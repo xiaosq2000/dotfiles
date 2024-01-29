@@ -1,0 +1,11 @@
+[http]
+	proxy = http://127.0.0.1:1080
+[https]
+	proxy = https://127.0.0.1:1080
+[user]
+	email = xiaosq2000@gmail.com
+	name = XIAO Shuqi 
+[core]
+	editor = nvim
+[init]
+	defaultBranch = main
