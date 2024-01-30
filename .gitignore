@@ -1,4 +1,11 @@
 *
-!.*
-!.config/**
+!.bashrc
+!.zshrc
+!.gitconfig
+!.gitignore
+!.config/nvim
 .config/nvim/plugin/packer_compiled.lua
+!.config/tmux
+!.config/zathura
+!.config/zsh
+!.config/starship.toml
