@@ -12,10 +12,6 @@ export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
 export LD_LIBRARY_PATH="$HOME/.local/lib:/usr/local/lib:$LD_LIBRARY_PATH"
 export MANPATH="$HOME/.local/man:/usr/local/man:$LD_LIBRARY_PATH"
 
-export http_proxy="http://127.0.0.1:1080"
-export HTTP_PROXY="http://127.0.0.1:1080"
-export https_proxy="http://127.0.0.1:1080"
-export HTTPS_PROXY="http://127.0.0.1:1080"
 
 export ZSH="$HOME/.oh-my-zsh"
 export USER=$USERNAME
@@ -92,6 +88,8 @@ plugins=(
     git 
     docker 
     docker-compose 
+    # git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/conda-zsh-completion
+    conda-zsh-completion
     # git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting 
     zsh-syntax-highlighting 
     # git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions 
@@ -123,3 +121,22 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 eval "$(starship init zsh)"
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/home/robotics/.local/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/home/robotics/.local/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/home/robotics/.local/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/home/robotics/.local/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
