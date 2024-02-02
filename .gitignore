@@ -1,12 +1,26 @@
-*
+# Reference: 
+# https://stackoverflow.com/a/29932318/11393911
+
+/*
+
 !README.md
+
 !.bashrc
 !.zshrc
+
 !.gitconfig
 !.gitignore
-!.config/nvim
+
+!.config/
+.config/*
+
+!.config/nvim/
 .config/nvim/plugin/packer_compiled.lua
-!.config/tmux
-!.config/zathura
-!.config/zsh
+
+!.config/tmux/
+
+!.config/zathura/
+ 
+!.config/zsh/
+
 !.config/starship.toml
