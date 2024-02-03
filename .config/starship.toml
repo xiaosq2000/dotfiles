@@ -24,13 +24,13 @@ disabled = true
 show_always = true
 style_user = "fg:lavender"
 style_root = "fg:lavender"
-format = ' [$user @ ]($style)'
+format = ' [$user]($style)'
 disabled = false
 
 [hostname]
 ssh_only = false
 style= "fg:lavender"
-format = '[$ssh_symbol$hostname]($style) '
+format = '[$ssh_symbol@$hostname]($style) '
 disabled = false
 
 [git_branch]
@@ -38,7 +38,7 @@ format = " [$symbol$branch(:$remote_branch)]($style) "
 style = "fg:sapphire"
 
 [directory]
-format = " [$path]($style) [$read_only]($read_only_style) "
+format = ' [$path]($style)[$read_only]($read_only_style) '
 style = "fg:peach"
 truncation_length = 8
 truncation_symbol = "…/"
