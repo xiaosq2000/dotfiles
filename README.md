@@ -2,9 +2,11 @@
 
 ## Usage
 
-**Warning: Backup first! The Following code snippets can replace your dotfiles! **
-**Warning: Backup first! The Following code snippets can replace your dotfiles! **
-**Warning: Backup first! The Following code snippets can replace your dotfiles! **
+**Warning: Backup first! The Following code snippets can replace your dotfiles!**
+
+**Warning: Backup first! The Following code snippets can replace your dotfiles!**
+
+**Warning: Backup first! The Following code snippets can replace your dotfiles!**
 
 Quick and wild, by making `$HOME` a git repository.
 ```sh
