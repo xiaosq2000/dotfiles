@@ -24,13 +24,13 @@ disabled = true
 show_always = true
 style_user = "fg:lavender"
 style_root = "fg:lavender"
-format = ' [$user]($style)'
+format = ' [$user @ ]($style)'
 disabled = false
 
 [hostname]
 ssh_only = false
 style= "fg:lavender"
-format = '[$ssh_symbol@$hostname]($style) '
+format = '[$ssh_symbol$hostname]($style) '
 disabled = false
 
 [git_branch]
