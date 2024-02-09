@@ -39,5 +39,6 @@ return require('packer').startup(function(use)
         run = "make install_jsregexp"
     }
     -- colorscheme
-    use({ 'rose-pine/neovim', as = 'rose-pine' })
+    -- use({ 'rose-pine/neovim', as = 'rose-pine' })
+    use { "catppuccin/nvim", as = "catppuccin" }
 end)
