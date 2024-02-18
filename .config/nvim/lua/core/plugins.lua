@@ -13,7 +13,7 @@ vim.opt.rtp:prepend(lazypath)
 
 local plugins = {
     -- parser engine
-    "nvim-treesitter/nvim-treesitter",
+    { 'nvim-treesitter/nvim-treesitter', build = ':TSUpdate' },
     -- fuzzy finder
     {
         'nvim-telescope/telescope.nvim',
@@ -52,7 +52,7 @@ local plugins = {
         build = "make install_jsregexp"
     },
     -- colorscheme
-    { "catppuccin/nvim", name = "catppuccin", priority = 1000 }
+    { "catppuccin/nvim",                 name = "catppuccin", priority = 1000 }
 }
 
 local opts = {}

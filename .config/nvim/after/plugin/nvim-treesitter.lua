@@ -9,7 +9,7 @@ require 'nvim-treesitter.configs'.setup {
     auto_install = true,
 
     -- List of parsers to ignore installing (for "all")
-    ignore_install = { },
+    ignore_install = { 'latex' },
     modules = {},
 
     ---- If you need to change the installation directory of the parsers (see -> Advanced Setup)
