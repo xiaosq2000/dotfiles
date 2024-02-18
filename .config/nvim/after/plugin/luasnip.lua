@@ -13,13 +13,13 @@ vim.keymap.set({ "s" }, "<C-F>", function() ls.jump(1) end, { silent = true })
 vim.keymap.set({ "i", "s" }, "<C-B>", function() ls.jump(-1) end, { silent = true })
 
 -- Load all snippets from the nvim/LuaSnip directory at startup
--- require("luasnip.loaders.from_lua").load({ paths = "~/.config/nvim/lua/shuqi/LuaSnip" })
+-- require("luasnip.loaders.from_lua").load({ paths = "~/.config/nvim/lua/core/LuaSnip" })
 
 -- Lazy-load snippets, i.e. only load when required, e.g. for a given filetype
-require("luasnip.loaders.from_lua").lazy_load({ paths = "~/.config/nvim/lua/shuqi/LuaSnip" })
+require("luasnip.loaders.from_lua").lazy_load({ paths = "~/.config/nvim/lua/core/LuaSnip" })
 
 -- reload luasnip
-vim.keymap.set('n', '<leader>L', '<Cmd>lua require("luasnip.loaders.from_lua").load({paths = "~/.config/nvim/lua/shuqi/LuaSnip/"})<CR>')
+vim.keymap.set('n', '<leader>L', '<Cmd>lua require("luasnip.loaders.from_lua").load({paths = "~/.config/nvim/lua/core/LuaSnip/"})<CR>')
 
 -- vertically open snippets for filetype tex to quick edit
-vim.keymap.set('n', '<leader>Lt', '<Cmd>vsp ~/.config/nvim/lua/shuqi/LuaSnip/tex<CR>')
+vim.keymap.set('n', '<leader>Lt', '<Cmd>vsp ~/.config/nvim/lua/core/LuaSnip/tex<CR>')
