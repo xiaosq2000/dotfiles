@@ -1,7 +1,6 @@
 require 'nvim-treesitter.configs'.setup {
     -- A list of parser names, or "all" (the five listed parsers should always be installed)
-    ensure_installed = { "bash", "c", "cpp", "make", "cmake", "dockerfile", "markdown", "python", "json", "yaml", "xml",
-      "lua", "vim", "vimdoc" },
+    ensure_installed = { },
     -- Install parsers synchronously (only applied to `ensure_installed`)
     sync_install = false,
 
@@ -10,7 +9,7 @@ require 'nvim-treesitter.configs'.setup {
     auto_install = true,
 
     -- List of parsers to ignore installing (for "all")
-    ignore_install = { "latex" },
+    ignore_install = { },
     modules = {},
 
     ---- If you need to change the installation directory of the parsers (see -> Advanced Setup)

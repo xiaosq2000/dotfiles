@@ -1,1 +1,1 @@
-require("shuqi")
+require("core")
