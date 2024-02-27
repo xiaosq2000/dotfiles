@@ -11,7 +11,11 @@ vim.keymap.set({"n", "v"}, "gj", "j", opts)
 vim.keymap.set({"n", "v"}, "k", "gk", opts)
 vim.keymap.set({"n", "v"}, "gk", "k", opts)
 
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
 vim.keymap.set("n", "<leader>ec", "<cmd>vsp ~/.config/nvim/<cr>", opts)
+
+-- copy to system clipboard 
 vim.keymap.set("v", "<enter>", "\"+y", opts)
 
 -- comment block, ref: https://vi.stackexchange.com/a/421

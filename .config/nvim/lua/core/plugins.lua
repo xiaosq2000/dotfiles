@@ -13,21 +13,21 @@ vim.opt.rtp:prepend(lazypath)
 
 local plugins = {
     -- parser engine
-    { 'nvim-treesitter/nvim-treesitter', build = ':TSUpdate' },
+    { 'nvim-treesitter/nvim-treesitter',  build = ':TSUpdate' },
     -- fuzzy finder
     {
         'nvim-telescope/telescope.nvim',
         tag = '0.1.2',
         dependencies = { { 'nvim-lua/plenary.nvim' } }
     },
-    {
-        -- portable package manager to easily install and manage LSP servers, DAP servers, linters, and formatters.
-        "williamboman/mason.nvim",
-        -- bridge
-        "williamboman/mason-lspconfig.nvim",
-        -- LSP configurator
-        "neovim/nvim-lspconfig",
-    },
+    -- LSP configurator
+    { "neovim/nvim-lspconfig" },
+    -- portable package manager to easily install and manage LSP servers, DAP servers, linters, and formatters.
+    { "williamboman/mason.nvim" },
+    -- a bridge between nvim-lspconfig and mason.
+    { "williamboman/mason-lspconfig.nvim" },
+    -- non-LSP tools configurator, like linters and formatters.
+    { 'nvimtools/none-ls.nvim' },
     -- auto-complete
     {
         'hrsh7th/cmp-nvim-lsp',
@@ -52,7 +52,18 @@ local plugins = {
         build = "make install_jsregexp"
     },
     -- colorscheme
-    { "catppuccin/nvim",                 name = "catppuccin", priority = 1000 }
+    { "catppuccin/nvim", name = "catppuccin", priority = 1000 },
+    {
+        "nvim-tree/nvim-tree.lua",
+        version = "*",
+        lazy = false,
+        dependencies = {
+            "nvim-tree/nvim-web-devicons",
+        },
+        config = function()
+            require("nvim-tree").setup {}
+        end,
+    }
 }
 
 local opts = {}

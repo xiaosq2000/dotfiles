@@ -1,5 +1,15 @@
 require("mason").setup()
-require("mason-lspconfig").setup()
+require("mason-lspconfig").setup {
+    automatic_installation = true,
+    ensure_installed = { "ruff_lsp", "pyright", "clangd", "cmake", "bashls", "autotools_ls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab" },
+
+}
+local on_attach = function(client, bufnr)
+    if client.name == 'ruff_lsp' then
+        -- Disable hover in favor of Pyright
+        client.server_capabilities.hoverProvider = false
+    end
+end
 require("mason-lspconfig").setup_handlers {
     -- The first entry (without a key) will be the default handler
     -- and will be called for each installed server that doesn't have
@@ -7,11 +17,39 @@ require("mason-lspconfig").setup_handlers {
     function(server_name) -- default handler (optional)
         require("lspconfig")[server_name].setup {}
     end,
-    -- Next, you can provide a dedicated handler for specific servers.
-    -- For example, a handler override for the `rust_analyzer`:
-    ["rust_analyzer"] = function()
-        require("rust-tools").setup {}
-    end
+    ["lua_ls"] = function()
+        require("lspconfig").lua_ls.setup {
+            settings = {
+                Lua = {
+                    diagnostics = {
+                        globals = { "vim" }
+                    }
+                }
+            }
+        }
+    end,
+    ["ruff_lsp"] = function()
+        require('lspconfig').ruff_lsp.setup {
+            on_attach = on_attach,
+        }
+    end,
+    ["pyright"] = function()
+        require('lspconfig').pyright.setup {
+            on_attach = on_attach,
+            settings = {
+                pyright = {
+                    -- Using Ruff's import organizer
+                    disableOrganizeImports = true,
+                },
+                python = {
+                    analysis = {
+                        -- Ignore all files for analysis to exclusively use Ruff for linting
+                        ignore = { '*' },
+                    },
+                },
+            },
+        }
+    end,
 }
 
 -- Global mappings.
