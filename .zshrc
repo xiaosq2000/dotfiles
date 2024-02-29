@@ -68,7 +68,7 @@ HIST_STAMPS="yyyy-mm-dd"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 
-source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
+source "$HOME/.config/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 # TODO ensure installed 
 plugins=(
     git 
