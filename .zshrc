@@ -1,22 +1,3 @@
-export LANG=en_US.UTF-8
-
-export XDG_DATA_HOME="$HOME/.local/share"
-export XDG_CONFIG_HOME="$HOME/.config"
-export XDG_STATE_HOME="$HOME/.local/state"
-export XDG_DATA_DIRS="/usr/local/share/:/usr/share/"
-export XDG_CONFIG_DIRS="/etc/xdg"
-export XDG_CACHE_HOME="$HOME/.cache"
-export XDG_RUNTIME_DIR="/tmp/runtime-${HOME}"
-
-export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
-export LD_LIBRARY_PATH="$HOME/.local/lib:/usr/local/lib:$LD_LIBRARY_PATH"
-export MANPATH="$HOME/.local/man:/usr/local/man:$LD_LIBRARY_PATH"
-
-export http_proxy="http://127.0.0.1:1080"
-export HTTP_PROXY="http://127.0.0.1:1080"
-export https_proxy="http://127.0.0.1:1080"
-export HTTPS_PROXY="http://127.0.0.1:1080"
-
 export ZSH="$HOME/.oh-my-zsh"
 export USER=$USERNAME
 
@@ -88,10 +69,12 @@ HIST_STAMPS="yyyy-mm-dd"
 # Add wisely, as too many plugins slow down shell startup.
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
+# TODO ensure installed 
 plugins=(
     git 
     docker 
     docker-compose 
+    # git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/conda-zsh-completion
     conda-zsh-completion
     # git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting 
     zsh-syntax-highlighting 
@@ -120,24 +103,30 @@ fi
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export LC_CTYPE=en_US.UTF-8
+
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_DATA_DIRS="/usr/local/share/:/usr/share/"
+export XDG_CONFIG_DIRS="/etc/xdg"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_RUNTIME_DIR="/tmp/runtime-${HOME}"
+
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+export LD_LIBRARY_PATH="$HOME/.local/lib:/usr/local/lib:$LD_LIBRARY_PATH"
+export MANPATH="$HOME/.local/man:/usr/local/man:$LD_LIBRARY_PATH"
+
+# export http_proxy="http://127.0.0.1:1080"
+# export HTTP_PROXY="http://127.0.0.1:1080"
+# export https_proxy="http://127.0.0.1:1080"
+# export HTTPS_PROXY="http://127.0.0.1:1080"
+ 
 alias lg="lazygit"
 
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 eval "$(starship init zsh)"
-
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/shuqi/.local/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/home/shuqi/.local/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/shuqi/.local/miniconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/home/shuqi/.local/miniconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<

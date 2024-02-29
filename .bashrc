@@ -116,10 +116,30 @@ if ! shopt -oq posix; then
   fi
 fi
 
-export http_proxy="http://127.0.0.1:1080"
-export HTTP_PROXY="http://127.0.0.1:1080"
-export https_proxy="http://127.0.0.1:1080"
-export HTTPS_PROXY="http://127.0.0.1:1080"
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export LC_CTYPE=en_US.UTF-8
+
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_DATA_DIRS="/usr/local/share/:/usr/share/"
+export XDG_CONFIG_DIRS="/etc/xdg"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_RUNTIME_DIR="/tmp/runtime-${HOME}"
+
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+export LD_LIBRARY_PATH="$HOME/.local/lib:/usr/local/lib:$LD_LIBRARY_PATH"
+export MANPATH="$HOME/.local/man:/usr/local/man:$LD_LIBRARY_PATH"
+
+# export http_proxy="http://127.0.0.1:1080"
+# export HTTP_PROXY="http://127.0.0.1:1080"
+# export https_proxy="http://127.0.0.1:1080"
+# export HTTPS_PROXY="http://127.0.0.1:1080"
+
+alias lg="lazygit"
+
+export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 eval "$(starship init bash)"
-

@@ -17,7 +17,7 @@ local plugins = {
     -- fuzzy finder
     {
         'nvim-telescope/telescope.nvim',
-        tag = '0.1.2',
+        tag = '0.1.5',
         dependencies = { { 'nvim-lua/plenary.nvim' } }
     },
     -- LSP configurator
@@ -63,7 +63,7 @@ local plugins = {
         config = function()
             require("nvim-tree").setup {}
         end,
-    }
+    },
 }
 
 local opts = {}
