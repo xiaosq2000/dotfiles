@@ -102,6 +102,60 @@ fi
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
+ 
+path_append() {
+  local args=("${@}")
+  for dir in "${args[@]}"; do
+    if [[ -d "$dir" && ! :$PATH: =~ :$dir: ]]; then
+      PATH+=":$dir"
+    fi
+  done
+}
+
+path_prepend() {
+  local args=("${@}")
+  for dir in "${args[@]}"; do
+    if [[ -d "$dir" && ! :$PATH: =~ :$dir: ]]; then
+      PATH="$dir:$PATH"
+    fi
+  done
+}
+
+ld_library_path_append() {
+  local args=("${@}")
+  for dir in "${args[@]}"; do
+    if [[ -d "$dir" && ! :$LD_LIBRARY_PATH: =~ :$dir: ]]; then
+      LD_LIBRARY_PATH+=":$dir"
+    fi
+  done
+}
+
+ld_library_path_prepend() {
+  local args=("${@}")
+  for dir in "${args[@]}"; do
+    if [[ -d "$dir" && ! :$LD_LIBRARY_PATH: =~ :$dir: ]]; then
+      LD_LIBRARY_PATH="$dir:$LD_LIBRARY_PATH"
+    fi
+  done
+}
+
+manpath_append() {
+  local args=("${@}")
+  for dir in "${args[@]}"; do
+    if [[ -d "$dir" && ! :$MANPATH: =~ :$dir: ]]; then
+      MANPATH+=":$dir"
+    fi
+  done
+}
+
+manpath_prepend() {
+  local args=("${@}")
+  for dir in "${args[@]}"; do
+    if [[ -d "$dir" && ! :$MANPATH: =~ :$dir: ]]; then
+      MANPATH="$dir:$MANPATH"
+    fi
+  done
+}
 
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
@@ -115,9 +169,9 @@ export XDG_CONFIG_DIRS="/etc/xdg"
 export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_RUNTIME_DIR="/tmp/runtime-${HOME}"
 
-export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
-export LD_LIBRARY_PATH="$HOME/.local/lib:/usr/local/lib:$LD_LIBRARY_PATH"
-export MANPATH="$HOME/.local/man:/usr/local/man:$LD_LIBRARY_PATH"
+path_prepend "$HOME/.local/bin" "/usr/local/bin"
+ld_library_path_prepend "$HOME/.local/lib" "/usr/local/lib"
+manpath_prepend "$HOME/.local/man" "/usr/local/man"
 
 # export http_proxy="http://127.0.0.1:1080"
 # export HTTP_PROXY="http://127.0.0.1:1080"
