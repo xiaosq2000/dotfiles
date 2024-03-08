@@ -1,3 +1,17 @@
+zshrc_start_time=$(date +%s%N)
+
+echo "$(whoami) @ $(hostname) @ $(hostname -I | awk '{ print $1; }')"
+echo
+echo -n "OS: $(uname -sr), " && cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")'
+echo -n "CPU: "
+cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*'
+echo -n "GPU: "
+[ -x "$(command -v nvidia-smi)" ] && echo -n $(nvidia-smi -L | sed 's/([^)]*)//g')\(Driver Version $(modinfo /usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko | grep ^version | grep -oP '(?<=:        ).*')\)
+echo
+echo -n "Avaiable Memory: "
+echo "$(free -mh | grep ^Mem | awk '{ print $7; }') / $(free -mh | grep ^Mem | awk '{ print $2; }')"
+
+
 export LANG=${LANG:-"en_US.UTF-8"}
 export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
 export LC_CTYPE=${LC_CTYPE:-"en_US.UTF-8"}
@@ -9,6 +23,8 @@ export XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
 export XDG_DATA_DIRS=${XDG_DATA_DIRS:-"/usr/local/share/:/usr/share"}
 export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/tmp/runtime-${USERNAME}"}
+# non-standard variable
+export XDG_PREFIX_HOME="${HOME}/.local"
 
 export ZSH="$HOME/.oh-my-zsh"
 export USER=$USERNAME
@@ -57,6 +73,9 @@ prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
 prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
 prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 
+alias python="python3"
+alias lg="lazygit"
+
 export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
 export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
 export no_proxy=${no_proxy:-"localhost,.hkust-gz.edu.cn"}
@@ -78,6 +97,16 @@ broadcast_proxies() {
 }
 broadcast_proxies
 
+check_version() {
+    local cli="${1}"
+    local command_to_print_version="${2}"
+    if command -v "$cli" &>/dev/null; then
+        eval "$command_to_print_version"
+    else
+        echo "$cli not found" >&2
+    fi
+}
+ 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -149,15 +178,19 @@ ensure_install_plugins() {
         git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion"
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]]; then
-        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" 
+        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting"
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]]; then
-        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" 
+        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
+    fi
+    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autoenv" ]]; then
+        git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv"
     fi
 }
 ensure_install_plugins
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
+source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
 plugins=(
     git
     docker
@@ -191,8 +224,6 @@ alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.
 # For a full list of active aliases, run `alias`.
-alias lg="lazygit"
-
 alias zshconfig="${EDITOR} ${HOME}/.zshrc"
 alias ohmyzsh="${EDITOR} ${HOME}/.oh-my-zsh"
 alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
@@ -203,3 +234,34 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 
 eval "$(starship init zsh)"
 
+# <<< personal conda initialization, not need to `conda init zsh` <<<
+# I personally download miniconda3 to "${XDG_PREFIX_HOME}/miniconda3"
+__conda_setup="$("${XDG_PREFIX_HOME}/miniconda3/bin/conda" 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="${XDG_PREFIX_HOME}/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< personal conda initialization <<<
+
+# echo 
+# check_version "zsh" "echo -e \"zsh\tv$(zsh --version | awk '{ print $2; }')\""
+# check_version "tmux" "echo -e \"tmux\tv$(tmux -V | awk '{ print $2; }')\""
+# check_version "nvim" "echo -e \"nvim\t$(nvim --version | sed -n '1p' | head -n 1 | awk '{ print $2; }')\""
+# check_version "python" "echo -e \"python\tv$(python --version | awk '{ print $2; }')\""
+# check_version "git" "echo -e \"git\tv$(git --version | awk '{ print $3; }')\""
+# check_version "docker" "echo -e \"docker\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
+# check_version "nvcc" "echo -e \"nvcc\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
+# check_version "conda" "echo -e \"conda\tv$(conda --version | awk '{ print $2; }')\""
+
+zshrc_end_time=$(date +%s%N)
+zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+echo
+echo "$zshrc_duration ms to execute ${HOME}/.zshrc"
+
+################################################################################
