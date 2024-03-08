@@ -69,16 +69,16 @@ HIST_STAMPS="yyyy-mm-dd"
 # Add wisely, as too many plugins slow down shell startup.
 
 source "$HOME/.config/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
-# TODO ensure installed 
+# TODO ensure installed
 plugins=(
-    git 
-    docker 
-    docker-compose 
+    git
+    docker
+    docker-compose
     # git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/conda-zsh-completion
     conda-zsh-completion
-    # git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting 
-    zsh-syntax-highlighting 
-    # git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions 
+    # git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+    zsh-syntax-highlighting
+    # git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
     zsh-autosuggestions
 )
 
@@ -86,9 +86,9 @@ source $ZSH/oh-my-zsh.sh
 
 # Preferred editor for local and remote sessions
 if [[ -n $SSH_CONNECTION ]]; then
-  export EDITOR='nvim'
+    export EDITOR='nvim'
 else
-  export EDITOR='nvim'
+    export EDITOR='nvim'
 fi
 
 # Compilation flags
@@ -102,85 +102,94 @@ fi
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
- 
-path_append() {
-  local args=("${@}")
-  for dir in "${args[@]}"; do
-    if [[ -d "$dir" && ! :$PATH: =~ :$dir: ]]; then
-      PATH+=":$dir"
+
+safe_export() {
+    local env_var_name="$1"
+    local env_var_value="$2"
+    if [[ -z "${(P)env_var_name}" ]]; then
+        eval "export ${env_var_name}=\"$env_var_value\""
     fi
-  done
 }
 
-path_prepend() {
-  local args=("${@}")
-  for dir in "${args[@]}"; do
-    if [[ -d "$dir" && ! :$PATH: =~ :$dir: ]]; then
-      PATH="$dir:$PATH"
+prepend_to_env_var() {
+    local env_var_name="$1"
+    shift
+    local args=("${@}")
+
+    if [[ -z "${(P)env_var_name}" ]]; then
+        export ${env_var_name}=""
     fi
-  done
+
+    for dir in "${args[@]}"; do
+        if [[ -d "$dir" && ! :${(P)env_var_name}: =~ :$dir: ]]; then
+            if [[ -z "${(P)env_var_name}" ]]; then
+                eval "export ${env_var_name}=\"$dir\""
+            else
+                eval "export ${env_var_name}=\"$dir:\${${env_var_name}}\""
+            fi
+        fi
+    done
 }
 
-ld_library_path_append() {
-  local args=("${@}")
-  for dir in "${args[@]}"; do
-    if [[ -d "$dir" && ! :$LD_LIBRARY_PATH: =~ :$dir: ]]; then
-      LD_LIBRARY_PATH+=":$dir"
+append_to_env_var() {
+    local env_var_name="$1"
+    shift
+    local args=("${@}")
+
+    if [[ -z "${(P)env_var_name}" ]]; then
+        export ${env_var_name}=""
     fi
-  done
+
+    for dir in "${args[@]}"; do
+        if [[ -d "$dir" && ! :${(P)env_var_name}: =~ :$dir: ]]; then
+            if [[ -z "${(P)env_var_name}" ]]; then
+                eval "export ${env_var_name}=\"$dir\""
+            else
+                eval "export ${env_var_name}=\"\${${env_var_name}}:$dir\""
+            fi
+        fi
+    done
 }
 
-ld_library_path_prepend() {
-  local args=("${@}")
-  for dir in "${args[@]}"; do
-    if [[ -d "$dir" && ! :$LD_LIBRARY_PATH: =~ :$dir: ]]; then
-      LD_LIBRARY_PATH="$dir:$LD_LIBRARY_PATH"
-    fi
-  done
-}
+safe_export LANG=en_US.UTF-8
+safe_export LC_ALL=en_US.UTF-8
+safe_export LC_CTYPE=en_US.UTF-8
 
-manpath_append() {
-  local args=("${@}")
-  for dir in "${args[@]}"; do
-    if [[ -d "$dir" && ! :$MANPATH: =~ :$dir: ]]; then
-      MANPATH+=":$dir"
-    fi
-  done
-}
+safe_export XDG_DATA_HOME "$HOME/.local/share"
+safe_export XDG_CONFIG_HOME "$HOME/.config"
+safe_export XDG_STATE_HOME "$HOME/.local/state"
+safe_export XDG_CACHE_HOME "$HOME/.cache"
+safe_export XDG_DATA_DIRS "/usr/local/share/:/usr/share"
+safe_export XDG_CONFIG_DIRS "/etc/xdg"
+safe_export XDG_RUNTIME_DIR "/tmp/runtime-${USERNAME}"
 
-manpath_prepend() {
-  local args=("${@}")
-  for dir in "${args[@]}"; do
-    if [[ -d "$dir" && ! :$MANPATH: =~ :$dir: ]]; then
-      MANPATH="$dir:$MANPATH"
-    fi
-  done
-}
-
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-export LC_CTYPE=en_US.UTF-8
-
-export XDG_DATA_HOME="$HOME/.local/share"
-export XDG_CONFIG_HOME="$HOME/.config"
-export XDG_STATE_HOME="$HOME/.local/state"
-export XDG_CACHE_HOME="$HOME/.cache"
-export XDG_DATA_DIRS="/usr/local/share/:/usr/share/"
-export XDG_CONFIG_DIRS="/etc/xdg"
-export XDG_RUNTIME_DIR="/tmp/runtime-${USERNAME}"
-
-path_prepend "$HOME/.local/bin" "/usr/local/bin"
-ld_library_path_prepend "$HOME/.local/lib" "/usr/local/lib"
-manpath_prepend "$HOME/.local/man" "/usr/local/man"
+prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
+prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
+prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 
 # export http_proxy="http://127.0.0.1:1080"
 # export HTTP_PROXY="http://127.0.0.1:1080"
 # export https_proxy="http://127.0.0.1:1080"
 # export HTTPS_PROXY="http://127.0.0.1:1080"
- 
+
+adapt_proxies() {
+    if [[ -z "${http_proxy}" ]]; then
+        git config --global --unset http.proxy
+    else
+        git config --global http.proxy ${http_proxy}
+    fi
+    if [[ -z "${https_proxy}" ]]; then
+        git config --global --unset https.proxy
+    else
+        git config --global https.proxy ${https_proxy}
+    fi
+}
+adapt_proxies
+
 alias lg="lazygit"
 
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 eval "$(starship init zsh)"
+
