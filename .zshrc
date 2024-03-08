@@ -164,10 +164,10 @@ export LC_CTYPE=en_US.UTF-8
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_DIRS="/usr/local/share/:/usr/share/"
 export XDG_CONFIG_DIRS="/etc/xdg"
-export XDG_CACHE_HOME="$HOME/.cache"
-export XDG_RUNTIME_DIR="/tmp/runtime-${HOME}"
+export XDG_RUNTIME_DIR="/tmp/runtime-${USERNAME}"
 
 path_prepend "$HOME/.local/bin" "/usr/local/bin"
 ld_library_path_prepend "$HOME/.local/lib" "/usr/local/lib"
