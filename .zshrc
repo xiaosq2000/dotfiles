@@ -4,9 +4,9 @@ echo "$(whoami) @ $(hostname) @ $(hostname -I | awk '{ print $1; }')"
 echo
 echo -n "OS: $(uname -sr), " && cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")'
 echo -n "CPU: "
-cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*'
+echo "Usage "$((100-$(vmstat 1 2 | tail -1 | awk '{print $15}')))%", $(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
 echo -n "GPU: "
-[ -x "$(command -v nvidia-smi)" ] && echo -n $(nvidia-smi -L | sed 's/([^)]*)//g')\(Driver Version $(modinfo /usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko | grep ^version | grep -oP '(?<=:        ).*')\)
+[ -x "$(command -v nvidia-smi)" ] && echo -n "Driver Version $(modinfo /usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko | grep ^version | grep -oP '(?<=:        ).*'), $(nvidia-smi -L | sed 's/([^)]*)//g')"
 echo
 echo -n "Avaiable Memory: "
 echo "$(free -mh | grep ^Mem | awk '{ print $7; }') / $(free -mh | grep ^Mem | awk '{ print $2; }')"
@@ -249,15 +249,15 @@ fi
 unset __conda_setup
 # <<< personal conda initialization <<<
 
-# echo 
-# check_version "zsh" "echo -e \"zsh\tv$(zsh --version | awk '{ print $2; }')\""
-# check_version "tmux" "echo -e \"tmux\tv$(tmux -V | awk '{ print $2; }')\""
-# check_version "nvim" "echo -e \"nvim\t$(nvim --version | sed -n '1p' | head -n 1 | awk '{ print $2; }')\""
-# check_version "python" "echo -e \"python\tv$(python --version | awk '{ print $2; }')\""
-# check_version "git" "echo -e \"git\tv$(git --version | awk '{ print $3; }')\""
-# check_version "docker" "echo -e \"docker\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
-# check_version "nvcc" "echo -e \"nvcc\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
-# check_version "conda" "echo -e \"conda\tv$(conda --version | awk '{ print $2; }')\""
+echo 
+check_version "zsh" "echo -e \"zsh\tv$(zsh --version | awk '{ print $2; }')\""
+check_version "tmux" "echo -e \"tmux\tv$(tmux -V | awk '{ print $2; }')\""
+check_version "nvim" "echo -e \"nvim\t$(nvim --version | sed -n '1p' | head -n 1 | awk '{ print $2; }')\""
+check_version "python" "echo -e \"python\tv$(python --version | awk '{ print $2; }')\""
+check_version "git" "echo -e \"git\tv$(git --version | awk '{ print $3; }')\""
+check_version "docker" "echo -e \"docker\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
+check_version "nvcc" "echo -e \"nvcc\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
+check_version "conda" "echo -e \"conda\tv$(conda --version | awk '{ print $2; }')\""
 
 zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
