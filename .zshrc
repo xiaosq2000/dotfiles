@@ -1,5 +1,82 @@
+export LANG=${LANG:-"en_US.UTF-8"}
+export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
+export LC_CTYPE=${LC_CTYPE:-"en_US.UTF-8"}
+
+export XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
+export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+export XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
+export XDG_DATA_DIRS=${XDG_DATA_DIRS:-"/usr/local/share/:/usr/share"}
+export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/tmp/runtime-${USERNAME}"}
+
 export ZSH="$HOME/.oh-my-zsh"
 export USER=$USERNAME
+
+prepend_to_env_var() {
+    local env_var_name="$1"
+    shift
+    local args=("${@}")
+
+    if [[ -z "${(P)env_var_name}" ]]; then
+        export ${env_var_name}=""
+    fi
+
+    for dir in "${args[@]}"; do
+        if [[ -d "$dir" && ! :${(P)env_var_name}: =~ :$dir: ]]; then
+            if [[ -z "${(P)env_var_name}" ]]; then
+                eval "export ${env_var_name}=\"$dir\""
+            else
+                eval "export ${env_var_name}=\"$dir:\${${env_var_name}}\""
+            fi
+        fi
+    done
+}
+
+append_to_env_var() {
+    local env_var_name="$1"
+    shift
+    local args=("${@}")
+
+    if [[ -z "${(P)env_var_name}" ]]; then
+        export ${env_var_name}=""
+    fi
+
+    for dir in "${args[@]}"; do
+        if [[ -d "$dir" && ! :${(P)env_var_name}: =~ :$dir: ]]; then
+            if [[ -z "${(P)env_var_name}" ]]; then
+                eval "export ${env_var_name}=\"$dir\""
+            else
+                eval "export ${env_var_name}=\"\${${env_var_name}}:$dir\""
+            fi
+        fi
+    done
+}
+
+prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
+prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
+prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
+
+export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
+export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
+export no_proxy=${no_proxy:-"localhost,.hkust-gz.edu.cn"}
+export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
+export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
+export NO_PROXY=${NO_PROXY:-${no_proxy}}
+
+broadcast_proxies() {
+    if [[ -z "${http_proxy}" ]]; then
+        git config --global --unset http.proxy
+    else
+        git config --global http.proxy ${http_proxy}
+    fi
+    if [[ -z "${https_proxy}" ]]; then
+        git config --global --unset https.proxy
+    else
+        git config --global https.proxy ${https_proxy}
+    fi
+}
+broadcast_proxies
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -60,133 +137,66 @@ export USER=$USERNAME
 HIST_STAMPS="yyyy-mm-dd"
 
 # Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM=/path/to/new-custom-folder
-
+ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 
-source "$HOME/.config/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
-# TODO ensure installed
+ensure_install_plugins() {
+    if [[ ! -d "${ZSH_CUSTOM}/plugins/conda-zsh-completion" ]]; then
+        git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion"
+    fi
+    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]]; then
+        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" 
+    fi
+    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]]; then
+        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" 
+    fi
+}
+ensure_install_plugins
+
+source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 plugins=(
     git
     docker
     docker-compose
-    # git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/conda-zsh-completion
+    # The following are manually installed plugins
     conda-zsh-completion
-    # git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
     zsh-syntax-highlighting
-    # git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
     zsh-autosuggestions
 )
 
 source $ZSH/oh-my-zsh.sh
 
-# Preferred editor for local and remote sessions
-if [[ -n $SSH_CONNECTION ]]; then
+# Preferred editor
+if (( $+commands[nvim] )); then
+    export SUDO_EDITOR='nvim'
     export EDITOR='nvim'
-else
-    export EDITOR='nvim'
+elif (( $+commands[vim] )); then
+    export SUDO_EDITOR='vim'
+    export EDITOR='vim'
+elif (( $+commands[vi] )); then
+    export SUDO_EDITOR='vi'
+    export EDITOR='vi'
 fi
 
-# Compilation flags
-# export ARCHFLAGS="-arch x86_64"
+# Compilation
+export ARCHFLAGS="-arch $(uname -m)"
+export NUMCPUS=`grep -c '^processor' /proc/cpuinfo`
+alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 
 # Set personal aliases, overriding those provided by oh-my-zsh libs,
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.
 # For a full list of active aliases, run `alias`.
-#
-# Example aliases
-# alias zshconfig="mate ~/.zshrc"
-# alias ohmyzsh="mate ~/.oh-my-zsh"
-
-safe_export() {
-    local env_var_name="$1"
-    local env_var_value="$2"
-    if [[ -z "${(P)env_var_name}" ]]; then
-        eval "export ${env_var_name}=\"$env_var_value\""
-    fi
-}
-
-prepend_to_env_var() {
-    local env_var_name="$1"
-    shift
-    local args=("${@}")
-
-    if [[ -z "${(P)env_var_name}" ]]; then
-        export ${env_var_name}=""
-    fi
-
-    for dir in "${args[@]}"; do
-        if [[ -d "$dir" && ! :${(P)env_var_name}: =~ :$dir: ]]; then
-            if [[ -z "${(P)env_var_name}" ]]; then
-                eval "export ${env_var_name}=\"$dir\""
-            else
-                eval "export ${env_var_name}=\"$dir:\${${env_var_name}}\""
-            fi
-        fi
-    done
-}
-
-append_to_env_var() {
-    local env_var_name="$1"
-    shift
-    local args=("${@}")
-
-    if [[ -z "${(P)env_var_name}" ]]; then
-        export ${env_var_name}=""
-    fi
-
-    for dir in "${args[@]}"; do
-        if [[ -d "$dir" && ! :${(P)env_var_name}: =~ :$dir: ]]; then
-            if [[ -z "${(P)env_var_name}" ]]; then
-                eval "export ${env_var_name}=\"$dir\""
-            else
-                eval "export ${env_var_name}=\"\${${env_var_name}}:$dir\""
-            fi
-        fi
-    done
-}
-
-safe_export LANG=en_US.UTF-8
-safe_export LC_ALL=en_US.UTF-8
-safe_export LC_CTYPE=en_US.UTF-8
-
-safe_export XDG_DATA_HOME "$HOME/.local/share"
-safe_export XDG_CONFIG_HOME "$HOME/.config"
-safe_export XDG_STATE_HOME "$HOME/.local/state"
-safe_export XDG_CACHE_HOME "$HOME/.cache"
-safe_export XDG_DATA_DIRS "/usr/local/share/:/usr/share"
-safe_export XDG_CONFIG_DIRS "/etc/xdg"
-safe_export XDG_RUNTIME_DIR "/tmp/runtime-${USERNAME}"
-
-prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
-prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
-prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
-
-# export http_proxy="http://127.0.0.1:1080"
-# export HTTP_PROXY="http://127.0.0.1:1080"
-# export https_proxy="http://127.0.0.1:1080"
-# export HTTPS_PROXY="http://127.0.0.1:1080"
-
-adapt_proxies() {
-    if [[ -z "${http_proxy}" ]]; then
-        git config --global --unset http.proxy
-    else
-        git config --global http.proxy ${http_proxy}
-    fi
-    if [[ -z "${https_proxy}" ]]; then
-        git config --global --unset https.proxy
-    else
-        git config --global https.proxy ${https_proxy}
-    fi
-}
-adapt_proxies
-
 alias lg="lazygit"
+
+alias zshconfig="${EDITOR} ${HOME}/.zshrc"
+alias ohmyzsh="${EDITOR} ${HOME}/.oh-my-zsh"
+alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
+alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
 
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
