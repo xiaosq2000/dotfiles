@@ -1,16 +1,4 @@
-zshrc_start_time=$(date +%s%N)
-
-echo "$(whoami) @ $(hostname) @ $(hostname -I | awk '{ print $1; }')"
-echo
-echo -n "OS: $(uname -sr), " && cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")'
-echo -n "CPU: "
-echo "Usage "$((100-$(vmstat 1 2 | tail -1 | awk '{print $15}')))%", $(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
-echo -n "GPU: "
-[ -x "$(command -v nvidia-smi)" ] && echo -n "Driver Version $(modinfo /usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko | grep ^version | grep -oP '(?<=:        ).*'), $(nvidia-smi -L | sed 's/([^)]*)//g')"
-echo
-echo -n "Avaiable Memory: "
-echo "$(free -mh | grep ^Mem | awk '{ print $7; }') / $(free -mh | grep ^Mem | awk '{ print $2; }')"
-
+# zshrc_start_time=$(date +%s%N)
 
 export LANG=${LANG:-"en_US.UTF-8"}
 export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
@@ -76,9 +64,16 @@ prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 alias python="python3"
 alias lg="lazygit"
 
-export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
-export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
+if [[ $(uname -r | grep 'WSL2') ]]; then 
+    local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
+    export http_proxy=${http_proxy:-"${host_ip}:1080"}
+    export https_proxy=${https_proxy:-"${host_ip}:1080"}
+else 
+    export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
+    export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
+fi
 export no_proxy=${no_proxy:-"localhost,.hkust-gz.edu.cn"}
+
 export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
 export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
 export NO_PROXY=${NO_PROXY:-${no_proxy}}
@@ -97,16 +92,6 @@ broadcast_proxies() {
 }
 broadcast_proxies
 
-check_version() {
-    local cli="${1}"
-    local command_to_print_version="${2}"
-    if command -v "$cli" &>/dev/null; then
-        eval "$command_to_print_version"
-    else
-        echo "$cli not found" >&2
-    fi
-}
- 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -248,20 +233,58 @@ else
 fi
 unset __conda_setup
 # <<< personal conda initialization <<<
+ 
+gpu_driver_path="/usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko"
+print_sys_info() {
+    echo
+    echo "$(whoami) @ $(hostname) @ $(hostname -I | awk '{ print $1; }')"
+    echo
+    echo "OS: $(uname -sr)"
+    echo "Distro: $(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
+    echo "CPU Device: $(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
+    echo "CPU Usage: $((100-$(vmstat 1 2 | tail -1 | awk '{print $15}')))%"
+    if [ ! -f ${gpu_driver_path} ]; then
+        echo "NVIDIA GPU Driver not found."
+    else
+        echo "NVIDIA GPU Driver Version $(modinfo ${gpu_driver_path} | grep ^version | grep -oP '(?<=:        ).*')"
+        if [ ! -x "$(command -v nvidia-smi)" ]; then
+            echo "command nvidia-smi not found."
+        else
+            echo "GPU Device: $(nvidia-smi -L | sed 's/([^)]*)//g')"
+        fi
+    fi
+    echo "Avaiable Memory: $(free -mh | grep ^Mem | awk '{ print $7; }') / $(free -mh | grep ^Mem | awk '{ print $2; }')"
+    echo
+}
+# print_sys_info
 
-echo 
-check_version "zsh" "echo -e \"zsh\tv$(zsh --version | awk '{ print $2; }')\""
-check_version "tmux" "echo -e \"tmux\tv$(tmux -V | awk '{ print $2; }')\""
-check_version "nvim" "echo -e \"nvim\t$(nvim --version | sed -n '1p' | head -n 1 | awk '{ print $2; }')\""
-check_version "python" "echo -e \"python\tv$(python --version | awk '{ print $2; }')\""
-check_version "git" "echo -e \"git\tv$(git --version | awk '{ print $3; }')\""
-check_version "docker" "echo -e \"docker\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
-check_version "nvcc" "echo -e \"nvcc\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
-check_version "conda" "echo -e \"conda\tv$(conda --version | awk '{ print $2; }')\""
 
-zshrc_end_time=$(date +%s%N)
-zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-echo
-echo "$zshrc_duration ms to execute ${HOME}/.zshrc"
+check_version() {
+    local cli="${1}"
+    local command_to_print_version="${2}"
+    if command -v "$cli" &>/dev/null; then
+        eval "$command_to_print_version"
+    else
+        echo "$cli not found" >&2
+    fi
+}
 
-################################################################################
+check_version_all() {
+    check_version "zsh" "echo -e \"zsh\tv$(zsh --version | awk '{ print $2; }')\""
+    check_version "tmux" "echo -e \"tmux\tv$(tmux -V | awk '{ print $2; }')\""
+    check_version "nvim" "echo -e \"nvim\t$(nvim --version | sed -n '1p' | head -n 1 | awk '{ print $2; }')\""
+    check_version "python" "echo -e \"python\tv$(python --version | awk '{ print $2; }')\""
+    check_version "git" "echo -e \"git\tv$(git --version | awk '{ print $3; }')\""
+    if [[ ! $(uname -r | grep 'WSL2') ]]; then 
+        check_version "docker" "echo -e \"docker\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
+    fi
+    if [ -f ${gpu_driver_path} ]; then
+        check_version "nvcc " "echo -e \"nvcc\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
+    fi
+    check_version "conda" "echo -e \"conda\tv$(conda --version | awk '{ print $2; }')\""
+    echo
+}
+
+# zshrc_end_time=$(date +%s%N)
+# zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+# echo "$zshrc_duration ms to execute ${HOME}/.zshrc"
