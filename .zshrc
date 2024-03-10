@@ -10,7 +10,7 @@ export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
 export XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
 export XDG_DATA_DIRS=${XDG_DATA_DIRS:-"/usr/local/share/:/usr/share"}
 export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
-export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/tmp/runtime-${USERNAME}"}
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
 # non-standard variable
 export XDG_PREFIX_HOME="${HOME}/.local"
 
