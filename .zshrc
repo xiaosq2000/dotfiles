@@ -1,5 +1,7 @@
 # zshrc_start_time=$(date +%s%N)
 
+[ -f "/etc/profile.d/modules.sh" ] && source "/etc/profile.d/modules.sh" && module load slurm
+
 export LANG=${LANG:-"en_US.UTF-8"}
 export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
 export LC_CTYPE=${LC_CTYPE:-"en_US.UTF-8"}
@@ -26,7 +28,8 @@ prepend_to_env_var() {
         export ${env_var_name}=""
     fi
 
-    for dir in "${args[@]}"; do
+    for (( i = $#args; i > 0; i-- )); do
+        dir=${args[i]}
         if [[ -d "$dir" && ! :${(P)env_var_name}: =~ :$dir: ]]; then
             if [[ -z "${(P)env_var_name}" ]]; then
                 eval "export ${env_var_name}=\"$dir\""
