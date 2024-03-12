@@ -60,6 +60,18 @@ append_to_env_var() {
     done
 }
 
+remove_from_env_var() {
+    local env_var_name="$1"
+    local path_to_remove="$2"
+    local current_value="${(P)env_var_name}"
+
+    current_value="${current_value//:$path_to_remove:/:}"
+    current_value="${current_value//:$path_to_remove/}"
+    current_value="${current_value//$path_to_remove:/}"
+
+    eval "export ${env_var_name}=\"${current_value}\""
+}
+
 prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
 prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
 prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
@@ -67,11 +79,11 @@ prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 alias python="python3"
 alias lg="lazygit"
 
-if [[ $(uname -r | grep 'WSL2') ]]; then 
+if [[ $(uname -r | grep 'WSL2') ]]; then
     local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
     export http_proxy=${http_proxy:-"${host_ip}:1080"}
     export https_proxy=${https_proxy:-"${host_ip}:1080"}
-else 
+else
     export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
     export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
 fi
@@ -236,7 +248,7 @@ else
 fi
 unset __conda_setup
 # <<< personal conda initialization <<<
- 
+
 gpu_driver_path="/usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko"
 print_sys_info() {
     echo
@@ -278,7 +290,7 @@ check_version_all() {
     check_version "nvim" "echo -e \"nvim\t$(nvim --version | sed -n '1p' | head -n 1 | awk '{ print $2; }')\""
     check_version "python" "echo -e \"python\tv$(python --version | awk '{ print $2; }')\""
     check_version "git" "echo -e \"git\tv$(git --version | awk '{ print $3; }')\""
-    if [[ ! $(uname -r | grep 'WSL2') ]]; then 
+    if [[ ! $(uname -r | grep 'WSL2') ]]; then
         check_version "docker" "echo -e \"docker\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
     fi
     if [ -f ${gpu_driver_path} ]; then
