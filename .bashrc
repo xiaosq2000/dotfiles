@@ -1,3 +1,113 @@
+if [ -f "/etc/profile.d/modules.sh" ]; then
+    source "/etc/profile.d/modules.sh"
+    module load slurm
+fi
+
+export LANG=${LANG:-"en_US.UTF-8"}
+export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
+export LC_CTYPE=${LC_CTYPE:-"en_US.UTF-8"}
+
+export XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
+export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
+export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+export XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
+export XDG_DATA_DIRS=${XDG_DATA_DIRS:-"/usr/local/share/:/usr/share"}
+export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
+# non-standard variable
+export XDG_PREFIX_HOME="${HOME}/.local"
+
+export ZSH="$HOME/.oh-my-zsh"
+export USER=$USERNAME
+
+prepend_to_env_var() {
+    local env_var_name="$1"
+    shift
+    local args=("$@")
+
+    if [ -z "${!env_var_name}" ]; then
+        export "$env_var_name"=""
+    fi
+
+    for ((i=${#args[@]}-1; i>=0; i--)); do
+        dir="${args[i]}"
+        if [ -d "$dir" ] && ! [[ ":${!env_var_name}:" =~ :$dir: ]]; then
+            if [ -z "${!env_var_name}" ]; then
+                eval "export $env_var_name=\"$dir\""
+            else
+                eval "export $env_var_name=\"$dir:\${$env_var_name}\""
+            fi
+        fi
+    done
+}
+
+append_to_env_var() {
+    local env_var_name="$1"
+    shift
+    local args=("$@")
+
+    if [ -z "${!env_var_name}" ]; then
+        export "$env_var_name"=""
+    fi
+
+    for dir in "${args[@]}"; do
+        if [ -d "$dir" ] && ! [[ ":${!env_var_name}:" =~ :$dir: ]]; then
+            if [ -z "${!env_var_name}" ]; then
+                eval "export $env_var_name=\"$dir\""
+            else
+                eval "export $env_var_name=\"\${$env_var_name}:$dir\""
+            fi
+        fi
+    done
+}
+
+remove_from_env_var() {
+    local env_var_name="$1"
+    local path_to_remove="$2"
+    local current_value="${!env_var_name}"
+
+    current_value="${current_value//:$path_to_remove:/:}"
+    current_value="${current_value//:$path_to_remove/}"
+    current_value="${current_value//$path_to_remove:/}"
+
+    eval "export $env_var_name=\"$current_value\""
+}
+
+prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
+prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
+prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
+
+alias python="python3"
+alias lg="lazygit"
+
+if [[ $(uname -r | grep 'WSL2') ]]; then
+    local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
+    export http_proxy=${http_proxy:-"${host_ip}:1080"}
+    export https_proxy=${https_proxy:-"${host_ip}:1080"}
+else
+    export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
+    export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
+fi
+export no_proxy=${no_proxy:-"localhost,.hkust-gz.edu.cn"}
+
+export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
+export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
+export NO_PROXY=${NO_PROXY:-${no_proxy}}
+
+broadcast_proxies() {
+    if [ -z "${http_proxy}" ]; then
+        git config --global --unset http.proxy
+    else
+        git config --global http.proxy ${http_proxy}
+    fi
+    if [ -z "${https_proxy}" ]; then
+        git config --global --unset https.proxy
+    else
+        git config --global https.proxy ${https_proxy}
+    fi
+}
+broadcast_proxies
+
 # ~/.bashrc: executed by bash(1) for non-login shells.
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
@@ -116,49 +226,94 @@ if ! shopt -oq posix; then
   fi
 fi
 
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-export LC_CTYPE=en_US.UTF-8
+# Preferred editor
+if command -v nvim &>/dev/null; then
+    export SUDO_EDITOR='nvim'
+    export EDITOR='nvim'
+elif command -v vim &>/dev/null; then
+    export SUDO_EDITOR='vim'
+    export EDITOR='vim'
+elif command -v vi &>/dev/null; then
+    export SUDO_EDITOR='vi'
+    export EDITOR='vi'
+fi
 
-export XDG_DATA_HOME="$HOME/.local/share"
-export XDG_CONFIG_HOME="$HOME/.config"
-export XDG_STATE_HOME="$HOME/.local/state"
-export XDG_DATA_DIRS="/usr/local/share/:/usr/share/"
-export XDG_CONFIG_DIRS="/etc/xdg"
-export XDG_CACHE_HOME="$HOME/.cache"
-export XDG_RUNTIME_DIR="/tmp/runtime-${HOME}"
 
-export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
-export LD_LIBRARY_PATH="$HOME/.local/lib:/usr/local/lib:$LD_LIBRARY_PATH"
-export MANPATH="$HOME/.local/man:/usr/local/man:$LD_LIBRARY_PATH"
+# Compilation
+export ARCHFLAGS="-arch $(uname -m)"
+export NUMCPUS=`grep -c '^processor' /proc/cpuinfo`
+alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 
-# export http_proxy="http://127.0.0.1:1080"
-# export HTTP_PROXY="http://127.0.0.1:1080"
-# export https_proxy="http://127.0.0.1:1080"
-# export HTTPS_PROXY="http://127.0.0.1:1080"
-
-alias lg="lazygit"
+alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
+alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
 
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
 eval "$(starship init bash)"
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/shuqi/.local/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+# <<< personal conda initialization, not need to `conda init zsh` <<<
+# I personally download miniconda3 to "${XDG_PREFIX_HOME}/miniconda3"
+__conda_setup="$("${XDG_PREFIX_HOME}/miniconda3/bin/conda" 'shell.zsh' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else
-    if [ -f "/home/shuqi/.local/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/shuqi/.local/miniconda3/etc/profile.d/conda.sh"
+    if [ -f "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh"
     else
-        export PATH="/home/shuqi/.local/miniconda3/bin:$PATH"
+        export PATH="${XDG_PREFIX_HOME}/miniconda3/bin:$PATH"
     fi
 fi
 unset __conda_setup
-# <<< conda initialize <<<
+# <<< personal conda initialization <<<
 
-export PATH=/usr/local/cuda-12.3/bin${PATH:+:${PATH}}
-export LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+gpu_driver_path="/usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko"
+print_sys_info() {
+    echo
+    echo "$(whoami) @ $(hostname) @ $(hostname -I | awk '{ print $1; }')"
+    echo
+    echo "OS: $(uname -sr)"
+    echo "Distro: $(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
+    echo "CPU Device: $(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
+    echo "CPU Usage: $((100-$(vmstat 1 2 | tail -1 | awk '{print $15}')))%"
+    if [ ! -f ${gpu_driver_path} ]; then
+        echo "NVIDIA GPU Driver not found."
+    else
+        echo "NVIDIA GPU Driver Version $(modinfo ${gpu_driver_path} | grep ^version | grep -oP '(?<=:        ).*')"
+        if [ ! -x "$(command -v nvidia-smi)" ]; then
+            echo "command nvidia-smi not found."
+        else
+            echo "GPU Device: $(nvidia-smi -L | sed 's/([^)]*)//g')"
+        fi
+    fi
+    echo "Avaiable Memory: $(free -mh | grep ^Mem | awk '{ print $7; }') / $(free -mh | grep ^Mem | awk '{ print $2; }')"
+    echo
+}
+# print_sys_info
 
+
+check_version() {
+    local cli="${1}"
+    local command_to_print_version="${2}"
+    if command -v "$cli" &>/dev/null; then
+        eval "$command_to_print_version"
+    else
+        echo "$cli not found" >&2
+    fi
+}
+
+check_version_all() {
+    check_version "zsh" "echo -e \"zsh\tv$(zsh --version | awk '{ print $2; }')\""
+    check_version "tmux" "echo -e \"tmux\tv$(tmux -V | awk '{ print $2; }')\""
+    check_version "nvim" "echo -e \"nvim\t$(nvim --version | sed -n '1p' | head -n 1 | awk '{ print $2; }')\""
+    check_version "python" "echo -e \"python\tv$(python --version | awk '{ print $2; }')\""
+    check_version "git" "echo -e \"git\tv$(git --version | awk '{ print $3; }')\""
+    if [[ ! $(uname -r | grep 'WSL2') ]]; then
+        check_version "docker" "echo -e \"docker\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
+    fi
+    if [ -f ${gpu_driver_path} ]; then
+        check_version "nvcc " "echo -e \"nvcc\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
+    fi
+    check_version "conda" "echo -e \"conda\tv$(conda --version | awk '{ print $2; }')\""
+    echo
+}
