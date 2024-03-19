@@ -459,11 +459,14 @@ local plugins = {
                     group_empty = true,
                 },
                 filters = {
-                    dotfiles = false,
+                    git_ignored = false,
                 },
             })
         end,
     },
+    {
+        "jeetsukumaran/vim-indentwise"
+    }
 }
 
 local opts = {}
