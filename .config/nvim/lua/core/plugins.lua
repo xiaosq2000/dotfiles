@@ -101,13 +101,13 @@ local plugins = {
                     local opts = { buffer = ev.buf }
 
                     vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
-                    vim.keymap.set('n', '<space>gk', vim.lsp.buf.signature_help, opts)
+                    vim.keymap.set('n', 'gk', vim.lsp.buf.signature_help, opts)
                     vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-                    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-                    vim.keymap.set('n', '<space>D', vim.lsp.buf.type_definition, opts)
-                    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
+                    -- vim.keymap.set('n', 'gD', vim.lsp.buf.definition, opts)
+                    vim.keymap.set('n', 'gY', vim.lsp.buf.type_definition, opts)
+                    vim.keymap.set('n', 'gR', vim.lsp.buf.references, opts)
+                    vim.keymap.set('n', 'gM', vim.lsp.buf.implementation, opts)
                     vim.keymap.set('n', '<space>rn', vim.lsp.buf.rename, opts)
-                    vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
                     vim.keymap.set('n', '<space>f', function()
                         vim.lsp.buf.format { async = true }
                     end, opts)
@@ -121,6 +121,9 @@ local plugins = {
                     vim.keymap.set({ 'n', 'v' }, '<space>ca', vim.lsp.buf.code_action, opts)
                 end,
             })
+            -- When using conda, 'clangd' managed by 'mason-lspconfig' seems buggy.
+            -- Manually installation is a work-around: `conda install -c conda-forge clang-tools'
+            require 'lspconfig'.clangd.setup {}
         end
     },
     -- portable package manager to easily install and manage LSP servers, DAP servers, linters, and formatters.
@@ -137,7 +140,7 @@ local plugins = {
         config = function()
             require("mason-lspconfig").setup {
                 automatic_installation = true,
-                ensure_installed = { "ruff_lsp", "pyright", "clangd", "cmake", "bashls", "autotools_ls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab" },
+                ensure_installed = { "ruff_lsp", "pyright", "cmake", "bashls", "autotools_ls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab" },
 
             }
             local on_attach = function(client)
@@ -185,7 +188,7 @@ local plugins = {
                             },
                         },
                     }
-                end,
+                end
             }
         end
     },
@@ -482,7 +485,27 @@ local plugins = {
     },
     {
         "jeetsukumaran/vim-indentwise"
+    },
+    {
+        'windwp/nvim-autopairs',
+        event = "InsertEnter",
+        config = true
+        -- use opts = {} for passing setup options
+        -- this is equalent to setup({}) function
+    },
+    {
+        "RRethy/vim-illuminate"
+    },
+    {
+        "DNLHC/glance.nvim",
+        config = function()
+            vim.keymap.set('n', 'gd', '<CMD>Glance definitions<CR>')
+            vim.keymap.set('n', 'gr', '<CMD>Glance references<CR>')
+            vim.keymap.set('n', 'gy', '<CMD>Glance type_definitions<CR>')
+            vim.keymap.set('n', 'gm', '<CMD>Glance implementations<CR>')
+        end
     }
+
 }
 
 local opts = {}
