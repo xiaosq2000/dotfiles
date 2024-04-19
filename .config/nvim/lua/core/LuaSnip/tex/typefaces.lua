@@ -17,6 +17,9 @@ return {
     \setmainfont{Source Serif 4}
     \setsansfont{Source Sans 3}
     \setmonofont{Source Code Pro}
+    % \setmainfont{TeX Gyre Pagella}
+    % \setsansfont{TeX Gyre Heros}
+    % \setmonofont{Fira Code}
 \usepackage{xeCJK}
     \setCJKmainfont{思源宋体}
     \setCJKsansfont{思源黑体}

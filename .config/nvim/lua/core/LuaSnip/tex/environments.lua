@@ -66,7 +66,7 @@ return {
         fmta(
             [[
 \begin{itemize}
-    \setlength{\itemsep}{1ex}
+    \setlength{\itemsep}{1.5ex}
     \item <>
 \end{itemize}
     ]],
@@ -77,7 +77,7 @@ return {
         fmta(
             [[
 \begin{enumerate}
-    \setlength{\itemsep}{1ex}
+    \setlength{\itemsep}{1.5ex}
     \item <>
 \end{enumerate}
     ]],
