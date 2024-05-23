@@ -4,27 +4,27 @@
 vim.g.mapleader = "\\"
 local opts = { noremap = true, silent = true }
 
-vim.keymap.set({"i", "s"}, "jk", "<esc>", opts)
+vim.keymap.set({ "i", "s" }, "jk", "<esc>", opts)
 
-vim.keymap.set({"n", "v"}, "j", "gj", opts)
-vim.keymap.set({"n", "v"}, "gj", "j", opts)
-vim.keymap.set({"n", "v"}, "k", "gk", opts)
-vim.keymap.set({"n", "v"}, "gk", "k", opts)
+vim.keymap.set({ "n", "v" }, "j", "gj", opts)
+vim.keymap.set({ "n", "v" }, "gj", "j", opts)
+vim.keymap.set({ "n", "v" }, "k", "gk", opts)
+vim.keymap.set({ "n", "v" }, "gk", "k", opts)
 
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.keymap.set("n", "<leader>ec", "<cmd>vsp ~/.config/nvim/<cr>", opts)
 
--- copy to system clipboard 
+-- copy to system clipboard
 vim.keymap.set("v", "<enter>", "\"+y", opts)
 
 -- comment block, ref: https://vi.stackexchange.com/a/421
 -- Todo: adapt to indent
 -- Todo: elegantly
-vim.keymap.set({"n", "i"}, "<leader>c/", "<esc><cmd>center 80<cr>hhv0r/A<space><esc>40A/<esc>d80<bar>YppVr/kk.", opts)
-vim.keymap.set({"n", "i"}, "<leader>c%", "<esc><cmd>center 80<cr>hhv0r%A<space><esc>40A%<esc>d80<bar>YppVr%kk.", opts)
-vim.keymap.set({"n", "i"}, "<leader>c-", "<esc><cmd>center 80<cr>hhv0r-A<space><esc>40A-<esc>d80<bar>YppVr-kk.", opts)
-vim.keymap.set({"n", "i"}, "<leader>c#", "<esc><cmd>center 80<cr>hhv0r#A<space><esc>40A#<esc>d80<bar>YppVr#kk.", opts)
+vim.keymap.set({ "n", "i" }, "<leader>c/", "<esc><cmd>center 80<cr>hhv0r/A<space><esc>40A/<esc>d80<bar>YppVr/kk.", opts)
+vim.keymap.set({ "n", "i" }, "<leader>c%", "<esc><cmd>center 80<cr>hhv0r%A<space><esc>40A%<esc>d80<bar>YppVr%kk.", opts)
+vim.keymap.set({ "n", "i" }, "<leader>c-", "<esc><cmd>center 80<cr>hhv0r-A<space><esc>40A-<esc>d80<bar>YppVr-kk.", opts)
+vim.keymap.set({ "n", "i" }, "<leader>c#", "<esc><cmd>center 80<cr>hhv0r#A<space><esc>40A#<esc>d80<bar>YppVr#kk.", opts)
 -- Todo: comment with ctrl+/ like vscode
 
 --------------------------------------------------------------------------------

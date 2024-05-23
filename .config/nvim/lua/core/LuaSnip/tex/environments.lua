@@ -93,7 +93,7 @@ return {
     \vspace*{\fill}
 \end{frame}
     ]],
-            { i(1, "Title"), i(2, "Hello") }
+            { i(1, "Title"), i(2, "TODO") }
         )
     ),
     s({ trig = "figure" },
@@ -104,7 +104,7 @@ return {
     \includegraphics[width=0.<>\linewidth]{<>}
     \vspace*{0.5ex}
     \caption{<>}
-    \label{fig:<>}
+    % \label{fig:<>}
 \end{figure}
     ]],
             { i(1, "htbp"), i(2, "7"), i(3, "path"), i(4), rep(4) }
@@ -134,16 +134,21 @@ return {
             [[
 \begin{table}[<>]
     \centering
-    \begin{tabular}{<>}
+    \begin{tblr}{<>}
         \toprule
+        Column 1 & Column 2 \\
         \midrule
+        Hello & World \\
+        \midrule[dashed]
+        Hello & World \\
         \bottomrule
-    \end{tabular}
-    \caption{<>}
-    \label{table:<>}
+    \end{tblr}
+    % \vspace{0.5ex}
+    % \caption{<>}
+    % \label{table:<>}
 \end{table}
     ]],
-            { i(1, "htbp"), i(2, "cc"), i(3, ""), rep(3) }
+            { i(1, "htbp"), i(2, "XX"), i(3, ""), rep(3) }
         )
     ),
     s({ trig = "quote" },

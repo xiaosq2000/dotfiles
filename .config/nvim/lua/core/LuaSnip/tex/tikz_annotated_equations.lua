@@ -22,8 +22,6 @@ return {
         \usepackage{tikz}
         \usetikzlibrary{calc,tikzmark}
         \usepackage{tcolorbox}
-        \colorlet{marknode_color}{cyan!30}
-        \colorlet{annotate_color}{cyan!60}
     ]]
         , {})
     ),
@@ -49,7 +47,7 @@ return {
     s({ trig = "tikz_annotate" },
         fmta(
             [[
-        \path (<>.<>) ++ (<>em,<>em) node[anchor=<>,color=<>] (<>_annotate) {\footnotesize{<>}};
+        \path (<>.<>) ++ (<>em,<>em) node[anchor=<>,color=<>] (<>_annotate) {\scriptsize{<>}};
         \draw [color=<>] (<>.<>) |- (<>_annotate.<>);
     ]],
             { i(1, "marknode name"), i(2, "marknode direction"), i(3, "0"), i(4, "0"), i(5, "anchor direction"),

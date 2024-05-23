@@ -320,6 +320,7 @@ local plugins = {
                 ['hooks'] = '',
                 ['options'] = {
                     '-pdflatex=xelatex', -- use xelatex engine
+                    '-shell-escape',
                     '-verbose',
                     '-file-line-error',
                     '-synctex=1',
@@ -456,7 +457,7 @@ local plugins = {
             })
 
             -- setup must be called before loading
-            vim.cmd.colorscheme "catppuccin-latte"
+            vim.cmd.colorscheme "catppuccin-macchiato"
         end
     },
     {

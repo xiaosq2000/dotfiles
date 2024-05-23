@@ -94,11 +94,25 @@ return {
     --------------------------------------------------------------------------------
     ------------------------------------ cases -------------------------------------
     --------------------------------------------------------------------------------
-    s({ trig = "cases", dscr = "" },
+    s({ trig = "cases", dscr = "based on 'empheq' package" },
         fmta([[
 \begin{empheq}[left={\eqmath[r]{A}{<>}\empheqlbrace}]{alignat=2}
     &\eqmath[l]{B}{<>} &\qquad& \eqtext[l]{C}{<>} \\
 \end{empheq}
         ]], { i(1, "stuff to be classified"), i(2, "one case"), i(3, "condition") })
+    ),
+    s({ trig = "bm", dscr = "" },
+        fmta([[
+\begin{bmatrix}
+    <>
+\end{bmatrix}
+        ]], { i(1, "") })
+    ),
+    s({ trig = "pm", dscr = "" },
+        fmta([[
+\begin{pmatrix}
+    <>
+\end{pmatrix}
+        ]], { i(1, "") })
     ),
 }
