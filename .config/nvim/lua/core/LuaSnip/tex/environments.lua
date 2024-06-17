@@ -107,7 +107,7 @@ return {
     % \label{fig:<>}
 \end{figure}
     ]],
-            { i(1, "htbp"), i(2, "7"), i(3, "path"), i(4), rep(4) }
+            { i(1, "htbp"), i(2, "7"), i(3, "example-image"), i(4), rep(4) }
         )
     ),
     s({ trig = "minipage" },
@@ -126,7 +126,7 @@ return {
     \caption{Caption}
 \end{figure}
     ]],
-            { i(1, "path"), i(2, "path") }
+            { i(1, "example-image"), i(2, "example-image") }
         )
     ),
     s({ trig = "table" },

@@ -18,95 +18,239 @@ local get_visual = function(args, parent)
 end
 
 return {
-    s({ trig = "beamer-preamble", dscr = "based on metropolis theme, all in one" }, fmta([[
-\documentclass[utf-8, 10pt, aspectratio=1610]{beamer}
+    s({ trig = "beamer-preamble-all-in-one" },
+        fmta(
+            [[
+\documentclass[10pt,aspectratio=1610]{beamer}
+\usetheme[subsectionpage=progressbar,progressbar=frametitle,block=fill]{moloch}
 \mode<<presentation>>
-\usetheme[
-background=light,
-titleformat=regular,
-% subsectionpage=progressbar,
-subsectionpage=none,
-block=fill,
-]{metropolis}
-\usepackage{appendixnumberbeamer}
-\usepackage{fontawesome5}
-% fontspec is preloaded
-    % \setsansfont[BoldFont={Fira Sans SemiBold}]{Fira Sans Book}
-    \setmainfont{Source Serif 4}
 
-\usepackage{xcolor}
-    % ref: http://zhongguose.com
-    \definecolor{kongquelan}{RGB}{14,176,201}
-    \definecolor{shenhuilan}{RGB}{19,44,51}
-    \definecolor{jianniaolan}{RGB}{20,145,168}
-    \definecolor{koushaolv}{RGB}{93,190,138}
-    \definecolor{yingwulv}{RGB}{91,174,35}
-    \definecolor{jiguanghong}{RGB}{243,59,31}
-    \definecolor{xiangyehong}{RGB}{240,124,130}
-    \definecolor{xinghuang}{RGB}{250,142,22}
-    \definecolor{lusuihui}{RGB}{189,174,173}
-\usepackage{tikz}
-\usetikzlibrary{calc,tikzmark}
-\usepackage{tcolorbox}
-\colorlet{red_marknode}{xiangyehong!50}
-\colorlet{red_annotate}{xiangyehong}
-\colorlet{blue_marknode}{jianniaolan!50}
-\colorlet{blue_annotate}{jianniaolan}
-\colorlet{green_marknode}{yingwulv!50}
-\colorlet{green_annotate}{yingwulv}
-\colorlet{gray_marknode}{lusuihui!50}
-\colorlet{gray_annotate}{lusuihui}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% color %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage{xcolor} % pre-loaded by beamer
+\definecolor{kongquelan}{RGB}{14,176,201}
+\definecolor{koushaolv}{RGB}{93,190,138}
+\definecolor{yingwulv}{RGB}{91,174,35}
+\definecolor{shenhuilan}{RGB}{19,44,51}
+\definecolor{jianniaolan}{RGB}{20,145,168}
+\definecolor{jiguanghong}{RGB}{243,59,31}
+\definecolor{xiangyehong}{RGB}{240,124,130}
+%
+\definecolor{red}{HTML}{E9002D}
+\definecolor{amber}{HTML}{FFAA00}
+\definecolor{green}{HTML}{00B000}
+%
+\definecolor{um-blue}{HTML}{002855}
+\definecolor{um-gold}{HTML}{84754E}
+\definecolor{um-red}{HTML}{Ef3340}
+\definecolor{um-yellow}{HTML}{84754E}
+%
+% \colorlet{blue}{um-blue}
+% \colorlet{gold}{um-gold}
+% \colorlet{red}{um-red}
+% \colorlet{yellow}{um-yellow}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% personal modification of the beamer theme %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\useinnertheme{rectangles}
+
+% color
+\setbeamercolor{frametitle}{fg=black!2, bg=um-blue}
+\setbeamercolor{progress bar}{fg=um-gold, bg=um-gold!20}
+\setbeamercolor{item projected}{fg=black!2, bg=um-gold}
+\setbeamercolor{itemize item}{fg=um-gold}
+
+% progress width
+\makeatletter
+\setlength{\moloch@titleseparator@linewidth}{2.5pt}
+\setlength{\moloch@progressonsectionpage@linewidth}{2.5pt}
+\setlength{\moloch@progressinheadfoot@linewidth}{2.5pt}
+\makeatother
+
+% make footnotesize smaller
+\let\oldfootnotesize\footnotesize
+\renewcommand*{\footnotesize}{\oldfootnotesize\tiny}
+
+% footnote without counter
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+
+% footnotetext without counter
+\newcommand\blfootnotetext[1]{%
+  \begingroup
+  \renewcommand\thefootnotetext{}\footnotetext{#1}%
+  \addtocounter{footnotetext}{-1}%
+  \endgroup
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% table %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{booktabs}
+
+% ref: https://tex.stackexchange.com/a/614273/240783
+\usepackage{tabularray}
+\UseTblrLibrary{booktabs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% caption %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{caption}
-\usepackage{graphicx}
+\captionsetup{font={scriptsize},
+              labelfont={scriptsize},
+              textfont={scriptsize},
+              % hypcap=false,
+              % format=hang,
+              % margin=1cm
+             }
 
-\usepackage[backend=biber,natbib=true,style=ext-numeric-comp,sorting=none,backref=true]{biblatex}
-\addbibresource{references.bib}
-\renewcommand*{\bibfont}{\normalfont\small}
-\DeclareOuterCiteDelims{cite}{\textcolor{yingwulv}{\bibopenbracket}}{\textcolor{yingwulv}{\bibclosebracket}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% glyph %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{fontawesome5}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+\usepackage{romannum}
 
-\usepackage{amsmath}
-\usepackage{amsfonts}
-\usepackage{amsthm}
-\usepackage{mathtools}
-\usepackage{cases} % numcases
-% ref: https://tex.stackexchange.com/a/602213/240783
-\usepackage{empheq}
-\usepackage{eqparbox}
-\newcommand{\eqmath}[3][c]{%
-  % #1 = alignment, default c, #2 = label, #2 = math material
-  \eqmakebox[#2][#1]{$\displaystyle#3$}%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% graphics %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage{graphicx} % pre-loaded by beamer
+    \graphicspath{{../images}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% figure annotation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage{tikz} % pre-loaded by beamer
+
+%\annotatedFigureBoxCustom{1: bottom-left}{2: top-right}{3: label}{4: label-position}{5: box-color}{6: label-color}{7: border-color}{8: text-color}
+\newcommand*\annotatedFigureBoxCustom[8]{
+    \draw[#5,ultra thick] (#1) rectangle (#2);
+    \node at (#4) [fill=#6,thick,shape=rectangle,draw=#7,inner sep=2.5pt,font=\small\sffamily,text=#8] { #3 };
 }
-\newcommand{\eqtext}[3][c]{%
-  % #1 = alignment, default c, #2 = label, #2 = text material
-  \eqmakebox[#2][#1]{#3}%
+%\annotatedFigureBox{bottom-left}{top-right}{label}{label-position}
+\newcommand*\annotatedFigureBox[4]{
+    \annotatedFigureBoxCustom{#1}{#2}{#3}{#4}{um-gold}{um-gold}{um-gold}{black!2}
 }
+\newcommand*\annotatedFigureText[4]{\node[draw=none, anchor=south west, text=#2, inner sep=0, text width=#3\linewidth,font=\sffamily] at (#1){#4};}
+\newenvironment{annotatedFigure}[1]{
+    \centering
+    \begin{tikzpicture}
+        \node[anchor=south west,inner sep=0] (image) at (0,0) { #1 };
+    \begin{scope}[x={(image.south east)},y={(image.north west)}]
+}
+{
+    \end{scope}
+    \end{tikzpicture}
+}
+%\figureBox{bottom-left}{top-right}{color}{thickness}
+\newcommand*\figureBox[4]{\draw[#3,#4,rounded corners] (#1) rectangle (#2);}
+
+\usetikzlibrary{calc,tikzmark}
+% \usepackage{tcolorbox} % pre-loaded by beamer
+\usepackage{makecell}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% pdf, svg, animation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{pdfpages}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% others %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{lipsum}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% reference %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[natbib=true, backend=biber, style=authoryear-icomp, useprefix=true, style=ieee]{biblatex}
+% \addbibresource{../references/reference.bib}
+\AtBeginBibliography{\scriptsize}
+
+\usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
-    linkcolor=xinghuang!80,
+    linkcolor=.,
     anchorcolor=.,
     filecolor=.,
     menucolor=.,
     runcolor=.,
-    urlcolor=jianniaolan,
-    citecolor=yingwulv,
+    urlcolor=cyan,
+    citecolor=.,
 }
 
-\title{<>}
-\subtitle{<>}
-\author{shuqi}
-\date{\today}
-\institute{
-    \faGithub\;
-    \href{https://github.com/xiaosq2000}{xiaosq2000}
-    \quad
-    \faEnvelope\;
-    \href{xiaosq2000@gmail.com}{xiaosq2000@gmail.com}
-}
+\title{Beamer Slides}
+\subtitle{Using moloch theme}
+\author{Author}
+
 \begin{document}
-    \maketitle
-    \begin{frame}{Hello}
-    \end{frame}
+\begin{frame}
+    \frametitle
+\end{frame}
+\begin{frame}{Outline}
+	\tableofcontents
+\end{frame}
+% \appendix
+% \section{\appendixname}
+% \subsection{References}
+% \begin{frame}[allowframebreaks]
+% 	\frametitle{References}
+% 	\nocite{*}
+% 	\printbibliography[heading=none]
+% \end{frame}
 \end{document}
-    ]], { i(1, "title"), i(2, "subtitle")})),
+    ]], {}
+        )
+    ),
+    s({ trig = "figure-annotation-preamble" },
+        fmta(
+            [[
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% figure annotation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{tikz} % pre-loaded by beamer
+
+% Usage: \annotatedFigureBoxCustom{1: bottom-left}{2: top-right}{3: label}{4: label-position}{5: box-color}{6: label-color}{7: border-color}{8: text-color}
+\newcommand*\annotatedFigureBoxCustom[8]{
+    \draw[#5,ultra thick] (#1) rectangle (#2); 
+    \node at (#4) [fill=#6,thick,shape=rectangle,draw=#7,inner sep=2.5pt,font=\small\sffamily,text=#8] { #3 };
+}
+% \annotatedFigureBox{bottom-left}{top-right}{label}{label-position}
+\newcommand*\annotatedFigureBox[4]{
+    \annotatedFigureBoxCustom{#1}{#2}{#3}{#4}{um-gold}{um-gold}{um-gold}{black!2}
+}
+\newcommand*\annotatedFigureText[4]{\node[draw=none, anchor=south west, text=#2, inner sep=0, text width=#3\linewidth,font=\sffamily] at (#1){#4};}
+\newenvironment{annotatedFigure}[1]{
+    \centering
+    \begin{tikzpicture}
+        \node[anchor=south west,inner sep=0] (image) at (0,0) { #1 };
+    \begin{scope}[x={(image.south east)},y={(image.north west)}]
+}
+{
+    \end{scope}
+    \end{tikzpicture}
+}
+% Usage: \figureBox{bottom-left}{top-right}{color}{thickness}
+\newcommand*\figureBox[4]{\draw[#3,#4,rounded corners] (#1) rectangle (#2);}
+
+\usepackage{makecell}
+\usetikzlibrary{calc,tikzmark}
+\usepackage{tcolorbox} % pre-loaded by beamer
+\colorlet{1_marknode_color}{cyan!20}
+\colorlet{1_annotate_color}{cyan!60}
+\colorlet{2_marknode_color}{green!20}
+\colorlet{2_annotate_color}{green!60}
+\colorlet{3_marknode_color}{um-red!15}
+\colorlet{3_annotate_color}{um-red!55}
+    ]], {}
+        )
+    ),
 }
