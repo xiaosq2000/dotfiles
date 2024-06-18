@@ -4,10 +4,22 @@ local sn = ls.snippet_node
 local t = ls.text_node
 local i = ls.insert_node
 local f = ls.function_node
+local c = ls.choice_node
 local d = ls.dynamic_node
 local fmt = require("luasnip.extras.fmt").fmt
 local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
+local rec_ls
+rec_ls = function()
+    return sn(nil, {
+        c(1, {
+            -- important!! Having the sn(...) as the first choice will cause infinite recursion.
+            t({ "" }),
+            -- The same dynamicNode as in the snippet (also note: self reference).
+            sn(nil, { t({ "", "\t\\item " }), i(1), d(2, rec_ls, {}) }),
+        }),
+    });
+end
 
 return {
     s({ trig = "e" },
@@ -96,6 +108,16 @@ return {
             { i(1, "Title"), i(2, "TODO") }
         )
     ),
+    s({ trig = "Frame" },
+        fmta(
+            [[
+\begin{Frame}{<>}
+    <>
+\end{Frame}
+    ]],
+            { i(1, "Title"), i(2, "TODO") }
+        )
+    ),
     s({ trig = "figure" },
         fmta(
             [[
@@ -123,6 +145,7 @@ return {
        \centering
        \includegraphics[width=\linewidth]{<>}
     \end{minipage}
+    \vspace*{0.5ex}
     \caption{Caption}
 \end{figure}
     ]],

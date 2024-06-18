@@ -381,6 +381,11 @@ local plugins = {
             vim.keymap.set({ "i" }, "<C-F>", function() ls.expand_or_jump() end, { silent = true })
             vim.keymap.set({ "s" }, "<C-F>", function() ls.jump(1) end, { silent = true })
             vim.keymap.set({ "i", "s" }, "<C-B>", function() ls.jump(-1) end, { silent = true })
+            vim.keymap.set({ "i", "s" }, "<C-E>", function()
+                if ls.choice_active() then
+                    ls.change_choice(1)
+                end
+            end, { silent = true })
 
             -- Load all snippets from the nvim/LuaSnip directory at startup
             -- require("luasnip.loaders.from_lua").load({ paths = "~/.config/nvim/lua/core/LuaSnip" })
@@ -490,7 +495,8 @@ local plugins = {
     {
         'windwp/nvim-autopairs',
         event = "InsertEnter",
-        config = true
+        config = true,
+        disable_filetype = { "tex" },
         -- use opts = {} for passing setup options
         -- this is equalent to setup({}) function
     },
