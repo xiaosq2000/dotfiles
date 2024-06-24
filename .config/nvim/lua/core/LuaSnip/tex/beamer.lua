@@ -24,6 +24,7 @@ return {
 \documentclass[
     10pt,
     aspectratio=1610,
+    xcolor={dvipsnames,pst},
     % handout
 ]{beamer}
 \usetheme[
@@ -32,26 +33,32 @@ return {
     block=transparent
 ]{moloch}
 \mode<<presentation>>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%% personal modification of the moloch/metropolis theme %%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% frametitle with right-aligned "section, subsection"
+\newenvironment{Frame}[1]{
+    \begin{frame}{#1 \hspace{0pt plus 1filll} \scriptsize \(\triangleleft\)\;\subsecname\;\(\triangleleft\)\;\secname}\vspace*{\fill}
+}{\vspace*{\fill}\end{frame}}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%% personal modification of the beamer theme %%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % inner theme
 \useinnertheme{rectangles}
 
-% color
-% \usepackage{xcolor} % pre-loaded by beamer
+% color palette
 \definecolor{um-blue}{HTML}{002855}
 \definecolor{um-gold}{HTML}{84754E}
 \definecolor{um-red}{HTML}{Ef3340}
 \definecolor{um-yellow}{HTML}{84754E}
+% color theme
+\colorlet{color-frametitle}{um-blue}
+\colorlet{color-progressbar}{um-gold}
 
-\setbeamercolor{frametitle}{fg=black!2, bg=um-blue}
-\setbeamercolor{progress bar}{fg=um-gold, bg=um-gold!20}
-\setbeamercolor{item projected}{fg=black!2, bg=um-gold}
-\setbeamercolor{itemize item}{fg=um-gold}
+\setbeamercolor{frametitle}{fg=black!2, bg=color-frametitle}
+\setbeamercolor{progress bar}{fg=color-progressbar, bg=color-progressbar!20}
+\setbeamercolor{item projected}{fg=black!2, bg=color-progressbar}
+\setbeamercolor{itemize item}{fg=color-progressbar}
 
-% progress width
+% make progress bar's width larger
 \makeatletter
 \setlength{\moloch@titleseparator@linewidth}{2.5pt}
 \setlength{\moloch@progressonsectionpage@linewidth}{2.5pt}
@@ -79,6 +86,33 @@ return {
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% fonts %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{xeCJK}
+\setCJKmainfont{思源宋体}
+\setCJKsansfont{思源黑体}
+\setCJKmonofont{思源等宽}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% color %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\definecolorseries{marknode-color-series}{hsb}{last}[hsb]{0.0,0.12,0.95}[hsb]{0.95,0.12,0.95}
+\definecolorseries{annotation-color-series}{hsb}{last}[hsb]{0.0,0.8,0.65}[hsb]{0.95,0.8,0.65}
+\resetcolorseries[8]{marknode-color-series}
+\resetcolorseries[8]{annotation-color-series}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% glyph %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{fontawesome5}
+\usepackage{bbding}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+\usepackage{romannum}
+\usepackage{stmaryrd} % for \mapsfrom (inverse of \mapsto)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% table %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{booktabs}
@@ -100,108 +134,90 @@ return {
              }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% glyph %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{fontawesome5}
-\usepackage{pifont}
-\newcommand{\cmark}{\ding{51}}
-\newcommand{\xmark}{\ding{55}}
-\usepackage{romannum}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% graphics %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % \usepackage{graphicx} % pre-loaded by beamer
-    \graphicspath{{../images}}
+\graphicspath{{./images}}
 
-% \usepackage{tikz} % pre-loaded by beamer
+\usepackage{forest} % mindmap
 
-% \usepackage{tcolorbox} % pre-loaded by beamer
+% \usetikzlibrary{calc,tikzmark,arrows.meta,fit,positioning,decorations.markings}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% tikz figure annotation %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%% equation annotation by TikZ %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage{tikz}
+% \usepackage[dvipsnames]{xcolor}
+\usetikzlibrary{calc,tikzmark}
+% \usepackage{tcolorbox}
+\usepackage{makecell}
+\usepackage{xstring}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Usage:
-%     \annotatedFigureBoxCustom{1: bottom-left}{2: top-right}{3: label}{4: label-position}{5: box-color}{6: label-color}{7: border-color}{8: text-color}
-\newcommand*\annotatedFigureBoxCustom[8]{
-    \draw[#5,ultra thick] (#1) rectangle (#2); \node at (#4) [fill=#6,thick,shape=rectangle,draw=#7,inner sep=2.5pt,font=\small\sffamily,text=#8] { #3 };
+% \annotatedEquation{1: color/colorseries}{2: node name}{3: node direction}{4: x shift}{5: y shift}{6: anchor direction}{7: color/colorseries name}{8: annotation}{9: baseline direction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newenvironment{annotatedEquationEnv}{
+    \begin{tikzpicture}[
+        overlay, remember picture,
+        >>=stealth, <<-,
+        nodes={align=left,inner ysep=1pt},
+    ]
 }
+{
+    \end{tikzpicture}
+}
+\newcommand*{\annotatedEquation}[9]{%
+     \IfEqCase{#1}{%
+        {color}{%
+            \path (#2.#3) ++ (#4,#5) node [anchor=#6] (#2-annotate) { \color{#7} \scriptsize \makecell[l]{#8} };%
+            \draw [#7] (#2.#3) |- (#2-annotate.south #9);%
+        }%
+        {colorseries}{%
+            \path (#2.#3) ++ (#4,#5) node [anchor=#6] (#2-annotate) { \color{#7!!} \scriptsize \makecell[l]{#8} };%
+            \draw [#7!!] (#2.#3) |- (#2-annotate.south #9);%
+            \textcolor{#7!!+}{}%
+        }%
+    }[\PackageError{annotatedEquation}{Undefined option to annotatedEquation #1}{}]%
+}%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% figure annotation by TikZ  %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \usepackage{tikz}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Usage:
+% \begin{annotatedFigureEnv}
+%     {\includegraphics[width=0.5\linewidth]{example-image}}
 %     \annotatedFigureBox{bottom-left}{top-right}{label}{label-position}
-\newcommand*\annotatedFigureBox[4]{
-    \annotatedFigureBoxCustom{#1}{#2}{#3}{#4}{um-gold}{um-gold}{um-gold}{black!2}
+% \end{annotatedFigureEnv}
+% Usage:
+% \annotatedFigure{bottom-left}{top-right}{label}{label-position}
+% Usage:
+% \annotatedFigureImpl{1: bottom-left}{2: top-right}{3: label}{4: label-position}{5: box-color}{6: label-color}{7: border-color}{8: text-color}
+% Usage:
+% \figureBox{bottom-left}{top-right}{color}{thickness}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand*\annotatedFigureImpl[8]{
+    \draw [#5, ultra thick] (#1) rectangle (#2);
+    \node at (#4) [fill=#6, thick, shape=rectangle, draw=#7, inner sep=2.5pt, font=\small\sffamily, text=#8] { #3 };
 }
-\newcommand*\annotatedFigureText[4]{\node[draw=none, anchor=south west, text=#2, inner sep=0, text width=#3\linewidth,font=\sffamily] at (#1){#4};}
-\newenvironment{annotatedFigure}[1]{
+\newcommand*\annotatedFigure[4]{
+    \annotatedFigureImpl{#1}{#2}{#3}{#4}{color-progressbar}{color-progressbar}{color-progressbar}{black!2}
+}
+\newcommand*\annotatedFigureText[4]{
+    \node[draw=none, anchor=south west, text=#2, inner sep=0, text width=#3\linewidth,font=\sffamily] at (#1) {#4};
+}
+\newenvironment{annotatedFigureEnv}[1]{
     \centering
     \begin{tikzpicture}
         \node[anchor=south west,inner sep=0] (image) at (0,0) { #1 };
-    \begin{scope}[x={(image.south east)},y={(image.north west)}]
+        \begin{scope}[x={(image.south east)},y={(image.north west)}]
 }
 {
-    \end{scope}
+        \end{scope}
     \end{tikzpicture}
 }
-% Usage:
-%     \figureBox{bottom-left}{top-right}{color}{thickness}
 \newcommand*\figureBox[4]{\draw[#3,#4,rounded corners] (#1) rectangle (#2);}
-
-\usetikzlibrary{calc,tikzmark,arrows.meta,fit,positioning,decorations.markings}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% tikz helpful grid %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Reference: https://tex.stackexchange.com/a/39698/240783
-% Usage:
-%     \draw (-2,-2) to[grid with coordinates] (7,4);
-\makeatletter
-\def\grd@save@target#1{%
-	\def\grd@target{#1}}
-\def\grd@save@start#1{%
-	\def\grd@start{#1}}
-\tikzset{
-	grid with coordinates/.style={
-			to path={%
-					\pgfextra{%
-						\edef\grd@@target{(\tikztotarget)}%
-						\tikz@scan@one@point\grd@save@target\grd@@target\relax
-						\edef\grd@@start{(\tikztostart)}%
-						\tikz@scan@one@point\grd@save@start\grd@@start\relax
-						\draw[minor help lines] (\tikztostart) grid (\tikztotarget);
-						\draw[major help lines] (\tikztostart) grid (\tikztotarget);
-						\grd@start
-						\pgfmathsetmacro{\grd@xa}{\the\pgf@x/1cm}
-						\pgfmathsetmacro{\grd@ya}{\the\pgf@y/1cm}
-						\grd@target
-						\pgfmathsetmacro{\grd@xb}{\the\pgf@x/1cm}
-						\pgfmathsetmacro{\grd@yb}{\the\pgf@y/1cm}
-						\pgfmathsetmacro{\grd@xc}{\grd@xa + \pgfkeysvalueof{/tikz/grid with coordinates/major step}}
-						\pgfmathsetmacro{\grd@yc}{\grd@ya + \pgfkeysvalueof{/tikz/grid with coordinates/major step}}
-						\foreach \x in {\grd@xa,\grd@xc,...,\grd@xb}
-						\node[anchor=north] at (\x,\grd@ya) {\pgfmathprintnumber{\x}};
-						\foreach \y in {\grd@ya,\grd@yc,...,\grd@yb}
-						\node[anchor=east] at (\grd@xa,\y) {\pgfmathprintnumber{\y}};
-					}
-				}
-		},
-	minor help lines/.style={
-			help lines,
-			step=\pgfkeysvalueof{/tikz/grid with coordinates/minor step}
-		},
-	major help lines/.style={
-			help lines,
-			line width=\pgfkeysvalueof{/tikz/grid with coordinates/major line width},
-			step=\pgfkeysvalueof{/tikz/grid with coordinates/major step}
-		},
-	grid with coordinates/.cd,
-	minor step/.initial=.2,
-	major step/.initial=1,
-	major line width/.initial=2pt,
-}
-\makeatother
-
-\usepackage{makecell}
-\usepackage{forest}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% pdf, svg, animation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -214,18 +230,14 @@ return {
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% others %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{lipsum}
+
 \usepackage{adjustbox}
-\usepackage{stmaryrd} % \mapsfrom
 
 % Usage: Map numbers to alphabets
 % Example: \Letter{1} prints A, \Letter{2} prints B
 \makeatletter
 \newcommand{\Letter}[1]{\@Alph{#1}}
 \makeatother
-
-\usepackage{bbding}
-\usepackage[weather]{ifsym}
-% \usetikzlibrary{shapes.geometric,positioning}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% reference %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -249,22 +261,37 @@ return {
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% meta info %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\title{A template for slides}
-\subtitle{Beamer, TikZ, ...}
+\title{Academic Slides}
+\subtitle{a template based on Beamer, TikZ, ...}
 \author{Shuqi XIAO}
+% \logo{
+%     \includegraphics[width=1.5cm]{example-image}
+% }
+% \titlegraphic{
+%     \begin{tikzpicture}[remember picture, overlay]
+%         \usetikzlibrary{calc}
+%         \node [anchor=north east] at ($(current page.north east)+(-2.5em,-2.5em)$) {
+%             \includegraphics[width=3cm]{example-image}
+%         };
+%     \end{tikzpicture}
+% }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% document %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
+\maketitle
+
 \begin{frame}{Outline}
 	\tableofcontents
 \end{frame}
-
 \appendix
+
 \section{\appendixname}
+
 \subsection{References}
+
 \begin{frame}[allowframebreaks]
 	\frametitle{References}
 	\nocite{*}

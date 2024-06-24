@@ -18,18 +18,14 @@ local get_visual = function(args, parent)
 end
 
 return {
-    s({ trig = "xcolor" },
+    s({ trig = "preamble-color" },
         fmta(
             [[
-        \usepackage{xcolor}
-            % ref: http://zhongguose.com
-            \definecolor{kongquelan}{RGB}{14,176,201}
-            \definecolor{koushaolv}{RGB}{93,190,138}
-            \definecolor{yingwulv}{RGB}{91,174,35}
-            \definecolor{shenhuilan}{RGB}{19,44,51}
-            \definecolor{jianniaolan}{RGB}{20,145,168}
-            \definecolor{jiguanghong}{RGB}{243,59,31}
-            \definecolor{xiangyehong}{RGB}{240,124,130}
+% \usepackage[dvipsnames]{xcolor}
+\definecolorseries{marknode-color-series}{hsb}{last}[hsb]{0.0,0.15,0.95}[hsb]{0.99,0.15,0.95}
+\definecolorseries{annotation-color-series}{hsb}{last}[hsb]{0.0,0.8,0.65}[hsb]{0.99,0.8,0.65}
+\resetcolorseries[12]{marknode-color-series}
+\resetcolorseries[12]{annotation-color-series}
     ]], {}
         )
     ),

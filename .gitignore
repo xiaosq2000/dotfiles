@@ -24,3 +24,5 @@
 !.config/zsh/
 
 !.config/starship.toml
+
+!.latexmkrc
