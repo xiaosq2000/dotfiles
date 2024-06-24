@@ -278,9 +278,9 @@ return {
     ]], {})
     ),
     --------------------------------------------------------------------------------
-    --------------------------- mindmap concept example ----------------------------
+    ----------------------------------- mindmap  -----------------------------------
     --------------------------------------------------------------------------------
-    s({ trig = "mindmap-concept-example" },
+    s({ trig = "example-mindmap" },
         fmta([[
 \resizebox{!}{0.7\textheight}{
     \begin{tikzpicture}
@@ -353,37 +353,64 @@ return {
     ]], {})
     ),
     --------------------------------------------------------------------------------
-    --------------------------- mindmap taxonomy example ---------------------------
+    ----------------------------------- taxonomy -----------------------------------
     --------------------------------------------------------------------------------
-    s({ trig = "preamble-mindmap-taxonomy" },
+    s({ trig = "preamble-taxonomy" },
         fmta([[
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Taxonomy by TikZ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ref: https://tex.stackexchange.com/a/112471/240783
+% ref: https://tex.stackexchange.com/a/357412/240783
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usetikzlibrary{shadows}
+\makeatletter
+\def\tikzopacityregister{.2} % the opacity of the shadows
+\tikzset{
+  opacity/.append code={
+    \pgfmathsetmacro\tikzopacityregister{#1*\tikzopacityregister}
+  },
+  opacity aux/.code={ % this is the original definition of opacity
+    \tikz@addoption{\pgfsetstrokeopacity{#1}\pgfsetfillopacity{#1}}
+  },
+  every shadow/.style={opacity aux=\tikzopacityregister}
+}
+\makeatother
 \tikzset{
     my node for tree/.style={
             text=black,
             draw=lightgray!50,
-            inner color=lightgray!5,
-            outer color=lightgray!20,
+            fill=lightgray!20,
+            % inner color=lightgray!5,
+            % outer color=lightgray!20,
             thick,
             minimum width=12mm,
             minimum height=6mm,
             rounded corners=3,
             text height=1.5ex,
             text depth=0ex,
-            font=\sffamily\bf,
+            font={\sffamily},
             drop shadow,
-        }
+        },
+    invisible/.style={opacity=0,text opacity=0},
+    visible on/.style={alt=#1{}{invisible}},
+    alt/.code args={<<#1>>#2#3}{%
+      \alt<<#1>>{\pgfkeysalso{#2}}{\pgfkeysalso{#3}} % \pgfkeysalso doesn't change the path
+    },
 }
 \forestset{
+    visible on/.style={
+        for tree={
+            /tikz/visible on={#1},
+            edge+={/tikz/visible on={#1}},
+        }
+    },
     my tree/.style={
             my node for tree,
             s sep+=4pt,
-            l sep+=15pt,
+            l sep+=10pt,
             grow'=east,
-            edge={lightgray, thin},
+            edge+={lightgray},
             parent anchor=east,
             child anchor=west,
             edge path={
@@ -398,68 +425,105 @@ return {
 }
         ]], {})
     ),
-    s({ trig = "mindmap-taxonomy-example" },
+    s({ trig = "example-taxonomy" },
         fmta([[
-\resizebox{0.8\textwidth}{!}{
-    \begin{forest}
-        for tree={
-        my tree
+\tikzset{
+    key/.style={
+            draw=OrangeRed,
         },
+    convention/.style={
+            draw=Cyan,
+        },
+    trick/.style={
+            draw=YellowGreen,
+        },
+}
+\resizebox{0.85\textwidth}{!}{
+    \begin{forest}
+        for tree={my tree}
         [
-                \textbf{MonoGS}
-                [
-                    Tracking
-                        [
-                            Analytical Jacobian Derivation
-                        ]
-                        [
-                            Direct Backpropagation
-                        ]
-                ]
-                [
-                    Mapping
-                        [
-                            Bundle Adjustment
-                        ]
-                        [
-                            Random Recall
-                        ]
-                        [
-                            Isotropic Regularization
-                        ]
-                ]
-                [
-                    Gaussian Management
-                        [
-                            Insertion
-                                [
-                                    Keyframing
-                                ]
-                        ]
-                        [
-                            Pruning
-                                [
-                                    Gaussian Covisibility
-                                ]
-                        ]
-                ]
-                [
-                    Keyframe Management
-                        [
-                            Registration
-                                [
-                                    Gaussian Covisibility
-                                ]
-                        ]
-                        [
-                            Removal
-                                [
-                                    Gaussian Overlap Coefficient
-                                ]
-                        ]
-                ]
+        MonoGS
+            [
+                Visual Odometry,for children={visible on=<<1->>}
+                    [
+                        Tracking,for children={visible on=<<2->>}
+                            [
+                                Inverse Rendering,font=\bf,for children={visible on=<<3->>}
+                                    [
+                                        Analytical Jacobians Derivation,key
+                                    ]
+                                    [
+                                        Photometric Appearance \& Depth Loss,convention
+                                    ]
+                                    [
+                                        Optimizable Exposure,trick
+                                    ]
+                                    [
+                                        Pixel-wise Penalization,trick
+                                    ]
+                            ]
+                    ]
+                    [
+                        Mapping,for children={visible on=<<2->>}
+                            [
+                                Bundle Adjustment,font=\bf,for children={visible on=<<3->>}
+                                    [
+                                        Photometric Appearance \& Depth Loss,convention
+                                    ]
+                                    [
+                                        Isotropic Regularization,key
+                                    ]
+                                    [
+                                        Random Recall,trick
+                                    ]
+                            ]
+                    ]
             ]
+            [
+                Online Pipeline,for children={visible on=<<1->>}
+                    [
+                        Keyframe Management,for children={visible on=<<2->>}
+                            [
+                                Registration,for children={visible on=<<3->>}
+                                    [
+                                        Gaussian Covisibility,key
+                                    ]
+                                    [
+                                        Relative Translation,convention
+                                    ]
+                            ]
+                            [
+                                Removal,for children={visible on=<<3->>}
+                                    [
+                                        Gaussian Overlap Coefficient,key
+                                    ]
+                            ]
+                    ]
+                    [
+                        Gaussian Management,for children={visible on=<<2->>}
+                            [
+                                Insertion,for children={visible on=<<3->>}
+                                    [
+                                        Keyframing,convention
+                                    ]
+                            ]
+                            [
+                                Pruning,for children={visible on=<<3->>}
+                                    [
+                                        Gaussian Covisibility,key
+                                    ]
+                            ]
+                    ]
+            ]
+        ]
     \end{forest}
+}
+\resizebox{0.08\textwidth}{!}{
+    \begin{tikzpicture}[visible on=<<3->>]
+        \node [my node for tree, draw=YellowGreen] (trick node) {trick};
+        \node [my node for tree, draw=OrangeRed, above of = trick node] {key method};
+        \node [my node for tree, draw=Cyan, below of = trick node] (convention) {convention};
+    \end{tikzpicture}
 }
     ]], {})
     ),
