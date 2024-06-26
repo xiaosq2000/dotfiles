@@ -18,6 +18,9 @@ local get_visual = function(args, parent)
 end
 
 return {
+    s({ trig = "at" },
+        fmta("\\alert<<<>>>{<>}", { i(1, ""), d(2, get_visual) })
+    ),
     s({ trig = "beamer-example" },
         fmta(
             [[
