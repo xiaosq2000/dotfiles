@@ -1,11 +1,18 @@
 # zshrc_start_time=$(date +%s%N)
 
-[ -f "/etc/profile.d/modules.sh" ] && source "/etc/profile.d/modules.sh" && module load slurm
+# load modules and slurm 
+# [ -f "/etc/profile.d/modules.sh" ] && source "/etc/profile.d/modules.sh" && module load slurm
 
+export ZSH="$HOME/.oh-my-zsh"
+export USER=$USERNAME
+
+# ":-" in Bash, 
+# ref: https://unix.stackexchange.com/a/282816
 export LANG=${LANG:-"en_US.UTF-8"}
 export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
 export LC_CTYPE=${LC_CTYPE:-"en_US.UTF-8"}
-
+# XDG Base Directory Specification, 
+# ref: https://specifications.freedesktop.org/basedir-spec/latest/
 export XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
 export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
@@ -15,9 +22,6 @@ export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
 # non-standard variable
 export XDG_PREFIX_HOME="${HOME}/.local"
-
-export ZSH="$HOME/.oh-my-zsh"
-export USER=$USERNAME
 
 prepend_to_env_var() {
     local env_var_name="$1"
@@ -76,36 +80,48 @@ prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
 prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
 prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 
-alias python="python3"
-alias lg="lazygit"
+check_public_ip() {
+    curl https://ipinfo.io/ip
+}
 
-if [[ $(uname -r | grep 'WSL2') ]]; then
-    local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
+set_proxy() {
+    echo -n "Before "; check_public_ip; echo;
+    if [[ $(uname -r | grep 'WSL2') ]]; then
+        local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
+        local host_port="1080"
+    else
+        sudo systemctl start sing-box.service
+        local host_ip="127.0.0.1"
+        local host_port="1080"
+    fi
     export http_proxy=${http_proxy:-"${host_ip}:1080"}
     export https_proxy=${https_proxy:-"${host_ip}:1080"}
-else
-    export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
-    export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
-fi
-export no_proxy=${no_proxy:-"localhost,.hkust-gz.edu.cn"}
-
-export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
-export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
-export NO_PROXY=${NO_PROXY:-${no_proxy}}
-
-broadcast_proxies() {
-    if [[ -z "${http_proxy}" ]]; then
-        git config --global --unset http.proxy
-    else
-        git config --global http.proxy ${http_proxy}
-    fi
-    if [[ -z "${https_proxy}" ]]; then
-        git config --global --unset https.proxy
-    else
-        git config --global https.proxy ${https_proxy}
-    fi
+    export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
+    export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
+    export no_proxy=${no_proxy:-"localhost"}
+    export NO_PROXY=${NO_PROXY:-${no_proxy}}
+    git config --global http.proxy ${http_proxy}
+    git config --global https.proxy ${https_proxy}
+    echo -n "After "; check_public_ip;
 }
-broadcast_proxies
+
+unset_proxy() {
+    echo -n "Before "; check_public_ip; echo;
+    if [[ $(uname -r | grep 'WSL2') ]]; then
+        ;
+    else
+        sudo systemctl stop sing-box.service
+    fi
+    unset http_proxy
+    unset https_proxy
+    unset HTTP_PROXY
+    unset HTTPS_PROXY
+    unset no_proxy
+    unset NO_PROXY
+    git config --global --unset http.proxy
+    git config --global --unset https.proxy
+    echo -n "After "; check_public_ip;
+}
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -224,6 +240,8 @@ alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.
 # For a full list of active aliases, run `alias`.
+alias python="python3"
+alias lg="lazygit"
 alias zshconfig="${EDITOR} ${HOME}/.zshrc"
 alias ohmyzsh="${EDITOR} ${HOME}/.oh-my-zsh"
 alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
