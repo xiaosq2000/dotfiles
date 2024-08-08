@@ -134,6 +134,10 @@ unset_proxy() {
     unset https_proxy
     unset HTTP_PROXY
     unset HTTPS_PROXY
+    unset ftp_proxy 
+    unset FTP_PROXY 
+    unset socks_proxy
+    unset SOCKS_PROXY
     unset no_proxy
     unset NO_PROXY
     git config --global --unset http.proxy
