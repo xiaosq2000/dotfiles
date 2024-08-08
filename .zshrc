@@ -87,18 +87,35 @@ check_public_ip() {
 set_proxy() {
     echo -n "Before "; check_public_ip; echo;
     if [[ $(uname -r | grep 'WSL2') ]]; then
-        local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
-        local host_port="1080"
-    else
+        local host="'$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)'"
+        local port=1080
+    elif [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
         sudo systemctl start sing-box.service
-        local host_ip="127.0.0.1"
-        local host_port="1080"
+        sleep 3s;
+        local host="'127.0.0.1'"
+        local port=1080
+        dconf write /system/proxy/mode "'manual'"
+        dconf write /system/proxy/http/host ${host}
+        dconf write /system/proxy/http/port ${port}
+        dconf write /system/proxy/https/host ${host}
+        dconf write /system/proxy/https/port ${port}
+        dconf write /system/proxy/ftp/host ${host}
+        dconf write /system/proxy/ftp/port ${port}
+        dconf write /system/proxy/socks/host ${host}
+        dconf write /system/proxy/socks/port ${port}
+        dconf write /system/proxy/ignore-hosts "'localhost,127.0.0.0/8,::1'"
     fi
-    export http_proxy=${http_proxy:-"${host_ip}:1080"}
-    export https_proxy=${https_proxy:-"${host_ip}:1080"}
+    local host="${host//\'/}"
+    local port="${port}"
+    export http_proxy=${http_proxy:-"${host}:${port}"}
+    export https_proxy=${https_proxy:-"${host}:${port}"}
+    export ftp_proxy=${ftp_proxy:-"${host}:${port}"}
+    export socks_proxy=${socks_proxy:-"${host}:${port}"}
+    export no_proxy=${no_proxy:-"localhost,127.0.0.0/8,::1"}
     export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
     export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
-    export no_proxy=${no_proxy:-"localhost"}
+    export FTP_PROXY=${FTP_PROXY:-${ftp_proxy}}
+    export SOCKS_PROXY=${SOCKS_PROXY:-${socks_proxy}}
     export NO_PROXY=${NO_PROXY:-${no_proxy}}
     git config --global http.proxy ${http_proxy}
     git config --global https.proxy ${https_proxy}
@@ -109,8 +126,9 @@ unset_proxy() {
     echo -n "Before "; check_public_ip; echo;
     if [[ $(uname -r | grep 'WSL2') ]]; then
         ;
-    else
+    elif [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
         sudo systemctl stop sing-box.service
+        dconf write /system/proxy/mode "'none'"
     fi
     unset http_proxy
     unset https_proxy
