@@ -80,18 +80,24 @@ prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
 prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
 prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 
-check_public_ip() {
-    curl https://ipinfo.io/ip
+autoload colors; colors
+
+check_proxy_status() {
+    echo $fg_bold[green]Public IP Information: $reset_color
+    curl ipinfo.io
+    echo; echo;
+    echo $fg_bold[green]Proxy-related Environment Variables: $reset_color
+    echo;
+    env | grep -i 'proxy'
+    echo $fg_bold[green]VPN Status: $reset_color
+    sudo systemctl status sing-box.service
 }
 
 set_proxy() {
-    echo -n "Before "; check_public_ip; echo;
     if [[ $(uname -r | grep 'WSL2') ]]; then
         local host="'$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)'"
         local port=1080
     elif [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
-        sudo systemctl start sing-box.service
-        sleep 3s;
         local host="'127.0.0.1'"
         local port=1080
         dconf write /system/proxy/mode "'manual'"
@@ -119,15 +125,12 @@ set_proxy() {
     export NO_PROXY=${NO_PROXY:-${no_proxy}}
     git config --global http.proxy ${http_proxy}
     git config --global https.proxy ${https_proxy}
-    echo -n "After "; check_public_ip;
 }
 
 unset_proxy() {
-    echo -n "Before "; check_public_ip; echo;
     if [[ $(uname -r | grep 'WSL2') ]]; then
         ;
     elif [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
-        sudo systemctl stop sing-box.service
         dconf write /system/proxy/mode "'none'"
     fi
     unset http_proxy
@@ -142,8 +145,9 @@ unset_proxy() {
     unset NO_PROXY
     git config --global --unset http.proxy
     git config --global --unset https.proxy
-    echo -n "After "; check_public_ip;
 }
+
+unset_proxy
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -274,22 +278,25 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 
 eval "$(starship init zsh)"
 
-# <<< personal conda initialization, not need to `conda init zsh` <<<
-# I personally download miniconda3 to "${XDG_PREFIX_HOME}/miniconda3"
-__conda_setup="$("${XDG_PREFIX_HOME}/miniconda3/bin/conda" 'shell.zsh' 'hook' 2> /dev/null)"
+# <<< personal mamba initialization, not need to `mamba init zsh` <<<
+# "${XDG_PREFIX_HOME}/miniforge3"
+__conda_setup="$('${XDG_PREFIX_HOME}/miniforge3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else
-    if [ -f "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh"
+    if [ -f "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/conda.sh" ]; then
+        . "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/conda.sh"
     else
-        export PATH="${XDG_PREFIX_HOME}/miniconda3/bin:$PATH"
+        export PATH="${XDG_PREFIX_HOME}/miniforge3/bin:$PATH"
     fi
 fi
 unset __conda_setup
-# <<< personal conda initialization <<<
 
-gpu_driver_path="/usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko"
+if [ -f "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/mamba.sh" ]; then
+    . "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/mamba.sh"
+fi
+# <<< personal mamba initialization <<<
+
 print_sys_info() {
     echo
     echo "$(whoami) @ $(hostname) @ $(hostname -I | awk '{ print $1; }')"
@@ -298,21 +305,20 @@ print_sys_info() {
     echo "Distro: $(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
     echo "CPU Device: $(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
     echo "CPU Usage: $((100-$(vmstat 1 2 | tail -1 | awk '{print $15}')))%"
-    if [ ! -f ${gpu_driver_path} ]; then
-        echo "NVIDIA GPU Driver not found."
-    else
-        echo "NVIDIA GPU Driver Version $(modinfo ${gpu_driver_path} | grep ^version | grep -oP '(?<=:        ).*')"
+    if [ -f "/proc/driver/nvidia/version" ]; then
+        cat /proc/driver/nvidia/version
         if [ ! -x "$(command -v nvidia-smi)" ]; then
-            echo "command nvidia-smi not found."
+            echo "Command \"nvidia-smi\" not found."
         else
             echo "GPU Device: $(nvidia-smi -L | sed 's/([^)]*)//g')"
         fi
+    else
+        echo "NVIDIA Driver not found."
     fi
     echo "Avaiable Memory: $(free -mh | grep ^Mem | awk '{ print $7; }') / $(free -mh | grep ^Mem | awk '{ print $2; }')"
     echo
 }
 # print_sys_info
-
 
 check_version() {
     local cli="${1}"
@@ -343,3 +349,10 @@ check_version_all() {
 # zshrc_end_time=$(date +%s%N)
 # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 # echo "$zshrc_duration ms to execute ${HOME}/.zshrc"
+echo "
+Supported commands:
+  print_sys_info
+  set_proxy
+  unset_proxy
+  check_proxy_status 
+"
