@@ -199,7 +199,7 @@ unset_proxy() {
             error "Unsupported for this platform."
         fi
     fi
-    info "Unset GNOME networking proxy settings."
+    info "Unset environment variables and unconfigure for specific programs."
     unset http_proxy
     unset https_proxy
     unset HTTP_PROXY
