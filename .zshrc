@@ -113,10 +113,12 @@ prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 autoload colors; colors
 
 check_public_ip() {
+    exec 2>/dev/null
     local ipinfo=$(curl ipinfo.io)
     echo "${PURPLE}Public Networking: ${NOCOLOR}"
     echo $ipinfo | grep --color=never "\"city\":"
     echo $ipinfo | grep --color=never "\"ip\":"
+    exec 2>&1
 }
 check_proxy_status() {
     check_public_ip
@@ -142,22 +144,26 @@ set_proxy() {
         warning "Only \"host\" networking mode is supported."
         local host="'127.0.0.1'"
         local port=1080
-    elif [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
-        local host="'127.0.0.1'"
-        local port=1080
-        info "Start the VPN client service."
-        sudo systemctl start sing-box.service
-        info "Set GNOME networking proxy settings."
-        dconf write /system/proxy/mode "'manual'"
-        dconf write /system/proxy/http/host ${host}
-        dconf write /system/proxy/http/port ${port}
-        dconf write /system/proxy/https/host ${host}
-        dconf write /system/proxy/https/port ${port}
-        dconf write /system/proxy/ftp/host ${host}
-        dconf write /system/proxy/ftp/port ${port}
-        dconf write /system/proxy/socks/host ${host}
-        dconf write /system/proxy/socks/port ${port}
-        dconf write /system/proxy/ignore-hosts "'localhost,127.0.0.0/8,::1'"
+    else
+        if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
+            local host="'127.0.0.1'"
+            local port=1080
+            info "Start the VPN client service."
+            sudo systemctl start sing-box.service
+            info "Set GNOME networking proxy settings."
+            dconf write /system/proxy/mode "'manual'"
+            dconf write /system/proxy/http/host ${host}
+            dconf write /system/proxy/http/port ${port}
+            dconf write /system/proxy/https/host ${host}
+            dconf write /system/proxy/https/port ${port}
+            dconf write /system/proxy/ftp/host ${host}
+            dconf write /system/proxy/ftp/port ${port}
+            dconf write /system/proxy/socks/host ${host}
+            dconf write /system/proxy/socks/port ${port}
+            dconf write /system/proxy/ignore-hosts "'localhost,127.0.0.0/8,::1'"
+        else 
+            error "Unsupported for this platform."
+        fi
     fi
     info "Set environment variables and configure for specific programs."
     local host="${host//\'/}"
@@ -183,11 +189,15 @@ unset_proxy() {
         ;
     elif [ -f /.dockerenv ]; then
         ;
-    elif [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
-        info "Stop VPN client service."
-        sudo systemctl stop sing-box.service
-        info "Unset GNOME networking proxy settings."
-        dconf write /system/proxy/mode "'none'"
+    else 
+        if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
+            info "Stop VPN client service."
+            sudo systemctl stop sing-box.service
+            info "Unset GNOME networking proxy settings."
+            dconf write /system/proxy/mode "'none'"
+        else 
+            error "Unsupported for this platform."
+        fi
     fi
     info "Unset GNOME networking proxy settings."
     unset http_proxy
@@ -386,16 +396,17 @@ check_version() {
     fi
     check_version_helper "conda" "echo -e \"${GREEN}conda${NOCOLOR}\tv$(conda --version | awk '{ print $2; }')\""
     echo
+    exec 2>&1
 }
 
 system_overview() {
+    if [ -f /.dockerenv ]; then
+        echo "${RED}A Docker container.${NOCOLOR}";
+    fi
     echo
     echo "${YELLOW}$(whoami)${NOCOLOR} @ ${YELLOW}$(hostname)${NOCOLOR} @ ${YELLOW}$(hostname -I | awk '{ print $1; }')${NOCOLOR}"
     echo 
     check_public_ip
-    if [ -f /.dockerenv ]; then
-        echo "${BRED}A docker container.${NOCOLOR}";
-    fi
     echo
     echo "${CYAN}OS Kernel:${NOCOLOR}\t\t$(uname -sr)"
     echo "${CYAN}OS Distro:${NOCOLOR}\t\t$(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
@@ -412,8 +423,12 @@ system_overview() {
     else
         error "NVIDIA Driver not found."
     fi
-    echo "${CYAN}Avaiable Memory:${NOCOLOR}\t$(free -mh | grep ^Mem | awk '{ print $7; }')/$(free -mh | grep ^Mem | awk '{ print $2; }')"
-    echo "${CYAN}Available Storage:${NOCOLOR}\t$(df -h --total | grep --color=never 'total' | awk '{ print $4}')/$(df -h --total | grep --color=never 'total' | awk '{ print $2}')"
+    echo "${CYAN}Available Memory:${NOCOLOR}\t$(free -mh | grep ^Mem | awk '{ print $7; }')/$(free -mh | grep ^Mem | awk '{ print $2; }')"
+    if [ -f /.dockerenv ]; then
+        echo "${CYAN}Available Storage:${NOCOLOR}\t$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $4}')/$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $2}')"
+    else
+        echo "${CYAN}Available Storage:${NOCOLOR}\t$(df -h --total | grep --color=never 'total' | awk '{ print $4}')/$(df -h --total | grep --color=never 'total' | awk '{ print $2}')"
+    fi
 }
 # system_overview
 
