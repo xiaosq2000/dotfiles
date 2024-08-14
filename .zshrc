@@ -436,11 +436,14 @@ system_overview() {
 # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 # echo "$zshrc_duration ms to execute ${HOME}/.zshrc"
 #
-echo "
-${BGREEN}Avaiable Commands:${NOCOLOR}
+greeting(){
+echo "${BGREEN}Avaiable Commands:${NOCOLOR}
   system_overview
   check_version
   [un]set_proxy
   check_public_ip
   check_proxy_status 
-"
+";
+  check_public_ip;
+}
+greeting

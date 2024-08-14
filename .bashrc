@@ -1,7 +1,7 @@
-if [ -f "/etc/profile.d/modules.sh" ]; then
-    source "/etc/profile.d/modules.sh"
-    module load slurm
-fi
+# if [ -f "/etc/profile.d/modules.sh" ]; then
+#     source "/etc/profile.d/modules.sh"
+#     module load slurm
+# fi
 
 export LANG=${LANG:-"en_US.UTF-8"}
 export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
@@ -16,9 +16,6 @@ export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
 # non-standard variable
 export XDG_PREFIX_HOME="${HOME}/.local"
-
-export ZSH="$HOME/.oh-my-zsh"
-export USER=$USERNAME
 
 prepend_to_env_var() {
     local env_var_name="$1"
@@ -80,33 +77,32 @@ prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 alias python="python3"
 alias lg="lazygit"
 
-if [[ $(uname -r | grep 'WSL2') ]]; then
-    local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
-    export http_proxy=${http_proxy:-"${host_ip}:1080"}
-    export https_proxy=${https_proxy:-"${host_ip}:1080"}
-else
-    export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
-    export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
-fi
-export no_proxy=${no_proxy:-"localhost,.hkust-gz.edu.cn"}
-
-export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
-export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
-export NO_PROXY=${NO_PROXY:-${no_proxy}}
-
-broadcast_proxies() {
-    if [ -z "${http_proxy}" ]; then
-        git config --global --unset http.proxy
-    else
-        git config --global http.proxy ${http_proxy}
-    fi
-    if [ -z "${https_proxy}" ]; then
-        git config --global --unset https.proxy
-    else
-        git config --global https.proxy ${https_proxy}
-    fi
-}
-broadcast_proxies
+# if [[ $(uname -r | grep 'WSL2') ]]; then
+#     local host_ip=$(cat /etc/resolv.conf | grep '^nameserver' | cut -d ' ' -f 2)
+#     export http_proxy=${http_proxy:-"${host_ip}:1080"}
+#     export https_proxy=${https_proxy:-"${host_ip}:1080"}
+# else
+#     export http_proxy=${http_proxy:-"http://127.0.0.1:1080"}
+#     export https_proxy=${https_proxy:-"http://127.0.0.1:1080"}
+# fi
+# export no_proxy=${no_proxy:-"localhost,.hkust-gz.edu.cn"}
+# export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
+# export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
+# export NO_PROXY=${NO_PROXY:-${no_proxy}}
+# 
+# broadcast_proxies() {
+#     if [ -z "${http_proxy}" ]; then
+#         git config --global --unset http.proxy
+#     else
+#         git config --global http.proxy ${http_proxy}
+#     fi
+#     if [ -z "${https_proxy}" ]; then
+#         git config --global --unset https.proxy
+#     else
+#         git config --global https.proxy ${https_proxy}
+#     fi
+# }
+# broadcast_proxies
 
 # ~/.bashrc: executed by bash(1) for non-login shells.
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
