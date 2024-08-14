@@ -1,17 +1,17 @@
 # zshrc_start_time=$(date +%s%N)
 
-# load modules and slurm 
+# load modules and slurm
 # [ -f "/etc/profile.d/modules.sh" ] && source "/etc/profile.d/modules.sh" && module load slurm
 
 export ZSH="$HOME/.oh-my-zsh"
 export USER=$USERNAME
 
-# ":-" in Bash, 
+# ":-" in Bash,
 # ref: https://unix.stackexchange.com/a/282816
 export LANG=${LANG:-"en_US.UTF-8"}
 export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
 export LC_CTYPE=${LC_CTYPE:-"en_US.UTF-8"}
-# XDG Base Directory Specification, 
+# XDG Base Directory Specification,
 # ref: https://specifications.freedesktop.org/basedir-spec/latest/
 export XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
 export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
@@ -22,6 +22,16 @@ export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
 # non-standard variable
 export XDG_PREFIX_HOME="${HOME}/.local"
+display_xdg_env() {
+    echo "XDG_DATA_HOME=$XDG_DATA_HOME"
+    echo "XDG_CONFIG_HOME=$XDG_CONFIG_HOME"
+    echo "XDG_STATE_HOME=$XDG_STATE_HOME"
+    echo "XDG_CACHE_HOME=$XDG_CACHE_HOME"
+    echo "XDG_DATA_DIRS=$XDG_DATA_DIRS"
+    echo "XDG_CONFIG_DIRS=$XDG_CONFIG_DIRS"
+    echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
+    echo "XDG_PREFIX_HOME=$XDG_PREFIX_HOME"
+}
 
 # Simple CLI Logging
 NOCOLOR='\033[0m' # No Color
@@ -44,13 +54,13 @@ BPURPLE='\033[1;35m' # Purple
 BCYAN='\033[1;36m'   # Cyan
 BWHITE='\033[1;37m'  # White
 error() {
-	echo -e "${BRED}ERROR:${NOCOLOR} $1"
+    echo -e "${BRED}ERROR:${NOCOLOR} $1"
 }
 info() {
-	echo -e "${BGREEN}INFO:${NOCOLOR} $1"
+    echo -e "${BGREEN}INFO:${NOCOLOR} $1"
 }
 warning() {
-	echo -e "${BYELLOW}WARNING:${NOCOLOR} $1"
+    echo -e "${BYELLOW}WARNING:${NOCOLOR} $1"
 }
 
 prepend_to_env_var() {
@@ -161,7 +171,7 @@ set_proxy() {
             dconf write /system/proxy/socks/host ${host}
             dconf write /system/proxy/socks/port ${port}
             dconf write /system/proxy/ignore-hosts "'localhost,127.0.0.0/8,::1'"
-        else 
+        else
             error "Unsupported for this platform."
         fi
     fi
@@ -189,13 +199,13 @@ unset_proxy() {
         ;
     elif [ -f /.dockerenv ]; then
         ;
-    else 
+    else
         if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
             info "Stop VPN client service."
             sudo systemctl stop sing-box.service
             info "Unset GNOME networking proxy settings."
             dconf write /system/proxy/mode "'none'"
-        else 
+        else
             error "Unsupported for this platform."
         fi
     fi
@@ -204,8 +214,8 @@ unset_proxy() {
     unset https_proxy
     unset HTTP_PROXY
     unset HTTPS_PROXY
-    unset ftp_proxy 
-    unset FTP_PROXY 
+    unset ftp_proxy
+    unset FTP_PROXY
     unset socks_proxy
     unset SOCKS_PROXY
     unset no_proxy
@@ -345,24 +355,17 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 
 eval "$(starship init zsh)"
 
-# <<< personal mamba initialization, not need to `mamba init zsh` <<<
-# "${XDG_PREFIX_HOME}/miniforge3"
-__conda_setup="$('${XDG_PREFIX_HOME}/miniforge3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+# <<< personal micromamba initialization <<<
+export MAMBA_EXE='${XDG_PREFIX_HOME}/bin/micromamba';
+export MAMBA_ROOT_PREFIX='${XDG_DATA_HOME}/micromamba';
+__mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
 if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
+    eval "$__mamba_setup"
 else
-    if [ -f "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/conda.sh" ]; then
-        . "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/conda.sh"
-    else
-        export PATH="${XDG_PREFIX_HOME}/miniforge3/bin:$PATH"
-    fi
+    alias micromamba="$MAMBA_EXE"  # Fallback on help from mamba activate
 fi
-unset __conda_setup
-
-if [ -f "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/mamba.sh" ]; then
-    . "${XDG_PREFIX_HOME}/miniforge3/etc/profile.d/mamba.sh"
-fi
-# <<< personal mamba initialization <<<
+unset __mamba_setup
+# <<< personal micromamba initialization <<<
 
 check_version_helper() {
     local cli_program="${1}"
@@ -405,7 +408,7 @@ system_overview() {
     fi
     echo
     echo "${YELLOW}$(whoami)${NOCOLOR} @ ${YELLOW}$(hostname)${NOCOLOR} @ ${YELLOW}$(hostname -I | awk '{ print $1; }')${NOCOLOR}"
-    echo 
+    echo
     check_public_ip
     echo
     echo "${CYAN}OS Kernel:${NOCOLOR}\t\t$(uname -sr)"
@@ -437,13 +440,11 @@ system_overview() {
 # echo "$zshrc_duration ms to execute ${HOME}/.zshrc"
 #
 greeting(){
-echo "${BGREEN}Avaiable Commands:${NOCOLOR}
-  system_overview
-  check_version
-  [un]set_proxy
-  check_public_ip
-  check_proxy_status 
-";
-  check_public_ip;
+    echo "${GREEN}Avaiable Commands:${NOCOLOR}
+  greeting | system_overview
+  display_xdg_env | check_version
+  [un]set_proxy | check_public_ip | check_proxy_status
+    ";
+    check_public_ip;
 }
 greeting
