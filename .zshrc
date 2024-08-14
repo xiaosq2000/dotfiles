@@ -1,4 +1,4 @@
-# zshrc_start_time=$(date +%s%N)
+zshrc_start_time=$(date +%s%N)
 
 # load modules and slurm
 # [ -f "/etc/profile.d/modules.sh" ] && source "/etc/profile.d/modules.sh" && module load slurm
@@ -367,37 +367,47 @@ fi
 unset __mamba_setup
 # <<< personal micromamba initialization <<<
 
-check_version_helper() {
+display_software_versions_helper() {
     local cli_program="${1}"
     local command_to_print_version="${2}"
     if command -v "$cli_program" >/dev/null 2&>1; then
         eval "$command_to_print_version"
     else
-        echo "${BRED}$cli_program${NOCOLOR}\tnot found"
+        echo "${BRED}$cli_program${NOCOLOR}\t\tnot found"
     fi
 }
 
-check_version() {
+display_software_versions() {
     exec 2>/dev/null
-    check_version_helper "gcc" "echo -e \"${GREEN}gcc${NOCOLOR}\tv$(gcc --version | head -n 1 | awk '{ print $4; }')\""
-    check_version_helper "python" "echo -e \"${GREEN}python${NOCOLOR}\tv$(python --version | awk '{ print $2; }')\""
+    display_software_versions_helper "ldd" "echo -e \"${GREEN}glibc${NOCOLOR}\t\tv$(ldd --version | head -n 1 | awk '{ print $5; }')\""
+    display_software_versions_helper "gcc" "echo -e \"${GREEN}gcc${NOCOLOR}\t\tv$(gcc --version | head -n 1 | awk '{ print $4; }')\""
     if [ -f ${gpu_driver_path} ]; then
-        check_version_helper "nvcc" "echo -e \"${GREEN}nvcc${NOCOLOR}\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
+        display_software_versions_helper "nvcc" "echo -e \"${GREEN}nvcc${NOCOLOR}\t\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
     fi
-    check_version_helper "zsh" "echo -e \"${GREEN}zsh${NOCOLOR}\tv$(zsh --version | awk '{ print $2; }')\""
-    check_version_helper "tmux" "echo -e \"${GREEN}tmux${NOCOLOR}\tv$(tmux -V | awk '{ print $2; }')\""
-    check_version_helper "nvim" "echo -e \"${GREEN}nvim${NOCOLOR}\t$(nvim --version | head -n 1 | awk '{ print $2; }')\""
-    check_version_helper "vim" "echo -e \"${GREEN}vim${NOCOLOR}\tv$(vim --version | head -n 1 | awk '{ print $5; }')\""
-    check_version_helper "git" "echo -e \"${GREEN}git${NOCOLOR}\tv$(git --version | awk '{ print $3; }')\""
-    check_version_helper "cmake" "echo -e \"${GREEN}cmake${NOCOLOR}\tv$(cmake --version | head -n 1 | awk '{ print $3; }')\""
+    echo
+    display_software_versions_helper "zsh" "echo -e \"${GREEN}zsh${NOCOLOR}\t\tv$(zsh --version | awk '{ print $2; }')\""
+    display_software_versions_helper "tmux" "echo -e \"${GREEN}tmux${NOCOLOR}\t\tv$(tmux -V | awk '{ print $2; }')\""
+    display_software_versions_helper "nvim" "echo -e \"${GREEN}nvim${NOCOLOR}\t\t$(nvim --version | head -n 1 | awk '{ print $2; }')\""
+    display_software_versions_helper "vim" "echo -e \"${GREEN}vim${NOCOLOR}\t\tv$(vim --version | head -n 1 | awk '{ print $5; }')\""
+    display_software_versions_helper "git" "echo -e \"${GREEN}git${NOCOLOR}\t\tv$(git --version | awk '{ print $3; }')\""
+    display_software_versions_helper "cmake" "echo -e \"${GREEN}cmake${NOCOLOR}\t\tv$(cmake --version | head -n 1 | awk '{ print $3; }')\""
     if [[ $(uname -r | grep 'WSL2') ]]; then
         ;
     elif [ -f /.dockerenv ]; then
         ;
     else
-        check_version_helper "docker" "echo -e \"${GREEN}docker${NOCOLOR}\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
+        display_software_versions_helper "docker" "echo -e \"${GREEN}docker${NOCOLOR}\t\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
     fi
-    check_version_helper "conda" "echo -e \"${GREEN}conda${NOCOLOR}\tv$(conda --version | awk '{ print $2; }')\""
+    echo
+    display_software_versions_helper "python" "echo -e \"${GREEN}python${NOCOLOR}\t\tv$(python --version | awk '{ print $2; }')\""
+    display_software_versions_helper "conda" "echo -e \"${GREEN}conda${NOCOLOR}\t\tv$(conda --version | awk '{ print $2; }')\""
+    display_software_versions_helper "micromamba" "echo -e \"${GREEN}micromamba${NOCOLOR}\tv$(micromamba --version)\""
+    echo
+    if [ -z "${ROS_DISTRO}" ]; then
+        echo "${BRED}ROS${NOCOLOR}\t\tnot found"
+    else
+        echo "${BRED}ROS${NOCOLOR}\t\t${ROS_DISTRO}"
+    fi
     echo
     exec 2>&1
 }
@@ -435,16 +445,42 @@ system_overview() {
 }
 # system_overview
 
-# zshrc_end_time=$(date +%s%N)
-# zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-# echo "$zshrc_duration ms to execute ${HOME}/.zshrc"
-#
+display_typefaces_with_hint() {
+    # ref: https://stackoverflow.com/a/49313231/11393911
+    fc-list -f "%{family}\n" | grep -i "$1" | sort -t: -u -k1,1
+}
+
+quick_open_docker_container() {
+    if command -v "docker" >/dev/null 2&>1; then
+        ;
+    else
+        error "docker: command not found.";
+        return 1;
+    fi
+    docker exec -it $1 zsh
+}
+
+alias latex='quick_open_docker_container latex'
+alias ros='quick_open_docker_container ros'
+
+zshrc_end_time=$(date +%s%N)
+zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+
 greeting(){
     echo "${GREEN}Avaiable Commands:${NOCOLOR}
   greeting | system_overview
-  display_xdg_env | check_version
+  display_software_versions | display_xdg_env | display_typefaces_with_hint
   [un]set_proxy | check_public_ip | check_proxy_status
     ";
     check_public_ip;
+    echo -e "\n$CYAN$zshrc_duration ms$NOCOLOR to start up."
 }
 greeting
+
+if [ -n "${ROS_DISTRO}" ]; then
+    if [ -f "/opt/ros/${ROS_DISTRO}/setup.zsh" ]; then
+        source "/opt/ros/${ROS_DISTRO}/setup.zsh";
+        echo 
+        info "Using ROS ($ROS_DISTRO)."
+    fi
+fi 
