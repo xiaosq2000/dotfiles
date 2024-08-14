@@ -356,8 +356,8 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 eval "$(starship init zsh)"
 
 # <<< personal micromamba initialization <<<
-export MAMBA_EXE='${XDG_PREFIX_HOME}/bin/micromamba';
-export MAMBA_ROOT_PREFIX='${XDG_DATA_HOME}/micromamba';
+export MAMBA_EXE="${XDG_PREFIX_HOME}/bin/micromamba";
+export MAMBA_ROOT_PREFIX="${XDG_DATA_HOME}/micromamba";
 __mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__mamba_setup"
