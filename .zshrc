@@ -22,7 +22,7 @@ export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
 # non-standard variable
 export XDG_PREFIX_HOME="${HOME}/.local"
-display_xdg_env() {
+display_xdg_envs() {
     echo "XDG_DATA_HOME=$XDG_DATA_HOME"
     echo "XDG_CONFIG_HOME=$XDG_CONFIG_HOME"
     echo "XDG_STATE_HOME=$XDG_STATE_HOME"
@@ -33,37 +33,35 @@ display_xdg_env() {
     echo "XDG_PREFIX_HOME=$XDG_PREFIX_HOME"
 }
 
-# Simple CLI Logging
-NOCOLOR='\033[0m' # No Color
-# Regular Colors
-BLACK='\033[0;30m'  # Black
-RED='\033[0;31m'    # Red
-GREEN='\033[0;32m'  # Green
-YELLOW='\033[0;33m' # Yellow
-BLUE='\033[0;34m'   # Blue
-PURPLE='\033[0;35m' # Purple
-CYAN='\033[0;36m'   # Cyan
-WHITE='\033[0;37m'  # White
-# BOLD
-BBLACK='\033[1;30m'  # Black
-BRED='\033[1;31m'    # Red
-BGREEN='\033[1;32m'  # Green
-BYELLOW='\033[1;33m' # Yellow
-BBLUE='\033[1;34m'   # Blue
-BPURPLE='\033[1;35m' # Purple
-BCYAN='\033[1;36m'   # Cyan
-BWHITE='\033[1;37m'  # White
+# ref: https://unix.stackexchange.com/a/269085/523957
+RESET=$(tput sgr0)
+BOLD=$(tput bold)
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+BLUE=$(tput setaf 4)
+PURPLE=$(tput setaf 5)
+CYAN=$(tput setaf 6)
+
 error() {
-    echo -e "${BRED}ERROR:${NOCOLOR} $1"
+    printf "${RED}${BOLD}ERROR:${RESET} %s\n" "$1"
 }
 info() {
-    echo -e "${BGREEN}INFO:${NOCOLOR} $1"
+    printf "${GREEN}${BOLD}INFO:${RESET} %s\n" "$1"
 }
 warning() {
-    echo -e "${BYELLOW}WARNING:${NOCOLOR} $1"
+    printf "${YELLOW}${BOLD}WARNING:${RESET} %s\n" "$1"
 }
 
 prepend_to_env_var() {
+    if [[ -z "$1" || -z "$2" ]]; then
+        error "at least 2 arguments are required.
+      For example:
+          $0 PATH "$HOME/.local/bin" "/usr/local/bin"
+        "
+        return 1;
+    fi
+
     local env_var_name="$1"
     shift
     local args=("${@}")
@@ -85,6 +83,14 @@ prepend_to_env_var() {
 }
 
 append_to_env_var() {
+    if [[ -z "$1" || -z "$2" ]]; then
+        error "at least 2 arguments are required.
+      For example:
+          $0 PATH "$HOME/.local/bin" "/usr/local/bin"
+        "
+        return 1;
+    fi
+
     local env_var_name="$1"
     shift
     local args=("${@}")
@@ -105,6 +111,13 @@ append_to_env_var() {
 }
 
 remove_from_env_var() {
+    if [[ -z "$1" || -z "$2" ]]; then
+        error "2 arguments are required.
+      For example:
+          $0 PATH "$HOME/.local/bin"
+        "
+        return 1;
+    fi
     local env_var_name="$1"
     local path_to_remove="$2"
     local current_value="${(P)env_var_name}"
@@ -120,19 +133,17 @@ prepend_to_env_var PATH "$HOME/.local/bin" "/usr/local/bin"
 prepend_to_env_var LD_LIBRARY_PATH "$HOME/.local/lib" "/usr/local/lib"
 prepend_to_env_var MANPATH "$HOME/.local/man" "/usr/local/man"
 
-autoload colors; colors
-
 check_public_ip() {
     exec 2>/dev/null
     local ipinfo=$(curl ipinfo.io)
-    echo "${PURPLE}Public Networking: ${NOCOLOR}"
+    echo "${PURPLE}Public Networking: ${RESET}"
     echo $ipinfo | grep --color=never "\"city\":"
     echo $ipinfo | grep --color=never "\"ip\":"
     exec 2>&1
 }
 check_proxy_status() {
     check_public_ip
-    echo "${YELLOW}VPN Client Status: ${NOCOLOR}"
+    echo "${YELLOW}VPN Client Status: ${RESET}"
     if [[ $(uname -r | grep 'WSL2') ]]; then
         warning "Unknown. For WSL2, the VPN client is probably running on the host machine. Please check manually.";
     elif [ -f /.dockerenv ]; then
@@ -140,7 +151,7 @@ check_proxy_status() {
     else
         echo "  $(systemctl is-active sing-box.service)"
     fi
-    echo -e "${CYAN}Related Environment Variables: ${NOCOLOR}"
+    echo -e "${CYAN}Related Environment Variables: ${RESET}"
     local proxy_env=$(env | grep --color=never -i 'proxy')
     echo $proxy_env | while read line; do echo "  ${line}"; done
 }
@@ -191,13 +202,13 @@ set_proxy() {
     git config --global http.proxy ${http_proxy}
     git config --global https.proxy ${https_proxy}
 
+    info "Wait 5 seconds before checking current public IP."
+    sleep 5s;
     check_public_ip
 }
 
 unset_proxy() {
-    if [[ $(uname -r | grep 'WSL2') ]]; then
-        ;
-    elif [ -f /.dockerenv ]; then
+    if [[ $(uname -r | grep 'WSL2') || -f /.dockerenv ]]; then
         ;
     else
         if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
@@ -218,11 +229,14 @@ unset_proxy() {
     unset FTP_PROXY
     unset socks_proxy
     unset SOCKS_PROXY
+    unset all_proxy
+    unset ALL_PROXY
     unset no_proxy
     unset NO_PROXY
     git config --global --unset http.proxy
     git config --global --unset https.proxy
-
+    info "Wait 2 seconds before checking current public IP."
+    sleep 2s;
     check_public_ip
 }
 
@@ -368,86 +382,102 @@ unset __mamba_setup
 # <<< personal micromamba initialization <<<
 
 display_software_versions_helper() {
-    local cli_program="${1}"
-    local command_to_print_version="${2}"
-    if command -v "$cli_program" >/dev/null 2&>1; then
-        eval "$command_to_print_version"
+    local cli_program
+    if [ alias "$cli_program" >/dev/null 2>&1 ]; then
+        cli_program=$(alias "$1" | cut -d = -f 2)
     else
-        echo "${BRED}$cli_program${NOCOLOR}\t\tnot found"
+        cli_program="$1"
+    fi
+    local command_to_print_version="$2"
+    if command -v "$cli_program" >/dev/null 2&>1; then
+        # echo -e -n "${GREEN}${cli_program}${RESET}${delimeter}v"
+        printf "${GREEN}%-16s %s" "${cli_program}" "v"
+        eval "$command_to_print_version"
+        printf "${RESET}"
+    else
+        local RED=$(tput setaf 1)
+        local BOLD=$(tput bold)
+        local RESET=$(tput sgr0)
+        printf "${RED}%-16s %s\n${RESET}" "${cli_program}" "not found"
     fi
 }
 
 display_software_versions() {
     exec 2>/dev/null
-    display_software_versions_helper "ldd" "echo -e \"${GREEN}glibc${NOCOLOR}\t\tv$(ldd --version | head -n 1 | awk '{ print $5; }')\""
-    display_software_versions_helper "gcc" "echo -e \"${GREEN}gcc${NOCOLOR}\t\tv$(gcc --version | head -n 1 | awk '{ print $4; }')\""
-    if [ -f ${gpu_driver_path} ]; then
-        display_software_versions_helper "nvcc" "echo -e \"${GREEN}nvcc${NOCOLOR}\t\tv$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.$//')\""
+    display_software_versions_helper "ldd" "ldd --version | head -n 1 | awk '{ print \$5; }'"
+    display_software_versions_helper "gcc" "gcc --version | head -n 1 | awk '{ print \$4; }'"
+    display_software_versions_helper "nvcc" "nvcc --version | sed -n '4p' | awk '{ print \$5; }' | sed 's/.\$//'"
+    echo
+    display_software_versions_helper "zsh" "zsh --version | awk '{ print \$2; }'"
+    display_software_versions_helper "tmux" "tmux -V | awk '{ print \$2; }'"
+    display_software_versions_helper "nvim" "nvim --version | head -n 1 | awk '{ print \$2; }' | cut -dv -f2"
+    display_software_versions_helper "vim" "vim --version | head -n 1 | awk '{ print \$5;}'"
+    display_software_versions_helper "git" "git --version | awk '{ print \$3; }'"
+    display_software_versions_helper "cmake" "cmake --version | head -n 1 | awk '{ print \$3; }'"
+    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
+        display_software_versions_helper "docker" "docker --version | awk '{print \$3}' | cut -d, -f1"
     fi
     echo
-    display_software_versions_helper "zsh" "echo -e \"${GREEN}zsh${NOCOLOR}\t\tv$(zsh --version | awk '{ print $2; }')\""
-    display_software_versions_helper "tmux" "echo -e \"${GREEN}tmux${NOCOLOR}\t\tv$(tmux -V | awk '{ print $2; }')\""
-    display_software_versions_helper "nvim" "echo -e \"${GREEN}nvim${NOCOLOR}\t\t$(nvim --version | head -n 1 | awk '{ print $2; }')\""
-    display_software_versions_helper "vim" "echo -e \"${GREEN}vim${NOCOLOR}\t\tv$(vim --version | head -n 1 | awk '{ print $5; }')\""
-    display_software_versions_helper "git" "echo -e \"${GREEN}git${NOCOLOR}\t\tv$(git --version | awk '{ print $3; }')\""
-    display_software_versions_helper "cmake" "echo -e \"${GREEN}cmake${NOCOLOR}\t\tv$(cmake --version | head -n 1 | awk '{ print $3; }')\""
-    if [[ $(uname -r | grep 'WSL2') ]]; then
-        ;
-    elif [ -f /.dockerenv ]; then
-        ;
-    else
-        display_software_versions_helper "docker" "echo -e \"${GREEN}docker${NOCOLOR}\t\tv$(docker --version | awk '{ print $3; }' | sed 's/.$//')\""
+    display_software_versions_helper "python" "python --version | awk '{ print \$2; }'"
+    display_software_versions_helper "conda" "conda --version | awk '{ print \$2; }'"
+    display_software_versions_helper "mamba" "mamba --version"
+    display_software_versions_helper "micromamba" "micromamba --version"
+    echo
+    if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
+        display_software_versions_helper "gnome-shell" "gnome-shell --version | awk '{ print \$3; }'"
+        echo
+        if [ -z "${ROS_DISTRO}" ]; then
+            printf "${RED}%-16s %s${RESET}\n" "ROS" "not found"
+        else
+            printf "${GREEN}%-16s %s${RESET}\n" "ROS" "${ROS_DISTRO}"
+        fi
+        echo
     fi
-    echo
-    display_software_versions_helper "python" "echo -e \"${GREEN}python${NOCOLOR}\t\tv$(python --version | awk '{ print $2; }')\""
-    display_software_versions_helper "conda" "echo -e \"${GREEN}conda${NOCOLOR}\t\tv$(conda --version | awk '{ print $2; }')\""
-    display_software_versions_helper "micromamba" "echo -e \"${GREEN}micromamba${NOCOLOR}\tv$(micromamba --version)\""
-    echo
-    if [ -z "${ROS_DISTRO}" ]; then
-        echo "${BRED}ROS${NOCOLOR}\t\tnot found"
-    else
-        echo "${BRED}ROS${NOCOLOR}\t\t${ROS_DISTRO}"
-    fi
-    echo
     exec 2>&1
 }
 
 system_overview() {
     if [ -f /.dockerenv ]; then
-        echo "${RED}A Docker container.${NOCOLOR}";
+        echo "${RED}A Docker container.${RESET}";
     fi
     echo
-    echo "${YELLOW}$(whoami)${NOCOLOR} @ ${YELLOW}$(hostname)${NOCOLOR} @ ${YELLOW}$(hostname -I | awk '{ print $1; }')${NOCOLOR}"
+    echo "${YELLOW}$(whoami)${RESET} @ ${YELLOW}$(hostname)${RESET} @ ${YELLOW}$(hostname -I | awk '{ print $1; }')${RESET}"
     echo
     check_public_ip
     echo
-    echo "${CYAN}OS Kernel:${NOCOLOR}\t\t$(uname -sr)"
-    echo "${CYAN}OS Distro:${NOCOLOR}\t\t$(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
-    echo "${CYAN}CPU Device:${NOCOLOR}\t\t$(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
-    echo "${CYAN}CPU Processing Units:${NOCOLOR}\t$(nproc --all)"
+    echo "${CYAN}OS Kernel:${RESET}\t\t$(uname -sr)"
+    echo "${CYAN}OS Distro:${RESET}\t\t$(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
+    echo "${CYAN}CPU Device:${RESET}\t\t$(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
+    echo "${CYAN}CPU Processing Units:${RESET}\t$(nproc --all)"
     # echo "CPU Usage: $((100-$(vmstat 1 2 | tail -1 | awk '{print $15}')))%"
     if [ -f "/proc/driver/nvidia/version" ]; then
         if [ ! -x "$(command -v nvidia-smi)" ]; then
             error "command \"nvidia-smi\" not found."
         else
-            echo "${CYAN}NVIDIA GPU Device:${NOCOLOR}\t$(nvidia-smi -L | sed 's/([^)]*)//g')"
+            echo "${CYAN}NVIDIA GPU Device:${RESET}\t$(nvidia-smi -L | sed 's/([^)]*)//g')"
         fi
-        echo "${CYAN}NVIDIA Driver Version:${NOCOLOR}\t$(grep -oP 'NVRM version:\s+NVIDIA UNIX\s+\S+\s+Kernel Module\s+\K[0-9.]+' /proc/driver/nvidia/version)"
+        echo "${CYAN}NVIDIA Driver Version:${RESET}\t$(grep -oP 'NVRM version:\s+NVIDIA UNIX\s+\S+\s+Kernel Module\s+\K[0-9.]+' /proc/driver/nvidia/version)"
     else
         error "NVIDIA Driver not found."
     fi
-    echo "${CYAN}Available Memory:${NOCOLOR}\t$(free -mh | grep ^Mem | awk '{ print $7; }')/$(free -mh | grep ^Mem | awk '{ print $2; }')"
+    echo "${CYAN}Available Memory:${RESET}\t$(free -mh | grep ^Mem | awk '{ print $7; }')/$(free -mh | grep ^Mem | awk '{ print $2; }')"
     if [ -f /.dockerenv ]; then
-        echo "${CYAN}Available Storage:${NOCOLOR}\t$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $4}')/$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $2}')"
+        echo "${CYAN}Available Storage:${RESET}\t$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $4}')/$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $2}')"
     else
-        echo "${CYAN}Available Storage:${NOCOLOR}\t$(df -h --total | grep --color=never 'total' | awk '{ print $4}')/$(df -h --total | grep --color=never 'total' | awk '{ print $2}')"
+        echo "${CYAN}Available Storage:${RESET}\t$(df -h --total | grep --color=never 'total' | awk '{ print $4}')/$(df -h --total | grep --color=never 'total' | awk '{ print $2}')"
     fi
 }
 # system_overview
 
-display_typefaces_with_hint() {
+display_typefaces() {
     # ref: https://stackoverflow.com/a/49313231/11393911
     fc-list -f "%{family}\n" | grep -i "$1" | sort -t: -u -k1,1
+    if [ -z $1 ]; then
+        info "A hint of the typeface family name could be given as an argument.
+        For example:
+            $0 fira
+        "
+    fi
 }
 
 quick_open_docker_container() {
@@ -467,20 +497,16 @@ zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 
 greeting(){
-    echo "${GREEN}Avaiable Commands:${NOCOLOR}
-  greeting | system_overview
-  display_software_versions | display_xdg_env | display_typefaces_with_hint
-  [un]set_proxy | check_public_ip | check_proxy_status
-    ";
+    echo "${GREEN}Avaiable Commands:${RESET}
+  greeting, system_overview
+  display_software_versions, display_xdg_envs, display_typefaces
+  [un]set_proxy, check_public_ip, check_proxy_status
+  [pre|ap]pend_to_env_var, remove_from_env_var";
     check_public_ip;
-    echo -e "\n$CYAN$zshrc_duration ms$NOCOLOR to start up."
+    if [[ -n ${ROS_DISTRO} && -f "/opt/ros/${ROS_DISTRO}/setup.zsh" ]]; then
+        source "/opt/ros/${ROS_DISTRO}/setup.zsh";
+        info "Using ROS $BOLD$ROS_DISTRO$RESET.";
+    fi
+    info "$CYAN$zshrc_duration ms$RESET to start up."
 }
 greeting
-
-if [ -n "${ROS_DISTRO}" ]; then
-    if [ -f "/opt/ros/${ROS_DISTRO}/setup.zsh" ]; then
-        source "/opt/ros/${ROS_DISTRO}/setup.zsh";
-        echo 
-        info "Using ROS ($ROS_DISTRO)."
-    fi
-fi 
