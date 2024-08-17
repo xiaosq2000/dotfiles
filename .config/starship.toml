@@ -32,13 +32,13 @@ disabled = false
 [hostname]
 ssh_only = false
 style= "fg:lavender"
-format = '[$ssh_symbol@$hostname]($style) '
+format = '[@$hostname $ssh_symbol]($style) '
 disabled = false
 
 [directory]
 format = ' [$path]($style)[$read_only]($read_only_style) '
 style = "fg:peach"
-truncation_length = 8
+truncation_length = 16
 truncation_symbol = "…/"
 
 [git_branch]
