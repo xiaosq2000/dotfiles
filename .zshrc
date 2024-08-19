@@ -62,18 +62,6 @@ debug() {
     fi
 }
 
-help(){
-echo "${GREEN}Avaiable Commands:${RESET}
-  help, greeting, 
-  system_overview, display_software_versions, 
-  display_xdg_envs, display_typefaces, 
-  check_public_ip, check_private_ip, 
-  set_proxy, unset_proxy, check_proxy_status, 
-  check_port_availability,
-  [pre|ap]pend_to_env_var, remove_from_env_var
-  "
-}
-
 prepend_to_env_var() {
     if [[ -z "$1" || -z "$2" ]]; then
         error "at least 2 arguments are required.
@@ -163,12 +151,13 @@ check_public_ip() {
     else 
         echo "${PURPLE}Public Networking:${RESET}\n`echo $ipinfo | grep --color=never -e '\"ip\"' -e '\"city\"' | sed 's/^[ \t]*//' | awk '{print}' ORS=' '`"
     fi
+    echo
 }
 check_private_ip() {
     echo "${PURPLE}Private Networking:${RESET}\n\"ip\": \"`hostname -I | awk '{ print $1; }'`\","
+    echo
 }
 check_proxy_status() {
-    check_public_ip
     echo "${YELLOW}VPN Client Status: ${RESET}"
     if [[ $(uname -r | grep 'WSL2') ]]; then
         warning "Unknown. For WSL2, the VPN client is probably running on the host machine. Please check manually.";
@@ -177,6 +166,7 @@ check_proxy_status() {
     else
         echo "  $(systemctl is-active sing-box.service)"
     fi
+    echo
     echo -e "${CYAN}Related Environment Variables: ${RESET}"
     local proxy_env=$(env | grep --color=never -i 'proxy')
     echo $proxy_env | while read line; do echo "  ${line}"; done
@@ -226,9 +216,8 @@ set_proxy() {
     export NO_PROXY=${NO_PROXY:-${no_proxy}}
     git config --global http.proxy ${http_proxy}
     git config --global https.proxy ${https_proxy}
-    debug "Wait 5 seconds before checking current public IP."
+    debug "Wait 5 seconds before the VPN client works."
     sleep 5s;
-    check_public_ip
 }
 unset_proxy() {
     if [[ $(uname -r | grep 'WSL2') || -f /.dockerenv ]]; then
@@ -258,9 +247,6 @@ unset_proxy() {
     unset NO_PROXY
     git config --global --unset http.proxy
     git config --global --unset https.proxy
-    debug "Wait 2 seconds before checking current public IP."
-    sleep 2s;
-    check_public_ip
 }
 check_port_availability() {
     if [[ -z $1 ]]; then
@@ -407,7 +393,17 @@ alias ohmyzsh="${EDITOR} ${HOME}/.oh-my-zsh"
 alias zshconfig="${EDITOR} ${HOME}/.zshrc"
 alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
 alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
+alias sshconfig="${EDITOR} ${HOME}/.ssh/config"
 alias starshipconfig="${EDITOR} ${XDG_CONFIG_HOME}/starship.toml"
+sshtmux() {
+    host="$1";
+    if [[ -n "$2" ]]; then
+        session_name="$2";
+    else 
+        session_name="session-`date +%d/%m/%y`";
+    fi
+    ssh $host -t "zsh -ic \"tmux a || tmux new -s '$session_name'\""
+}
 
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -434,80 +430,90 @@ fi
 # <<< personal ros initialization <<<
 
 
-display_software_versions() {
+software_overview() {
     echo "${BLUE}Software Overview: ${RESET}"
     local WIDTH=16
-    local display_software_versions_helper() {
+    local INDENT='  '
+    local software_overview_helper() {
+        exec 2>/dev/null
         local unaliased_name
         if [[ `which $1 | grep 'alias'` ]]; then
             unaliased_name="`which $1 | awk '{ print $4; }'`"
         else
             unaliased_name="$1"
         fi
-        local command_to_print_version="$2"
+        # local command_to_print_version="$2"
         if [[ `command -v "$unaliased_name"` ]]; then
-            printf "  %-${WIDTH}s%s" "$1" "v"
-            eval "$command_to_print_version"
+            printf "${INDENT}%-${WIDTH}s%s\n" $1 $2
+            # eval "$command_to_print_version"
+            return 0
         else
-            printf "  ${RED}%-${WIDTH}s${RESET}%s\n" "$1" "not found"
+            printf "${INDENT}${RED}%-${WIDTH}s${RESET}%s\n" "$1" "not found"
+            return 1
         fi
+        exec 2>/dev/tty
     }
-    display_software_versions_helper "ldd" "ldd --version | head -n 1 | awk '{ print \$5; }'"
-    display_software_versions_helper "gcc" "gcc --version | head -n 1 | awk '{ print \$4; }'"
-    display_software_versions_helper "nvcc" "nvcc --version | sed -n '4p' | awk '{ print \$5; }' | sed 's/.\$//'"
-    display_software_versions_helper "zsh" "zsh --version | awk '{ print \$2; }'"
-    display_software_versions_helper "tmux" "tmux -V | awk '{ print \$2; }'"
-    display_software_versions_helper "nvim" "nvim --version | head -n 1 | awk '{ print \$2; }' | cut -dv -f2"
-    display_software_versions_helper "vim" "vim --version | head -n 1 | awk '{ print \$5;}'"
-    display_software_versions_helper "git" "git --version | awk '{ print \$3; }'"
-    display_software_versions_helper "cmake" "cmake --version | head -n 1 | awk '{ print \$3; }'"
-    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
-        display_software_versions_helper "docker" "docker --version | awk '{print \$3}' | cut -d, -f1"
+    if [ -f /.dockerenv ]; then
+        warning "Inside a docker container."
     fi
-    display_software_versions_helper "python" "python --version | awk '{ print \$2; }'"
-    display_software_versions_helper "conda" "conda --version | awk '{ print \$2; }'"
-    display_software_versions_helper "mamba" "mamba --version"
-    display_software_versions_helper "micromamba" "micromamba --version"
-    if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
-        display_software_versions_helper "gnome-shell" "gnome-shell --version | awk '{ print \$3; }'"
-        if [ -z "${ROS_DISTRO}" ]; then
-            printf "  ${RED}%-${WIDTH}s${RESET}%s\n" "ROS" "not found"
-        else
-            printf "  ${GREEN}%-${WIDTH}s${RESET}%s\n" "ROS" "${ROS_DISTRO}"
-        fi
+    
+    printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "OS Kernel" "`uname -sr`"
+    printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "OS Distro" "`cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")'`"
+
+    software_overview_helper "ldd" "`ldd --version | head -n 1 | cut -f 1 -d ' ' --complement`"
+    software_overview_helper "gcc" "`gcc --version | head -n 1 | awk '{ print $4; }'`"
+    software_overview_helper "nvcc" "`nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.\$//'`"
+    software_overview_helper "zsh" "`zsh --version | awk '{ print $2; }'`"
+    software_overview_helper "tmux" "`tmux -V | awk '{ print $2; }'`"
+    software_overview_helper "nvim" "`nvim --version | head -n 1 | awk '{ print $2; }' | cut -dv -f2`"
+    software_overview_helper "vim" "`vim --version | head -n 1 | awk '{ print $5;}'`"
+    software_overview_helper "git" "`git --version | awk '{ print $3; }'`"
+    software_overview_helper "cmake" "`cmake --version | head -n 1 | awk '{ print $3; }'`"
+    software_overview_helper "ninja" "`ninja --version`"
+    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
+        software_overview_helper "docker" "`docker --version | awk '{print $3}' | cut -d, -f1`"
+    fi
+    software_overview_helper "python" "`python --version | awk '{ print $2; }'`"
+    software_overview_helper "conda" "`conda --version | awk '{ print $2; }'`"
+    software_overview_helper "mamba" "`mamba --version`"
+    software_overview_helper "micromamba" "`micromamba --version`"
+    software_overview_helper "gnome-shell" "`gnome-shell --version | awk '{ print $3; }'`"
+    software_overview_helper "xclip" "`xclip -version 2>&1 | head -n 1 | awk '{ print $3;}'`"
+    software_overview_helper "zathura" "`zathura --version | head -n 1 | awk '{ print $2; }'`"
+    software_overview_helper "TeX" "`tex --version | grep -o '(.*)' | sed 's/[()]//g'`"
+    if [ -z "${ROS_DISTRO}" ]; then
+        printf "  ${RED}%-${WIDTH}s${RESET}%s\n" "ROS" "not found"
+    else
+        printf "  ${GREEN}%-${WIDTH}s${RESET}%s\n" "ROS" "${ROS_DISTRO}"
     fi
     echo
 }
 
-system_overview() {
+hardware_overview() {
     local WIDTH=32
-    echo "${CYAN}System Overview:${RESET}"
-    if [ -f /.dockerenv ]; then
-        warning "Inside a docker container."
-    fi
-    local system_overview_helper() {
-        printf "  %-${WIDTH}s${RESET}%s\n" $@
+    local INDENT="  "
+    echo "${BLUE}Hardware Overview:${RESET}"
+    local hardware_overview_helper() {
+        printf "${INDENT}%-${WIDTH}s${RESET}%s\n" $@
     }
-    system_overview_helper "OS Kernel:" "`uname -sr`"
-    system_overview_helper "OS Distro:" "`cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")'`"
-    system_overview_helper "CPU Device:" "`cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*'`"
-    system_overview_helper "CPU Processing Units:" "`nproc --all`"
+    hardware_overview_helper "CPU Device:" "`cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*'`"
+    hardware_overview_helper "CPU Processing Units:" "`nproc --all`"
     if [ -f "/proc/driver/nvidia/version" ]; then
         if [ ! -x "$(command -v nvidia-smi)" ]; then
             error "command \"nvidia-smi\" not found."
         else
-            system_overview_helper "NVIDIA GPU Device:" "`nvidia-smi -L | sed 's/([^)]*)//g'`"
+            hardware_overview_helper "NVIDIA GPU Device:" "`nvidia-smi -L | sed 's/([^)]*)//g'`"
         fi
-        system_overview_helper "NVIDIA Driver Version:" "`grep -oP 'NVRM version:\s+NVIDIA UNIX\s+\S+\s+Kernel Module\s+\K[0-9.]+' /proc/driver/nvidia/version`"
+        hardware_overview_helper "NVIDIA Driver Version:" "`grep -oP 'NVRM version:\s+NVIDIA UNIX\s+\S+\s+Kernel Module\s+\K[0-9.]+' /proc/driver/nvidia/version`"
     else
         error "NVIDIA Driver not found."
     fi
-    system_overview_helper "Memory:" "`free -mh | grep ^Mem | awk '{ print $2; }'`"
+    hardware_overview_helper "Available Memory:" "`free -mh | grep ^Mem | awk '{ print $7; }'`/`free -mh | grep ^Mem | awk '{ print $2; }'`"
     if [ ! -f /.dockerenv ]; then
-       system_overview_helper "Available Storage:" "`df -h --total | grep --color=never 'total' | awk '{ print $4 }'`"
+       hardware_overview_helper "Available Storage:" "`df -h --total | grep --color=never 'total' | awk '{ print $4 }'`/`df -h --total | grep --color=never 'total' | awk '{ print $2 }'`"
     else
         # the results of 'total' field will be doubled if inside a docker container.
-       system_overview_helper "Available Storage:" "`df -h --total | grep --color=never '/etc/hosts' | awk '{ print $4 }'`"
+       hardware_overview_helper "Available Storage:" "`df -h --total | grep --color=never '/etc/hosts' | awk '{ print $4 }'`/`df -h --total | grep --color=never '/etc/hosts' | awk '{ print $2 }'`"
     fi
     echo
 }
@@ -538,12 +544,23 @@ alias ros='quick_open_docker_container ros'
 zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 
+help(){
+echo "${GREEN}Avaiable Commands:${RESET}
+help, greeting, 
+hardware_overview, software_overview, display_xdg_envs, display_typefaces, 
+check_public_ip, check_private_ip, set_proxy, unset_proxy, check_proxy_status, check_port_availability,
+prepend_to_env_var, append_to_env_var, remove_from_env_var,
+latex, ros
+"
+}
+
 greeting(){
-    # help;
-    # system_overview;
-    # display_software_versions
-    # check_private_ip;
+    help;
+    hardware_overview;
+    software_overview
+    check_private_ip;
     check_public_ip;
+    check_proxy_status;
     debug "$zshrc_duration ms$RESET to start up."
 }
 greeting
