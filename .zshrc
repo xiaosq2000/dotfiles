@@ -587,6 +587,10 @@ ${INDENT}latex; ros
 "
 }
 
+# if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
+#   exec tmux
+# fi
+
 greeting(){
     # help;
     # hardware_overview;
