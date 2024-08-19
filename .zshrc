@@ -44,16 +44,20 @@ PURPLE=$(tput setaf 5)
 CYAN=$(tput setaf 6)
 
 error() {
-    printf "${RED}${BOLD}ERROR:${RESET} %s\n" "$@"
+    printf "${RED}${BOLD}ERROR:${RESET} %s\n" "$@" >&2
+    return 1;
 }
 warning() {
-    printf "${YELLOW}${BOLD}WARNING:${RESET} %s\n" "$@"
+    printf "${YELLOW}${BOLD}WARNING:${RESET} %s\n" "$@" >&2
+    return 1;
 }
 info() {
     printf "${GREEN}${BOLD}INFO:${RESET} %s\n" "$@"
+    return 0;
 }
 
 local print_debug=false
+local print_verbose=false
 debug() {
     if [[ $print_debug == "true" ]]; then
         printf "${BOLD}DEBUG:${RESET} %s\n" "$@"
@@ -149,28 +153,16 @@ check_public_ip() {
     if [[ -z $ipinfo ]]; then
         error "No public networking."
     else 
-        echo "${PURPLE}Public Networking:${RESET}\n$(echo $ipinfo | grep --color=never -e '\"ip\"' -e '\"city\"' | sed 's/^[ \t]*//' | awk '{print}' ORS=' ')"
+        echo "${PURPLE}Public Network:${RESET}\n${INDENT}$(echo $ipinfo | grep --color=never -e '\"ip\"' -e '\"city\"' | sed 's/^[ \t]*//' | awk '{print}' ORS=' ')"
     fi
     echo
 }
 check_private_ip() {
-    echo "${PURPLE}Private Networking:${RESET}\n\"ip\": \"$(hostname -I | awk '{ print $1; }')\","
+    echo "${PURPLE}Private Network:${RESET}\n${INDENT}\"ip\": \"$(hostname -I | awk '{ print $1; }')\","
     echo
 }
-check_proxy_status() {
-    echo "${YELLOW}VPN Client Status: ${RESET}"
-    if [[ $(uname -r | grep 'WSL2') ]]; then
-        warning "Unknown. For WSL2, the VPN client is probably running on the host machine. Please check manually.";
-    elif [ -f /.dockerenv ]; then
-        warning "Unknown. For a Docker container, the VPN client is probably running on the host machine. Please check manually.";
-    else
-        echo "  $(systemctl is-active sing-box.service)"
-    fi
-    echo
-    echo -e "${CYAN}Related Environment Variables: ${RESET}"
-    local proxy_env=$(env | grep --color=never -i 'proxy')
-    echo $proxy_env | while read line; do echo "  ${line}"; done
-}
+
+local using_proxy
 set_proxy() {
     if [[ $(uname -r | grep 'WSL2') ]]; then
         warning "Make sure the VPN client is working on host."
@@ -218,6 +210,8 @@ set_proxy() {
     git config --global https.proxy ${https_proxy}
     debug "Wait 5 seconds before the VPN client works."
     sleep 5s;
+
+    using_proxy=true;
 }
 unset_proxy() {
     if [[ $(uname -r | grep 'WSL2') || -f /.dockerenv ]]; then
@@ -247,7 +241,35 @@ unset_proxy() {
     unset NO_PROXY
     git config --global --unset http.proxy
     git config --global --unset https.proxy
+
+    using_proxy=false;
 }
+check_proxy_status() {
+    local proxy_env=$(env | grep --color=never -i 'proxy')
+    if [[ -n $proxy_env ]]; then
+        using_proxy=true;
+        info "The shell is using network proxy.";
+    else 
+        using_proxy=false;
+        info "The shell is ${BOLD}${YELLOW}NOT${RESET} using network proxy.";
+    fi
+    if [[ $print_verbose == "true" ]]; then
+        check_public_ip;
+        echo -e "${CYAN}Environment Variables Related with Network Proxy: ${RESET}"
+        echo $proxy_env | while read line; do echo "${INDENT}${line}"; done
+        echo
+        echo "${YELLOW}VPN Client Status: ${RESET}"
+        if [[ $(uname -r | grep 'WSL2') ]]; then
+            warning "Unknown. For WSL2, the VPN client is probably running on the host machine. Please check manually.";
+        elif [ -f /.dockerenv ]; then
+            warning "Unknown. For a Docker container, the VPN client is probably running on the host machine. Please check manually.";
+        else
+            echo "  $(systemctl is-active sing-box.service)"
+        fi
+        echo
+    fi 
+}
+
 check_port_availability() {
     if [[ -z $1 ]]; then
         error "an argument, the port number, should be given."
@@ -436,34 +458,47 @@ software_overview() {
     echo "${BLUE}Software Overview: ${RESET}"
     local WIDTH=16
     software_overview_helper() {
-        local unaliased_name
-        if [[ $(which $1 | grep 'alias') ]]; then
-            unaliased_name="$(which $1 | awk '{ print $4; }')"
+        local format="${INDENT}%-${WIDTH}s%s\n";
+        local not_found_format="${INDENT}${RED}%-${WIDTH}s${RESET}%s\n";
+        local cli_name;
+        local version;
+        if [[ $# -eq 3 ]]; then
+            format=$1;
+            cli_name=$2;
+            version=$3;
+        elif [[ $# -eq 2 ]]; then
+            cli_name=$1;
+            version=$2;
         else
-            unaliased_name="$1"
+            error "Given $# arguments, it should be 2 or 3."
+            return 1;
         fi
-        # local command_to_print_version="$2"
-        if [[ $(command -v "$unaliased_name") ]]; then
-            printf "${INDENT}%-${WIDTH}s%s\n" "$1" "$2"
-            # eval "$command_to_print_version"
+        local unaliased_name;
+        local print_only_not_found="false";
+        if [[ $(which $cli_name | grep 'alias') ]]; then
+            unaliased_name="$(which $cli_name | awk '{ print $4; }')";
         else
-            printf "${INDENT}${RED}%-${WIDTH}s${RESET}%s\n" "$1" "not found"
+            unaliased_name="$cli_name";
+        fi
+        if [[ $(command -v "$unaliased_name") ]]; then
+            if [[ ! $print_only_not_found == "true" ]]; then
+                printf $format $unaliased_name $version;
+            fi
+        else
+            printf $not_found_format $unaliased_name "not found";
         fi
     }
-    if [ -f /.dockerenv ]; then
-        warning "Inside a docker container."
-    fi
     printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "OS Kernel" "$(uname -sr)"
     printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "OS Distro" "$(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
-    if [ -z "${ROS_DISTRO}" ]; then
-        printf "  ${RED}%-${WIDTH}s${RESET}%s\n" "ROS" "not found"
-    else
-        printf "  ${GREEN}%-${WIDTH}s${RESET}%s\n" "ROS" "${ROS_DISTRO}"
-    fi
-
     software_overview_helper "ldd" "$(ldd --version | head -n 1 | cut -f 1 -d ' ' --complement)"
     software_overview_helper "gcc" "$(gcc --version | head -n 1 | awk '{ print $4; }')"
     software_overview_helper "nvcc" "$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.\$//')"
+    if [ -f /.dockerenv ]; then
+        warning "This is a docker container."
+    fi
+    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
+        software_overview_helper "docker" "$(docker --version | awk '{print $3}' | cut -d, -f1)"
+    fi
     software_overview_helper "zsh" "$(zsh --version | awk '{ print $2; }')"
     software_overview_helper "tmux" "$(tmux -V | awk '{ print $2; }')"
     software_overview_helper "nvim" "$(nvim --version | head -n 1 | awk '{ print $2; }' | cut -dv -f2)"
@@ -471,9 +506,6 @@ software_overview() {
     software_overview_helper "git" "$(git --version | awk '{ print $3; }')"
     software_overview_helper "cmake" "$(cmake --version | head -n 1 | awk '{ print $3; }')"
     software_overview_helper "ninja" "$(ninja --version)"
-    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
-        software_overview_helper "docker" "$(docker --version | awk '{print $3}' | cut -d, -f1)"
-    fi
     software_overview_helper "python" "$(python --version | awk '{ print $2; }')"
     software_overview_helper "conda" "$(conda --version | awk '{ print $2; }')"
     software_overview_helper "mamba" "$(mamba --version)"
@@ -482,6 +514,11 @@ software_overview() {
     software_overview_helper "xclip" "$(xclip -version 2>&1 | head -n 1 | awk '{ print $3;}')"
     software_overview_helper "zathura" "$(zathura --version | head -n 1 | awk '{ print $2; }')"
     software_overview_helper "TeX" "$(tex --version | grep -o '(.*)' | sed 's/[()]//g')"
+    if [ -z "${ROS_DISTRO}" ]; then
+        software_overview_helper "${INDENT}${RED}%-${WIDTH}s${RESET}%s\n" "ROS" "not found"
+    else
+        software_overview_helper "${INDENT}${GREEN}%-${WIDTH}s${RESET}%s\n" "ROS" "${ROS_DISTRO}"
+    fi
     echo
     exec 2> /dev/tty
 }
@@ -542,20 +579,20 @@ zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 
 help(){
 echo "${GREEN}Avaiable Commands:${RESET}
-${INDENT}help, greeting, 
-${INDENT}hardware_overview, software_overview, display_xdg_envs, display_typefaces, 
-${INDENT}check_public_ip, check_private_ip, set_proxy, unset_proxy, check_proxy_status, check_port_availability,
-${INDENT}prepend_to_env_var, append_to_env_var, remove_from_env_var,
-latex, ros
+${INDENT}help; greeting; export print_[debug|verbose]=[true|false];
+${INDENT}hardware_overview; software_overview; display_xdg_envs; display_typefaces; 
+${INDENT}check_public_ip; check_private_ip; set_proxy; unset_proxy; check_proxy_status; check_port_availability;
+${INDENT}prepend_to_env_var; append_to_env_var; remove_from_env_var;
+${INDENT}latex; ros
 "
 }
 
 greeting(){
-    help;
-    hardware_overview;
-    software_overview
-    check_private_ip;
-    check_public_ip;
+    # help;
+    # hardware_overview;
+    # software_overview
+    # check_private_ip;
+    # check_public_ip;
     check_proxy_status;
     debug "$zshrc_duration ms$RESET to start up."
 }
