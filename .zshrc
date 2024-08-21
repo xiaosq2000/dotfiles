@@ -23,7 +23,7 @@ export XDG_PREFIX_HOME="${HOME}/.local"
 export XDG_PREFIX_DIR="/usr/local"
 
 # ref: https://unix.stackexchange.com/a/269085/523957
-print_debug=true
+print_debug=false
 print_verbose=true
 
 INDENT='  '
@@ -52,8 +52,6 @@ info() {
 debug() {
     if [[ $print_debug == "true" ]]; then
         printf "${BOLD}DEBUG:${RESET} %s\n" "$@"
-    else
-        ;
     fi
 }
 
@@ -101,7 +99,7 @@ prepend_env() {
                 eval "export ${env_var_name}=\"$dir:\${${env_var_name}}\""
             fi
         else
-            warning "$0: $dir pre-exists in ${env_var_name} and nothing happens."
+            debug "$0: $dir pre-exists in ${env_var_name} and nothing happens."
         fi
     done
 }
@@ -231,16 +229,18 @@ set_proxy() {
     debug "Set git global network proxy."
     git config --global http.proxy ${http_proxy}
     git config --global https.proxy ${https_proxy}
-    info "You're recommended to wait a couple of seconds until the VPN client is on.
+    # info "You're recommended to wait a couple of seconds until the VPN client is on.
 
-      Try with:
+    #   Try with:
 
-      ${INDENT}$ print_verbose=true check_proxy_status
+    #   ${INDENT}$ print_verbose=true check_proxy_status
 
-      or
+    #   or
 
-      ${INDENT}$ check_public_ip
-    "
+    #   ${INDENT}$ check_public_ip
+    # "
+    sleep 5s;
+    check_public_ip;
 }
 unset_proxy() {
     if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
@@ -269,14 +269,15 @@ unset_proxy() {
     debug "Unset git global network proxy."
     git config --global --unset http.proxy
     git config --global --unset https.proxy
-    info "Try with:
+    # info "Try with:
 
-      ${INDENT}$ print_verbose=true check_proxy_status
+    #   ${INDENT}$ print_verbose=true check_proxy_status
 
-      or
+    #   or
 
-      ${INDENT}$ check_public_ip
-    "
+    #   ${INDENT}$ check_public_ip
+    # "
+    check_public_ip
 }
 check_proxy_status() {
     local proxy_env=$(env | grep --color=never -i 'proxy')
@@ -609,6 +610,6 @@ start_up() {
     # check_proxy_status;
     check_public_ip;
     # set_proxy # unset_proxy
-    debug "$zshrc_duration ms$RESET to start up."
+    info "$zshrc_duration ms$RESET to start up."
 }
 start_up
