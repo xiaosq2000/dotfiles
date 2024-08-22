@@ -488,6 +488,14 @@ local plugins = {
                     git_ignored = false,
                 },
             })
+            -- Use <C-Q> to open or close.
+            vim.keymap.set({ "i", "n" }, "<C-Q>", "<CMD>NvimTreeOpen<CR>", { silent = true })
+            vim.api.nvim_create_autocmd("FileType", {
+                pattern = "NvimTree",
+                callback = function()
+                    vim.keymap.set("n", "<C-Q>", ":NvimTreeClose<CR>", { buffer = true, silent = true })
+                end,
+            })
         end,
     },
     {
