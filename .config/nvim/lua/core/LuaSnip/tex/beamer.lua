@@ -5,6 +5,7 @@ local t = ls.text_node
 local i = ls.insert_node
 local f = ls.function_node
 local d = ls.dynamic_node
+local c = ls.choice_node
 local fmt = require("luasnip.extras.fmt").fmt
 local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
@@ -20,6 +21,9 @@ end
 return {
     s({ trig = "at" },
         fmta("\\alert<<<>>>{<>}", { i(1, ""), d(2, get_visual) })
+    ),
+    s({ trig = "md" },
+        fmta("\\mode<<<>>>{<>}", { c(1, { t({ 'presentation' }), t({ 'article' }) }), d(2, get_visual) })
     ),
     s({ trig = "beamer-example" },
         fmta(

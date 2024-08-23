@@ -78,7 +78,6 @@ return {
         fmta(
             [[
 \begin{itemize}
-    \setlength{\itemsep}{1.5ex}
     \item <>
 \end{itemize}
     ]],
@@ -99,10 +98,8 @@ return {
     s({ trig = "frame" },
         fmta(
             [[
-\begin{frame}{<>}
-    \vspace*{\fill}
+\begin{frame}[c]{<>}
     <>
-    \vspace*{\fill}
 \end{frame}
     ]],
             { i(1, "Title"), i(2, "TODO") }
@@ -111,9 +108,9 @@ return {
     s({ trig = "Frame" },
         fmta(
             [[
-\begin{Frame}{<>}
+\begin{frame}[c]\Frametitle{<>}
     <>
-\end{Frame}
+\end{frame}
     ]],
             { i(1, "Title"), i(2, "TODO") }
         )
@@ -124,7 +121,7 @@ return {
 \begin{figure}[<>]
     \centering
     \includegraphics[width=0.<>\linewidth]{<>}
-    \vspace*{0.5ex}
+    \smallskip
     \caption{<>}
     % \label{fig:<>}
 \end{figure}
@@ -145,7 +142,7 @@ return {
        \centering
        \includegraphics[width=\linewidth]{<>}
     \end{minipage}
-    \vspace*{0.5ex}
+    \vspace*{\smallskip}
     \caption{Caption}
 \end{figure}
     ]],
@@ -166,7 +163,7 @@ return {
         Hello & World \\
         \bottomrule
     \end{tblr}
-    % \vspace{0.5ex}
+    % \smallskip
     % \caption{<>}
     % \label{table:<>}
 \end{table}
