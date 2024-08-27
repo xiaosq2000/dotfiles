@@ -562,11 +562,17 @@ ensure_install_plugins() {
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autoenv" ]]; then
         git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv"
     fi
+    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-vi-mode" ]]; then
+        git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode"
+    fi
 }
 ensure_install_plugins
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
+# Only changing the escape key to `jk` in insert mode, we still
+# keep using the default keybindings `^[` in other modes
+ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
 plugins=(
     git
     docker
@@ -575,6 +581,7 @@ plugins=(
     conda-zsh-completion
     zsh-syntax-highlighting
     zsh-autosuggestions
+    zsh-vi-mode
 )
 
 source $ZSH/oh-my-zsh.sh
