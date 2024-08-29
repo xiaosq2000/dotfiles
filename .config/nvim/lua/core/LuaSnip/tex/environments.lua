@@ -142,7 +142,7 @@ return {
        \centering
        \includegraphics[width=\linewidth]{<>}
     \end{minipage}
-    \vspace*{\smallskip}
+    \smallskip
     \caption{Caption}
 \end{figure}
     ]],

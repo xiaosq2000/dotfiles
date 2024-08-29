@@ -253,4 +253,20 @@ return {
     ]], {}
         )
     ),
+    s({ trig = "hyperref", dscr = "" },
+        fmta([[
+            \usepackage{hyperref}
+            \hypersetup{
+                colorlinks=true,
+                linkcolor=.,
+                anchorcolor=.,
+                filecolor=.,
+                menucolor=.,
+                runcolor=.,
+                urlcolor=.,
+                citecolor=.,
+            }
+        ]]
+        , {})
+    ),
 }
