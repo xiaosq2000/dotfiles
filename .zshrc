@@ -198,6 +198,7 @@ set_proxy() {
             local port=1080
             debug "Start the VPN client service."
             sudo systemctl start sing-box.service
+            sleep 5s;
             debug "Set GNOME networking proxy settings."
             dconf write /system/proxy/mode "'manual'"
             dconf write /system/proxy/http/host ${host}
@@ -239,7 +240,6 @@ set_proxy() {
 
     #   ${INDENT}$ check_public_ip
     # "
-    sleep 5s;
     check_public_ip;
 }
 unset_proxy() {
