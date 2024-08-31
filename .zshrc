@@ -432,7 +432,7 @@ software_overview() {
     if [ -f /.dockerenv ]; then
         warning "This is a docker container."
     fi
-    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
+    if [[ ! -f /.dockerenv ]]; then
         software_overview_helper "docker" "$(docker --version | awk '{print $3}' | cut -d, -f1)"
     fi
     software_overview_helper "zsh" "$(zsh --version | awk '{ print $2; }')"
@@ -479,7 +479,7 @@ hardware_overview() {
         error "NVIDIA Driver not found."
     fi
     hardware_overview_helper "Available Memory:" "$(free -mh | grep ^Mem | awk '{ print $7; }')/$(free -mh | grep ^Mem | awk '{ print $2; }')"
-    if [ ! -f /.dockerenv ]; then
+    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
         hardware_overview_helper "Available Storage:" "$(df -h --total | grep --color=never 'total' | awk '{ print $4 }')/$(df -h --total | grep --color=never 'total' | awk '{ print $2 }')"
     else
         # the results of 'total' field will be doubled if inside a docker container.
