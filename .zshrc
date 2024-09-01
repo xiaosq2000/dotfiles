@@ -569,6 +569,7 @@ source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
 plugins=(
     git
+    git-auto-fetch
     docker
     docker-compose
     # The following are manually installed plugins
