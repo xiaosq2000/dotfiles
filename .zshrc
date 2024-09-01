@@ -198,6 +198,7 @@ set_proxy() {
             local port=1080
             debug "Start the VPN client service."
             sudo systemctl start sing-box.service
+            sleep 5s;
             debug "Set GNOME networking proxy settings."
             dconf write /system/proxy/mode "'manual'"
             dconf write /system/proxy/http/host ${host}
@@ -239,7 +240,6 @@ set_proxy() {
 
     #   ${INDENT}$ check_public_ip
     # "
-    sleep 5s;
     check_public_ip;
 }
 unset_proxy() {
@@ -432,7 +432,7 @@ software_overview() {
     if [ -f /.dockerenv ]; then
         warning "This is a docker container."
     fi
-    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
+    if [[ ! -f /.dockerenv ]]; then
         software_overview_helper "docker" "$(docker --version | awk '{print $3}' | cut -d, -f1)"
     fi
     software_overview_helper "zsh" "$(zsh --version | awk '{ print $2; }')"
@@ -479,7 +479,7 @@ hardware_overview() {
         error "NVIDIA Driver not found."
     fi
     hardware_overview_helper "Available Memory:" "$(free -mh | grep ^Mem | awk '{ print $7; }')/$(free -mh | grep ^Mem | awk '{ print $2; }')"
-    if [ ! -f /.dockerenv ]; then
+    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
         hardware_overview_helper "Available Storage:" "$(df -h --total | grep --color=never 'total' | awk '{ print $4 }')/$(df -h --total | grep --color=never 'total' | awk '{ print $2 }')"
     else
         # the results of 'total' field will be doubled if inside a docker container.
@@ -562,11 +562,17 @@ ensure_install_plugins() {
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autoenv" ]]; then
         git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv"
     fi
+    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-vi-mode" ]]; then
+        git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode"
+    fi
 }
 ensure_install_plugins
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
+# Only changing the escape key to `jk` in insert mode, we still
+# keep using the default keybindings `^[` in other modes
+ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
 plugins=(
     git
     git-auto-fetch
@@ -576,6 +582,7 @@ plugins=(
     conda-zsh-completion
     zsh-syntax-highlighting
     zsh-autosuggestions
+    zsh-vi-mode
 )
 
 source $ZSH/oh-my-zsh.sh
