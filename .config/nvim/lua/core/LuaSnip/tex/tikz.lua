@@ -87,7 +87,7 @@ return {
 \annotatedEquation{<>}{n<>}{<>}{0em}{<>em}{<>}{<>}{<>}{<>}
     ]],
             { c(1, { t("colorseries"), t("color") }), i(2, "0"), c(3, { t("south"), t("north") }), i(4,
-                "0.5"), c(5,
+                "-0.5"), c(5,
                 { t("north west"), t("north east"), t("south west"), t("south east") }),
                 i(6,
                     "annotation-color-series"), i(7, "annotation"), c(8,
