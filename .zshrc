@@ -575,6 +575,7 @@ source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
 ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
 plugins=(
     git
+    git-auto-fetch
     docker
     docker-compose
     # The following are manually installed plugins
