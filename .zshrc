@@ -501,7 +501,7 @@ display_typefaces() {
 }
 
 quick_open_docker_container() {
-    if command -v "docker" >/dev/null 2&>1; then
+    if command -v "docker" >/dev/null 2>&1; then
         ;
     else
         error "docker: command not found.";
