@@ -512,6 +512,12 @@ quick_open_docker_container() {
 alias latex='quick_open_docker_container latex'
 alias ros='quick_open_docker_container ros'
 
+sync() {
+    git pull
+    git add .
+    git commit -m "Update"
+    git push
+}
 
 ################################################################################
 CASE_SENSITIVE="false"
