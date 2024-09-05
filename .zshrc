@@ -322,7 +322,7 @@ check_port_availability() {
     if [[ -z $(sudo lsof -i:$1) ]]; then
         info "port $1 is not in use.";
     else
-        warning "port $1 is unavaiable.";
+        error "port $1 is ${BOLD}unavaiable${RESET}.";
     fi
 }
 
