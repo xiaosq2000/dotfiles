@@ -71,7 +71,7 @@ usage() {
 		"Options: " \
 		"${INDENT}-h, --help" \
         ""
-
+}
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	-h | --help)

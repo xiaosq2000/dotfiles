@@ -182,7 +182,7 @@ check_private_ip() {
     echo -e "${PURPLE}Private Network:${RESET}\n${INDENT}\"ip\": \"$(hostname -I | awk '{ print $1; }')\","
     echo
 }
-
+PROXY_PROTOCOL="trojan"
 set_proxy() {
     if [[ $(uname -r | grep 'WSL2') ]]; then
         warning "Make sure the VPN client is working on host."
@@ -197,7 +197,7 @@ set_proxy() {
             local host="'127.0.0.1'"
             local port=1080
             debug "Start the VPN client service."
-            sudo systemctl start sing-box.service
+            sudo systemctl start sing-box-${PROXY_PROTOCOL}.service
             sleep 5s;
             debug "Set GNOME networking proxy settings."
             dconf write /system/proxy/mode "'manual'"
@@ -246,7 +246,7 @@ unset_proxy() {
     if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
         if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
             debug "Stop VPN client service."
-            sudo systemctl stop sing-box.service
+            sudo systemctl stop sing-box-${PROXY_PROTOCOL}.service
             debug "Unset GNOME networking proxy settings."
             dconf write /system/proxy/mode "'none'"
         else
@@ -298,7 +298,7 @@ check_proxy_status() {
         elif [[ -f /.dockerenv ]]; then
             warning "Unknown. For a Docker container, the VPN client is probably running on the host machine. Please check manually.";
         else
-            echo "${INDENT}$(systemctl is-active sing-box.service)"
+            echo "${INDENT}$(systemctl is-active sing-box-${PROXY_PROTOCOL}.service)"
         fi
         echo
     fi
