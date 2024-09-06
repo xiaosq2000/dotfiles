@@ -54,6 +54,9 @@ info() {
 debug() {
 	printf '%s\n' "${BOLD}${GREY}DEBUG:${RESET} $*"
 }
+completed() {
+	printf '%s\n' "${BOLD}${GREEN}✓${RESET} $*"
+}
 
         ]], {})),
     s(
@@ -78,9 +81,13 @@ while [[ $# -gt 0 ]]; do
 		usage
 		exit 0
 		;;
-    -f | --flag)
+    --flag)
 		flag=true
-		shift
+		shift 1
+		;;
+	--foo)
+		foo="$2"
+		shift 2
 		;;
 	*)
 		error "Unknown argument: $1"
@@ -88,6 +95,20 @@ while [[ $# -gt 0 ]]; do
 		;;
 	esac
 done
+
+good_foo=$(
+	IFS=" "
+	for x in $SUPPORTED_FOO; do
+		if [[ "$x" = "$foo" ]]; then
+			printf 1
+			break
+		fi
+	done
+)
+if [[ "${good_foo}" != "1" ]]; then
+	error "foo=$foo is not supported yet."
+	exit 1
+fi
         ]=], {})),
     s(
         {

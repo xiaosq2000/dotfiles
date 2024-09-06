@@ -22,37 +22,32 @@ export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
 export XDG_PREFIX_HOME="${HOME}/.local"
 export XDG_PREFIX_DIR="/usr/local"
 
-# ref: https://unix.stackexchange.com/a/269085/523957
-print_debug=false
-print_verbose=true
+DEBUG=false
 
-INDENT='  '
-
-RESET=$(tput sgr0)
-BOLD=$(tput bold)
-RED=$(tput setaf 1)
-GREEN=$(tput setaf 2)
-YELLOW=$(tput setaf 3)
-BLUE=$(tput setaf 4)
-PURPLE=$(tput setaf 5)
-CYAN=$(tput setaf 6)
-
+INDENT='    '
+BOLD="$(tput bold 2>/dev/null || printf '')"
+GREY="$(tput setaf 0 2>/dev/null || printf '')"
+UNDERLINE="$(tput smul 2>/dev/null || printf '')"
+RED="$(tput setaf 1 2>/dev/null || printf '')"
+GREEN="$(tput setaf 2 2>/dev/null || printf '')"
+YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
+BLUE="$(tput setaf 4 2>/dev/null || printf '')"
+MAGENTA="$(tput setaf 5 2>/dev/null || printf '')"
+RESET="$(tput sgr0 2>/dev/null || printf '')"
 error() {
-    printf "${RED}${BOLD}ERROR:${RESET} %s\n" "$@" >&2
-    return 1;
+    printf '%s\n' "${BOLD}${RED}ERROR:${RESET} $*" >&2
 }
 warning() {
-    printf "${YELLOW}${BOLD}WARNING:${RESET} %s\n" "$@" >&2
-    return 1;
+    printf '%s\n' "${BOLD}${YELLOW}WARNING:${RESET} $*"
 }
 info() {
-    printf "${GREEN}${BOLD}INFO:${RESET} %s\n" "$@"
-    return 0;
+    printf '%s\n' "${BOLD}${GREEN}INFO:${RESET} $*"
 }
 debug() {
-    if [[ $print_debug == "true" ]]; then
-        printf "${BOLD}DEBUG:${RESET} %s\n" "$@"
-    fi
+    [ "$DEBUG" = "true" ] && printf '%s\n' "${BOLD}${GREY}DEBUG:${RESET} $*"
+}
+completed() {
+    printf '%s\n' "${BOLD}${GREEN}✓${RESET} $*"
 }
 
 display_xdg_envs() {
@@ -65,8 +60,8 @@ display_xdg_envs() {
     echo "${INDENT}XDG_CONFIG_DIRS=$XDG_CONFIG_DIRS"
     echo "${INDENT}XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
     echo "${INDENT}# non-standard variables"
-    echo "${INDENT}XDG_PREFIX_HOME=$XDG_PREFIX_HOME"
     echo "${INDENT}XDG_PREFIX_DIR=$XDG_PREFIX_DIR"
+    echo "${INDENT}XDG_PREFIX_HOME=$XDG_PREFIX_HOME"
 }
 
 # TODO: bash-compatiable
@@ -174,15 +169,15 @@ check_public_ip() {
     if [[ -z "$ipinfo" ]]; then
         error "No public networking."
     else
-        echo -e "${PURPLE}Public Network:${RESET}\n${INDENT}$(echo $ipinfo | grep --color=never -e '\"ip\"' -e '\"city\"' | sed 's/^[ \t]*//' | awk '{print}' ORS=' ')"
+        echo -e "${MAGENTA}Public Network:${RESET}\n${INDENT}$(echo $ipinfo | grep --color=never -e '\"ip\"' -e '\"city\"' | sed 's/^[ \t]*//' | awk '{print}' ORS=' ')"
     fi
     echo
 }
 check_private_ip() {
-    echo -e "${PURPLE}Private Network:${RESET}\n${INDENT}\"ip\": \"$(hostname -I | awk '{ print $1; }')\","
+    echo -e "${MAGENTA}Private Network:${RESET}\n${INDENT}\"ip\": \"$(hostname -I | awk '{ print $1; }')\","
     echo
 }
-PROXY_PROTOCOL="trojan"
+proxy_protocol="trojan"
 set_proxy() {
     if [[ $(uname -r | grep 'WSL2') ]]; then
         warning "Make sure the VPN client is working on host."
@@ -197,7 +192,7 @@ set_proxy() {
             local host="'127.0.0.1'"
             local port=1080
             debug "Start the VPN client service."
-            sudo systemctl start sing-box-${PROXY_PROTOCOL}.service
+            sudo systemctl start sing-box-${proxy_protocol}.service
             sleep 5s;
             debug "Set GNOME networking proxy settings."
             dconf write /system/proxy/mode "'manual'"
@@ -234,7 +229,7 @@ set_proxy() {
 
     #   Try with:
 
-    #   ${INDENT}$ print_verbose=true check_proxy_status
+    #   ${INDENT}$ VERBOSE=true check_proxy_status
 
     #   or
 
@@ -246,7 +241,7 @@ unset_proxy() {
     if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
         if [[ $(lsb_release -d | grep 'Ubuntu') ]]; then
             debug "Stop VPN client service."
-            sudo systemctl stop sing-box-${PROXY_PROTOCOL}.service
+            sudo systemctl stop sing-box-${proxy_protocol}.service
             debug "Unset GNOME networking proxy settings."
             dconf write /system/proxy/mode "'none'"
         else
@@ -271,7 +266,7 @@ unset_proxy() {
     git config --global --unset https.proxy
     # info "Try with:
 
-    #   ${INDENT}$ print_verbose=true check_proxy_status
+    #   ${INDENT}$ VERBOSE=true check_proxy_status
 
     #   or
 
@@ -288,20 +283,18 @@ check_proxy_status() {
     fi
     echo
     check_public_ip;
-    if [[ $print_verbose == "true" ]]; then
-        echo "${CYAN}Environment Variables Related with Network Proxy: ${RESET}"
-        echo $proxy_env | while read line; do echo "${INDENT}${line}"; done
-        echo
-        echo "${YELLOW}VPN Client Status: ${RESET}"
-        if [[ $(uname -r | grep 'WSL2') ]]; then
-            warning "Unknown. For WSL2, the VPN client is probably running on the host machine. Please check manually.";
-        elif [[ -f /.dockerenv ]]; then
-            warning "Unknown. For a Docker container, the VPN client is probably running on the host machine. Please check manually.";
-        else
-            echo "${INDENT}$(systemctl is-active sing-box-${PROXY_PROTOCOL}.service)"
-        fi
-        echo
+    echo "${CYAN}Environment Variables Related with Network Proxy: ${RESET}"
+    echo $proxy_env | while read line; do echo "${INDENT}${line}"; done
+    echo
+    echo "${YELLOW}VPN Client Status: ${RESET}"
+    if [[ $(uname -r | grep 'WSL2') ]]; then
+        warning "Unknown. For WSL2, the VPN client is probably running on the host machine. Please check manually.";
+    elif [[ -f /.dockerenv ]]; then
+        warning "Unknown. For a Docker container, the VPN client is probably running on the host machine. Please check manually.";
+    else
+        echo "${INDENT}$(systemctl is-active sing-box-${proxy_protocol}.service)"
     fi
+    echo
 }
 
 check_port_availability() {
@@ -326,14 +319,18 @@ check_port_availability() {
     fi
 }
 
+has() {
+  command -v "$1" 1>/dev/null 2>&1
+}
+
 # Preferred editor
-if [[ $(command -v "nvim") ]]; then
+if has "nvim"; then
     export SUDO_EDITOR='nvim'
     export EDITOR='nvim'
-elif [[ $(command -v "vim") ]]; then
+elif has "vim"; then
     export SUDO_EDITOR='vim'
     export EDITOR='vim'
-elif [[ $(command -v "vi") ]]; then
+elif has "vi"; then
     export SUDO_EDITOR='vi'
     export EDITOR='vi'
 fi
@@ -355,16 +352,6 @@ alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
 alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
 alias sshconfig="${EDITOR} ${HOME}/.ssh/config"
 alias starshipconfig="${EDITOR} ${XDG_CONFIG_HOME}/starship.toml"
-sshtmux() {
-    host="$1";
-    if [[ -n "$2" ]]; then
-        session_name="$2";
-    else
-        session_name="session-$(date +%d/%m/%y)";
-    fi
-    ssh $host -t "zsh -ic \"tmux a || tmux new -s '$session_name'\""
-}
-
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
@@ -416,7 +403,7 @@ software_overview() {
         else
             unaliased_name="$cli_name";
         fi
-        if [[ $(command -v "$unaliased_name") ]]; then
+        if has "$unaliased_name"; then
             if [[ ! $print_only_not_found == "true" ]]; then
                 printf "$format" "$unaliased_name" "$version";
             fi
@@ -501,7 +488,7 @@ display_typefaces() {
 }
 
 quick_open_docker_container() {
-    if command -v "docker" >/dev/null 2>&1; then
+    if has "docker"; then
         ;
     else
         error "docker: command not found.";
@@ -536,7 +523,7 @@ zstyle ':omz:update' mode reminder  # just remind me to update when it's time
 # DISABLE_AUTO_TITLE="true"
 
 # Uncomment the following line to enable command auto-correction.
-# ENABLE_CORRECTION="true"
+ENABLE_CORRECTION="true"
 
 # Uncomment the following line to display red dots whilst waiting for completion.
 # You can also set it to another string to have that shown instead of the default red dots.
@@ -547,15 +534,9 @@ zstyle ':omz:update' mode reminder  # just remind me to update when it's time
 export ZSH="$HOME/.oh-my-zsh"
 HIST_STAMPS="dd/mm/yyyy"
 
-# Would you like to use another custom folder than $ZSH/custom?
 ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
-# Which plugins would you like to load?
-# Standard plugins can be found in $ZSH/plugins/
-# Custom plugins may be added to $ZSH_CUSTOM/plugins/
-# Example format: plugins=(rails git textmate ruby lighthouse)
-# Add wisely, as too many plugins slow down shell startup.
 
-ensure_install_plugins() {
+zsh_plugins_bootstrap() {
     if [[ ! -d "${ZSH_CUSTOM}/plugins/conda-zsh-completion" ]]; then
         git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion"
     fi
@@ -572,7 +553,7 @@ ensure_install_plugins() {
         git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode"
     fi
 }
-ensure_install_plugins
+zsh_plugins_bootstrap
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
@@ -594,9 +575,6 @@ plugins=(
 source $ZSH/oh-my-zsh.sh
 ################################################################################
 
-zshrc_end_time=$(date +%s%N)
-zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-
 help() {
     echo "${GREEN}Avaiable Commands:${RESET}
 ${INDENT}help; start_up; export print_[debug|verbose]=[true|false];
@@ -607,12 +585,25 @@ ${INDENT}latex; ros
     "
 }
 
+sshtmux() {
+    host="$1";
+    if [[ -n "$2" ]]; then
+        session_name="$2";
+    else
+        session_name="session-$(date +%d/%m/%y)";
+    fi
+    ssh $host -t "zsh -ic \"tmux a || tmux new -s '$session_name'\""
+}
+
 # Let each shell open a tmux session
 auto_tmux() {
-    if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
+    if has "tmux" && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
         exec tmux
     fi
 }
+
+zshrc_end_time=$(date +%s%N)
+zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 
 start_up() {
     echo
