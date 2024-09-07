@@ -125,4 +125,51 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>>/dev/null && pwd)
         fmta([=[
 set -o allexport && source ${env_file} && set +o allexport
         ]=], {})),
+    s(
+        {
+            trig = "sudo",
+        },
+        fmta([=[
+if [[ $(id -u) -ne 0 ]]; then
+	error "The script needs root privilege to run. Try again with sudo."
+	exit 1
+fi
+        ]=], {})),
+    s(
+        {
+            trig = "has",
+        },
+        fmta([=[
+has() {
+    command -v "$1" 1>>/dev/null 2>>&1
+}
+        ]=], {})),
+    s(
+        {
+            trig = "check_port_availability",
+        },
+        fmta([=[
+check_port_availability() {
+    if [[ -z $1 ]]; then
+        error "An argument, the port number, should be given."
+        return 1;
+    fi
+    if [[ $(sudo ufw status | head -n 1 | awk '{ print $2;}') == "active" ]]; then
+        info "ufw is active.";
+        if [[ -z $(sudo ufw status | grep "$1") ]]; then
+            warning "port $1 is not specified in the firewall rules and may not be allowed to use.";
+        else
+            sudo ufw status | grep "$1"
+        fi
+    else
+        info "ufw is inactive.";
+    fi
+    if [[ -z $(sudo lsof -i:$1) ]]; then
+        info "port $1 is not in use.";
+    else
+        error "port $1 is ${BOLD}unavaiable${RESET}.";
+    fi
+}
+        ]=], {})),
+
 }
