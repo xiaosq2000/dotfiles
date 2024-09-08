@@ -92,6 +92,7 @@ while [[ $# -gt 0 ]]; do
 	*)
 		error "Unknown argument: $1"
 		usage
+        exit 1
 		;;
 	esac
 done
