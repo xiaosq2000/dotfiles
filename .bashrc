@@ -214,7 +214,7 @@ alias lg="lazygit"
 
 alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
 alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
-alias bashconfig="${EDITOR} ${XDG_CONFIG_HOME}/.bashrc"
+alias bashconfig="${EDITOR} ~/.bashrc"
 alias sshconfig="${EDITOR} ${XDG_CONFIG_HOME}/.ssh/config"
 
 # nvm

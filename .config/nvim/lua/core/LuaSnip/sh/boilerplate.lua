@@ -172,5 +172,46 @@ check_port_availability() {
     fi
 }
         ]=], {})),
+    s({ trig = "download" }, fmta([=[
+wget_urls=()
+wget_paths=()
+_append_to_list() {
+	# $1: flag
+	if [ -z "$(eval echo "\$$1")" ]; then
+		warning "$1 is unset. Failed to append to the downloading list."
+		return 0
+	fi
+	# $2: url
+	url="$2"
+	# $3: filename
+	if [ -z "$3" ]; then
+		filename=$(basename "$url")
+	else
+		filename="$3"
+	fi
+	if [ ! -f "${downloads_dir}/${filename}" ]; then
+		wget_paths+=("${downloads_dir}/${filename}")
+		wget_urls+=("$url")
+	fi
+}
+_wget_all() {
+	for i in "${!wget_urls[@]}"; do
+		wget "${wget_urls[i]}" -q -c --show-progress -O "${wget_paths[i]}"
+	done
+}
+_download_everything() {
+	# a wrapper of the function "wget_all"
+	if [ ${#wget_urls[@]} = 0 ]; then
+		debug "No download tasks."
+	else
+		debug "${#wget_urls[@]} files to download:"
+		(
+			IFS=$'\n'
+			echo "${wget_urls[*]}"
+		)
+		_wget_all
+	fi
+}
+    ]=], {}))
 
 }
