@@ -369,13 +369,6 @@ fi
 unset __mamba_setup
 # <<< personal micromamba initialization <<<
 
-# >>> personal ros initialization >>>
-if [[ -n ${ROS_DISTRO} && -f "/opt/ros/${ROS_DISTRO}/setup.zsh" ]]; then
-    source "/opt/ros/${ROS_DISTRO}/setup.zsh";
-    info "Using ROS $BOLD$ROS_DISTRO$RESET.";
-fi
-# <<< personal ros initialization <<<
-
 software_overview() {
     exec 2> /dev/null
     echo "${BLUE}Software Overview: ${RESET}"
@@ -487,7 +480,7 @@ display_typefaces() {
     fi
 }
 
-quick_open_docker_container() {
+enter_docker_container() {
     if has "docker"; then
         ;
     else
@@ -496,13 +489,26 @@ quick_open_docker_container() {
     fi
     docker exec -it $1 zsh
 }
-alias latex='quick_open_docker_container latex'
-alias ros='quick_open_docker_container ros'
+alias latex='enter_docker_container latex'
+alias robotics='enter_docker_container robotics'
+
+ros() {
+    if [[ -n ${ROS_DISTRO} && -f "/opt/ros/${ROS_DISTRO}/setup.zsh" ]]; then
+        source "/opt/ros/${ROS_DISTRO}/setup.zsh";
+        info "Using ROS $BOLD$ROS_DISTRO$RESET.";
+    else
+        error "Failed to setup ROS environment."
+    fi
+}
 
 sync() {
     git pull
     git add .
-    git commit -m "Update"
+    if [[ -z "$1" ]]; then
+        git commit -m "Update"
+    else
+        git commit -m "$1"
+    fi
     git push
 }
 
