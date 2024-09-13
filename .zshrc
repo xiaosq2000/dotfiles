@@ -507,8 +507,16 @@ alias latex='enter_docker_container latex'
 alias robotics='enter_docker_container robotics'
 
 ros() {
-    if [[ -n ${ROS_DISTRO} && -f "/opt/ros/${ROS_DISTRO}/setup.zsh" ]]; then
-        source "/opt/ros/${ROS_DISTRO}/setup.zsh";
+    if [[ -n ${ROS1_DISTRO} && -f "/opt/ros/${ROS1_DISTRO}/setup.zsh" ]]; then
+        source "/opt/ros/${ROS1_DISTRO}/setup.zsh";
+        info "Using ROS $BOLD$ROS_DISTRO$RESET.";
+    else
+        error "Failed to setup ROS environment."
+    fi
+}
+ros2() {
+    if [[ -n ${ROS2_DISTRO} && -f "/opt/ros/${ROS2_DISTRO}/setup.zsh" ]]; then
+        source "/opt/ros/${ROS2_DISTRO}/setup.zsh";
         info "Using ROS $BOLD$ROS_DISTRO$RESET.";
     else
         error "Failed to setup ROS environment."
