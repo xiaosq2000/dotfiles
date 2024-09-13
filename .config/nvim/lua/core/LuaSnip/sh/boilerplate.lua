@@ -147,6 +147,24 @@ has() {
         ]=], {})),
     s(
         {
+            trig = "yes-or-no",
+        },
+        fmta([=[
+read -p "Do you want to proceed? (y/N) " yn
+case $yn in
+yes | y)
+    return 0
+    ;;
+no | n)
+    return 0
+    ;;
+*)
+    return 0
+    ;;
+esac
+        ]=], {})),
+    s(
+        {
             trig = "check_port_availability",
         },
         fmta([=[

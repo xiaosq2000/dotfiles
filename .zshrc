@@ -597,11 +597,11 @@ source $ZSH/oh-my-zsh.sh
 
 help() {
     echo "${GREEN}Avaiable Commands:${RESET}
-${INDENT}help; start_up; export print_[debug|verbose]=[true|false];
+${INDENT}help; start_up
 ${INDENT}hardware_overview; software_overview; display_xdg_envs; display_typefaces;
 ${INDENT}check_public_ip; check_private_ip; set_proxy; unset_proxy; check_proxy_status; check_port_availability;
 ${INDENT}prepend_env; append_env; remove_from_env;
-${INDENT}latex; ros
+${INDENT}latex; robotics; ros
     "
 }
 
