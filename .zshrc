@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 zshrc_start_time=$(date +%s%N)
 
 # load modules and slurm
@@ -534,6 +535,70 @@ sync() {
     git push
 }
 
+manual_install() {
+    SRC_DIR=${1%/}
+    DEST_DIR=${2:-${XDG_PREFIX_HOME}}
+    INSTALL_MANIFEST=${3:-install_manifest.txt}
+    if [[ "$#" == 0 ]]; then
+        printf "%s" "Usage:
+
+    $0 SRC_DIR [DEST_DIR] [INSTALL_MANIFEST]
+
+Default:
+
+    $0 SRC_DIR ${DEST_DIR} ${INSTALL_MANIFEST}
+"
+        return 1;
+    fi
+    if [[ ! -d ${SRC_DIR} ]]; then
+        error "${SRC_DIR} is not found."
+        return 1;
+    fi
+    if [[ ! -d ${DEST_DIR} ]]; then
+        error "${DEST_DIR} is not found."
+        return 1;
+    fi
+    if [[ -f ${INSTALL_MANIFEST} ]]; then
+        warning "${INSTALL_MANIFEST} exists."
+        # ref: https://unix.stackexchange.com/a/565636
+        if read -qs "?Do you want to proceed and replace everything? (y/N)"; then
+            >&2 echo -e "\nYour choice: $REPLY"
+        else 
+            >&2 echo -e "\nYour choice: $REPLY"
+            return 0;
+        fi
+    fi
+    # Install
+    find ${SRC_DIR} -type f -exec install -Dm 755 "{}" "${DEST_DIR}/{}" \;
+    # Generate install_manifest
+    find ${SRC_DIR} -type f -exec echo "{}" > "$INSTALL_MANIFEST" \;
+    sed -i "s|^.|${DEST_DIR}|" "$INSTALL_MANIFEST"
+    completed "Done."
+}
+
+manual_uninstall() {
+    if [[ "$#" == 0 ]]; then
+        printf "%s" "Usage:
+
+    $0 INSTALL_MANIFEST DEST_DIR
+"
+        return 1;
+    fi
+    INSTALL_MANIFEST=${1}
+    DEST_DIR=${2}
+    if [[ ! -f "${INSTALL_MANIFEST}" ]]; then
+        error "${INSTALL_MANIFEST} is not found."
+        return 1;
+    fi
+    <$INSTALL_MANIFEST xargs -I % rm % 
+    if [[ -d "${DEST_DIR}" ]]; then
+        debug "Remove empty folders in ${DEST_DIR}"
+        find ${DEST_DIR} -type d -empty -delete
+    fi
+    info "You could remove the file ${BOLD}${INSTALL_MANIFEST}${RESET} manually."
+    completed "Done."
+}
+
 ################################################################################
 CASE_SENSITIVE="false"
 
@@ -609,7 +674,9 @@ ${INDENT}help; start_up
 ${INDENT}hardware_overview; software_overview; display_xdg_envs; display_typefaces;
 ${INDENT}check_public_ip; check_private_ip; set_proxy; unset_proxy; check_proxy_status; check_port_availability;
 ${INDENT}prepend_env; append_env; remove_from_env;
-${INDENT}latex; robotics; ros
+${INDENT}latex; robotics; 
+${INDENT}ros; ros2
+${INDENT}manual_install; manual_uninstall
     "
 }
 
