@@ -540,7 +540,7 @@ enter_docker_container() {
 alias latex='enter_docker_container latex'
 alias robotics='enter_docker_container robotics'
 
-ros() {
+set_ros() {
     if [[ -n ${ROS1_DISTRO} && -f "/opt/ros/${ROS1_DISTRO}/setup.zsh" ]]; then
         source "/opt/ros/${ROS1_DISTRO}/setup.zsh";
         info "Using ROS $BOLD$ROS_DISTRO$RESET.";
@@ -548,10 +548,18 @@ ros() {
         error "Failed to setup ROS environment."
     fi
 }
-ros2() {
+set_ros2() {
     if [[ -n ${ROS2_DISTRO} && -f "/opt/ros/${ROS2_DISTRO}/setup.zsh" ]]; then
         source "/opt/ros/${ROS2_DISTRO}/setup.zsh";
-        info "Using ROS $BOLD$ROS_DISTRO$RESET.";
+        info "Using ROS2 $BOLD$ROS_DISTRO$RESET.";
+        printf "%s\n" "
+ROS2 Environment Variables:
+${INDENT}ROS_VERSION=${ROS_VERSION}
+${INDENT}ROS_PYTHON_VERSION=${ROS_PYTHON_VERSION}
+${INDENT}ROS_DISTRO=${ROS_DISTRO}
+${INDENT}ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
+${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
+        "
     else
         error "Failed to setup ROS environment."
     fi
@@ -739,8 +747,8 @@ ${INDENT}manual_uninstall
 ${INDENT}latex 
 ${INDENT}robotics
 
-${INDENT}ros 
-${INDENT}ros2
+${INDENT}set_ros 
+${INDENT}set_ros2
 "
 }
 
@@ -766,13 +774,14 @@ zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 
 start_up() {
     # auto_tmux
-    help;
     # hardware_overview;
     # software_overview
     check_private_ip;
     # check_proxy_status;
     check_public_ip;
     # set_proxy # unset_proxy
+    # help;
+    echo "Type \"help\" to display supported handy commands."
     debug "$zshrc_duration ms$RESET to start up zsh."
 }
 start_up
