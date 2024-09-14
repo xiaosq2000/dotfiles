@@ -362,6 +362,7 @@ alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
 alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
 alias sshconfig="${EDITOR} ${HOME}/.ssh/config"
 alias starshipconfig="${EDITOR} ${XDG_CONFIG_HOME}/starship.toml"
+alias alacrittyconfig="${EDITOR} $XDG_CONFIG_HOME/alacritty/alacritty.toml"
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 
