@@ -328,12 +328,21 @@ has() {
 if has "nvim"; then
     export SUDO_EDITOR='nvim'
     export EDITOR='nvim'
+    if has "git"; then
+        git config --global core.editor "nvim"
+    fi
 elif has "vim"; then
     export SUDO_EDITOR='vim'
     export EDITOR='vim'
+    if has "git"; then
+        git config --global core.editor "vim"
+    fi
 elif has "vi"; then
     export SUDO_EDITOR='vi'
     export EDITOR='vi'
+    if has "git"; then
+        git config --global core.editor "vi"
+    fi
 fi
 
 # Compilation
@@ -383,6 +392,11 @@ else
 fi
 unset __conda_setup
 # <<< personal miniconda initialization <<<
+
+# Rust
+if [[ -f "$HOME/.cargo/env" ]]; then
+    . "$HOME/.cargo/env"
+fi
 
 software_overview() {
     exec 2> /dev/null
@@ -437,6 +451,7 @@ software_overview() {
     software_overview_helper "git" "$(git --version | awk '{ print $3; }')"
     software_overview_helper "cmake" "$(cmake --version | head -n 1 | awk '{ print $3; }')"
     software_overview_helper "ninja" "$(ninja --version)"
+    software_overview_helper "cargo" "$(cargo --version | awk '{ print $2; }')"
     software_overview_helper "python" "$(python --version | awk '{ print $2; }')"
     software_overview_helper "conda" "$(conda --version | awk '{ print $2; }')"
     software_overview_helper "mamba" "$(mamba --version)"
@@ -454,6 +469,24 @@ software_overview() {
     unfunction software_overview_helper
     exec 2> /dev/tty
 }
+
+if has "git"; then
+    if [[ ! -f $HOME/.gitconfig ]]; then
+        touch $HOME/.gitconfig
+    fi
+    if [[ ! $(cat $HOME/.gitconfig | grep 'email') ]]; then
+        warning "You are recommended to execute:
+
+${INDENT}git config --global user.email \"<YOUR_EMAIL>\"
+"
+    fi
+    if [[ ! $(cat $HOME/.gitconfig | grep 'name') ]]; then
+        warning "You are recommended to execute:
+
+${INDENT}git config --global user.name \"<YOUR_NAME>\"
+"
+    fi
+fi
 
 hardware_overview() {
     local WIDTH=32
@@ -669,15 +702,46 @@ source $ZSH/oh-my-zsh.sh
 ################################################################################
 
 help() {
-    echo "${GREEN}Avaiable Commands:${RESET}
-${INDENT}help; start_up
-${INDENT}hardware_overview; software_overview; display_xdg_envs; display_typefaces;
-${INDENT}check_public_ip; check_private_ip; set_proxy; unset_proxy; check_proxy_status; check_port_availability;
-${INDENT}prepend_env; append_env; remove_from_env;
-${INDENT}latex; robotics; 
-${INDENT}ros; ros2
-${INDENT}manual_install; manual_uninstall
-    "
+    echo "
+${BOLD}${BLUE}Supported Commands${RESET}:
+    
++-----------------+
+| System Overview |
++-----------------+
+
+${INDENT}hardware_overview
+${INDENT}software_overview
+${INDENT}display_xdg_envs
+${INDENT}display_typefaces
+
++------------+
+| Networking |
++------------+
+
+${INDENT}check_public_ip
+${INDENT}check_private_ip
+${INDENT}set_proxy
+${INDENT}unset_proxy
+${INDENT}check_proxy_status
+${INDENT}check_port_availability
+
++----------------------+
+| Other Handy Commands |
++----------------------+
+
+${INDENT}prepend_env
+${INDENT}append_env
+${INDENT}remove_from_env;
+
+${INDENT}manual_install 
+${INDENT}manual_uninstall
+
+${INDENT}latex 
+${INDENT}robotics
+
+${INDENT}ros 
+${INDENT}ros2
+"
 }
 
 sshtmux() {
@@ -701,15 +765,14 @@ zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 
 start_up() {
-    echo
     # auto_tmux
-    # help;
+    help;
     # hardware_overview;
     # software_overview
-    # check_private_ip;
+    check_private_ip;
     # check_proxy_status;
     check_public_ip;
     # set_proxy # unset_proxy
-    info "$zshrc_duration ms$RESET to start up."
+    debug "$zshrc_duration ms$RESET to start up zsh."
 }
 start_up

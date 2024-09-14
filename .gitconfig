@@ -1,7 +1,0 @@
-[user]
-	email = xiaosq2000@gmail.com
-	name = XIAO Shuqi 
-[core]
-	editor = nvim
-[init]
-	defaultBranch = main

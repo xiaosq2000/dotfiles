@@ -6,23 +6,25 @@
 !README.md
 
 !.bashrc
-!.zshrc
 
-!.gitconfig
+# .gitconfig
 !.gitignore
 
 !.config/
 .config/*
 
-!.config/nvim/
-.config/nvim/lazy-lock.json
+!.config/alacritty/alacritty.toml
+
+!.config/starship.toml
 
 !.config/tmux/
 
-!.config/zathura/
- 
 !.config/zsh/
+!.zshrc
 
-!.config/starship.toml
+!.config/nvim/
+.config/nvim/lazy-lock.json
+
+!.config/zathura/
 
 !.latexmkrc
