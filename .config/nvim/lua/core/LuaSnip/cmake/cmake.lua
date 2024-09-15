@@ -45,8 +45,14 @@ return {
     ),
     s({ trig = "opencv" },
         fmta([[
-set(OpenCV_DIR <>)
 find_package(OpenCV REQUIRED)
-        ]], { i(1, "/usr/local/opencv-4.8.0/build") })
+include_directories(${OpenCV_INCLUDE_DIRS})
+add_executable(opencv-test ./src/opencv_test.cpp)
+target_link_libraries(opencv-test ${OpenCV_LIBS})
+install(
+  TARGETS opencv-test
+  DESTINATION lib/${PROJECT_NAME}
+)
+        ]], {})
     ),
 }

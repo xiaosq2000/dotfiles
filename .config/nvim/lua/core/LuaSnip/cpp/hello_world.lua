@@ -43,6 +43,39 @@ return {
             }
         ]], {})
     ),
+    s({ trig = "mwe-opencv" },
+        fmta([[
+// ref: https://docs.opencv.org/4.x/db/df5/tutorial_linux_gcc_cmake.html
+#include <<stdio.h>>
+#include <<opencv2/opencv.hpp>>
+
+using namespace cv;
+
+int main(int argc, char** argv )
+{
+    if ( argc != 2 )
+    {
+        printf("Usage: an argument of the path of the image to display should be given.\n");
+        return -1;
+    }
+
+    Mat image;
+    image = imread(argv[1], IMREAD_COLOR);
+
+    if ( !image.data )
+    {
+        printf("No image data \n");
+        return -1;
+    }
+    namedWindow("Display Image", WINDOW_AUTOSIZE);
+    imshow("Display Image", image);
+
+    waitKey(0);
+
+    return 0;
+}
+        ]], {})
+    ),
     s('INCLUDE', {
         d(1, function(args, snip)
             -- Create a table of nodes that will go into the header choice_node

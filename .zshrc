@@ -561,6 +561,11 @@ ${INDENT}ROS_DISTRO=${ROS_DISTRO}
 ${INDENT}ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
 ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
         "
+        debug "Setup colcon_cd"
+        source "/usr/share/colcon_cd/function/colcon_cd.sh"
+        export _colcon_cd_root="/opt/ros/${ROS_DISTRO}"
+        debug "Setup colcon tab completion"
+        source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
     else
         error "Failed to setup ROS environment."
     fi
@@ -782,7 +787,8 @@ start_up() {
     check_public_ip;
     # set_proxy # unset_proxy
     # help;
-    echo "Type \"help\" to display supported handy commands."
     debug "$zshrc_duration ms$RESET to start up zsh."
+    set_ros2
+    echo "Type \"help\" to display supported handy commands."
 }
 start_up
