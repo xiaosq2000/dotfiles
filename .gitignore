@@ -13,7 +13,9 @@
 !.config/
 .config/*
 
+!.config/alacritty/
 !.config/alacritty/alacritty.toml
+.config/alacritty/themes
 
 !.config/starship.toml
 

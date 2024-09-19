@@ -458,6 +458,8 @@ software_overview() {
     software_overview_helper "mamba" "$(mamba --version)"
     software_overview_helper "micromamba" "$(micromamba --version)"
     software_overview_helper "gnome-shell" "$(gnome-shell --version | awk '{ print $3; }')"
+    software_overview_helper "gnome-terminal" "$(gnome-terminal --version | awk '{ print $4; }')"
+    software_overview_helper "alacritty" "$(alacritty --version | awk '{ print $2; }')"
     software_overview_helper "xclip" "$(xclip -version 2>&1 | head -n 1 | awk '{ print $3;}')"
     software_overview_helper "zathura" "$(zathura --version | head -n 1 | awk '{ print $2; }')"
     software_overview_helper "TeX" "$(tex --version | grep -o '(.*)' | sed 's/[()]//g')"
@@ -712,6 +714,7 @@ plugins=(
     zsh-syntax-highlighting
     zsh-autosuggestions
     zsh-vi-mode
+    web-search
 )
 
 source $ZSH/oh-my-zsh.sh
