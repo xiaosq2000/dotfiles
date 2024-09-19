@@ -10,7 +10,7 @@ startup_mode="Fullscreen"
 title = "Terminal"
 [font]
 normal = { family = "FiraCode Nerd Font", style = "Regular" }
-size = 15
+size = 18
 [selection]
 save_to_clipboard=true
 [keyboard]

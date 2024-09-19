@@ -543,7 +543,13 @@ enter_docker_container() {
     docker exec -it $1 zsh
 }
 alias latex='enter_docker_container latex'
-alias robotics='enter_docker_container robotics'
+robotics(){
+    if [[ -z "$1" ]]; then
+        enter_docker_container robotics
+    else 
+        enter_docker_container robotics-"$1"
+    fi
+}
 
 set_ros() {
     if [[ -n ${ROS1_DISTRO} && -f "/opt/ros/${ROS1_DISTRO}/setup.zsh" ]]; then
@@ -850,9 +856,6 @@ ${INDENT}remove_from_env;
 
 ${INDENT}manual_install 
 ${INDENT}manual_uninstall
-
-${INDENT}latex 
-${INDENT}robotics
 
 ${INDENT}set_ros 
 ${INDENT}set_ros2
