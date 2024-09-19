@@ -471,24 +471,6 @@ software_overview() {
     exec 2> /dev/tty
 }
 
-if has "git"; then
-    if [[ ! -f $HOME/.gitconfig ]]; then
-        touch $HOME/.gitconfig
-    fi
-    if [[ ! $(cat $HOME/.gitconfig | grep 'email') ]]; then
-        warning "You are recommended to execute:
-
-${INDENT}git config --global user.email \"<YOUR_EMAIL>\"
-"
-    fi
-    if [[ ! $(cat $HOME/.gitconfig | grep 'name') ]]; then
-        warning "You are recommended to execute:
-
-${INDENT}git config --global user.name \"<YOUR_NAME>\"
-"
-    fi
-fi
-
 hardware_overview() {
     local WIDTH=32
     hardware_overview_helper() {
@@ -516,6 +498,26 @@ hardware_overview() {
     fi
     echo
     unfunction hardware_overview_helper
+}
+
+check_git_config () {
+    if has "git"; then
+        if [[ ! -f $HOME/.gitconfig ]]; then
+            touch $HOME/.gitconfig
+        fi
+        if [[ ! $(cat $HOME/.gitconfig | grep 'email') ]]; then
+            warning "You are recommended to execute:
+    
+    ${INDENT}git config --global user.email \"<YOUR_EMAIL>\"
+    "
+        fi
+        if [[ ! $(cat $HOME/.gitconfig | grep 'name') ]]; then
+            warning "You are recommended to execute:
+    
+    ${INDENT}git config --global user.name \"<YOUR_NAME>\"
+    "
+        fi
+    fi
 }
 
 display_typefaces() {
@@ -715,51 +717,6 @@ plugins=(
 source $ZSH/oh-my-zsh.sh
 ################################################################################
 
-help() {
-    echo "
-${BOLD}${BLUE}Supported Commands${RESET}:
-    
-+-----------------+
-| System Overview |
-+-----------------+
-
-${INDENT}hardware_overview
-${INDENT}software_overview
-${INDENT}display_xdg_envs
-${INDENT}display_typefaces
-
-+------------+
-| Networking |
-+------------+
-
-${INDENT}check_public_ip
-${INDENT}check_private_ip
-${INDENT}set_proxy
-${INDENT}unset_proxy
-${INDENT}check_proxy_status
-${INDENT}check_port_availability
-
-+----------------------+
-| Other Handy Commands |
-+----------------------+
-
-${INDENT}prepend_env
-${INDENT}append_env
-${INDENT}remove_from_env;
-
-${INDENT}manual_install 
-${INDENT}manual_uninstall
-
-${INDENT}latex 
-${INDENT}robotics
-
-${INDENT}set_ros 
-${INDENT}set_ros2
-
-${INDENT}command_with_email_notification
-"
-}
-
 sshtmux() {
     host="$1";
     if [[ -n "$2" ]]; then
@@ -774,6 +731,16 @@ sshtmux() {
 auto_tmux() {
     if has "tmux" && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
         exec tmux
+    fi
+}
+
+check_x11_wayland() {
+    if [[ "$XDG_SESSION_TYPE" == "wayland" ]]; then
+        debug "Using Wayland."
+        # reference: https://unix.stackexchange.com/a/359244/523957
+        __xhost_command="xhost +SI:localuser:$(id -un) >/dev/null 2>&1"
+        warning "Executes '$__xhost_command'"
+        eval "$__xhost_command"
     fi
 }
 
@@ -843,20 +810,72 @@ command_with_email_notification() {
     cd "$original_dir" || { echo "Failed to restore original directory: $original_dir"; return 1; }
 }
 
-zshrc_end_time=$(date +%s%N)
-zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+help() {
+    echo "
+${BOLD}${BLUE}Supported Commands${RESET}:
+    
++-----------------+
+| System Overview |
++-----------------+
+
+${INDENT}hardware_overview
+${INDENT}software_overview
+
+${INDENT}display_xdg_envs
+${INDENT}display_typefaces
+
+${INDENT}check_x11_wayland
+
++------------+
+| Networking |
++------------+
+
+${INDENT}check_public_ip
+${INDENT}check_private_ip
+${INDENT}set_proxy
+${INDENT}unset_proxy
+${INDENT}check_proxy_status
+${INDENT}check_port_availability
+
++----------------------+
+| Other Handy Commands |
++----------------------+
+
+${INDENT}prepend_env
+${INDENT}append_env
+${INDENT}remove_from_env;
+
+${INDENT}manual_install 
+${INDENT}manual_uninstall
+
+${INDENT}latex 
+${INDENT}robotics
+
+${INDENT}set_ros 
+${INDENT}set_ros2
+
+${INDENT}command_with_email_notification
+
+${INDENT}check_git_config
+${INDENT}sync
+"
+}
 
 start_up() {
+    # help;
     # auto_tmux
     # hardware_overview;
     # software_overview
+    check_git_config
+    check_x11_wayland
     check_private_ip;
-    # check_proxy_status;
     check_public_ip;
     # set_proxy # unset_proxy
-    # help;
-    debug "$zshrc_duration ms$RESET to start up zsh."
     set_ros2
     echo "Type \"help\" to display supported handy commands."
+
+    zshrc_end_time=$(date +%s%N)
+    zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+    debug "$zshrc_duration ms$RESET to start up zsh."
 }
 start_up
