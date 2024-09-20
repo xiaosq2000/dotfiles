@@ -29,6 +29,12 @@ return {
     ]], {}
         )
     ),
+    s({ trig = "rc" },
+        fmta([[
+\resetcolorseries[<>]{marknode-color-series}
+\resetcolorseries[<>]{annotation-color-series}
+        ]] , { i(1, "4"), rep(1) })
+    ),
     s({ trig = "tc" },
         fmta("\\textcolor{<>}{<>}", { i(1, "color"), d(2, get_visual) })
     ),
