@@ -555,8 +555,6 @@ set_ros() {
     if [[ -n ${ROS1_DISTRO} && -f "/opt/ros/${ROS1_DISTRO}/setup.zsh" ]]; then
         source "/opt/ros/${ROS1_DISTRO}/setup.zsh";
         info "Using ROS $BOLD$ROS_DISTRO$RESET.";
-    else
-        error "Failed to setup ROS environment."
     fi
 }
 set_ros2() {
@@ -575,9 +573,7 @@ ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
         source "/usr/share/colcon_cd/function/colcon_cd.sh"
         export _colcon_cd_root="/opt/ros/${ROS_DISTRO}"
         debug "Setup colcon tab completion"
-        source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
-    else
-        error "Failed to setup ROS environment."
+        [ -f "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh" ] && source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
     fi
 }
 
@@ -626,7 +622,7 @@ Default:
         fi
     fi
     # Install
-    find ${SRC_DIR} -type f -exec install -Dm 755 "{}" "${DEST_DIR}/{}" \;
+    (cd ${SRC_DIR} && find . -type f -exec install -Dm 755 "{}" "${DEST_DIR}/{}" \;)
     # Generate install_manifest
     find ${SRC_DIR} -type f -exec echo "{}" > "$INSTALL_MANIFEST" \;
     sed -i "s|^.|${DEST_DIR}|" "$INSTALL_MANIFEST"
