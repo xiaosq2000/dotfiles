@@ -161,7 +161,7 @@ return {
 		\usetikzlibrary{calc}
 
 		\pgfmathsetmacro{\dy}{0.3cm/1pt};
-		\pgfmathsetmacro{\nodeNum}{4};
+		\pgfmathsetmacro{\nodeNum}{3};
 		\pgfmathsetmacro{\sepNum}{\nodeNum-1};
 		\pgfmathsetmacro{\length}{0.8*\linewidth};
 		\pgfmathsetmacro{\edgeLength}{1cm/1pt};
@@ -170,10 +170,10 @@ return {
 
 		\tikzset{
 			note/.style={
-					anchor=north, align=center, text width=\dx, yshift=-\dy/3, font={\scriptsize}
+					anchor=north, align=center, text width=\dx, yshift=-\dy/3, font={\scriptsize}, text=black
 				},
 			time/.style={
-					anchor=south, font={\scriptsize\bf}
+					anchor=south, font={\scriptsize\bf}, text=black
 				}
 		};
 
