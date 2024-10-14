@@ -682,7 +682,7 @@ HIST_STAMPS="dd/mm/yyyy"
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
 
-zsh_plugins_bootstrap() {
+download_plugins() {
     if [[ ! -d "${ZSH_CUSTOM}/plugins/conda-zsh-completion" ]]; then
         git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion"
     fi
@@ -698,8 +698,11 @@ zsh_plugins_bootstrap() {
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-vi-mode" ]]; then
         git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode"
     fi
+    if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
+        git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux
+    fi
 }
-zsh_plugins_bootstrap
+download_plugins
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
