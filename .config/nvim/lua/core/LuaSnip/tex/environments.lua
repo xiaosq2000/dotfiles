@@ -78,6 +78,7 @@ return {
         fmta(
             [[
 \begin{itemize}
+    \setlength{\itemsep}{1.5ex}
     \item <>
 \end{itemize}
     ]],
@@ -132,15 +133,26 @@ return {
     s({ trig = "minipage" },
         fmta(
             [[
+    \begin{minipage}[<>]{<>\linewidth}
+        <>
+    \end{minipage}
+    ]],
+            { c(1, { t("c"), t("t"), t("b") }), i(2, ".4"), i(3, "\\includegraphics[width=0.5\\linewidth]{example-image}") }
+
+        )
+    ),
+    s({ trig = "minipage-two" },
+        fmta(
+            [[
 \begin{figure}[htbp]
     \begin{minipage}[c]{0.45\linewidth}
        \centering
-       \includegraphics[width=\linewidth]{<>}
+       \includegraphics[width=.5\linewidth]{<>}
     \end{minipage}
     \hspace{\fill}
     \begin{minipage}[c]{0.45\linewidth}
        \centering
-       \includegraphics[width=\linewidth]{<>}
+       \includegraphics[width=.5\linewidth]{<>}
     \end{minipage}
     \smallskip
     \caption{Caption}
