@@ -78,7 +78,15 @@ return {
             [[
 \tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}
     ]],
-            { i(2, "0"), rep(2), d(1, get_visual) }
+            { i(1, "0"), rep(1), d(2, get_visual) }
+        )
+    ),
+    s({ trig = "tikzmarknode-beamer-overlay" },
+        fmta(
+            [[
+\alt<<<>>>{\tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}}{<>}
+     ]],
+            { i(1, "+(1)-"), i(2, "0"), rep(2), d(3, get_visual), rep(3) }
         )
     ),
     s({ trig = "equation-annotation" },
@@ -87,11 +95,19 @@ return {
 \annotatedEquation{<>}{n<>}{<>}{0em}{<>em}{<>}{<>}{<>}{<>}
     ]],
             { c(1, { t("colorseries"), t("color") }), i(2, "0"), c(3, { t("south"), t("north") }), i(4,
-                "-0.5"), c(5,
-                { t("north west"), t("north east"), t("south west"), t("south east") }),
-                i(6,
-                    "annotation-color-series"), i(7, "annotation"), c(8,
-                { t("east"), t("west") }) }
+                "-0.5"), c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
+                i(6, "annotation-color-series"), i(7, "annotation"), c(8, { t("east"), t("west") }) }
+        )
+    ),
+    s({ trig = "equation-annotation-beamer-overlay" },
+        fmta(
+            [[
+\only<<<>>>{\annotatedEquation{color}{n<>}{<>}{0em}{<>em}{<>}{annotation-color-series!![<>]}{<>}{<>}}
+    ]],
+            { i(1, "+(1)-"), i(2, "0"), c(3, { t("south"), t("north") }), i(4,
+                "-0.5"), c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
+                rep(2),
+                i(6, "annotation"), c(7, { t("east"), t("west") }) }
         )
     ),
     --------------------------------------------------------------------------------
