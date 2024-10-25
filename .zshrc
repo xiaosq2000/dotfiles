@@ -818,6 +818,14 @@ command_with_email_notification() {
     cd "$original_dir" || { echo "Failed to restore original directory: $original_dir"; return 1; }
 }
 
+webm2mp4() {
+    if has ffmpeg; then
+        ffmpeg -fflags +genpts -i $1.webm -r ${2:-24} $1.mp4
+    else
+        error "ffmpeg not found."
+    fi
+}
+
 help() {
     echo "
 ${BOLD}${BLUE}Supported Commands${RESET}:
