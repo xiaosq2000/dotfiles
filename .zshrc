@@ -826,6 +826,20 @@ webm2mp4() {
     fi
 }
 
+compress_pdf() {
+    # ref: https://askubuntu.com/a/256449
+    if has gs; then
+        gs -sDEVICE=pdfwrite \
+            -dCompatibilityLevel=1.4 \
+            -dNOPAUSE \
+            -dQUIET \
+            -dBATCH \
+            -dPDFSETTINGS=/printer \
+            -sOutputFile=${1}-compressed.pdf \
+            $1.pdf
+    fi
+}
+
 help() {
     echo "
 ${BOLD}${BLUE}Supported Commands${RESET}:
