@@ -22,6 +22,9 @@ return {
     s({ trig = "at" },
         fmta("\\alert<<<>>>{<>}", { i(1, ""), d(2, get_visual) })
     ),
+    s({ trig = "uc" },
+        fmta("\\uncover<<<>>>{<>}", { i(1, "+(1)-"), d(2, get_visual) })
+    ),
     s({ trig = "md" },
         fmta("\\mode<<<>>>{<>}", { c(1, { t({ 'presentation' }), t({ 'article' }) }), d(2, get_visual) })
     ),
