@@ -332,7 +332,7 @@ local plugins = {
             vim.g.vimtex_complete_close_braces = 1
 
             -- keymaps
-            vim.keymap.set('i', '<A-i>', '\\item ', { buffer = true })
+            vim.keymap.set('i', '<A-i>', '\\item ', { buffer = false })
         end
     },
     -- vim-tmux
