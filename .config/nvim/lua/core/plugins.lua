@@ -140,11 +140,11 @@ local plugins = {
         config = function()
             require("mason-lspconfig").setup {
                 automatic_installation = true,
-                ensure_installed = { "ruff_lsp", "pyright", "cmake", "bashls", "autotools_ls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab" },
+                ensure_installed = { "ruff", "pyright", "cmake", "bashls", "autotools_ls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab" },
 
             }
             local on_attach = function(client)
-                if client.name == 'ruff_lsp' then
+                if client.name == 'ruff' then
                     -- Disable hover in favor of Pyright
                     client.server_capabilities.hoverProvider = false
                 end
@@ -167,8 +167,8 @@ local plugins = {
                         }
                     }
                 end,
-                ["ruff_lsp"] = function()
-                    require('lspconfig').ruff_lsp.setup {
+                ["ruff"] = function()
+                    require('lspconfig').ruff.setup {
                         on_attach = on_attach,
                     }
                 end,
