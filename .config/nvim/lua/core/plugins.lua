@@ -1,13 +1,17 @@
+-- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
-    vim.fn.system({
-        "git",
-        "clone",
-        "--filter=blob:none",
-        "https://github.com/folke/lazy.nvim.git",
-        "--branch=stable", -- latest stable release
-        lazypath,
-    })
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+    local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+    local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+    if vim.v.shell_error ~= 0 then
+        vim.api.nvim_echo({
+            { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
+            { out,                            "WarningMsg" },
+            { "\nPress any key to exit..." },
+        }, true, {})
+        vim.fn.getchar()
+        os.exit(1)
+    end
 end
 vim.opt.rtp:prepend(lazypath)
 
@@ -490,25 +494,27 @@ local plugins = {
     {
         "David-Kunz/gen.nvim",
         opts = {
-            model = "qwen2.5-coder:latest", -- The default model to use.
-            quit_map = "q",                 -- set keymap to close the response window
-            retry_map = "<c-r>",            -- set keymap to re-send the current prompt
-            accept_map = "<c-cr>",          -- set keymap to replace the previous selection with the last result
-            host = "localhost",             -- The host running the Ollama service.
-            port = "11434",                 -- The port on which the Ollama service is listening.
-            display_mode = "float",         -- The display mode. Can be "float" or "split" or "horizontal-split".
-            show_prompt = false,            -- Shows the prompt submitted to Ollama.
-            show_model = false,             -- Displays which model you are using at the beginning of your chat session.
-            no_auto_close = false,          -- Never closes the window automatically.
-            file = false,                   -- Write the payload to a temporary file to keep the command short.
-            hidden = false,                 -- Hide the generation window (if true, will implicitly set `prompt.replace = true`), requires Neovim >= 0.10
-            init = function(options) pcall(io.popen, "ollama serve > /dev/null 2>&1 &") end,
+            model = "mistral", -- The default model to use.
+            quit_map = "q",          -- set keymap to close the response window
+            retry_map = "<c-r>",     -- set keymap to re-send the current prompt
+            accept_map = "<c-cr>",   -- set keymap to replace the previous selection with the last result
+            host = "localhost",      -- The host running the Ollama service.
+            port = "11434",          -- The port on which the Ollama service is listening.
+            display_mode = "float",  -- The display mode. Can be "float" or "split" or "horizontal-split".
+            show_prompt = false,     -- Shows the prompt submitted to Ollama.
+            show_model = false,      -- Displays which model you are using at the beginning of your chat session.
+            no_auto_close = false,   -- Never closes the window automatically.
+            file = false,            -- Write the payload to a temporary file to keep the command short.
+            hidden = false,          -- Hide the generation window (if true, will implicitly set `prompt.replace = true`), requires Neovim >= 0.10
+            init = function()
+                pcall(io.popen, "ollama serve > /dev/null 2>&1 &")
+            end,
             -- Function to initialize Ollama
             command = function(options)
-                local body = { model = options.model, stream = true }
                 return "curl --silent --no-buffer -X POST http://" ..
                     options.host .. ":" .. options.port .. "/api/chat -d $body"
             end,
+
             -- The command for the Ollama service. You can use placeholders $prompt, $model and $body (shellescaped).
             -- This can also be a command string.
             -- The executed command must return a JSON object with { response, context }
@@ -518,10 +524,20 @@ local plugins = {
         },
         config = function()
             vim.keymap.set({ 'n', 'v' }, '<leader>]', ':Gen<CR>')
+            vim.keymap.set({ 'n' }, '<leader>oo', ':lua require(\'gen\').select_model()<CR>')
         end
     },
 }
 
-local opts = {}
-
-require("lazy").setup(plugins, opts)
+-- Setup lazy.nvim
+require("lazy").setup({
+    spec = {
+        plugins
+        -- add your plugins here
+    },
+    -- Configure any other settings here. See the documentation for more details.
+    -- colorscheme that will be used when installing plugins.
+    install = { colorscheme = { "habamax" } },
+    -- automatically check for plugin updates
+    checker = { enabled = true },
+})
