@@ -840,6 +840,9 @@ compress_pdf() {
     fi
 }
 
+# https://labbots.github.io/google-drive-upload/
+[ -f "${HOME}/.google-drive-upload/bin/gupload" ] && [ -x "${HOME}/.google-drive-upload/bin" ] && PATH="${HOME}/.google-drive-upload/bin:${PATH}"
+
 help() {
     echo "
 ${BOLD}${BLUE}Supported Commands${RESET}:
