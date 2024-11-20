@@ -69,7 +69,7 @@ local plugins = {
     {
         'nvim-telescope/telescope.nvim',
         tag = '0.1.5',
-        dependencies = { { 'nvim-lua/plenary.nvim' } },
+        dependencies = { { 'nvim-lua/plenary.nvim' }, { 'nvim-telescope/telescope-ui-select.nvim' } },
         config = function()
             local builtin = require('telescope.builtin')
             vim.keymap.set('n', '<space>fs', function()
@@ -79,6 +79,31 @@ local plugins = {
             vim.keymap.set('n', '<space>fg', builtin.live_grep, {})
             vim.keymap.set('n', '<space>fb', builtin.buffers, {})
             vim.keymap.set('n', '<space>fhp', builtin.help_tags, {})
+            --
+            require('telescope').setup {
+                extensions = {
+                    ["ui-select"] = {
+                        require("telescope.themes").get_dropdown {
+                            -- even more opts
+                        }
+
+                        -- pseudo code / specification for writing custom displays, like the one
+                        -- for "codeactions"
+                        -- specific_opts = {
+                        --   [kind] = {
+                        --     make_indexed = function(items) -> indexed_items, width,
+                        --     make_displayer = function(widths) -> displayer
+                        --     make_display = function(displayer) -> function(e)
+                        --     make_ordinal = function(e) -> string
+                        --   },
+                        --   -- for example to disable the custom builtin "codeactions" display
+                        --      do the following
+                        --   codeactions = false,
+                        -- }
+                    }
+                }
+            }
+            require("telescope").load_extension("ui-select")
         end
     },
     -- LSP configurator
@@ -422,7 +447,7 @@ local plugins = {
         name = "rose-pine",
         config = function()
             -- main, moon, dawn
-            vim.cmd.colorscheme "rose-pine"
+            vim.cmd.colorscheme "rose-pine-dawn"
         end
     },
     {
@@ -494,18 +519,18 @@ local plugins = {
     {
         "David-Kunz/gen.nvim",
         opts = {
-            model = "mistral", -- The default model to use.
-            quit_map = "q",          -- set keymap to close the response window
-            retry_map = "<c-r>",     -- set keymap to re-send the current prompt
-            accept_map = "<c-cr>",   -- set keymap to replace the previous selection with the last result
-            host = "localhost",      -- The host running the Ollama service.
-            port = "11434",          -- The port on which the Ollama service is listening.
-            display_mode = "float",  -- The display mode. Can be "float" or "split" or "horizontal-split".
-            show_prompt = false,     -- Shows the prompt submitted to Ollama.
-            show_model = false,      -- Displays which model you are using at the beginning of your chat session.
-            no_auto_close = false,   -- Never closes the window automatically.
-            file = false,            -- Write the payload to a temporary file to keep the command short.
-            hidden = false,          -- Hide the generation window (if true, will implicitly set `prompt.replace = true`), requires Neovim >= 0.10
+            model = "mistral",      -- The default model to use.
+            quit_map = "q",         -- set keymap to close the response window
+            retry_map = "<c-r>",    -- set keymap to re-send the current prompt
+            accept_map = "<c-cr>",  -- set keymap to replace the previous selection with the last result
+            host = "localhost",     -- The host running the Ollama service.
+            port = "11434",         -- The port on which the Ollama service is listening.
+            display_mode = "split", -- The display mode. Can be "float" or "split" or "horizontal-split".
+            show_prompt = true,     -- Shows the prompt submitted to Ollama.
+            show_model = true,      -- Displays which model you are using at the beginning of your chat session.
+            no_auto_close = true,   -- Never closes the window automatically.
+            file = false,           -- Write the payload to a temporary file to keep the command short.
+            hidden = true,          -- Hide the generation window (if true, will implicitly set `prompt.replace = true`), requires Neovim >= 0.10
             init = function()
                 pcall(io.popen, "ollama serve > /dev/null 2>&1 &")
             end,
@@ -520,7 +545,7 @@ local plugins = {
             -- The executed command must return a JSON object with { response, context }
             -- (context property is optional).
             -- list_models = '<omitted lua function>', -- Retrieves a list of model names
-            debug = false -- Prints errors and the command which is run.
+            debug = true -- Prints errors and the command which is run.
         },
         config = function()
             vim.keymap.set({ 'n', 'v' }, '<leader>]', ':Gen<CR>')

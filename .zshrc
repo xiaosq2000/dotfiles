@@ -205,7 +205,7 @@ set_proxy() {
             dconf write /system/proxy/ftp/port ${port}
             dconf write /system/proxy/socks/host ${host}
             dconf write /system/proxy/socks/port ${port}
-            dconf write /system/proxy/ignore-hosts "'localhost,127.0.0.0/8,::1,.um.edu.mo'"
+            dconf write /system/proxy/ignore-hosts "'localhost,127.0.0.0/8,::1'"
         else
             error "This platform is not supported."
         fi
@@ -217,7 +217,7 @@ set_proxy() {
     export https_proxy=${https_proxy:-"${host}:${port}"}
     export ftp_proxy=${ftp_proxy:-"${host}:${port}"}
     export socks_proxy=${socks_proxy:-"${host}:${port}"}
-    export no_proxy=${no_proxy:-"localhost,127.0.0.0/8,::1,.um.edu.mo"}
+    export no_proxy=${no_proxy:-"localhost,127.0.0.0/8,::1"}
     export HTTP_PROXY=${HTTP_PROXY:-${http_proxy}}
     export HTTPS_PROXY=${HTTPS_PROXY:-${https_proxy}}
     export FTP_PROXY=${FTP_PROXY:-${ftp_proxy}}

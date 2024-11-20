@@ -1,4 +1,4 @@
-import = ["~/.config/alacritty/rose-pine.toml"]
+import = ["~/.config/alacritty/rose-pine-dawn.toml"]
 [window]
 dimensions = { columns = 80, lines = 60 }
 decorations = "Full"
