@@ -829,7 +829,7 @@ webm2mp4() {
 compress_pdf() {
     # ref: https://askubuntu.com/a/256449
     if [[ ! "$#" -eq 2 ]]; then
-        error "Usage: compress_pdf INPUT_FILE_WITHOUT_EXTENSION OUTPUT_FILE_WITHOUT_EXTENSION"
+        error "Usage: compress_pdf INPUT_FILE OUTPUT_FILE"
     elif has gs; then
         gs -sDEVICE=pdfwrite \
             -dCompatibilityLevel=1.4 \
@@ -838,7 +838,7 @@ compress_pdf() {
             -dBATCH \
             -dPDFSETTINGS=/printer \
             -sOutputFile=$2 \
-            $1.pdf
+            $1
     fi
 }
 
@@ -891,7 +891,7 @@ ${INDENT}command_with_email_notification \"<COMMAND>\"
 
 ${INDENT}sync
 
-${INDENT}compress_pdf <INPUT_FILE_WITHOUT_EXTENSION> <OUTPUT_FILE_WITHOUT_EXTENSION>
+${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
 ${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
 "
 }
