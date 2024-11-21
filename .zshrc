@@ -828,15 +828,17 @@ webm2mp4() {
 
 compress_pdf() {
     # ref: https://askubuntu.com/a/256449
-    if has gs; then
+    if [[ ! "$#" -eq 2 ]]; then
+        error "Usage: compress_pdf INPUT_FILE OUTPUT_FILE"
+    elif has gs; then
         gs -sDEVICE=pdfwrite \
             -dCompatibilityLevel=1.4 \
             -dNOPAUSE \
             -dQUIET \
             -dBATCH \
             -dPDFSETTINGS=/printer \
-            -sOutputFile=${1}-compressed.pdf \
-            $1.pdf
+            -sOutputFile=$2 \
+            $1
     fi
 }
 
@@ -858,6 +860,7 @@ ${INDENT}display_xdg_envs
 ${INDENT}display_typefaces
 
 ${INDENT}check_x11_wayland
+${INDENT}check_git_config
 
 +------------+
 | Networking |
@@ -876,7 +879,7 @@ ${INDENT}check_port_availability
 
 ${INDENT}prepend_env
 ${INDENT}append_env
-${INDENT}remove_from_env;
+${INDENT}remove_from_env
 
 ${INDENT}manual_install 
 ${INDENT}manual_uninstall
@@ -884,26 +887,35 @@ ${INDENT}manual_uninstall
 ${INDENT}set_ros 
 ${INDENT}set_ros2
 
-${INDENT}command_with_email_notification
+${INDENT}command_with_email_notification \"<COMMAND>\"
 
-${INDENT}check_git_config
 ${INDENT}sync
+
+${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
+${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
 "
 }
 
 start_up() {
     # help;
     # auto_tmux
+     
     # hardware_overview;
     # software_overview
+     
     check_git_config
     check_x11_wayland
+
     check_private_ip;
     check_public_ip;
-    # set_proxy # unset_proxy
-    set_ros2
-    echo "Type \"help\" to display supported handy commands."
 
+    # set_proxy 
+    # unset_proxy
+     
+    # set_ros
+    set_ros2
+
+    echo "Type \"help\" to display supported handy commands."
     zshrc_end_time=$(date +%s%N)
     zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
     debug "$zshrc_duration ms$RESET to start up zsh."
