@@ -27,6 +27,11 @@ vim.keymap.set({ "n", "i" }, "<leader>c-", "<esc><cmd>center 80<cr>hhv0r-A<space
 vim.keymap.set({ "n", "i" }, "<leader>c#", "<esc><cmd>center 80<cr>hhv0r#A<space><esc>40A#<esc>d80<bar>YppVr#kk.", opts)
 -- Todo: comment with ctrl+/ like vscode
 
+-- count specfic characters before cursor on the current line
+-- ref: https://stackoverflow.com/a/63521765
+-- Todo: to substitute variables.
+vim.keymap.set({ "n" }, "<leader>cl", ":echo count(getline('.')[0:getpos('.')[2]-1], '*')", opts)
+
 --------------------------------------------------------------------------------
 --------------------------------- line number ----------------------------------
 --------------------------------------------------------------------------------

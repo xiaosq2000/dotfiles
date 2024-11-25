@@ -328,18 +328,21 @@ has() {
 if has "nvim"; then
     export SUDO_EDITOR='nvim'
     export EDITOR='nvim'
+    alias v='nvim'
     if has "git"; then
         git config --global core.editor "nvim"
     fi
 elif has "vim"; then
     export SUDO_EDITOR='vim'
     export EDITOR='vim'
+    alias v='vim'
     if has "git"; then
         git config --global core.editor "vim"
     fi
 elif has "vi"; then
     export SUDO_EDITOR='vi'
     export EDITOR='vi'
+    alias v='vi'
     if has "git"; then
         git config --global core.editor "vi"
     fi
