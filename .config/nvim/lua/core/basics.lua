@@ -5,6 +5,7 @@ vim.g.mapleader = "\\"
 local opts = { noremap = true, silent = true }
 
 vim.keymap.set({ "i", "s" }, "jk", "<esc>", opts)
+vim.keymap.set('t', '<Esc>', [[<C-\><C-n>]], opts)
 
 vim.keymap.set({ "n", "v" }, "j", "gj", opts)
 vim.keymap.set({ "n", "v" }, "gj", "j", opts)

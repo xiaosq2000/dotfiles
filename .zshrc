@@ -371,18 +371,6 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 
 eval "$(starship init zsh)"
 
-# >>> personal micromamba initialization >>>
-export MAMBA_EXE="${XDG_PREFIX_HOME}/bin/micromamba";
-export MAMBA_ROOT_PREFIX="${XDG_DATA_HOME}/micromamba";
-__mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__mamba_setup"
-else
-    alias micromamba="$MAMBA_EXE"  # Fallback on help from mamba activate
-fi
-unset __mamba_setup
-# <<< personal micromamba initialization <<<
-
 # >>> personal miniconda initialization >>>
 __conda_setup="$("${XDG_PREFIX_HOME}/miniconda3/bin/conda" 'shell.zsh' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
@@ -397,6 +385,21 @@ fi
 unset __conda_setup
 # <<< personal miniconda initialization <<<
 
+# micromamba is preferred rather than miniconda
+# >>> personal micromamba initialization >>>
+export MAMBA_EXE="${XDG_PREFIX_HOME}/bin/micromamba";
+export MAMBA_ROOT_PREFIX="${XDG_DATA_HOME}/micromamba";
+__mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__mamba_setup"
+    alias conda=micromamba
+else
+    alias micromamba="$MAMBA_EXE"  # Fallback on help from mamba activate
+    alias conda="$MAMBA_EXE"       # Fallback on help from mamba activate
+fi
+unset __mamba_setup
+# <<< personal micromamba initialization <<<
+#
 # Rust
 if [[ -f "$HOME/.cargo/env" ]]; then
     . "$HOME/.cargo/env"
@@ -646,10 +649,10 @@ manual_uninstall() {
         error "${INSTALL_MANIFEST} is not found."
         return 1;
     fi
-    <$INSTALL_MANIFEST xargs -I % rm % 
+    sudo <$INSTALL_MANIFEST xargs -I % rm % 
     if [[ -d "${DEST_DIR}" ]]; then
         debug "Remove empty folders in ${DEST_DIR}"
-        find ${DEST_DIR} -type d -empty -delete
+        sudo find ${DEST_DIR} -type d -empty -delete
     fi
     info "You could remove the file ${BOLD}${INSTALL_MANIFEST}${RESET} manually."
     completed "Done."
