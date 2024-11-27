@@ -30,3 +30,5 @@
 !.config/zathura/
 
 !.latexmkrc
+
+!.condarc
