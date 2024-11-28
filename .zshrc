@@ -178,6 +178,10 @@ check_private_ip() {
     echo -e "${MAGENTA}Private Network:${RESET}\n${INDENT}\"ip\": \"$(hostname -I | awk '{ print $1; }')\","
     echo
 }
+check_all_private_ip() {
+    echo -e "${MAGENTA}Private Network:${RESET}\n${INDENT}\"ip\": \"$(hostname -I | head -c -1 | sed 's/ /, /g')\""
+    echo
+}
 proxy_protocol="trojan"
 set_proxy() {
     if [[ $(uname -r | grep 'WSL2') ]]; then

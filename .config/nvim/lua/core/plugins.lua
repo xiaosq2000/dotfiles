@@ -72,37 +72,16 @@ local plugins = {
         dependencies = { { 'nvim-lua/plenary.nvim' }, { 'nvim-telescope/telescope-ui-select.nvim' } },
         config = function()
             local builtin = require('telescope.builtin')
+            --
             vim.keymap.set('n', '<space>fs', function()
                 builtin.grep_string({ search = vim.fn.input("Grep > ") });
             end)
+            --
             vim.keymap.set('n', '<space>ff', builtin.find_files, {})
             vim.keymap.set('n', '<space>fg', builtin.live_grep, {})
             vim.keymap.set('n', '<space>fb', builtin.buffers, {})
             vim.keymap.set('n', '<space>fhp', builtin.help_tags, {})
             --
-            require('telescope').setup {
-                extensions = {
-                    ["ui-select"] = {
-                        require("telescope.themes").get_dropdown {
-                            -- even more opts
-                        }
-
-                        -- pseudo code / specification for writing custom displays, like the one
-                        -- for "codeactions"
-                        -- specific_opts = {
-                        --   [kind] = {
-                        --     make_indexed = function(items) -> indexed_items, width,
-                        --     make_displayer = function(widths) -> displayer
-                        --     make_display = function(displayer) -> function(e)
-                        --     make_ordinal = function(e) -> string
-                        --   },
-                        --   -- for example to disable the custom builtin "codeactions" display
-                        --      do the following
-                        --   codeactions = false,
-                        -- }
-                    }
-                }
-            }
             require("telescope").load_extension("ui-select")
         end
     },
@@ -510,14 +489,14 @@ local plugins = {
         'voldikss/vim-floaterm',
         config = function()
             vim.keymap.set({ "i", "n" }, "<C-Q>", "<CMD>NvimTreeOpen<CR>", { silent = true })
-            vim.keymap.set({ "n" }, "<F1>", ":FloatermNew<CR>", { silent = true})
-            vim.keymap.set({ "t" }, "<F1>", [[<C-\><C-n>:FloatermNew<CR>]], { silent = true})
-            vim.keymap.set({ "n" }, "<F2>", ":FloatermToggle<CR>", { silent = true})
-            vim.keymap.set({ "t" }, "<F2>", [[<C-\><C-n>:FloatermToggle<CR>]], { silent = true})
-            vim.keymap.set({ "n" }, "<F3>", ":FloatermPrev<CR>", { silent = true})
-            vim.keymap.set({ "t" }, "<F3>", [[<C-\><C-n>:FloatermPrev<CR>]], { silent = true})
-            vim.keymap.set({ "n" }, "<F4>", ":FloatermNext<CR>", { silent = true})
-            vim.keymap.set({ "t" }, "<F4>", [[<C-\><C-n>:FloatermNext<CR>]], { silent = true})
+            vim.keymap.set({ "n" }, "<F1>", ":FloatermNew<CR>", { silent = true })
+            vim.keymap.set({ "t" }, "<F1>", [[<C-\><C-n>:FloatermNew<CR>]], { silent = true })
+            vim.keymap.set({ "n" }, "<F2>", ":FloatermToggle<CR>", { silent = true })
+            vim.keymap.set({ "t" }, "<F2>", [[<C-\><C-n>:FloatermToggle<CR>]], { silent = true })
+            vim.keymap.set({ "n" }, "<F3>", ":FloatermPrev<CR>", { silent = true })
+            vim.keymap.set({ "t" }, "<F3>", [[<C-\><C-n>:FloatermPrev<CR>]], { silent = true })
+            vim.keymap.set({ "n" }, "<F4>", ":FloatermNext<CR>", { silent = true })
+            vim.keymap.set({ "t" }, "<F4>", [[<C-\><C-n>:FloatermNext<CR>]], { silent = true })
         end
     },
     {
@@ -538,12 +517,12 @@ local plugins = {
             -- add any opts here
             provider = "ollama",
             vendors = {
-              ollama = {
-                __inherited_from = "openai",
-                api_key_name = "",
-                endpoint = "http://127.0.0.1:11434/v1",
-                model = "qwen2.5-coder:latest",
-              },
+                ollama = {
+                    __inherited_from = "openai",
+                    api_key_name = "",
+                    endpoint = "http://127.0.0.1:11434/v1",
+                    model = "qwen2.5-coder:latest",
+                },
             },
         },
         -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
