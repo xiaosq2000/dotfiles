@@ -852,6 +852,14 @@ gif2mp4() {
     fi
 }
 
+mp42png() {
+    if has ffmpeg; then
+        ffmpeg -i $1.mp4 -vframes 1 $1.png
+    else
+        error "ffmpeg not found."
+    fi
+}
+
 compress_pdf() {
     # ref: https://askubuntu.com/a/256449
     if [[ ! "$#" -eq 2 ]]; then
@@ -922,6 +930,7 @@ ${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
 ${INDENT}webp2png <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}gif2mp4 <FILENAME_WITHOUT_EXTENSION>
+${INDENT}mp42png <FILENAME_WITHOUT_EXTENSION>
 "
 }
 
