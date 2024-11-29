@@ -828,9 +828,25 @@ command_with_email_notification() {
     cd "$original_dir" || { echo "Failed to restore original directory: $original_dir"; return 1; }
 }
 
+webp2png() {
+    if has dwebp; then
+        dwebp -i $1.webp -o $1.png
+    else
+        error "dwebp not found."
+    fi
+}
+
 webm2mp4() {
     if has ffmpeg; then
         ffmpeg -fflags +genpts -i $1.webm -r ${2:-24} $1.mp4
+    else
+        error "ffmpeg not found."
+    fi
+}
+
+gif2mp4() {
+    if has ffmpeg; then
+        ffmpeg -i $1.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" $1.mp4
     else
         error "ffmpeg not found."
     fi
@@ -902,7 +918,10 @@ ${INDENT}command_with_email_notification \"<COMMAND>\"
 ${INDENT}sync
 
 ${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
+
+${INDENT}webp2png <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
+${INDENT}gif2mp4 <FILENAME_WITHOUT_EXTENSION>
 "
 }
 
