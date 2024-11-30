@@ -327,7 +327,7 @@ local plugins = {
                 ['executable'] = 'latexmk',
                 ['hooks'] = '',
                 ['options'] = {
-                    '-pdflatex=xelatex', -- use xelatex engine
+                    '-pdflatex=lualatex',
                     '-shell-escape',
                     '-verbose',
                     '-file-line-error',
