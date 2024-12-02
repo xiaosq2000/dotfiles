@@ -363,6 +363,8 @@ alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 # For a full list of active aliases, run `alias`.
 alias python="python3"
 alias lg="lazygit"
+alias t="tmux"
+alias ta="tmux a"
 alias ohmyzsh="${EDITOR} ${HOME}/.oh-my-zsh"
 alias zshconfig="${EDITOR} ${HOME}/.zshrc"
 alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
