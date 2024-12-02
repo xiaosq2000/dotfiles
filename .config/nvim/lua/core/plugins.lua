@@ -499,6 +499,14 @@ local plugins = {
             vim.keymap.set({ "t" }, "<F4>", [[<C-\><C-n>:FloatermNext<CR>]], { silent = true })
         end
     },
+    -- Improved UI and workflow for the Neovim quickfix
+    {
+        'stevearc/quicker.nvim',
+        event = "FileType qf",
+        ---@module "quicker"
+        ---@type quicker.SetupOptions
+        opts = {},
+    },
     {
         "DNLHC/glance.nvim",
         config = function()
