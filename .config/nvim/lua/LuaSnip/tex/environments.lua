@@ -77,43 +77,21 @@ return {
     s({ trig = "itm" },
         fmta(
             [[
-\begin{itemize}
-    \setlength{\itemsep}{1.5ex}
+\begin{itemize}<>
     \item <>
 \end{itemize}
     ]],
-            { i(1) }
+            { c(1, { t("\\setlength{\\itemsep}{1.5ex}"), t("") }), i(2, "some content"), }
         )
     ),
     s({ trig = "enu" },
         fmta(
             [[
-\begin{enumerate}
-    \setlength{\itemsep}{1.5ex}
+\begin{enumerate}<>
     \item <>
 \end{enumerate}
     ]],
-            { i(1) }
-        )
-    ),
-    s({ trig = "frame" },
-        fmta(
-            [[
-\begin{frame}[c]{<>}
-    <>
-\end{frame}
-    ]],
-            { i(1, "Title"), i(2, "TODO") }
-        )
-    ),
-    s({ trig = "Frame" },
-        fmta(
-            [[
-\begin{frame}[c]\Frametitle{<>}
-    <>
-\end{frame}
-    ]],
-            { i(1, "Title"), i(2, "TODO") }
+            { c(1, { t("\\setlength{\\itemsep}{1.5ex}"), t("") }), i(2, "some content"), }
         )
     ),
     s({ trig = "figure" },

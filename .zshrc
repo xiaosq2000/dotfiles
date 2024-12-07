@@ -830,6 +830,14 @@ command_with_email_notification() {
     cd "$original_dir" || { echo "Failed to restore original directory: $original_dir"; return 1; }
 }
 
+svg2pdf() {
+    if has inkscape; then
+        inkscape $1.svg -o $1.pdf
+    else
+        error "inkscape not found."
+    fi
+}
+
 webp2png() {
     if has dwebp; then
         dwebp -i $1.webp -o $1.png
@@ -929,6 +937,7 @@ ${INDENT}sync
 
 ${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
 
+${INDENT}svg2pdf <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}webp2png <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}gif2mp4 <FILENAME_WITHOUT_EXTENSION>
