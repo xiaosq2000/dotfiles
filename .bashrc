@@ -223,11 +223,9 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 
 # starship
 eval "$(starship init bash)"
+# Network proxy management configuration
+source /home/shuqixiao/Projects/sing-box-docker/scripts/setup.bash
 
-# Networking Proxy
-PROXY_SETUP_SCRIPT="${HOME}/Projects/sing-box-docker/releases/sing-box-v1.9.4-c02c2c7/sing-box-v1.9.4-c02c2c7-xiaoshuqi/linux-amd64/setup.bash"
-if [[ -f "$PROXY_SETUP_SCRIPT" ]]; then
-	source "${PROXY_SETUP_SCRIPT}"
-else
-	warning "$PROXY_SETUP_SCRIPT is not found."
-fi
+# Network proxy management configuration
+[ -f /home/shuqixiao/Projects/sing-box-docker/scripts/setup.bash ] && source /home/shuqixiao/Projects/sing-box-docker/scripts/setup.bash
+

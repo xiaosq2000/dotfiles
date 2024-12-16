@@ -32,3 +32,5 @@
 !.latexmkrc
 
 !.condarc
+
+!.network_management.sh

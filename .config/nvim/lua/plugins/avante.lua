@@ -13,6 +13,12 @@ return {
                 endpoint = "http://127.0.0.1:11434/v1",
                 model = "qwen2.5-coder:latest",
             },
+            oaipro = {
+                __inherited_from = "openai",
+                api_key_name = "OAIPRO_API_KEY",
+                endpoint = "https://api.oaipro.com/v1",
+                model = "claude-3-5-haiku-20241022",
+            },
         },
     },
     -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
