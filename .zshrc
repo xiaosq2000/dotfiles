@@ -789,8 +789,8 @@ compress_pdf() {
 [ -f "${HOME}/.google-drive-upload/bin/gupload" ] && [ -x "${HOME}/.google-drive-upload/bin" ] && PATH="${HOME}/.google-drive-upload/bin:${PATH}"
 
 # LLM APIs
-source ~/.oaipro_api_key
-source ~/.deepseek_api_key
+[ -f "~/.oaipro_api_key" ] && source ~/.oaipro_api_key
+[ -f "~/.deepseek_api_key"] && source ~/.deepseek_api_key
 
 help() {
     echo "
