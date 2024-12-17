@@ -270,7 +270,41 @@ else
 fi
 unset __mamba_setup
 # <<< personal micromamba initialization <<<
-#
+
+auto_conda() {
+    local autoenv_zsh_content='has() {
+    command -v "$1" 1>/dev/null 2>&1
+}
+BOLD="$(tput bold 2>/dev/null || printf '')"
+YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
+RESET="$(tput sgr0 2>/dev/null || printf '')"
+warning() {
+    printf "%s\n" "${BOLD}${YELLOW}WARNING:${RESET} $*"
+}
+if has micromamba; then
+    if [[ $(micromamba env list | grep "${environment_name}") ]]; then
+        warning "Activating micormamba virtual environment ${BOLD}\"${environment_name}\"${RESET}"
+        micromamba activate "${environment_name}"
+    fi
+fi'
+    local autoenv_leave_zsh_content='has() {
+    command -v "$1" 1>/dev/null 2>&1
+}
+BOLD="$(tput bold 2>/dev/null || printf '')"
+YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
+RESET="$(tput sgr0 2>/dev/null || printf '')"
+warning() {
+    printf "%s\n" "${BOLD}${YELLOW}WARNING:${RESET} $*"
+}
+if has micromamba; then
+    warning "Deactivating the conda environment."
+    micromamba deactivate
+fi'
+    echo "$autoenv_zsh_content" > .autoenv.zsh
+    sed -i "1i environment_name=$1" .autoenv.zsh
+    echo "$autoenv_leave_zsh_content" > .autoenv_leave.zsh
+}
+
 # Rust
 if [[ -f "$HOME/.cargo/env" ]]; then
     . "$HOME/.cargo/env"
@@ -754,8 +788,9 @@ compress_pdf() {
 # https://labbots.github.io/google-drive-upload/
 [ -f "${HOME}/.google-drive-upload/bin/gupload" ] && [ -x "${HOME}/.google-drive-upload/bin" ] && PATH="${HOME}/.google-drive-upload/bin:${PATH}"
 
-# OAIPRO_API_KEY
+# LLM APIs
 source ~/.oaipro_api_key
+source ~/.deepseek_api_key
 
 help() {
     echo "

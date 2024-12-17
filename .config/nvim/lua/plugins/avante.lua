@@ -2,10 +2,10 @@ return {
     "yetone/avante.nvim",
     event = "VeryLazy",
     lazy = false,
-    version = false,     -- set this if you want to always pull the latest change
+    version = false, -- set this if you want to always pull the latest change
     opts = {
         -- add any opts here
-        provider = "ollama",
+        provider = "deepseek",
         vendors = {
             ollama = {
                 __inherited_from = "openai",
@@ -19,6 +19,12 @@ return {
                 endpoint = "https://api.oaipro.com/v1",
                 model = "claude-3-5-haiku-20241022",
             },
+            deepseek = {
+                __inherited_from = "openai",
+                api_key_name = "DEEPSEEK_API_KEY",
+                endpoint = "https://api.deepseek.com",
+                model = "deepseek-coder",
+            }
         },
     },
     -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
@@ -30,8 +36,8 @@ return {
         "nvim-lua/plenary.nvim",
         "MunifTanjim/nui.nvim",
         --- The below dependencies are optional,
-        "nvim-tree/nvim-web-devicons",     -- or echasnovski/mini.icons
-        "zbirenbaum/copilot.lua",          -- for providers='copilot'
+        "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
+        "zbirenbaum/copilot.lua",      -- for providers='copilot'
         {
             -- support for image pasting
             "HakonHarnes/img-clip.nvim",
