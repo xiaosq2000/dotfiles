@@ -227,5 +227,4 @@ eval "$(starship init bash)"
 source /home/shuqixiao/Projects/sing-box-docker/scripts/setup.bash
 
 # Network proxy management configuration
-[ -f /home/shuqixiao/Projects/sing-box-docker/scripts/setup.bash ] && source /home/shuqixiao/Projects/sing-box-docker/scripts/setup.bash
-
+[ -f ~/.network_management.sh ] && source ~/.network_management.sh
