@@ -658,7 +658,7 @@ check_x11_wayland() {
         debug "Using Wayland."
         # reference: https://unix.stackexchange.com/a/359244/523957
         __xhost_command="xhost +SI:localuser:$(id -un) >/dev/null 2>&1"
-        warning "Executes '$__xhost_command'"
+        debug "Executes '$__xhost_command'"
         eval "$__xhost_command"
     fi
 }
@@ -785,12 +785,21 @@ compress_pdf() {
     fi
 }
 
-# https://labbots.github.io/google-drive-upload/
-[ -f "${HOME}/.google-drive-upload/bin/gupload" ] && [ -x "${HOME}/.google-drive-upload/bin" ] && PATH="${HOME}/.google-drive-upload/bin:${PATH}"
+# google-drive-upload, ref: https://labbots.github.io/google-drive-upload/
+if [[ -f "${HOME}/.google-drive-upload/bin/gupload" && -x "${HOME}/.google-drive-upload/bin" ]]; then
+    prepend_env PATH "${HOME}/.google-drive-upload/bin"
+fi
 
-# LLM APIs
-[ -f "~/.oaipro_api_key" ] && source ~/.oaipro_api_key
-[ -f "~/.deepseek_api_key"] && source ~/.deepseek_api_key
+safely_source() {
+    if [[ -f "$1" ]]; then
+        source "$1"
+    else
+        warning "$1 is not found."
+    fi
+}
+
+safely_source "${HOME}/.network_management.sh"
+safely_source "${HOME}/.secrets/llm_api_keys.sh"
 
 help() {
     echo "
@@ -839,7 +848,6 @@ ${INDENT}command_with_email_notification \"<COMMAND>\"
 ${INDENT}sync
 
 ${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
-
 ${INDENT}svg2pdf <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}webp2png <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
@@ -847,9 +855,6 @@ ${INDENT}gif2mp4 <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}mp42png <FILENAME_WITHOUT_EXTENSION>
 "
 }
-
-# Network proxy management configuration
-[ -f ~/.network_management.sh ] && source ~/.network_management.sh
 
 start_up() {
     # help;
@@ -870,9 +875,9 @@ start_up() {
     # set_ros
     set_ros2
 
-    echo "Type \"help\" to display supported handy commands."
-    zshrc_end_time=$(date +%s%N)
-    zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-    debug "$zshrc_duration ms$RESET to start up zsh."
+    # echo "Type \"help\" to display supported handy commands."
+    # zshrc_end_time=$(date +%s%N)
+    # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+    # debug "$zshrc_duration ms$RESET to start up zsh."
 }
 start_up

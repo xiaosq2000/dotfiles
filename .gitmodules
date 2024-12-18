@@ -1,0 +1,3 @@
+[submodule ".secrets"]
+	path = .secrets
+	url = git@github.com:xiaosq2000/.secrets.git
