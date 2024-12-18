@@ -18,6 +18,8 @@ vim.keymap.set("n", "<leader>ec", "<cmd>vsp ~/.config/nvim/<cr>", opts)
 
 -- copy to system clipboard
 vim.keymap.set("v", "<enter>", "\"+y", opts)
+vim.keymap.set("n", "<leader>yp", ":let @+ = expand('%:p')<cr>", opts)
+vim.keymap.set("n", "<leader>yr", ":let @+ = expand('%')<cr>", opts)
 
 -- comment block, ref: https://vi.stackexchange.com/a/421
 -- Todo: adapt to indent
