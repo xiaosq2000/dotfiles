@@ -39,12 +39,5 @@ return {
             -- vertically open snippets for filetype tex to quick edit
             vim.keymap.set('n', '<leader>Lt', '<Cmd>vsp ~/.config/nvim/lua/LuaSnip/tex<CR>')
         end
-    },
-    {
-        'saadparwaiz1/cmp_luasnip',
-        dependencies = {
-            "L3MON4D3/LuaSnip",
-            'hrsh7th/nvim-cmp',
-        }
     }
 }

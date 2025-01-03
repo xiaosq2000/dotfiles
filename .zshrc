@@ -631,6 +631,7 @@ plugins=(
     zsh-autosuggestions
     zsh-vi-mode
     web-search
+    fzf
 )
 
 source $ZSH/oh-my-zsh.sh
