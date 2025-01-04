@@ -361,6 +361,9 @@ software_overview() {
     software_overview_helper "nvim" "$(nvim --version | head -n 1 | awk '{ print $2; }' | cut -dv -f2)"
     software_overview_helper "vim" "$(vim --version | head -n 1 | awk '{ print $5;}')"
     software_overview_helper "git" "$(git --version | awk '{ print $3; }')"
+    software_overview_helper "git-lfs" "$(git-lfs --version | awk '{ print $1; }' | cut -d '/' -f 2)"
+    software_overview_helper "lazygit" "$(lazygit --version | cut -d ',' -f 4 | cut -d '=' -f 2)"
+    software_overview_helper "fzf" "$(fzf --version | cut -d ' ' -f 1)"
     software_overview_helper "cmake" "$(cmake --version | head -n 1 | awk '{ print $3; }')"
     software_overview_helper "ninja" "$(ninja --version)"
     software_overview_helper "cargo" "$(cargo --version | awk '{ print $2; }')"
@@ -612,6 +615,10 @@ download_plugins() {
     if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
         git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux
     fi
+    # Install latest fzf
+    if [[ ! -x "$XDG_PREFIX_HOME/bin/fzf" ]]; then
+        curl -s https://api.github.com/repos/junegunn/fzf/releases/latest | grep 'browser_download_url.*linux_amd64.tar.gz' | cut -d : -f 2,3 | tr -d \" | wget -qi - && tar -zxf *linux_amd64.tar.gz && mv fzf ${XDG_PREFIX_HOME}/bin && rm *linux_amd64.tar.gz
+    fi 
 }
 download_plugins
 
