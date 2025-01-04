@@ -19,10 +19,15 @@ return {
         -- 'enter' for mappings similar to 'super-tab' but with 'enter' to accept
         -- See the full "keymap" documentation for information on defining your own keymap.
         keymap = {
-            preset = 'enter',
-            cmdline = {
-                preset = 'default',
-            },
+            preset = 'none',
+            ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
+            ['<C-e>'] = { 'hide' },
+            ['<CR>'] = { 'accept', 'fallback' },
+            ['<Tab>'] = { 'select_next', 'fallback' },
+            ['<C-n>'] = { 'select_next', 'fallback' },
+            ['<S-Tab>'] = { 'select_prev', 'fallback' },
+            ['<C-p>'] = { 'select_prev', 'fallback' },
+
             ['<A-1>'] = { function(cmp) cmp.accept({ index = 1 }) end },
             ['<A-2>'] = { function(cmp) cmp.accept({ index = 2 }) end },
             ['<A-3>'] = { function(cmp) cmp.accept({ index = 3 }) end },
@@ -33,6 +38,10 @@ return {
             ['<A-8>'] = { function(cmp) cmp.accept({ index = 8 }) end },
             ['<A-9>'] = { function(cmp) cmp.accept({ index = 9 }) end },
             ['<A-0>'] = { function(cmp) cmp.accept({ index = 10 }) end },
+        },
+
+        completion = {
+            list = { selection = "auto_insert" },
         },
 
         appearance = {
@@ -47,9 +56,6 @@ return {
 
         -- Default list of enabled providers defined so that you can extend it
         -- elsewhere in your config, without redefining it, due to `opts_extend`
-        sources = {
-            default = { 'lsp', 'path', 'snippets', 'buffer' },
-        },
         snippets = {
             expand = function(snippet) require('luasnip').lsp_expand(snippet) end,
             active = function(filter)
@@ -59,6 +65,9 @@ return {
                 return require('luasnip').in_snippet()
             end,
             jump = function(direction) require('luasnip').jump(direction) end,
+        },
+        sources = {
+            default = { 'lsp', 'path', 'luasnip', 'buffer' },
         },
     },
     opts_extend = { "sources.default" }
