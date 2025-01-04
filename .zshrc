@@ -596,31 +596,51 @@ HIST_STAMPS="dd/mm/yyyy"
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
 
-download_plugins() {
+download_tools() {
     if [[ ! -d "${ZSH_CUSTOM}/plugins/conda-zsh-completion" ]]; then
+        info "Installing the latest conda-zsh-completion"
         git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion"
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]]; then
+        info "Installing the latest zsh-syntax-highlighting"
         git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting"
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]]; then
+        info "Installing the latest zsh-autosuggestions"
         git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autoenv" ]]; then
+        info "Installing the latest zsh-autoenv"
         git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv"
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-vi-mode" ]]; then
+        info "Installing the latest zsh-vi-mode"
         git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode"
     fi
     if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
+        info "Installing the latest catppuccin/tmux"
         git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux
     fi
-    # Install latest fzf
     if [[ ! -x "$XDG_PREFIX_HOME/bin/fzf" ]]; then
+        info "Installing the latest fzf (linux, amd64)"
         curl -s https://api.github.com/repos/junegunn/fzf/releases/latest | grep 'browser_download_url.*linux_amd64.tar.gz' | cut -d : -f 2,3 | tr -d \" | wget -qi - && tar -zxf *linux_amd64.tar.gz && mv fzf ${XDG_PREFIX_HOME}/bin && rm *linux_amd64.tar.gz
     fi 
+    if [[ ! -x "$XDG_PREFIX_HOME/bin/yazi" ]]; then
+        info "Installing the latest yazi (linux, x86_64, gnu)"
+        curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep 'browser_download_url.*yazi-x86_64-unknown-linux-gnu.zip' | cut -d : -f 2,3 | tr -d \" | wget -qi - && unzip -qq yazi-x86_64-unknown-linux-gnu.zip && rm yazi-x86_64-unknown-linux-gnu.zip && cp yazi-x86_64-unknown-linux-gnu/ya* $XDG_PREFIX_HOME/bin/ && rm -r yazi-x86_64-unknown-linux-gnu/
+    fi
 }
-download_plugins
+download_tools
+if has "yazi"; then
+    function y() {
+        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+        yazi "$@" --cwd-file="$tmp"
+        if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+            builtin cd -- "$cwd"
+        fi
+        rm -f -- "$tmp"
+    }
+fi
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
@@ -638,8 +658,11 @@ plugins=(
     zsh-autosuggestions
     zsh-vi-mode
     web-search
-    fzf
 )
+
+if has "fzf"; then
+    plugins+=(fzf)
+fi
 
 source $ZSH/oh-my-zsh.sh
 ################################################################################
