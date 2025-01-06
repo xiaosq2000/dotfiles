@@ -215,6 +215,8 @@ elif has "vi"; then
     fi
 fi
 
+alias e='$EDITOR'
+
 # Compilation
 export ARCHFLAGS="-arch $(uname -m)"
 export NUMCPUS=$(grep -c '^processor' /proc/cpuinfo)
