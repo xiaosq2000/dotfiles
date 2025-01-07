@@ -20,13 +20,15 @@ return {
         -- See the full "keymap" documentation for information on defining your own keymap.
         keymap = {
             preset = 'none',
+            ['<CR>'] = { 'select_and_accept', 'fallback' },
             ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
-            ['<C-e>'] = { 'hide' },
-            ['<CR>'] = { 'accept', 'fallback' },
+            ['<C-e>'] = { 'cancel' },
             ['<Tab>'] = { 'select_next', 'fallback' },
-            ['<C-n>'] = { 'select_next', 'fallback' },
             ['<S-Tab>'] = { 'select_prev', 'fallback' },
-            ['<C-p>'] = { 'select_prev', 'fallback' },
+            ['<C-n>'] = { 'snippet_forward', 'fallback' },
+            ['<C-p>'] = { 'snippet_forward', 'fallback' },
+            ['<Up>'] = { 'snippet_forward', 'fallback' },
+            ['<Down>'] = { 'snippet_backward', 'fallback' },
 
             ['<A-1>'] = { function(cmp) cmp.accept({ index = 1 }) end },
             ['<A-2>'] = { function(cmp) cmp.accept({ index = 2 }) end },
@@ -38,10 +40,15 @@ return {
             ['<A-8>'] = { function(cmp) cmp.accept({ index = 8 }) end },
             ['<A-9>'] = { function(cmp) cmp.accept({ index = 9 }) end },
             ['<A-0>'] = { function(cmp) cmp.accept({ index = 10 }) end },
+
+            cmdline = { 
+                preset = 'enter',
+            }
         },
 
         completion = {
             list = { selection = "auto_insert" },
+            trigger = { show_in_snippet = false },
         },
 
         appearance = {
