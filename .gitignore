@@ -33,5 +33,5 @@
 
 !.condarc
 
-!.network_management.sh
 !.secrets
+!.sh_utils
