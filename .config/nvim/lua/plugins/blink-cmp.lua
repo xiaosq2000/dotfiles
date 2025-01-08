@@ -19,17 +19,19 @@ return {
         -- 'enter' for mappings similar to 'super-tab' but with 'enter' to accept
         -- See the full "keymap" documentation for information on defining your own keymap.
         keymap = {
-            preset = 'none',
-            ['<CR>'] = { 'select_and_accept', 'fallback' },
-            ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
-            ['<C-e>'] = { 'cancel' },
-            ['<Tab>'] = { 'select_next', 'fallback' },
-            ['<S-Tab>'] = { 'select_prev', 'fallback' },
-            ['<C-n>'] = { 'snippet_forward', 'fallback' },
-            ['<C-p>'] = { 'snippet_forward', 'fallback' },
-            ['<Up>'] = { 'snippet_forward', 'fallback' },
-            ['<Down>'] = { 'snippet_backward', 'fallback' },
-
+            preset = 'enter',
+            cmdline = {
+                preset = 'enter',
+            },
+            -- ['<CR>'] = { 'select_and_accept', 'fallback' },
+            -- ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
+            -- ['<C-e>'] = { 'cancel' },
+            -- ['<Tab>'] = { 'select_next', 'fallback' },
+            -- ['<S-Tab>'] = { 'select_prev', 'fallback' },
+            -- ['<C-n>'] = { 'snippet_forward', 'fallback' },
+            -- ['<C-p>'] = { 'snippet_forward', 'fallback' },
+            -- ['<Up>'] = { 'snippet_forward', 'fallback' },
+            -- ['<Down>'] = { 'snippet_backward', 'fallback' },
             ['<A-1>'] = { function(cmp) cmp.accept({ index = 1 }) end },
             ['<A-2>'] = { function(cmp) cmp.accept({ index = 2 }) end },
             ['<A-3>'] = { function(cmp) cmp.accept({ index = 3 }) end },
@@ -40,14 +42,10 @@ return {
             ['<A-8>'] = { function(cmp) cmp.accept({ index = 8 }) end },
             ['<A-9>'] = { function(cmp) cmp.accept({ index = 9 }) end },
             ['<A-0>'] = { function(cmp) cmp.accept({ index = 10 }) end },
-
-            cmdline = { 
-                preset = 'enter',
-            }
         },
 
         completion = {
-            list = { selection = "auto_insert" },
+            list = { selection = { preselect = false, auto_insert = true } },
             trigger = { show_in_snippet = false },
         },
 
@@ -61,20 +59,12 @@ return {
             nerd_font_variant = 'mono'
         },
 
-        -- Default list of enabled providers defined so that you can extend it
-        -- elsewhere in your config, without redefining it, due to `opts_extend`
         snippets = {
-            expand = function(snippet) require('luasnip').lsp_expand(snippet) end,
-            active = function(filter)
-                if filter and filter.direction then
-                    return require('luasnip').jumpable(filter.direction)
-                end
-                return require('luasnip').in_snippet()
-            end,
-            jump = function(direction) require('luasnip').jump(direction) end,
+            preset = 'luasnip'
         },
+
         sources = {
-            default = { 'lsp', 'path', 'luasnip', 'buffer' },
+            default = { 'lsp', 'path', 'snippets', 'buffer' },
         },
     },
     opts_extend = { "sources.default" }
