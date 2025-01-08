@@ -263,6 +263,13 @@ setup_luarocks() {
     fi
 }
 
+setup_tpm() {
+    if [[ ! -d "${XDG_PREFIX_HOME}/share/tmux/plugins/tpm" ]]; then
+        info "Installing the latest tpm."
+        git clone --depth 1 https://github.com/tmux-plugins/tpm ${XDG_PREFIX_HOME}/share/tmux/plugins/tpm
+    fi 
+}
+
 # Rust
 if [[ -f "$HOME/.cargo/env" ]]; then
     . "$HOME/.cargo/env"
@@ -272,6 +279,7 @@ download_zsh_plugins
 setup_starship
 setup_google_drive_upload
 setup_nvm
+setup_tpm
 setup_lazygit
 setup_yazi
 setup_fzf
@@ -319,6 +327,6 @@ set_ros2
 safely_source "${HOME}/.secrets/llm_api_keys.sh"
 
 # echo "Type \"help\" to display supported handy commands."
-# zshrc_end_time=$(date +%s%N)
-# zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-# debug "$zshrc_duration ms$RESET to start up zsh."
+zshrc_end_time=$(date +%s%N)
+zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+info "$zshrc_duration ms$RESET to start up zsh."
