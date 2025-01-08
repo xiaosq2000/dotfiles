@@ -195,7 +195,16 @@ setup_google_drive_upload() {
     # https://labbots.github.io/google-drive-upload/
     if [[ ! -d "${HOME}/.google-drive-upload" ]]; then
         info "Installing the latest google-drive-upload."
-        curl --compressed -Ls https://github.com/labbots/google-drive-upload/raw/master/install.sh | sh -s 1>/dev/null 2>&1
+        # Store output in temp file
+        tmpfile=$(mktemp)
+        if ! curl --compressed -Ls https://github.com/labbots/google-drive-upload/raw/master/install.sh | sh -s > "$tmpfile" 2>&1; then
+            # If failed, show output
+            error "Failed to install: $(cat "$tmpfile")"
+            rm "$tmpfile"
+            return 1
+        fi
+        # On success, discard output
+        rm "$tmpfile"
     fi
     prepend_env PATH "${HOME}/.google-drive-upload/bin"
 }
