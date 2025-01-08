@@ -128,3 +128,59 @@ ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
         [ -f "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh" ] && source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
     fi
 }
+
+help() {
+    echo "
+${BOLD}${BLUE}Supported Commands${RESET}:
+    
++-----------------+
+| System Overview |
++-----------------+
+
+${INDENT}hardware_overview
+${INDENT}software_overview
+
+${INDENT}display_xdg_envs
+${INDENT}display_typefaces
+
+${INDENT}check_x11_wayland
+${INDENT}check_git_config
+
++------------+
+| Networking |
++------------+
+
+${INDENT}check_public_ip
+${INDENT}check_private_ip
+${INDENT}set_proxy
+${INDENT}unset_proxy
+${INDENT}check_proxy_status
+${INDENT}check_port_availability
+
++----------------------+
+| Other Handy Commands |
++----------------------+
+
+${INDENT}prepend_env
+${INDENT}append_env
+${INDENT}remove_from_env
+
+${INDENT}manual_install 
+${INDENT}manual_uninstall
+
+${INDENT}set_ros 
+${INDENT}set_ros2
+
+${INDENT}command_with_email_notification \"<COMMAND>\"
+
+${INDENT}sync
+
+${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
+${INDENT}svg2pdf <FILENAME_WITHOUT_EXTENSION>
+${INDENT}webp2png <FILENAME_WITHOUT_EXTENSION>
+${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
+${INDENT}gif2mp4 <FILENAME_WITHOUT_EXTENSION>
+${INDENT}mp42png <FILENAME_WITHOUT_EXTENSION>
+"
+}
+

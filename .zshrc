@@ -31,24 +31,6 @@ prepend_env LD_LIBRARY_PATH "${XDG_PREFIX_HOME}/lib" "${XDG_PREFIX_DIR}/lib"
 prepend_env MANPATH "${XDG_PREFIX_HOME}/man" "${XDG_PREFIX_DIR}/man"
 
 ################################################################################
-
-# NVM
-export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-
-# Rust
-if [[ -f "$HOME/.cargo/env" ]]; then
-    . "$HOME/.cargo/env"
-fi
-
-# Starship
-eval "$(starship init zsh)"
-
-# google-drive-upload, ref: https://labbots.github.io/google-drive-upload/
-if [[ -f "${HOME}/.google-drive-upload/bin/gupload" && -x "${HOME}/.google-drive-upload/bin" ]]; then
-    prepend_env PATH "${HOME}/.google-drive-upload/bin"
-fi
-
 # Condas:
 # micromamba is preferred rather than miniconda
 # >>> personal miniconda initialization >>>
@@ -185,10 +167,61 @@ download_zsh_plugins() {
     fi
 }
 
+setup_nvm() {
+    export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
+    if [[ ! -d "$NVM_DIR" ]]; then
+        info "Installing the latest nvm"
+        mkdir -p ${NVM_DIR} && \
+        PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash' && \
+        # Load nvm and install the latest lts nodejs
+        . "${NVM_DIR}/nvm.sh" && nvm install --lts node && \
+        # Install tree-sitter-cli
+        npm install -g tree-sitter-cli
+    fi 
+    # Load nvm
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+}
+
+setup_starship() {
+    if [[ ! -x "${XDG_PREFIX_HOME}/bin/starship" ]]; then
+        info "Installing the latest starship."
+        wget -qO- https://starship.rs/install.sh | /bin/sh -s -- --yes -b ${XDG_PREFIX_HOME}/bin 1>/dev/null 2>&1
+    fi
+    # Load starship
+    eval "$(starship init zsh)"
+}
+
+setup_google_drive_upload() {
+    # https://labbots.github.io/google-drive-upload/
+    if [[ ! -d "${HOME}/.google-drive-upload" ]]; then
+        info "Installing the latest google-drive-upload."
+        curl --compressed -Ls https://github.com/labbots/google-drive-upload/raw/master/install.sh | sh -s 1>/dev/null 2>&1
+    fi
+    prepend_env PATH "${HOME}/.google-drive-upload/bin"
+}
+
+setup_lazygit() {
+    if [[ ! -x "$XDG_PREFIX_HOME/bin/lazygit" ]]; then
+        info "Installing the latest lazygit"
+        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*') && \
+        curl -s -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" && \
+        tar xf lazygit.tar.gz lazygit && \
+        install -Dm 755 lazygit ${XDG_PREFIX_HOME}/bin && \
+        rm lazygit.tar.gz lazygit
+    fi
+}
+
 setup_yazi() {
     if [[ ! -x "$XDG_PREFIX_HOME/bin/yazi" ]]; then
         info "Installing the latest yazi (linux, x86_64, gnu)"
-        curl -s https://api.github.com/repos/sxyazi/yazi/releases/latest | grep 'browser_download_url.*yazi-x86_64-unknown-linux-gnu.zip' | cut -d : -f 2,3 | tr -d \" | wget -qi - && unzip -qq yazi-x86_64-unknown-linux-gnu.zip && rm yazi-x86_64-unknown-linux-gnu.zip && cp yazi-x86_64-unknown-linux-gnu/ya* $XDG_PREFIX_HOME/bin/ && rm -r yazi-x86_64-unknown-linux-gnu/
+        curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | \
+            grep 'browser_download_url.*yazi-x86_64-unknown-linux-gnu.zip' | \
+            cut -d : -f 2,3 | \
+            tr -d \" | \
+            wget -qi -
+        unzip -qq yazi-x86_64-unknown-linux-gnu.zip 
+        cp yazi-x86_64-unknown-linux-gnu/ya* $XDG_PREFIX_HOME/bin/ 
+        rm -r yazi-x86_64-unknown-linux-gnu*
     fi
     if has "yazi"; then
         function y() {
@@ -207,7 +240,7 @@ setup_fzf() {
         info "Cloning the latest fzf"
         git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
         info "Installing the latest fzf"
-        ~/.fzf/install --key-bindings --completion --no-update-rc 
+        ~/.fzf/install --key-bindings --completion --no-update-rc 1>/dev/null 2>&1
     fi 
     [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
     export FZF_CTRL_R_OPTS="
@@ -218,7 +251,31 @@ setup_fzf() {
     export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
 }
 
+setup_luarocks() {
+    LUAROCKS_VERSION=3.11.1
+    if [[ ! -x "$XDG_PREFIX_HOME/bin/luarocks" ]] || \
+       [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" != "$LUAROCKS_VERSION" ]]; then
+        info "Installing the luarocks ${LUAROCKS_VERSION}".
+        wget -q https://luarocks.github.io/luarocks/releases/luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip
+        unzip -qq luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip 
+        cp luarocks-${LUAROCKS_VERSION}-linux-x86_64/luarocks* ${XDG_PREFIX_HOME}/bin && \
+        rm -r luarocks-${LUAROCKS_VERSION}-linux-x86_64*
+    fi
+}
+
+# Rust
+if [[ -f "$HOME/.cargo/env" ]]; then
+    . "$HOME/.cargo/env"
+fi
+
 download_zsh_plugins
+setup_starship
+setup_google_drive_upload
+setup_nvm
+setup_lazygit
+setup_yazi
+setup_fzf
+setup_luarocks
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
@@ -254,87 +311,14 @@ precmd() {
     echo
 }
 
-help() {
-    echo "
-${BOLD}${BLUE}Supported Commands${RESET}:
-    
-+-----------------+
-| System Overview |
-+-----------------+
+check_git_config
+check_x11_wayland
 
-${INDENT}hardware_overview
-${INDENT}software_overview
+set_ros2
 
-${INDENT}display_xdg_envs
-${INDENT}display_typefaces
+safely_source "${HOME}/.secrets/llm_api_keys.sh"
 
-${INDENT}check_x11_wayland
-${INDENT}check_git_config
-
-+------------+
-| Networking |
-+------------+
-
-${INDENT}check_public_ip
-${INDENT}check_private_ip
-${INDENT}set_proxy
-${INDENT}unset_proxy
-${INDENT}check_proxy_status
-${INDENT}check_port_availability
-
-+----------------------+
-| Other Handy Commands |
-+----------------------+
-
-${INDENT}prepend_env
-${INDENT}append_env
-${INDENT}remove_from_env
-
-${INDENT}manual_install 
-${INDENT}manual_uninstall
-
-${INDENT}set_ros 
-${INDENT}set_ros2
-
-${INDENT}command_with_email_notification \"<COMMAND>\"
-
-${INDENT}sync
-
-${INDENT}compress_pdf <INPUT_FILE> <OUTPUT_FILE>
-${INDENT}svg2pdf <FILENAME_WITHOUT_EXTENSION>
-${INDENT}webp2png <FILENAME_WITHOUT_EXTENSION>
-${INDENT}webm2mp4 <FILENAME_WITHOUT_EXTENSION>
-${INDENT}gif2mp4 <FILENAME_WITHOUT_EXTENSION>
-${INDENT}mp42png <FILENAME_WITHOUT_EXTENSION>
-"
-}
-
-start_up() {
-    # help;
-    # auto_tmux
-     
-    # hardware_overview;
-    # software_overview
-     
-    source "${HOME}/.secrets/llm_api_keys.sh"
-
-    setup_yazi
-    setup_fzf
-    check_git_config
-    check_x11_wayland
-
-    # check_private_ip;
-    # check_public_ip;
-
-    # set_proxy 
-    # unset_proxy
-     
-    # set_ros
-    set_ros2
-
-    # echo "Type \"help\" to display supported handy commands."
-    # zshrc_end_time=$(date +%s%N)
-    # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-    # debug "$zshrc_duration ms$RESET to start up zsh."
-}
-start_up
+# echo "Type \"help\" to display supported handy commands."
+# zshrc_end_time=$(date +%s%N)
+# zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+# debug "$zshrc_duration ms$RESET to start up zsh."
