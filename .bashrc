@@ -223,8 +223,3 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 
 # starship
 eval "$(starship init bash)"
-# Network proxy management configuration
-source /home/shuqixiao/Projects/sing-box-docker/scripts/setup.bash
-
-# Network proxy management configuration
-[ -f ~/.network_management.sh ] && source ~/.network_management.sh
