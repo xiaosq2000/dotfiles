@@ -172,7 +172,7 @@ setup_nvm() {
     if [[ ! -d "$NVM_DIR" ]]; then
         info "Installing the latest nvm"
         mkdir -p ${NVM_DIR} && \
-        PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash' && \
+        (unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash') && \
         # Load nvm and install the latest lts nodejs
         . "${NVM_DIR}/nvm.sh" && nvm install --lts node && \
         # Install tree-sitter-cli
