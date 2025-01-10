@@ -132,9 +132,9 @@ ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
 setup_texlive() {
     TEXLIVE_VERSION=2024
     if [[ -d "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}" ]]; then
-        prepend_env "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/info" PATH 
-        prepend_env "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/man" PATH
-        prepend_env "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/bin/x86_64-linux" PATH
+        prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/info"
+        prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/man"
+        prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/bin/x86_64-linux"
     fi 
 }
 
