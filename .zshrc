@@ -185,7 +185,7 @@ setup_nvm() {
 setup_starship() {
     if [[ ! -x "${XDG_PREFIX_HOME}/bin/starship" ]]; then
         info "Installing the latest starship."
-        wget -qO- https://starship.rs/install.sh | /bin/sh -s -- --yes -b ${XDG_PREFIX_HOME}/bin 1>/dev/null 2>&1
+        (unset ZSH_VERSION && wget -qO- https://starship.rs/install.sh | /bin/sh -s -- --yes -b ${XDG_PREFIX_HOME}/bin 1>/dev/null 2>&1)
     fi
     # Load starship
     eval "$(starship init zsh)"
