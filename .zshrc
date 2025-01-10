@@ -90,6 +90,7 @@ alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
 alias sshconfig="${EDITOR} ${HOME}/.ssh/config"
 alias starshipconfig="${EDITOR} ${XDG_CONFIG_HOME}/starship.toml"
 alias alacrittyconfig="${EDITOR} $XDG_CONFIG_HOME/alacritty/alacritty.toml"
+alias kittyconfig="${EDITOR} $XDG_CONFIG_HOME/kitty/kitty.conf"
 
 alias e='$EDITOR'
 alias v='$EDITOR'
@@ -279,6 +280,22 @@ setup_tpm() {
     fi 
 }
 
+setup_kitty() {
+    if [[ -x "${XDG_PREFIX_HOME}/bin/kitty" ]]; then
+        if has gsettings; then
+            if gsettings set org.gnome.desktop.default-applications.terminal exec "${XDG_PREFIX_HOME}/bin/kitty" 2>/dev/null; then
+                debug "Set kitty as default terminal"
+            else
+                error "Failed to set kitty as default terminal"
+            fi
+        else
+            warning "gsettings not found - cannot set kitty as default terminal"
+        fi
+    else
+        error "kitty not found at ${XDG_PREFIX_HOME}/bin/kitty"
+    fi
+}
+
 # Rust
 if [[ -f "$HOME/.cargo/env" ]]; then
     . "$HOME/.cargo/env"
@@ -293,6 +310,7 @@ setup_lazygit
 setup_yazi
 setup_fzf
 setup_luarocks
+setup_kitty
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"

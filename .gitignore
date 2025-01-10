@@ -17,6 +17,8 @@
 !.config/alacritty/alacritty.toml
 .config/alacritty/themes
 
+!.config/kitty/
+
 !.config/starship.toml
 
 !.config/tmux/
