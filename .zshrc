@@ -291,8 +291,27 @@ setup_kitty() {
         else
             warning "gsettings not found - cannot set kitty as default terminal"
         fi
+        # IMPORTANT: kitty-scrollback.nvim only supports zsh 5.9 or greater for command-line editing,
+        # please check your version by running: zsh --version
+
+        # add the following environment variables to your zsh config (e.g., ~/.zshrc)
+
+        autoload -Uz edit-command-line
+        zle -N edit-command-line
+
+        function kitty_scrollback_edit_command_line() { 
+          local VISUAL='/home/shuqixiao/.local/share/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
+          zle edit-command-line
+          zle kill-whole-line
+        }
+        zle -N kitty_scrollback_edit_command_line
+
+        bindkey '^x^e' kitty_scrollback_edit_command_line
+        # [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode
+        # by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS
+        # export KITTY_SCROLLBACK_NVIM_EDIT_ARGS=''
     else
-        error "kitty not found at ${XDG_PREFIX_HOME}/bin/kitty"
+        debug "kitty not found at ${XDG_PREFIX_HOME}/bin/kitty"
     fi
 }
 
@@ -349,7 +368,8 @@ precmd() {
 check_git_config
 check_x11_wayland
 
-set_ros2
+setup_ros2
+setup_texlive
 
 safely_source "${HOME}/.secrets/llm_api_keys.sh"
 

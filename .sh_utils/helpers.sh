@@ -99,17 +99,17 @@ enter_docker_container() {
         error "docker: command not found.";
         return 1;
     fi
-    docker exec -it $1 zsh
+    docker exec -it $1 zsh -l
 }
 
-set_ros() {
+setup_ros() {
     if [[ -n ${ROS1_DISTRO} && -f "/opt/ros/${ROS1_DISTRO}/setup.zsh" ]]; then
         source "/opt/ros/${ROS1_DISTRO}/setup.zsh";
         info "Using ROS $BOLD$ROS_DISTRO$RESET.";
     fi
 }
 
-set_ros2() {
+setup_ros2() {
     if [[ -n ${ROS2_DISTRO} && -f "/opt/ros/${ROS2_DISTRO}/setup.zsh" ]]; then
         source "/opt/ros/${ROS2_DISTRO}/setup.zsh";
         info "Using ROS2 $BOLD$ROS_DISTRO$RESET.";
@@ -127,6 +127,15 @@ ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
         debug "Setup colcon tab completion"
         [ -f "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh" ] && source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
     fi
+}
+
+setup_texlive() {
+    TEXLIVE_VERSION=2024
+    if [[ -d "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}" ]]; then
+        prepend_env "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/info" PATH 
+        prepend_env "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/man" PATH
+        prepend_env "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/bin/x86_64-linux" PATH
+    fi 
 }
 
 help() {
@@ -167,9 +176,6 @@ ${INDENT}remove_from_env
 
 ${INDENT}manual_install 
 ${INDENT}manual_uninstall
-
-${INDENT}set_ros 
-${INDENT}set_ros2
 
 ${INDENT}command_with_email_notification \"<COMMAND>\"
 
