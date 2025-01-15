@@ -17,6 +17,8 @@
 !.config/alacritty/alacritty.toml
 .config/alacritty/themes
 
+!.config/kitty/
+.config/kitty/*
 !.config/kitty/kitty.conf
 !.config/kitty/current-theme.conf
 
