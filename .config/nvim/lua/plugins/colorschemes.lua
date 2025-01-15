@@ -10,9 +10,10 @@ return {
     {
         "catppuccin/nvim",
         name = "catppuccin",
-        config = function()
-            -- latte, frappe, macchiato, mocha
-            -- vim.cmd.colorscheme "catppuccin-latte"
-        end
+        enabled = false,
+        -- config = function()
+        --     -- latte, frappe, macchiato, mocha
+        --     vim.cmd.colorscheme "catppuccin-latte"
+        -- end
     }
 }
