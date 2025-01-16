@@ -33,11 +33,11 @@ return {
             require("luasnip.loaders.from_lua").lazy_load({ paths = "~/.config/nvim/lua/LuaSnip" })
 
             -- reload luasnip
-            vim.keymap.set('n', '<leader>L',
+            vim.keymap.set('n', '<leader>ll',
                 '<Cmd>lua require("luasnip.loaders.from_lua").load({paths = "~/.config/nvim/lua/LuaSnip/"})<CR>')
 
             -- vertically open snippets for filetype tex to quick edit
-            vim.keymap.set('n', '<leader>Lt', '<Cmd>vsp ~/.config/nvim/lua/LuaSnip/tex<CR>')
+            vim.keymap.set('n', '<leader>tl', '<Cmd>vsp ~/.config/nvim/lua/LuaSnip/tex<CR>')
         end
     }
 }
