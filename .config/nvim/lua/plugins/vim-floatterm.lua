@@ -1,5 +1,6 @@
 return {
     'voldikss/vim-floaterm',
+    enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= 'true',
     config = function()
         vim.keymap.set({ "i", "n" }, "<C-Q>", "<CMD>NvimTreeOpen<CR>", { silent = true })
         vim.keymap.set({ "n" }, "<F1>", ":FloatermNew<CR>", { silent = true })
