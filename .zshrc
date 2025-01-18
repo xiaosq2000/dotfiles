@@ -262,12 +262,26 @@ setup_fzf() {
 }
 
 setup_luarocks() {
-    LUAROCKS_VERSION=3.11.1
+    # Get glibc version and clean it
+    local glibc_version=$(ldd --version 2>&1 | head -n1 | grep -oP '\d+\.\d+')
+    glibc_version=$(echo "$glibc_version" | tr -d '\n' | tr -d ' ')  # Remove newlines and spaces
+    
+    # Convert versions to comparable integers (major * 100 + minor)
+    local glibc_num=$(echo "$glibc_version" | awk -F. '{print $1 * 100 + $2}')
+    local target_num=$((2 * 100 + 38))  # 2.38 as integer
+    
+    # Set luarocks version based on glibc version
+    if (( glibc_num > target_num )); then
+        LUAROCKS_VERSION="3.11.1"
+    else
+        LUAROCKS_VERSION="3.8.0"
+    fi
+    
     if [[ ! -x "$XDG_PREFIX_HOME/bin/luarocks" ]] || \
        [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" != "$LUAROCKS_VERSION" ]]; then
-        info "Installing the luarocks ${LUAROCKS_VERSION}".
-        wget -q https://luarocks.github.io/luarocks/releases/luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip
-        unzip -qq luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip 
+        info "Installing the luarocks ${LUAROCKS_VERSION}"
+        wget -q "https://luarocks.github.io/luarocks/releases/luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip"
+        unzip -qq "luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip"
         cp luarocks-${LUAROCKS_VERSION}-linux-x86_64/luarocks* ${XDG_PREFIX_HOME}/bin && \
         rm -r luarocks-${LUAROCKS_VERSION}-linux-x86_64*
     fi
