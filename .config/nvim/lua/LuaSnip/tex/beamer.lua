@@ -20,7 +20,7 @@ end
 
 return {
     s({ trig = "at" },
-        fmta("\\alert<<<>>>{<>}", { i(1, ""), d(2, get_visual) })
+        fmta("\\alert{<>}", { d(1, get_visual) })
     ),
     s({ trig = "uc" },
         fmta("\\uncover<<<>>>{<>}", { i(1, "+(1)-"), d(2, get_visual) })
