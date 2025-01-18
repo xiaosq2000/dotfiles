@@ -33,6 +33,12 @@
 .config/nvim/lazy-lock.json
 
 !.config/zathura/
+# TODO: simplify
+!.local
+.local/*
+!.local/bin
+.local/bin/*
+!.local/bin/zathura
 
 !.latexmkrc
 
