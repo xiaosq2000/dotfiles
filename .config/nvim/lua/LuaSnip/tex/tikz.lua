@@ -63,7 +63,7 @@ return {
     ]]
         , {})
     ),
-    s({ trig = "env-equation-annotation" },
+    s({ trig = "env-eqan", dscr = 'environment of annotated equation' },
         fmta(
             [[
 \begin{annotatedEquationEnv}
@@ -73,7 +73,7 @@ return {
             { i(1, "Use \\annotatedEquation here.") }
         )
     ),
-    s({ trig = "tikzmarknode" },
+    s({ trig = "mn", dscr = 'tikzmarknode' },
         fmta(
             [[
 \tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}
@@ -81,7 +81,7 @@ return {
             { i(1, "0"), rep(1), d(2, get_visual) }
         )
     ),
-    s({ trig = "tikzmarknode-beamer-overlay" },
+    s({ trig = "mno", dscr='tikzmarknode with beamer overlay' },
         fmta(
             [[
 \alt<<<>>>{\tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}}{<>}
@@ -89,7 +89,7 @@ return {
             { i(1, "+(1)-"), i(2, "0"), rep(2), d(3, get_visual), rep(3) }
         )
     ),
-    s({ trig = "equation-annotation" },
+    s({ trig = "eqan", dscr = 'annotated equation'  },
         fmta(
             [[
 \annotatedEquation{<>}{n<>}{<>}{0em}{<>em}{<>}{<>}{<>}{<>}
@@ -99,7 +99,7 @@ return {
                 i(6, "annotation-color-series"), i(7, "annotation"), c(8, { t("east"), t("west") }) }
         )
     ),
-    s({ trig = "equation-annotation-beamer-overlay" },
+    s({ trig = "eqano", dscr = 'equation annotation with beamer overlay' },
         fmta(
             [[
 \only<<<>>>{\annotatedEquation{color}{n<>}{<>}{0em}{<>em}{<>}{annotation-color-series!![<>]}{<>}{<>}}
@@ -155,15 +155,15 @@ return {
 \newcommand*\figureBox[4]{\draw[#3,#4,rounded corners] (#1) rectangle (#2);}
     ]], {})
     ),
-    s({ trig = "env-figure-annotation" },
+    s({ trig = "env-figan" },
         fmta([[
 \begin{annotatedFigureEnv}
-    {\includegraphics[width=0.5\linewidth]{<>}}
+    {\includegraphics[width=0.7\linewidth]{<>}}
     <>
 \end{annotatedFigureEnv}
     ]], { i(1, "example-image"), i(2, "figure-annotation") })
     ),
-    s({ trig = "figure-annotation", desr = "bottom-left, top-right, label, label-position" },
+    s({ trig = "figan", desr = "annotated figure: bottom-left, top-right, label, label-position" },
         fmta([[
 \annotatedFigure{<>}{<>}{<>}{<>}
     ]], { i(1, "0,0"), i(2, "1,1"), i(3, "annotation"), rep(1) })

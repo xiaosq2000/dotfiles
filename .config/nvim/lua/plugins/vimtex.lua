@@ -1,7 +1,8 @@
 -- LaTex
 return {
     'lervag/vimtex',
-    config = function()
+    lazy = false,
+    init = function()
         vim.g.tex_flavor = "latex"
         vim.g.vimtex_view_method = "zathura"
         vim.g.vimtex_compiler_method = "latexmk"
@@ -13,8 +14,7 @@ return {
             ['executable'] = 'latexmk',
             ['hooks'] = '',
             ['options'] = {
-                '-pdflatex=lualatex',
-                '-shell-escape',
+                '-pdflatex=lualatex', '-shell-escape',
                 '-verbose',
                 '-file-line-error',
                 '-synctex=1',

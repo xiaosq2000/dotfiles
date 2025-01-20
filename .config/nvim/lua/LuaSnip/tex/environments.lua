@@ -22,7 +22,7 @@ rec_ls = function()
 end
 
 return {
-    s({ trig = "e" },
+    s({ trig = "e", dscr = 'environment' },
         fmta(
             [[
 \begin{<>}
@@ -34,7 +34,7 @@ return {
             }
         )
     ),
-    s({ trig = "eq" },
+    s({ trig = "eq", dscr = 'equation' },
         fmta(
             [[
 \begin{equation}
@@ -44,7 +44,7 @@ return {
             { i(1) }
         )
     ),
-    s({ trig = "eqn" },
+    s({ trig = "eqn", dscr = 'equation' },
         fmta(
             [[
 \begin{eqnarray}
@@ -54,7 +54,7 @@ return {
             { i(1) }
         )
     ),
-    s({ trig = "al" },
+    s({ trig = "al", dscr = 'align' },
         fmta(
             [[
 \begin{align}
@@ -64,7 +64,7 @@ return {
             { i(1) }
         )
     ),
-    s({ trig = "ald" },
+    s({ trig = "ald", dscr = 'aligned' },
         fmta(
             [[
 \begin{aligned}
@@ -74,7 +74,7 @@ return {
             { i(1) }
         )
     ),
-    s({ trig = "itm" },
+    s({ trig = "itm", dscr = 'itemize' },
         fmta(
             [[
 \begin{itemize}<>
@@ -84,7 +84,7 @@ return {
             { c(1, { t("\\setlength{\\itemsep}{1.5ex}"), t("") }), i(2, "some content"), }
         )
     ),
-    s({ trig = "enu" },
+    s({ trig = "enu", dscr = 'enumerate' },
         fmta(
             [[
 \begin{enumerate}<>
@@ -94,52 +94,31 @@ return {
             { c(1, { t("\\setlength{\\itemsep}{1.5ex}"), t("") }), i(2, "some content"), }
         )
     ),
-    s({ trig = "figure" },
+    s({ trig = "fig", dscr = 'figure' },
         fmta(
             [[
 \begin{figure}[<>]
     \centering
     \includegraphics[width=0.<>\linewidth]{<>}
-    \smallskip
-    \caption{<>}
+    % \caption{<>}
     % \label{fig:<>}
 \end{figure}
     ]],
             { i(1, "htbp"), i(2, "7"), i(3, "example-image"), i(4), rep(4) }
         )
     ),
-    s({ trig = "minipage" },
+    s({ trig = "mp", dscr = 'minipage' },
         fmta(
             [[
     \begin{minipage}[<>]{<>\linewidth}
         <>
     \end{minipage}
     ]],
-            { c(1, { t("c"), t("t"), t("b") }), i(2, ".4"), i(3, "\\includegraphics[width=0.5\\linewidth]{example-image}") }
+            { c(1, { t("t"), t("c"), t("b") }), i(2, ".4"), i(3, "\\includegraphics[width=0.5\\linewidth]{example-image}") }
 
         )
     ),
-    s({ trig = "minipage-two" },
-        fmta(
-            [[
-\begin{figure}[htbp]
-    \begin{minipage}[c]{0.45\linewidth}
-       \centering
-       \includegraphics[width=.5\linewidth]{<>}
-    \end{minipage}
-    \hspace{\fill}
-    \begin{minipage}[c]{0.45\linewidth}
-       \centering
-       \includegraphics[width=.5\linewidth]{<>}
-    \end{minipage}
-    \smallskip
-    \caption{Caption}
-\end{figure}
-    ]],
-            { i(1, "example-image"), i(2, "example-image") }
-        )
-    ),
-    s({ trig = "table" },
+    s({ trig = "tab", dscr = 'table' },
         fmta(
             [[
 \begin{table}[<>]
@@ -161,7 +140,7 @@ return {
             { i(1, "htbp"), i(2, "XX"), i(3, ""), rep(3) }
         )
     ),
-    s({ trig = "quote" },
+    s({ trig = "quote", dscr = 'quote' },
         fmta(
             [[
 \begin{quote}
@@ -172,7 +151,7 @@ return {
             { i(1, "put the quote here"), i(2, "put the person here") }
         )
     ),
-    s({ trig = "block" },
+    s({ trig = "blk", dscr = 'block' },
         fmta(
             [[
 \begin{block}{<>}
@@ -182,7 +161,7 @@ return {
             { i(1, "put the title here"), i(2, "put the contents here") }
         )
     ),
-    s({ trig = "definition" },
+    s({ trig = "def", dscr = 'definition' },
         fmta(
             [[
 \begin{definition}[<>]
@@ -192,7 +171,7 @@ return {
             { i(1), i(2) }
         )
     ),
-    s({ trig = "theorem" },
+    s({ trig = "theo", dscr = 'theorem' },
         fmta(
             [[
 \begin{theorem}[<>]
@@ -202,7 +181,7 @@ return {
             { i(1), i(2) }
         )
     ),
-    s({ trig = "corollary" },
+    s({ trig = "corollary", dscr = 'crly' },
         fmta(
             [[
 \begin{corollary}[<>]
@@ -212,7 +191,7 @@ return {
             { i(1), i(2) }
         )
     ),
-    s({ trig = "lemma" },
+    s({ trig = "lem", dscr = 'lemma' },
         fmta(
             [[
 \begin{lemma}[<>]
@@ -222,7 +201,7 @@ return {
             { i(1), i(2) }
         )
     ),
-    s({ trig = "remark" },
+    s({ trig = "rmk", dscr = 'remark' },
         fmta(
             [[
 \begin{block}{Remark\ (<>)}
