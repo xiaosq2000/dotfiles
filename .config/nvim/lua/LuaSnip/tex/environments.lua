@@ -81,7 +81,7 @@ return {
     \item <>
 \end{itemize}
     ]],
-            { c(1, { t("\\setlength{\\itemsep}{1.5ex}"), t("") }), i(2, "some content"), }
+            { c(1, { t(""), t("\\setlength{\\itemsep}{1.5ex}") }), i(2, "some content"), }
         )
     ),
     s({ trig = "enu", dscr = 'enumerate' },
@@ -91,7 +91,7 @@ return {
     \item <>
 \end{enumerate}
     ]],
-            { c(1, { t("\\setlength{\\itemsep}{1.5ex}"), t("") }), i(2, "some content"), }
+            { c(1, { t(""), t("\\setlength{\\itemsep}{1.5ex}") }), i(2, "some content"), }
         )
     ),
     s({ trig = "fig", dscr = 'figure' },
@@ -105,6 +105,21 @@ return {
 \end{figure}
     ]],
             { i(1, "htbp"), i(2, "7"), i(3, "example-image"), i(4), rep(4) }
+        )
+    ),
+    s({ trig = "video", dscr = 'video' },
+        fmta(
+            [[
+\begin{video}[<>]
+    \centering
+    \movie[<><><>]{\includegraphics[<>]{<>}}{<>}
+    % \caption{<>}
+    % \label{fig:<>}
+\end{video}
+    ]],
+            { i(1, "htbp"), c(2, { t(""), t("showcontrols,") }), c(3, { t(""), t("autostart,") }), c(4,
+                { t(""), t("loop") }), i(5, "width=.75\\linewidth"), i(6, "example-image"), i(7, "video-filepath"), i(8,
+                ""), rep(8) }
         )
     ),
     s({ trig = "mp", dscr = 'minipage' },
