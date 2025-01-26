@@ -335,3 +335,22 @@ avi2mp4() {
 		error "ffmpeg not found."
 	fi
 }
+
+mp42avi() {
+	if has ffmpeg; then
+		if [ $# -ne 1 ]; then
+			error "Usage: mp42avi <video-path-w/o-ext>"
+			return 1
+		fi
+		local input="$1.mp4"
+		local output="$1.avi"
+		# Uses ffmpeg with these settings:
+		#    - Video codec: mpeg4 (standard AVI codec)
+		#    - Quality: qscale 3 (good quality)
+		#    - Audio codec: mp3
+		#    - Audio bitrate: 128k
+		ffmpeg -i "$input" -c:v mpeg4 -qscale:v 3 -c:a libmp3lame -b:a 128k "$output"
+	else
+		error "ffmpeg not found."
+	fi
+}
