@@ -354,3 +354,32 @@ mp42avi() {
 		error "ffmpeg not found."
 	fi
 }
+
+jpg2png() {
+	if has convert; then
+		if [ $# -ne 1 ]; then
+			error "Usage: jpg2png <video-path-w/o-ext>"
+			return 1
+		fi
+		local input="$1.jpg"
+		local output="$1.png"
+
+		if [ ! -f "$input" ]; then
+			error "Input file '$input' not found"
+			return 1
+		fi
+
+		convert "$input" "$output"
+
+		if [ $? -eq 0 ]; then
+			completed "Successfully converted $input to $output"
+			return 0
+		else
+			error "Conversion failed"
+			return 1
+		fi
+	else
+		error "convert not found."
+		return 1
+	fi
+}
