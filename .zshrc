@@ -162,10 +162,10 @@ download_zsh_plugins() {
         info "Installing the latest zsh-vi-mode"
         git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode"
     fi
-    if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
-        info "Installing the latest catppuccin/tmux"
-        git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux
-    fi
+    # if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
+    #     info "Installing the latest catppuccin/tmux"
+    #     git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux
+    # fi
 }
 
 setup_nvm() {
