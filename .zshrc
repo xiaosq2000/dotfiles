@@ -146,54 +146,54 @@ download_zsh_plugins() {
         info "Installing the latest conda-zsh-completion"
         git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
-            complete "Done."
+            complete "Done"
         else 
-            error "Failed."
+            error "Failed"
         fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]]; then
         info "Installing the latest zsh-syntax-highlighting"
         git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
-            complete "Done."
+            complete "Done"
         else 
-            error "Failed."
+            error "Failed"
         fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]]; then
         info "Installing the latest zsh-autosuggestions"
         git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
-            complete "Done."
+            complete "Done"
         else 
-            error "Failed."
+            error "Failed"
         fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autoenv" ]]; then
         info "Installing the latest zsh-autoenv"
         git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
-            complete "Done."
+            complete "Done"
         else 
-            error "Failed."
+            error "Failed"
         fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-vi-mode" ]]; then
         info "Installing the latest zsh-vi-mode"
         git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
-            complete "Done."
+            complete "Done"
         else 
-            error "Failed."
+            error "Failed"
         fi
     fi
     # if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
     #     info "Installing the latest catppuccin/tmux"
     #     git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux 1>/dev/null 2>&1
     #     if [[ $? -eq 0 ]]; then
-    #         complete "Done."
+    #         complete "Done"
     #     else 
-    #         error "Failed."
+    #         error "Failed"
     #     fi
     # fi
 }
@@ -204,10 +204,12 @@ setup_nvm() {
     if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
         info "Installing the latest nvm"
         mkdir -p ${NVM_DIR} && \
-        (unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash') && \
+        (unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash' 1>/dev/null 2>&1) && \
 
+        # Load
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
         info "Installing the latest lts node.js"
-        . "${NVM_DIR}/nvm.sh" && nvm install --lts node 1>/dev/null 2>&1
+        nvm install --lts node 1>/dev/null 2>&1
 
         info "Installing tree-sitter-cli"
         npm install -g tree-sitter-cli 1>/dev/null 2>&1
@@ -215,8 +217,10 @@ setup_nvm() {
         if [[ -s "$NVM_DIR/nvm.sh" ]]; then
             \. "$NVM_DIR/nvm.sh"
             completed "nvm version: $(nvm --version)"
+            completed "node version: $(node --version)"
         else
             error "Failed to install nvm"
+            rm -rf $NVM_DIR
         fi
     fi
     # Load
@@ -250,7 +254,7 @@ setup_google_drive_upload() {
         if has "${HOME}/.google-drive-upload/bin/gupload"; then
             completed "Version: $(${HOME}/.google-drive-upload/bin/gupload --version | grep '^LATEST_INSTALLED_SHA' | cut -d' ' -f2)"
         else 
-            error "Failed."
+            error "Failed to install google-drive-upload"
         fi 
     fi
     # Load
@@ -373,7 +377,7 @@ setup_tpm() {
         if [[ $? -eq 0 ]]; then
             complete "Done."
         else 
-            error "Failed."
+            error "Failed to install tpm"
         fi
     fi 
 }
@@ -413,6 +417,36 @@ setup_kitty() {
     fi
 }
 
+setup_wsl_notify_send() {
+    if [[ $(uname -r) =~ WSL2 ]]; then
+        # Install
+        if [[ ! -x "$XDG_PREFIX_HOME/bin/wsl-notify-send.exe" ]]; then
+            info "Installing the latest wsl-notify-send (x86_64)"
+            pwddir=$(pwd)
+            tmpdir=$(mktemp -d)
+            cd "$tmpdir"
+            curl -s "https://api.github.com/repos/stuartleeks/wsl-notify-send/releases/latest" | \
+                grep 'browser_download_url.*wsl-notify-send_windows_amd64.zip' | \
+                cut -d : -f 2,3 | \
+                tr -d \" | \
+                wget -qi -
+            unzip -qq wsl-notify-send_windows_amd64.zip
+            cp wsl-notify-send.exe $XDG_PREFIX_HOME/bin
+            cd $pwddir
+            rm -rf $tmpdir
+            if [[ -x "$XDG_PREFIX_HOME/bin/wsl-notify-send.exe" ]]; then
+                completed "wsl-notify-send version: $(wsl-notify-send.exe --version | head -n 1 | cut -d' ' -f3)"
+            else
+                error "Failed to install wsl-notify-send"
+            fi
+        fi
+        # Load
+        if [[ -x "$XDG_PREFIX_HOME/bin/wsl-notify-send.exe" ]]; then
+            notify-send() { $XDG_PREFIX_HOME/bin/wsl-notify-send.exe --category $WSL_DISTRO_NAME "${@}"; }
+        fi
+    fi
+}
+
 # Rust
 if [[ -f "$HOME/.cargo/env" ]]; then
     . "$HOME/.cargo/env"
@@ -428,6 +462,7 @@ setup_yazi
 setup_fzf
 setup_luarocks
 setup_kitty
+setup_wsl_notify_send
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
