@@ -144,57 +144,98 @@ ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
 download_zsh_plugins() {
     if [[ ! -d "${ZSH_CUSTOM}/plugins/conda-zsh-completion" ]]; then
         info "Installing the latest conda-zsh-completion"
-        git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion"
+        git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion" 1>/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            complete "Done."
+        else 
+            error "Failed."
+        fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]]; then
         info "Installing the latest zsh-syntax-highlighting"
-        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting"
+        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" 1>/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            complete "Done."
+        else 
+            error "Failed."
+        fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]]; then
         info "Installing the latest zsh-autosuggestions"
-        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
+        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" 1>/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            complete "Done."
+        else 
+            error "Failed."
+        fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autoenv" ]]; then
         info "Installing the latest zsh-autoenv"
-        git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv"
+        git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv" 1>/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            complete "Done."
+        else 
+            error "Failed."
+        fi
     fi
     if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-vi-mode" ]]; then
         info "Installing the latest zsh-vi-mode"
-        git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode"
+        git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode" 1>/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            complete "Done."
+        else 
+            error "Failed."
+        fi
     fi
     # if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
     #     info "Installing the latest catppuccin/tmux"
-    #     git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux
+    #     git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux 1>/dev/null 2>&1
+    #     if [[ $? -eq 0 ]]; then
+    #         complete "Done."
+    #     else 
+    #         error "Failed."
+    #     fi
     # fi
 }
 
 setup_nvm() {
     export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
-    if [[ ! -d "$NVM_DIR" ]]; then
+    # Install
+    if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
         info "Installing the latest nvm"
         mkdir -p ${NVM_DIR} && \
         (unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash') && \
-        # Load nvm and install the latest lts nodejs
-        . "${NVM_DIR}/nvm.sh" && nvm install --lts node && \
-        # Install tree-sitter-cli
-        npm install -g tree-sitter-cli
-    fi 
-    # Load nvm
+
+        info "Installing the latest lts node.js"
+        . "${NVM_DIR}/nvm.sh" && nvm install --lts node 1>/dev/null 2>&1
+
+        info "Installing tree-sitter-cli"
+        npm install -g tree-sitter-cli 1>/dev/null 2>&1
+
+        if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+            \. "$NVM_DIR/nvm.sh"
+            completed "nvm version: $(nvm --version)"
+        else
+            error "Failed to install nvm"
+        fi
+    fi
+    # Load
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 }
 
 setup_starship() {
+    # Install
     if [[ ! -x "${XDG_PREFIX_HOME}/bin/starship" ]]; then
         info "Installing the latest starship."
         (unset ZSH_VERSION && wget -qO- https://starship.rs/install.sh | /bin/sh -s -- --yes -b ${XDG_PREFIX_HOME}/bin 1>/dev/null 2>&1)
     fi
-    # Load starship
+    # Load
     eval "$(starship init zsh)"
 }
 
 setup_google_drive_upload() {
     # https://labbots.github.io/google-drive-upload/
-    if [[ ! -d "${HOME}/.google-drive-upload" ]]; then
+    if ! has "${HOME}/.google-drive-upload/bin/gupload"; then
         info "Installing the latest google-drive-upload."
         # Store output in temp file
         tmpfile=$(mktemp)
@@ -206,23 +247,35 @@ setup_google_drive_upload() {
         fi
         # On success, discard output
         rm "$tmpfile"
+        if has "${HOME}/.google-drive-upload/bin/gupload"; then
+            completed "Version: $(${HOME}/.google-drive-upload/bin/gupload --version | grep '^LATEST_INSTALLED_SHA' | cut -d' ' -f2)"
+        else 
+            error "Failed."
+        fi 
     fi
+    # Load
     prepend_env PATH "${HOME}/.google-drive-upload/bin"
 }
 
 setup_lazygit() {
-    if [[ ! -x "$XDG_PREFIX_HOME/bin/lazygit" ]]; then
+    if ! has "$XDG_PREFIX_HOME/bin/lazygit"; then
         info "Installing the latest lazygit"
         LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*') && \
         curl -s -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" && \
         tar xf lazygit.tar.gz lazygit && \
         install -Dm 755 lazygit ${XDG_PREFIX_HOME}/bin && \
         rm lazygit.tar.gz lazygit
+        if has "$XDG_PREFIX_HOME/bin/lazygit"; then
+            completed "lazygit version: $($XDG_PREFIX_HOME/bin/lazygit --version)"
+        else 
+            error "Failed to install lazygit"
+        fi
     fi
 }
 
 setup_yazi() {
-    if [[ ! -x "$XDG_PREFIX_HOME/bin/yazi" ]]; then
+    # Install
+    if ! has "$XDG_PREFIX_HOME/bin/yazi"; then
         info "Installing the latest yazi (linux, x86_64, gnu)"
         curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | \
             grep 'browser_download_url.*yazi-x86_64-unknown-linux-gnu.zip' | \
@@ -232,8 +285,15 @@ setup_yazi() {
         unzip -qq yazi-x86_64-unknown-linux-gnu.zip 
         cp yazi-x86_64-unknown-linux-gnu/ya* $XDG_PREFIX_HOME/bin/ 
         rm -r yazi-x86_64-unknown-linux-gnu*
+
+        if has "$XDG_PREFIX_HOME/bin/yazi"; then
+            completed "yazi version: $($XDG_PREFIX_HOME/bin/yazi --version | cut -d' ' -f2)"
+        else 
+            error "Failed to install yazi"
+        fi
     fi
-    if has "yazi"; then
+    # Configuration
+    if has "$XDG_PREFIX_HOME/bin/yazi"; then
         function y() {
             local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
             yazi "$@" --cwd-file="$tmp"
@@ -246,29 +306,33 @@ setup_yazi() {
 }
 
 setup_fzf() {
+    # Install
     if [[ ! -d "$HOME/.fzf" ]]; then
-        info "Cloning the latest fzf"
-        git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
         info "Installing the latest fzf"
+        git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 1>/dev/null 2>&1
         ~/.fzf/install --key-bindings --completion --no-update-rc 1>/dev/null 2>&1
+        if has "$XDG_PREFIX_HOME/bin/fzf"; then
+            completed "fzf version: $($XDG_PREFIX_HOME/bin/fzf --version | cut -d' ' -f1)"
+        else 
+            error "Failed to install yazi"
+        fi
     fi 
-    [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-    export FZF_CTRL_R_OPTS="
+    # Load
+    if [[ -f ~/.fzf.zsh ]]; then
+        source ~/.fzf.zsh
+        export FZF_CTRL_R_OPTS="
 --bind 'ctrl-y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)+abort'
 --color header:italic
 --header 'Press CTRL-Y to copy command into clipboard'"
-    # Print tree structure in the preview window
-    export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-    # Theme: Rose Pine Dawn
-    export FZF_DEFAULT_OPTS="
-	--color=fg:#797593,bg:#faf4ed,hl:#d7827e
-	--color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e
-	--color=border:#dfdad9,header:#286983,gutter:#faf4ed
-	--color=spinner:#ea9d34,info:#56949f
-	--color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
+        # Print tree structure in the preview window
+        export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
+        # Theme: Rose Pine Dawn
+        export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
+    fi
 }
 
 setup_luarocks() {
+    # Ubuntu 22.04 LTS glibc version is too old to install recent luarocks.
     # Get glibc version and clean it
     local glibc_version=$(ldd --version 2>&1 | head -n1 | grep -oP '\d+\.\d+')
     glibc_version=$(echo "$glibc_version" | tr -d '\n' | tr -d ' ')  # Remove newlines and spaces
@@ -284,6 +348,7 @@ setup_luarocks() {
         LUAROCKS_VERSION="3.8.0"
     fi
     
+    # Install
     if [[ ! -x "$XDG_PREFIX_HOME/bin/luarocks" ]] || \
        [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" != "$LUAROCKS_VERSION" ]]; then
         info "Installing the luarocks ${LUAROCKS_VERSION}"
@@ -291,13 +356,25 @@ setup_luarocks() {
         unzip -qq "luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip"
         cp luarocks-${LUAROCKS_VERSION}-linux-x86_64/luarocks* ${XDG_PREFIX_HOME}/bin && \
         rm -r luarocks-${LUAROCKS_VERSION}-linux-x86_64*
+
+        # Check
+        if [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" == "$LUAROCKS_VERSION" ]]; then
+            completed "luarocks version: $LUAROCKS_VERSION"
+        else
+            error "Failed to install luarocks $LUAROCKS_VERSION"
+        fi
     fi
 }
 
 setup_tpm() {
     if [[ ! -d "${XDG_PREFIX_HOME}/share/tmux/plugins/tpm" ]]; then
         info "Installing the latest tpm."
-        git clone --depth 1 https://github.com/tmux-plugins/tpm ${XDG_PREFIX_HOME}/share/tmux/plugins/tpm
+        git clone --depth 1 https://github.com/tmux-plugins/tpm ${XDG_PREFIX_HOME}/share/tmux/plugins/tpm 1>/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            complete "Done."
+        else 
+            error "Failed."
+        fi
     fi 
 }
 
