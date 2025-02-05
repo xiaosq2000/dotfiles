@@ -4,7 +4,7 @@ return {
         name = "rose-pine",
         config = function()
             -- main, moon, dawn
-            vim.cmd.colorscheme "rose-pine-dawn"
+            vim.cmd.colorscheme "rose-pine"
         end
     },
     {
