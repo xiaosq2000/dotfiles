@@ -14,7 +14,8 @@ return {
             ['executable'] = 'latexmk',
             ['hooks'] = '',
             ['options'] = {
-                '-pdflatex=lualatex', '-shell-escape',
+                '-pdflatex=lualatex',
+                '-shell-escape',
                 '-verbose',
                 '-file-line-error',
                 '-synctex=1',
@@ -24,8 +25,8 @@ return {
         vim.g.vimtex_parser_bib_backend = 'bibtex'
         vim.g.vimtex_quickfix_mode = 0
         vim.g.vimtex_complete_close_braces = 1
-
-        -- keymaps
+        -- Keymaps 
+        -- TODO: use luasnip instead
         vim.keymap.set('i', '<A-i>', '\\item ', { buffer = false })
     end
 }
