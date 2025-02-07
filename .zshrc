@@ -265,7 +265,7 @@ setup_lazygit() {
     if ! has "$XDG_PREFIX_HOME/bin/lazygit"; then
         info "Installing the latest lazygit"
         LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*') && \
-        curl -s -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" && \
+        curl -sS --no-progress-meter -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" && \
         tar xf lazygit.tar.gz lazygit && \
         install -Dm 755 lazygit ${XDG_PREFIX_HOME}/bin && \
         rm lazygit.tar.gz lazygit
@@ -273,6 +273,18 @@ setup_lazygit() {
             completed "lazygit version: $($XDG_PREFIX_HOME/bin/lazygit --version)"
         else 
             error "Failed to install lazygit"
+        fi
+    fi
+}
+
+setup_lazydocker() {
+    if ! has "$XDG_PREFIX_HOME/bin/lazydocker"; then
+        info "Installing the latest lazydocker"
+        curl -sS --no-progress-meter https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
+        if has "$XDG_PREFIX_HOME/bin/lazygit"; then
+            completed "lazydocker version: $($XDG_PREFIX_HOME/bin/lazydocker --version | head -n 1 | cut -d' ' -f2)"
+        else 
+            error "Failed to install lazydocker"
         fi
     fi
 }
@@ -462,6 +474,7 @@ setup_google_drive_upload
 setup_nvm
 setup_tpm
 setup_lazygit
+setup_lazydocker
 setup_yazi
 setup_fzf
 setup_luarocks
