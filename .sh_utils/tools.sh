@@ -1,4 +1,4 @@
-#!/usr/env/bin bash
+#!/usr/env/bin zsh
 auto_conda() {
 	local autoenv_zsh_content='has() {
     command -v "$1" 1>/dev/null 2>&1
@@ -110,6 +110,39 @@ svg2pdf() {
 		inkscape $1.svg -o $1.pdf
 	else
 		error "inkscape not found."
+	fi
+}
+
+svg2png() {
+	if has convert; then
+		if [ $# -ne 1 ]; then
+			error "Usage: svg2png <video-path-w/o-ext>"
+			return 1
+		fi
+		local input="$1.svg"
+		local output="$1.png"
+
+		if [ ! -f "$input" ]; then
+			error "Input file '$input' not found"
+			return 1
+		fi
+
+        # density: Sets the DPI (dots per inch) resolution. Higher values like 300 or 600 give better quality
+        # quality: Sets maximum quality for the output (ranges from 0-100)
+        # background none: Preserves transparency
+        # define png:compression-level=9: Maximum PNG compression while remaining lossless
+        convert -density 600 -background none $input -quality 100 -define png:compression-level=9 $output
+
+		if [ $? -eq 0 ]; then
+			completed "Successfully converted $input to $output"
+			return 0
+		else
+			error "Conversion failed"
+			return 1
+		fi
+	else
+		error "convert not found."
+		return 1
 	fi
 }
 
@@ -382,4 +415,65 @@ jpg2png() {
 		error "convert not found."
 		return 1
 	fi
+}
+
+invert_color() {
+	if has convert; then
+		if [ $# -ne 2 ]; then
+			error "Usage: $0 <input-img-path> <output-img-path>"
+			return 1
+		fi
+		local input="$1"
+		local output="$2"
+		# -colorspace HSL: Converts the image to HSL color space
+		# -channel L: Selects only the Lightness channel for modification
+		# -negate: Inverts the selected channel
+		# -colorspace sRGB: Converts back to standard RGB color space
+		convert $input -colorspace HSL -channel L -negate -colorspace sRGB $output
+	else
+		error "convert not found."
+		return 1
+	fi
+}
+
+invert_lightness() {
+    if [ $# -ne 1 ]; then
+        echo "Usage: invert_lightness <hex_color>"
+        echo "Example: invert_lightness '#FF0000'"
+        return 1
+    fi
+
+    input_hex=$1
+    r=$(printf "%d" 0x${input_hex:1:2})
+    g=$(printf "%d" 0x${input_hex:3:2})
+    b=$(printf "%d" 0x${input_hex:5:2})
+    
+    # Convert RGB to HSL
+    r_norm=$(echo "scale=6; $r / 255" | bc)
+    g_norm=$(echo "scale=6; $g / 255" | bc)
+    b_norm=$(echo "scale=6; $b / 255" | bc)
+    
+    max_rgb=$(echo "$r_norm $g_norm $b_norm" | tr ' ' '\n' | sort -n | tail -1)
+    min_rgb=$(echo "$r_norm $g_norm $b_norm" | tr ' ' '\n' | sort -n | head -1)
+    
+    # Calculate lightness
+    l=$(echo "scale=6; ($max_rgb + $min_rgb) / 2" | bc)
+    
+    # Invert lightness
+    new_l=$(echo "scale=6; 1 - $l" | bc)
+    
+    # Keep original hue and saturation, but with new lightness
+    # For simplicity, we'll approximate by scaling RGB values
+    scale=$(echo "scale=6; $new_l / $l" | bc)
+    
+    new_r=$(echo "scale=0; $r * $scale / 1" | bc)
+    new_g=$(echo "scale=0; $g * $scale / 1" | bc)
+    new_b=$(echo "scale=0; $b * $scale / 1" | bc)
+    
+    # Ensure values are within bounds
+    new_r=$(echo "if ($new_r > 255) 255 else if ($new_r < 0) 0 else $new_r" | bc)
+    new_g=$(echo "if ($new_g > 255) 255 else if ($new_g < 0) 0 else $new_g" | bc)
+    new_b=$(echo "if ($new_b > 255) 255 else if ($new_b < 0) 0 else $new_b" | bc)
+    
+    printf "#%02x%02x%02x\n" $new_r $new_g $new_b
 }
