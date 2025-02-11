@@ -46,3 +46,5 @@
 
 !.secrets
 !.sh_utils
+
+!.config/kmonad/

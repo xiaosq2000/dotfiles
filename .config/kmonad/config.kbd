@@ -1,0 +1,95 @@
+;; KMonad configuration for HHKB-style layout
+;; This config remaps a standard keyboard to behave like an HHKB
+
+(defcfg
+ ;; Input device - your CM Storm keyboard
+ input  (device-file "/dev/input/by-id/usb-CM_Storm_Side_print-event-kbd")
+ ;; Output device - creates a virtual keyboard
+ output (uinput-sink "KMonad: CM Storm HHKB-Style")
+ ;; Let unmapped keys pass through
+ fallthrough true
+)
+
+;; Source layer - defines all physical keys we'll be mapping
+;; This represents your actual keyboard layout
+(defsrc
+ esc  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+ tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
+ caps a    s    d    f    g    h    j    k    l    ;    '    ret
+ lsft z    x    c    v    b    n    m    ,    .    /    rsft
+ lctl      lalt           spc            ralt      rctl
+)
+
+;; Define aliases for special keys and combinations
+(defalias
+ ;; Layer toggle for function layer
+ fn (layer-toggle function)
+ 
+ ;; Media key aliases
+ pp KeyPlayPause    ;; Play/Pause
+ st KeyStop         ;; Stop
+ pr KeyPreviousSong ;; Previous Track
+ nx KeyNextSong     ;; Next Track
+ 
+ ;; Volume control aliases
+ vm KeyMute         ;; Mute
+ vd KeyVolumeDown   ;; Volume Down
+ vu KeyVolumeUp     ;; Volume Up
+)
+
+;; Base layer - normal typing layer
+;; All keys behave normally except right control becomes fn
+(deflayer base
+ esc  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+ tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
+ caps a    s    d    f    g    h    j    k    l    ;    '    ret
+ lsft z    x    c    v    b    n    m    ,    .    /    rsft
+ lctl      lalt           spc            ralt      @fn        ;; right control becomes fn
+)
+
+;; Function layer - activated when fn (right control) is held
+(deflayer function
+ ;; Number row becomes F1-F12 and Delete
+ grv  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12  del
+ 
+ ;; Tab row: 
+ ;; - Insert on \
+ ;; - Up arrow on [
+ ;; Other keys transparent
+ _    _    _    _    _    _    _    _    _    _    _    up   _    ins
+ 
+ ;; Home row:
+ ;; - Volume controls on A S D
+ ;; - Left/Right arrows on ;/'
+ ;; - Home/End on H/N
+ caps @vm   @vd   @vu   _    _    home _    _    _    left right _
+ 
+ ;; Bottom row:
+ ;; - Media controls on Z X C V
+ ;; - Down arrow on /
+ ;; - Page Up/Down on B/N
+ _    @pp   @st   @pr   @nx   pgup pgdn _    _    _    down  _
+ 
+ ;; Space row - all keys transparent
+ _          _              _              _          _
+)
+
+;; Usage Notes:
+;; Fn + Number row = F1-F12
+;; Fn + Backspace = Delete
+;; Fn + [ = Up Arrow
+;; Fn + ; = Left Arrow
+;; Fn + ' = Right Arrow
+;; Fn + / = Down Arrow
+;; Fn + H = Home
+;; Fn + N = End
+;; Fn + B = Page Up
+;; Fn + N = Page Down
+;; Fn + \ = Insert
+;; Fn + A = Mute
+;; Fn + S = Volume Down
+;; Fn + D = Volume Up
+;; Fn + Z = Play/Pause
+;; Fn + X = Stop
+;; Fn + C = Previous Track
+;; Fn + V = Next Track
