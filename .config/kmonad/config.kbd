@@ -1,7 +1,11 @@
 ;; KMonad configuration for HHKB-style layout
-;; This config remaps a standard keyboard to behave like an HHKB
-
-;; Usage Notes:
+;;
+;; Note:
+;; 1. Arrow keys are disabled. 
+;; 2. Right shift and right control keys are mapped to FN.
+;; 3. Capslock is mapped to control.
+;;
+;; Other:
 ;; Fn + Number row = F1-F12
 ;; Fn + Backspace = Delete
 ;; Fn + [ = Up Arrow
@@ -55,7 +59,7 @@
  esc  1    2    3    4    5    6    7    8    9    0    -    =    bspc
  tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
  lctl a    s    d    f    g    h    j    k    l    ;    '    ret
- lsft z    x    c    v    b    n    m    ,    .    /    rsft
+ lsft z    x    c    v    b    n    m    ,    .    /    @fn
  XX        lalt           spc            ralt      @fn
  XX   XX   XX    XX    
 )
