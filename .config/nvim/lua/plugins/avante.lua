@@ -2,10 +2,10 @@ return {
     "yetone/avante.nvim",
     enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= 'true',
     event = "VeryLazy",
-    version = "v0.0.15", -- set this if you want to always pull the latest change
+    -- version = "v0.0.15", -- set this if you want to always pull the latest change
     opts = {
         -- add any opts here
-        provider = "deepseek",
+        provider = "tencent_deepseek",
         vendors = {
             ollama = {
                 __inherited_from = "openai",
@@ -24,6 +24,12 @@ return {
                 api_key_name = "DEEPSEEK_API_KEY",
                 endpoint = "https://api.deepseek.com",
                 model = "deepseek-coder",
+            },
+            tencent_deepseek = {
+                __inherited_from = "openai",
+                api_key_name = "TENCENT_DEEPSEEK_API_KEY",
+                endpoint = "https://api.lkeap.cloud.tencent.com/v1",
+                model = "deepseek-v3",
             }
         },
     },
