@@ -147,11 +147,14 @@ svg2png() {
 }
 
 webp2png() {
-	if has dwebp; then
-		dwebp -i $1.webp -o $1.png
-	else
+	if ! has dwebp; then
 		error "dwebp not found."
+        return 1
 	fi
+    dwebp $1.webp -o $1.png
+    if [ $? -eq 0 ]; then
+        completed "Successfully converted $1.webp to $1.png"
+    fi
 }
 
 webm2mp4() {
