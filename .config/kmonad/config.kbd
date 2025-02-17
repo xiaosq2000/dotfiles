@@ -5,25 +5,24 @@
 ;; 2. Right control keys are mapped to FN.
 ;; 3. Capslock is mapped to control.
 ;;
-;; Other:
+;; Mappings following HHKB layout:
 ;; Fn + Number row = F1-F12
-;; Fn + Backspace = Delete
+;; Fn + \ = Insert
+;; Fn + ` = Delete
+;; Fn + Delete = Backspace
+;; Fn + Tab = Capslock
 ;; Fn + [ = Up Arrow
 ;; Fn + ; = Left Arrow
 ;; Fn + ' = Right Arrow
 ;; Fn + / = Down Arrow
-;; Fn + H = Home
-;; Fn + J = End
-;; Fn + B = Page Up
-;; Fn + M = Page Down
-;; Fn + \ = Insert
-;; Fn + A = Mute
-;; Fn + S = Volume Down
-;; Fn + D = Volume Up
-;; Fn + Z = Play/Pause
-;; Fn + X = Stop
-;; Fn + C = Previous Track
-;; Fn + V = Next Track
+;; Fn + H = *
+;; Fn + K = Home
+;; Fn + , = End
+;; Fn + L = Page Up
+;; Fn + . = Page Down
+;; Fn + A = Volume Down
+;; Fn + S = Volume Up
+;; Fn + D = Mute
 
 (defcfg
  input  (device-file "/dev/input/by-id/usb-CM_Storm_Side_print-event-kbd")
@@ -43,12 +42,6 @@
 (defalias
  fn (layer-toggle function)
  
- ;; Media key aliases
- pp KeyPlayPause
- st KeyStop
- pr KeyPreviousSong
- nx KeyNextSong
- 
  ;; Volume control aliases
  vm KeyMute
  vd KeyVolumeDown
@@ -61,33 +54,14 @@
  lctl a    s    d    f    g    h    j    k    l    ;    '    ret
  lsft z    x    c    v    b    n    m    ,    .    /    rsft
  XX        lalt           spc            ralt      @fn
- XX   XX   XX    XX    
+ XX   XX   XX   XX    
 )
 
 (deflayer function
- ;; Number row becomes F1-F12 and Delete
- grv  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12  del
- 
- ;; Tab row: 
- ;; - Insert on \
- ;; - Up arrow on [
- _    _    _    _    _    _    _    _    _    _    _    up   _    ins
- 
- ;; Home row:
- ;; - Volume controls on A S D
- ;; - Left/Right arrows on ;/'
- ;; - Home/End on H/J
- lctl @vm   @vd   @vu   _    _    home end    _    _    left right _
- 
- ;; Bottom row:
- ;; - Media controls on Z X C V
- ;; - Page Up/Down on B/N
- ;; - Down arrow on /
- _    @pp   @st   @pr   @nx   pgup pgdn _    _    _    down  _
- 
- ;; Space row - all keys transparent
- _          _              _            _          _
- 
- ;; Arrow keys row (disabled)
+ del  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10   f11  f12  _
+ caps _    _    _    _    _    _    _    _    _    _     up   _    ins
+ _    @vm  @vd  @vu  _    _    _    _    home pgup left right _
+ _    _    _    _    _    _    _    _    end  pgdn down  _
+ _         _              _              _         _
  _    _    _    _
 )
