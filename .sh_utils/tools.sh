@@ -3,9 +3,9 @@ auto_conda() {
 	local autoenv_zsh_content='has() {
     command -v "$1" 1>/dev/null 2>&1
 }
-BOLD="$(tput bold 2>/dev/null || printf '')"
-YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
-RESET="$(tput sgr0 2>/dev/null || printf '')"
+BOLD="$(tput bold 2>/dev/null || printf "")"
+YELLOW="$(tput setaf 3 2>/dev/null || printf "")"
+RESET="$(tput sgr0 2>/dev/null || printf "")"
 warning() {
     printf "%s\n" "${BOLD}${YELLOW}WARNING:${RESET} $*"
 }
@@ -18,9 +18,9 @@ fi'
 	local autoenv_leave_zsh_content='has() {
     command -v "$1" 1>/dev/null 2>&1
 }
-BOLD="$(tput bold 2>/dev/null || printf '')"
-YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
-RESET="$(tput sgr0 2>/dev/null || printf '')"
+BOLD="$(tput bold 2>/dev/null || printf "")"
+YELLOW="$(tput setaf 3 2>/dev/null || printf "")"
+RESET="$(tput sgr0 2>/dev/null || printf "")"
 warning() {
     printf "%s\n" "${BOLD}${YELLOW}WARNING:${RESET} $*"
 }
