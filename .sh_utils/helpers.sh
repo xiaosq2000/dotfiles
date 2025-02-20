@@ -121,11 +121,23 @@ ${INDENT}ROS_DISTRO=${ROS_DISTRO}
 ${INDENT}ROS_DOMAIN_ID=${ROS_DOMAIN_ID}
 ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
         "
+
         debug "Setup colcon_cd"
-        source "/usr/share/colcon_cd/function/colcon_cd.sh"
-        export _colcon_cd_root="/opt/ros/${ROS_DISTRO}"
+        if [ -f "/usr/share/colcon_cd/function/colcon_cd.sh" ]; then
+            source "/usr/share/colcon_cd/function/colcon_cd.sh" 
+            export _colcon_cd_root="/opt/ros/${ROS_DISTRO}"
+        else 
+            warning "colcon_cd not found."
+            warning "Try 'sudo apt install python3-colcon-common-extensions'"
+        fi
+
         debug "Setup colcon tab completion"
-        [ -f "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh" ] && source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
+        if [ -f "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh" ]; then
+            source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
+        else 
+            warning "colcon-argcomplete.zsh not found."
+            warning "Try 'sudo apt install python3-colcon-common-extensions'"
+        fi
     fi
 }
 

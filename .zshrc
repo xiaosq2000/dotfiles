@@ -518,7 +518,9 @@ precmd() {
 check_git_config
 check_x11_wayland
 
+safely_source "${HOME}/.secrets/ros.sh"
 setup_ros2
+
 setup_texlive
 
 safely_source "${HOME}/.secrets/llm_api_keys.sh"
