@@ -30,7 +30,7 @@
 !.zshrc
 
 !.config/nvim/
-.config/nvim/lazy-lock.json
+#.config/nvim/lazy-lock.json
 
 !.config/zathura/
 # TODO: simplify
