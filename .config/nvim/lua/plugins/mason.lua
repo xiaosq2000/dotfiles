@@ -14,7 +14,6 @@ return {
             require("mason-lspconfig").setup {
                 automatic_installation = true,
                 ensure_installed = { "ruff", "pyright", "cmake", "bashls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab" },
-
             }
             local on_attach = function(client)
                 if client.name == 'ruff' then
