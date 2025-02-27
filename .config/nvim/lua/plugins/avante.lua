@@ -5,7 +5,7 @@ return {
     -- version = "v0.0.15", -- set this if you want to always pull the latest change
     opts = {
         -- add any opts here
-        provider = "tencent_deepseek",
+        provider = "deepseek",
         vendors = {
             ollama = {
                 __inherited_from = "openai",
@@ -13,11 +13,11 @@ return {
                 endpoint = "http://127.0.0.1:11434/v1",
                 model = "qwen2.5-coder:latest",
             },
-            oaipro = {
+            oaipro_claude = {
                 __inherited_from = "openai",
                 api_key_name = "OAIPRO_API_KEY",
                 endpoint = "https://api.oaipro.com/v1",
-                model = "claude-3-5-haiku-20241022",
+                model = "claude-3-7-sonnet",
             },
             deepseek = {
                 __inherited_from = "openai",
