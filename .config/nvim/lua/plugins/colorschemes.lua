@@ -10,7 +10,7 @@ return {
     {
         "catppuccin/nvim",
         name = "catppuccin",
-        enabled = vim.env.KITTY_SCROLLBACK_NVIM == 'true',
+        enabled = false,
         -- config = function()
         --     -- latte, frappe, macchiato, mocha
         --     vim.cmd.colorscheme "catppuccin-latte"
