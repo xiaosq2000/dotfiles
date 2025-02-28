@@ -23,7 +23,12 @@ return {
         },
         cmdline = {
             keymap = {
-                preset = 'enter',
+                preset = 'cmdline',
+            },
+            completion = {
+                menu = {
+                    auto_show = true,
+                }
             }
         },
         term = {
