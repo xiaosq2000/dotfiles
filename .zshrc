@@ -209,214 +209,6 @@ download_zsh_plugins() {
     # fi
 }
 
-setup_nvm() {
-    export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
-    # Install
-    if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
-        info "Installing the latest nvm"
-        mkdir -p ${NVM_DIR} && \
-        (unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash' 1>/dev/null 2>&1) && \
-
-        # Load
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        info "Installing the latest lts node.js"
-        nvm install --lts node 1>/dev/null 2>&1
-
-        info "Installing tree-sitter-cli"
-        npm install -g tree-sitter-cli 1>/dev/null 2>&1
-
-        if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-            \. "$NVM_DIR/nvm.sh"
-            completed "nvm version: $(nvm --version)"
-            completed "node version: $(node --version)"
-        else
-            error "Failed to install nvm"
-            rm -rf $NVM_DIR
-        fi
-    fi
-    # Load
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-}
-
-setup_starship() {
-    # Install
-    if [[ ! -x "${XDG_PREFIX_HOME}/bin/starship" ]]; then
-        info "Installing the latest starship."
-        (unset ZSH_VERSION && wget -qO- https://starship.rs/install.sh | /bin/sh -s -- --yes -b ${XDG_PREFIX_HOME}/bin 1>/dev/null 2>&1)
-    fi
-    # Load
-    eval "$(starship init zsh)"
-}
-
-setup_google_drive_upload() {
-    # https://labbots.github.io/google-drive-upload/
-    if ! has "${HOME}/.google-drive-upload/bin/gupload"; then
-        info "Installing the latest google-drive-upload."
-        # Store output in temp file
-        tmpfile=$(mktemp)
-        if ! curl --compressed -Ls https://github.com/labbots/google-drive-upload/raw/master/install.sh | sh -s > "$tmpfile" 2>&1; then
-            # If failed, show output
-            error "Failed to install: $(cat "$tmpfile")"
-            rm "$tmpfile"
-            return 1
-        fi
-        # On success, discard output
-        rm "$tmpfile"
-        if has "${HOME}/.google-drive-upload/bin/gupload"; then
-            completed "Version: $(${HOME}/.google-drive-upload/bin/gupload --version | grep '^LATEST_INSTALLED_SHA' | cut -d' ' -f2)"
-        else 
-            error "Failed to install google-drive-upload"
-        fi 
-    fi
-    # Load
-    prepend_env PATH "${HOME}/.google-drive-upload/bin"
-}
-
-setup_lazygit() {
-    if ! has "$XDG_PREFIX_HOME/bin/lazygit"; then
-        info "Installing the latest lazygit"
-        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*') && \
-        curl -sS --no-progress-meter -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" && \
-        tar xf lazygit.tar.gz lazygit && \
-        install -Dm 755 lazygit ${XDG_PREFIX_HOME}/bin && \
-        rm lazygit.tar.gz lazygit
-        if has "$XDG_PREFIX_HOME/bin/lazygit"; then
-            completed "lazygit version: $($XDG_PREFIX_HOME/bin/lazygit --version)"
-        else 
-            error "Failed to install lazygit"
-        fi
-    fi
-}
-
-setup_lazydocker() {
-    if ! has "$XDG_PREFIX_HOME/bin/lazydocker"; then
-        info "Installing the latest lazydocker"
-        curl -sS --no-progress-meter https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
-        if has "$XDG_PREFIX_HOME/bin/lazygit"; then
-            completed "lazydocker version: $($XDG_PREFIX_HOME/bin/lazydocker --version | head -n 1 | cut -d' ' -f2)"
-        else 
-            error "Failed to install lazydocker"
-        fi
-    fi
-}
-
-setup_yazi() {
-    local glibc_version=$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)
-    local glibc_num=$(echo "$glibc_version" | awk -F. '{print $1 * 100 + $2}')
-    
-    # Install
-    if ! has "$XDG_PREFIX_HOME/bin/yazi"; then
-        if (( glibc_num >= 232 )); then
-            info "Installing the latest yazi (linux, x86_64, gnu)"
-            curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | \
-                grep 'browser_download_url.*yazi-x86_64-unknown-linux-gnu.zip' | \
-                cut -d : -f 2,3 | \
-                tr -d \" | \
-                wget -qi -
-            unzip -qq yazi-x86_64-unknown-linux-gnu.zip 
-            cp yazi-x86_64-unknown-linux-gnu/ya* $XDG_PREFIX_HOME/bin/ 
-            rm -r yazi-x86_64-unknown-linux-gnu*
-        else
-            info "Building the latest yazi from source."
-            YAZI_VERSION=$(curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-            git clone https://github.com/sxyazi/yazi
-            cd yazi
-            git checkout $YAZI_VERSION
-            cargo build --release --locked
-            mv target/release/yazi target/release/ya $XDG_PREFIX_HOME/bin/
-            cd ..
-            rm -rf yazi
-        fi
-
-        if has "$XDG_PREFIX_HOME/bin/yazi"; then
-            completed "yazi version: $($XDG_PREFIX_HOME/bin/yazi --version | cut -d' ' -f2)"
-        else 
-            error "Failed to install yazi"
-        fi
-    fi
-    # Configuration
-    if has "$XDG_PREFIX_HOME/bin/yazi"; then
-        function y() {
-            local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-            yazi "$@" --cwd-file="$tmp"
-            if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-                builtin cd -- "$cwd"
-            fi
-            rm -f -- "$tmp"
-        }
-    fi
-}
-
-setup_fzf() {
-    # Install
-    if [[ ! -d "$HOME/.fzf" ]]; then
-        info "Installing the latest fzf"
-        git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf 1>/dev/null 2>&1
-        ~/.fzf/install --key-bindings --completion --no-update-rc 1>/dev/null 2>&1
-        if has "$XDG_PREFIX_HOME/bin/fzf"; then
-            completed "fzf version: $($XDG_PREFIX_HOME/bin/fzf --version | cut -d' ' -f1)"
-        else 
-            error "Failed to install yazi"
-        fi
-    fi 
-    # Load
-    if [[ -f ~/.fzf.zsh ]]; then
-        source ~/.fzf.zsh
-        export FZF_CTRL_R_OPTS="
---bind 'ctrl-y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)+abort'
---color header:italic
---header 'Press CTRL-Y to copy command into clipboard'"
-        # Print tree structure in the preview window
-        export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-        # Theme: Rose Pine Main
-        export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#191724,hl:#ebbcba --color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba --color=border:#403d52,header:#31748f,gutter:#191724 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
-        # # Theme: Rose Pine Moon
-        # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#232136,hl:#ea9a97 --color=fg+:#e0def4,bg+:#393552,hl+:#ea9a97 --color=border:#44415a,header:#3e8fb0,gutter:#232136 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
-        # # Theme: Rose Pine Dawn
-        # export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
-    fi
-}
-
-setup_luarocks() {
-    local glibc_version=$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)
-    local glibc_num=$(echo "$glibc_version" | awk -F. '{print $1 * 100 + $2}')
-    # Set luarocks version based on glibc version
-    if (( glibc_num > 238 )); then
-        LUAROCKS_VERSION="3.11.1"
-    elif (( glibc_num <= 238 )) && (( glibc_num > 231 )); then
-        LUAROCKS_VERSION="3.8.0"
-    else
-        LUAROCKS_VERSION="3.7.0"
-    fi
-    # Install
-    if [[ ! -x "$XDG_PREFIX_HOME/bin/luarocks" ]] || \
-       [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" != "$LUAROCKS_VERSION" ]]; then
-        info "Installing the luarocks ${LUAROCKS_VERSION}"
-        wget -q "https://luarocks.github.io/luarocks/releases/luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip"
-        unzip -qq "luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip"
-        cp luarocks-${LUAROCKS_VERSION}-linux-x86_64/luarocks* ${XDG_PREFIX_HOME}/bin && \
-        rm -r luarocks-${LUAROCKS_VERSION}-linux-x86_64*
-        # Check
-        if [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" == "$LUAROCKS_VERSION" ]]; then
-            completed "luarocks version: $LUAROCKS_VERSION"
-        else
-            error "Failed to install luarocks $LUAROCKS_VERSION"
-        fi
-    fi
-}
-
-setup_tpm() {
-    if [[ ! -d "${XDG_PREFIX_HOME}/share/tmux/plugins/tpm" ]]; then
-        info "Installing the latest tpm."
-        git clone --depth 1 https://github.com/tmux-plugins/tpm ${XDG_PREFIX_HOME}/share/tmux/plugins/tpm 1>/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            completed "Done."
-        else 
-            error "Failed to install tpm"
-        fi
-    fi 
-}
-
 setup_kitty() {
     if [[ -x "${XDG_PREFIX_HOME}/bin/kitty" ]]; then
         if has gsettings; then
@@ -451,67 +243,45 @@ setup_kitty() {
         debug "kitty not found at ${XDG_PREFIX_HOME}/bin/kitty"
     fi
 }
-
-setup_wsl_notify_send() {
-    if [[ $(uname -r) =~ WSL2 ]]; then
-        # Install
-        if [[ ! -x "$XDG_PREFIX_HOME/bin/wsl-notify-send.exe" ]]; then
-            info "Installing the latest wsl-notify-send (x86_64)"
-            pwddir=$(pwd)
-            tmpdir=$(mktemp -d)
-            cd "$tmpdir"
-            curl -s "https://api.github.com/repos/stuartleeks/wsl-notify-send/releases/latest" | \
-                grep 'browser_download_url.*wsl-notify-send_windows_amd64.zip' | \
-                cut -d : -f 2,3 | \
-                tr -d \" | \
-                wget -qi -
-            unzip -qq wsl-notify-send_windows_amd64.zip
-            cp wsl-notify-send.exe $XDG_PREFIX_HOME/bin
-            cd $pwddir
-            rm -rf $tmpdir
-            if [[ -x "$XDG_PREFIX_HOME/bin/wsl-notify-send.exe" ]]; then
-                completed "wsl-notify-send version: $(wsl-notify-send.exe --version | head -n 1 | cut -d' ' -f3)"
-            else
-                error "Failed to install wsl-notify-send"
-            fi
-        fi
-        # Load
-        if [[ -x "$XDG_PREFIX_HOME/bin/wsl-notify-send.exe" ]]; then
-            notify-send() { $XDG_PREFIX_HOME/bin/wsl-notify-send.exe --category $WSL_DISTRO_NAME "${@}"; }
-        fi
-    fi
-}
-
-setup_termsvg() {
-    TERMSVG_VERSION=$(curl -s "https://api.github.com/repos/mrmarble/termsvg/releases/latest" | grep -Po '"tag_name": "v\K[^"]*') && \
-    info "Installing the latset termsvg (v$TERMSVG_VERSION)"
-    wget -q https://github.com/MrMarble/termsvg/releases/download/v$TERMSVG_VERSION/termsvg-$TERMSVG_VERSION-linux-amd64.tar.gz
-    tar -xf termsvg-$TERMSVG_VERSION-linux-amd64.tar.gz
-    cp termsvg-$TERMSVG_VERSION-linux-amd64/termsvg $XDG_PREFIX_HOME/bin
-    rm -rf termsvg-$TERMSVG_VERSION-linux-amd64*
-    completed "$(termsvg --version)"
-}
-
-setup_rust() {
-    if [[ ! -f "$HOME/.cargo/env" ]]; then
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile default --no-modify-path
-    fi
-    . "$HOME/.cargo/env"
-}
+setup_kitty
 
 download_zsh_plugins
-setup_starship
-setup_google_drive_upload
-setup_nvm
-setup_tpm
-setup_lazygit
-setup_lazydocker
-setup_rust
-setup_yazi
-setup_fzf
-setup_luarocks
-setup_kitty
-setup_wsl_notify_send
+
+export NVM_DIR="${XDG_CONFIG_HOME}/nvm" 
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+eval "$(starship init zsh)"
+
+[ -f "$HOME/.cargo/env" ] && \. "$HOME/.cargo/env"
+
+prepend_env PATH "${HOME}/.google-drive-upload/bin"
+
+if [ -f ~/.fzf.zsh ]; then
+    source ~/.fzf.zsh
+    export FZF_CTRL_R_OPTS="
+--bind 'ctrl-y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)+abort'
+--color header:italic
+--header 'Press CTRL-Y to copy command into clipboard'"
+    # Print tree structure in the preview window
+    export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
+    # Theme: Rose Pine Main
+    export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#191724,hl:#ebbcba --color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba --color=border:#403d52,header:#31748f,gutter:#191724 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
+    # # Theme: Rose Pine Moon
+    # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#232136,hl:#ea9a97 --color=fg+:#e0def4,bg+:#393552,hl+:#ea9a97 --color=border:#44415a,header:#3e8fb0,gutter:#232136 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
+    # # Theme: Rose Pine Dawn
+    # export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
+fi
+
+if [ -x "$XDG_PREFIX_HOME/bin/yazi" ]; then
+	function y() {
+		local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+		yazi "$@" --cwd-file="$tmp"
+		if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+			builtin cd -- "$cwd"
+		fi
+		rm -f -- "$tmp"
+	}
+fi
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
 source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
