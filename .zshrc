@@ -301,17 +301,32 @@ setup_lazydocker() {
 }
 
 setup_yazi() {
+    local glibc_version=$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)
+    local glibc_num=$(echo "$glibc_version" | awk -F. '{print $1 * 100 + $2}')
+    
     # Install
     if ! has "$XDG_PREFIX_HOME/bin/yazi"; then
-        info "Installing the latest yazi (linux, x86_64, gnu)"
-        curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | \
-            grep 'browser_download_url.*yazi-x86_64-unknown-linux-gnu.zip' | \
-            cut -d : -f 2,3 | \
-            tr -d \" | \
-            wget -qi -
-        unzip -qq yazi-x86_64-unknown-linux-gnu.zip 
-        cp yazi-x86_64-unknown-linux-gnu/ya* $XDG_PREFIX_HOME/bin/ 
-        rm -r yazi-x86_64-unknown-linux-gnu*
+        if (( glibc_num >= 232 )); then
+            info "Installing the latest yazi (linux, x86_64, gnu)"
+            curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | \
+                grep 'browser_download_url.*yazi-x86_64-unknown-linux-gnu.zip' | \
+                cut -d : -f 2,3 | \
+                tr -d \" | \
+                wget -qi -
+            unzip -qq yazi-x86_64-unknown-linux-gnu.zip 
+            cp yazi-x86_64-unknown-linux-gnu/ya* $XDG_PREFIX_HOME/bin/ 
+            rm -r yazi-x86_64-unknown-linux-gnu*
+        else
+            info "Building the latest yazi from source."
+            YAZI_VERSION=$(curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+            git clone https://github.com/sxyazi/yazi
+            cd yazi
+            git checkout $YAZI_VERSION
+            cargo build --release --locked
+            mv target/release/yazi target/release/ya $XDG_PREFIX_HOME/bin/
+            cd ..
+            rm -rf yazi
+        fi
 
         if has "$XDG_PREFIX_HOME/bin/yazi"; then
             completed "yazi version: $($XDG_PREFIX_HOME/bin/yazi --version | cut -d' ' -f2)"
@@ -363,22 +378,16 @@ setup_fzf() {
 }
 
 setup_luarocks() {
-    # Ubuntu 22.04 LTS glibc version is too old to install recent luarocks.
-    # Get glibc version and clean it
-    local glibc_version=$(ldd --version 2>&1 | head -n1 | grep -oP '\d+\.\d+')
-    glibc_version=$(echo "$glibc_version" | tr -d '\n' | tr -d ' ')  # Remove newlines and spaces
-    
-    # Convert versions to comparable integers (major * 100 + minor)
+    local glibc_version=$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)
     local glibc_num=$(echo "$glibc_version" | awk -F. '{print $1 * 100 + $2}')
-    local target_num=$((2 * 100 + 38))  # 2.38 as integer
-    
     # Set luarocks version based on glibc version
-    if (( glibc_num > target_num )); then
+    if (( glibc_num > 238 )); then
         LUAROCKS_VERSION="3.11.1"
-    else
+    elif (( glibc_num <= 238 )) && (( glibc_num > 231 )); then
         LUAROCKS_VERSION="3.8.0"
+    else
+        LUAROCKS_VERSION="3.7.0"
     fi
-    
     # Install
     if [[ ! -x "$XDG_PREFIX_HOME/bin/luarocks" ]] || \
        [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" != "$LUAROCKS_VERSION" ]]; then
@@ -387,7 +396,6 @@ setup_luarocks() {
         unzip -qq "luarocks-${LUAROCKS_VERSION}-linux-x86_64.zip"
         cp luarocks-${LUAROCKS_VERSION}-linux-x86_64/luarocks* ${XDG_PREFIX_HOME}/bin && \
         rm -r luarocks-${LUAROCKS_VERSION}-linux-x86_64*
-
         # Check
         if [[ "$($XDG_PREFIX_HOME/bin/luarocks --version | head -n 1 | cut -d ' ' -f 2)" == "$LUAROCKS_VERSION" ]]; then
             completed "luarocks version: $LUAROCKS_VERSION"
@@ -474,10 +482,12 @@ setup_wsl_notify_send() {
     fi
 }
 
-# Rust
-if [[ -f "$HOME/.cargo/env" ]]; then
+setup_rust() {
+    if [[ ! -f "$HOME/.cargo/env" ]]; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile default --no-modify-path
+    fi
     . "$HOME/.cargo/env"
-fi
+}
 
 download_zsh_plugins
 setup_starship
@@ -486,6 +496,7 @@ setup_nvm
 setup_tpm
 setup_lazygit
 setup_lazydocker
+setup_rust
 setup_yazi
 setup_fzf
 setup_luarocks
