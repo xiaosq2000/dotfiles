@@ -482,6 +482,16 @@ setup_wsl_notify_send() {
     fi
 }
 
+setup_termsvg() {
+    TERMSVG_VERSION=$(curl -s "https://api.github.com/repos/mrmarble/termsvg/releases/latest" | grep -Po '"tag_name": "v\K[^"]*') && \
+    info "Installing the latset termsvg (v$TERMSVG_VERSION)"
+    wget -q https://github.com/MrMarble/termsvg/releases/download/v$TERMSVG_VERSION/termsvg-$TERMSVG_VERSION-linux-amd64.tar.gz
+    tar -xf termsvg-$TERMSVG_VERSION-linux-amd64.tar.gz
+    cp termsvg-$TERMSVG_VERSION-linux-amd64/termsvg $XDG_PREFIX_HOME/bin
+    rm -rf termsvg-$TERMSVG_VERSION-linux-amd64*
+    completed "$(termsvg --version)"
+}
+
 setup_rust() {
     if [[ ! -f "$HOME/.cargo/env" ]]; then
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile default --no-modify-path
@@ -541,7 +551,7 @@ check_git_config
 check_x11_wayland
 
 safely_source "${HOME}/.secrets/ros.sh"
-setup_ros2
+# setup_ros2
 
 setup_texlive
 
@@ -550,4 +560,4 @@ safely_source "${HOME}/.secrets/llm_api_keys.sh"
 # echo "Type \"help\" to display supported handy commands."
 zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-info "$zshrc_duration ms$RESET to start up zsh."
+debug "$zshrc_duration ms$RESET to start up zsh."
