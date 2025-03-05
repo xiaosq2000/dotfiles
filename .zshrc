@@ -254,7 +254,7 @@ eval "$(starship init zsh)"
 
 [ -f "$HOME/.cargo/env" ] && \. "$HOME/.cargo/env"
 
-[ -f "/home/shuqixiao/.deno/env" ] && \. "/home/shuqixiao/.deno/env"
+[ -f "$HOME/.deno/env" ] && \. "$HOME/.deno/env"
 
 prepend_env PATH "${HOME}/.google-drive-upload/bin"
 
