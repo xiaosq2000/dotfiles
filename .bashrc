@@ -223,3 +223,5 @@ export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 
 # starship
 eval "$(starship init bash)"
+# deno
+[ -f "/home/shuqixiao/.deno/env" ] && \. "/home/shuqixiao/.deno/env"
