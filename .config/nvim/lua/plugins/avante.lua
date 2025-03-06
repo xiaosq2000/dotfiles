@@ -12,24 +12,28 @@ return {
                 api_key_name = "",
                 endpoint = "http://127.0.0.1:11434/v1",
                 model = "qwen2.5-coder:latest",
+                disable_tools = true
             },
             oaipro_claude = {
                 __inherited_from = "openai",
                 api_key_name = "OAIPRO_API_KEY",
                 endpoint = "https://api.oaipro.com/v1",
                 model = "claude-3-7-sonnet",
+                disable_tools = true
             },
             deepseek = {
                 __inherited_from = "openai",
                 api_key_name = "DEEPSEEK_API_KEY",
                 endpoint = "https://api.deepseek.com",
                 model = "deepseek-coder",
+                disable_tools = true
             },
             tencent_deepseek = {
                 __inherited_from = "openai",
                 api_key_name = "TENCENT_DEEPSEEK_API_KEY",
                 endpoint = "https://api.lkeap.cloud.tencent.com/v1",
                 model = "deepseek-v3",
+                disable_tools = true
             }
         },
     },
