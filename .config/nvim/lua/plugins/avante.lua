@@ -21,11 +21,18 @@ return {
                 model = "claude-3-7-sonnet",
                 disable_tools = true
             },
-            deepseek = {
+            deepseek_chat = {
                 __inherited_from = "openai",
                 api_key_name = "DEEPSEEK_API_KEY",
                 endpoint = "https://api.deepseek.com",
-                model = "deepseek-coder",
+                model = "deepseek-chat",
+                disable_tools = true
+            },
+            deepseek_reasoner = {
+                __inherited_from = "openai",
+                api_key_name = "DEEPSEEK_API_KEY",
+                endpoint = "https://api.deepseek.com",
+                model = "deepseek-reasoner",
                 disable_tools = true
             },
             tencent_deepseek = {
