@@ -20,7 +20,6 @@ return {
         -- See the full "keymap" documentation for information on defining your own keymap.
         keymap = {
             preset = 'default',
-            ['<CR>'] = { 'select_and_accept' }
         },
         cmdline = {
             keymap = {
