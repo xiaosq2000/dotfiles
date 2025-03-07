@@ -1,3 +1,5 @@
+-- Todo: offer different scheme for lazy.nvim instead.
+
 local function is_docker()
     local f = io.open("/.dockerenv", "r")
     if f ~= nil then

@@ -117,11 +117,11 @@ return {
             vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
             vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
             -- Open/close quickfix window
-            vim.keymap.set('n', '<space>c', ':copen<CR>') -- open quickfix
+            vim.keymap.set('n', '<space>c', ':copen<CR>')  -- open quickfix
             vim.keymap.set('n', '<space>x', ':cclose<CR>') -- close quickfix
             -- Navigate quickfix entries
-            vim.keymap.set('n', '[q', ':cprevious<CR>') -- previous quickfix entry
-            vim.keymap.set('n', ']q', ':cnext<CR>') -- next quickfix entry
+            vim.keymap.set('n', '[q', ':cprevious<CR>')    -- previous quickfix entry
+            vim.keymap.set('n', ']q', ':cnext<CR>')        -- next quickfix entry
 
             -- Use LspAttach autocommand to only map the following keys
             -- after the language server attaches to the current buffer
