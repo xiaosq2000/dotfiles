@@ -5,7 +5,7 @@ return {
     -- version = "v0.0.15", -- set this if you want to always pull the latest change
     opts = {
         -- add any opts here
-        provider = "deepseek",
+        provider = "deepseek_chat",
         vendors = {
             ollama = {
                 __inherited_from = "openai",
