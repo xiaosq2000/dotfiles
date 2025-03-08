@@ -2,7 +2,7 @@ return {
     "yetone/avante.nvim",
     enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= 'true',
     event = "VeryLazy",
-    -- version = "v0.0.15", -- set this if you want to always pull the latest change
+    version = "v0.0.22", -- set this if you want to always pull the latest change
     opts = {
         -- add any opts here
         provider = "deepseek_chat",
