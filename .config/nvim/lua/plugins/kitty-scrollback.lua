@@ -1,3 +1,4 @@
+-- TODO: prepare a subset of plugins to use, instead of `enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= 'true',`'
 return {
     'mikesmithgh/kitty-scrollback.nvim',
     enabled = true,

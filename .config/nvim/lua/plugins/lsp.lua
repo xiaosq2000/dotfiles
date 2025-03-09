@@ -1,19 +1,19 @@
--- portable package manager to easily install and manage LSP servers, DAP servers, linters, and formatters.
--- a bridge between nvim-lspconfig and mason.
 return {
     {
+        -- portable package manager to easily install and manage LSP servers, DAP servers, linters, and formatters.
         "williamboman/mason.nvim",
         config = function()
             require("mason").setup()
         end
     },
     {
+        -- a bridge between nvim-lspconfig and mason.
         "williamboman/mason-lspconfig.nvim",
         dependencies = { "williamboman/mason.nvim" },
         config = function()
             require("mason-lspconfig").setup {
                 automatic_installation = true,
-                ensure_installed = { "ruff", "pyright", "cmake", "bashls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab" },
+                ensure_installed = { "ruff", "pyright", "cmake", "bashls", "lua_ls", "marksman", "dockerls", "docker_compose_language_service", "jsonls", "texlab", "taplo" },
             }
             local on_attach = function(client)
                 if client.name == 'ruff' then
