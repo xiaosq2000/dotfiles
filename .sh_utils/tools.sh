@@ -426,13 +426,22 @@ invert_color() {
         return 1
     fi
 
-    if [ $# -ne 2 ]; then
-        error "Usage: $0 <input-img-path> <output-img-path>"
+    if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+        error "Usage: $0 <input-img-path> [output-img-path]"
         return 1
     fi
 
     local input="$1"
-    local output="$2"
+    local output
+    
+    if [ $# -eq 2 ]; then
+        output="$2"
+    else
+        # Extract basename and extension
+        local base="${input%.*}"
+        local ext="${input##*.}"
+        output="${base}-dark.${ext}"
+    fi
 
     # -colorspace HSL: Converts the image to HSL color space
     # -channel L: Selects only the Lightness channel for modification
@@ -448,13 +457,13 @@ transparent_bg() {
         return 1
     fi
 
-    if [ $# -ne 2 ]; then
-        error "Usage: $0 <input-img-path> <output-img-path>"
+    if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+        error "Usage: $0 <input-img-path> [output-img-path]"
         return 1
     fi
 
     local input="$1"
-    local output="$2"
+    local output="${2:-$1}"  # Use input as output if not provided
     local fuzz="1%"            # Adjust tolerance as needed
     local original_bg="white"  # e.g. "#FF0000"
 
@@ -462,6 +471,28 @@ transparent_bg() {
     return $?
 }
 
+process_image() {
+    if [ $# -ne 1 ]; then
+        error "Usage: process_image <input-img-path>"
+        return 1
+    fi
+
+    local input="$1"
+    
+    # First make background transparent
+    if ! transparent_bg "$input"; then
+        error "Failed to make background transparent"
+        return 1
+    fi
+    
+    # Then invert colors
+    if ! invert_color "$input"; then
+        error "Failed to invert colors"
+        return 1
+    fi
+    
+    return 0
+}
 # invert_lightness() {
 #     if [ $# -ne 1 ]; then
 #         echo "Usage: invert_lightness <hex_color>"
