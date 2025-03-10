@@ -259,7 +259,8 @@ eval "$(starship init zsh)"
 prepend_env PATH "${HOME}/.google-drive-upload/bin"
 
 # https://github.com/prefix-dev/pixi/
-# curl -fsSL https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 bash
+# Installation: curl -fsSL https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 bash
+# Add pixi to PATH first
 prepend_env PATH "${HOME}/.pixi/bin"
 
 if [ -f ~/.fzf.zsh ]; then
@@ -317,6 +318,9 @@ plugins=(
 )
 
 source $ZSH/oh-my-zsh.sh
+
+# pixi shell-completion
+eval "$(pixi completion --shell zsh)"
 
 # Add a newline
 precmd() {
