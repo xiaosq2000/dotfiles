@@ -258,6 +258,10 @@ eval "$(starship init zsh)"
 
 prepend_env PATH "${HOME}/.google-drive-upload/bin"
 
+# https://github.com/prefix-dev/pixi/
+# curl -fsSL https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 bash
+prepend_env PATH "${HOME}/.pixi/bin"
+
 if [ -f ~/.fzf.zsh ]; then
     source ~/.fzf.zsh
     export FZF_CTRL_R_OPTS="
