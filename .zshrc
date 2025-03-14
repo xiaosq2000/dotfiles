@@ -97,32 +97,29 @@ fi
 alias ohmyzsh="${EDITOR} ${HOME}/.oh-my-zsh"
 alias zshconfig="${EDITOR} ${HOME}/.zshrc"
 alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
+alias kittyconfig="${EDITOR} $XDG_CONFIG_HOME/kitty/kitty.conf"
 alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
 alias sshconfig="${EDITOR} ${HOME}/.ssh/config"
 alias starshipconfig="${EDITOR} ${XDG_CONFIG_HOME}/starship.toml"
 alias alacrittyconfig="${EDITOR} $XDG_CONFIG_HOME/alacritty/alacritty.toml"
-alias kittyconfig="${EDITOR} $XDG_CONFIG_HOME/kitty/kitty.conf"
+
+alias cl="tput clear"
 
 alias e='$EDITOR'
 alias v='$EDITOR'
-alias s='web_search google'
 
 alias python="python3"
 alias lg="lazygit"
+
 alias t="tmux"
 alias ta="tmux a"
+
+alias s='web_search google'
+# alias s='kitten ssh'
 
 export ARCHFLAGS="-arch $(uname -m)"
 export NUMCPUS=$(grep -c '^processor' /proc/cpuinfo)
 alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
-alias latex='enter_docker_container latex'
-robotics(){
-    if [[ -z "$1" ]]; then
-        enter_docker_container robotics
-    else 
-        enter_docker_container robotics-"$1"
-    fi
-}
 
 CASE_SENSITIVE="false"
 HYPHEN_INSENSITIVE="true"
@@ -271,12 +268,12 @@ if [ -f ~/.fzf.zsh ]; then
 --header 'Press CTRL-Y to copy command into clipboard'"
     # Print tree structure in the preview window
     export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-    # Theme: Rose Pine Main
-    export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#191724,hl:#ebbcba --color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba --color=border:#403d52,header:#31748f,gutter:#191724 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
+    # # Theme: Rose Pine Main
+    # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#191724,hl:#ebbcba --color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba --color=border:#403d52,header:#31748f,gutter:#191724 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
     # # Theme: Rose Pine Moon
     # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#232136,hl:#ea9a97 --color=fg+:#e0def4,bg+:#393552,hl+:#ea9a97 --color=border:#44415a,header:#3e8fb0,gutter:#232136 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
-    # # Theme: Rose Pine Dawn
-    # export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
+    # Theme: Rose Pine Dawn
+    export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
 fi
 
 if [ -x "$XDG_PREFIX_HOME/bin/yazi" ]; then

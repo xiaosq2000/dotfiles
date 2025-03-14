@@ -102,6 +102,8 @@ enter_docker_container() {
     docker exec -it $1 zsh -l
 }
 
+alias latex='enter_docker_container latex'
+
 setup_ros() {
     if [[ -n ${ROS1_DISTRO} && -f "/opt/ros/${ROS1_DISTRO}/setup.zsh" ]]; then
         source "/opt/ros/${ROS1_DISTRO}/setup.zsh";
@@ -142,7 +144,7 @@ ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
 }
 
 setup_texlive() {
-    TEXLIVE_VERSION=2024
+    TEXLIVE_VERSION=2025
     if [[ -d "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}" ]]; then
         prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/info"
         prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/man"
@@ -153,7 +155,7 @@ setup_texlive() {
 help() {
     echo "
 ${BOLD}${BLUE}Supported Commands${RESET}:
-    
+
 +-----------------+
 | System Overview |
 +-----------------+
