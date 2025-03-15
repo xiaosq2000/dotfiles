@@ -1,7 +1,8 @@
 -- fuzzy finder
 return {
     'nvim-telescope/telescope.nvim',
-    tag = '0.1.5',
+    enable = "false",
+    -- tag = '0.1.5',
     dependencies = { { 'nvim-lua/plenary.nvim' }, { 'nvim-telescope/telescope-ui-select.nvim' } },
     config = function()
         local builtin = require('telescope.builtin')
