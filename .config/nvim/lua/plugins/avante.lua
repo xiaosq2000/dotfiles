@@ -1,6 +1,7 @@
 return {
 	"yetone/avante.nvim",
-	enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
+	-- enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
+	enabled = false,
 	event = "VeryLazy",
 	version = "v0.0.22", -- set this if you want to always pull the latest change
 	opts = {

@@ -3,6 +3,10 @@
     "branch": "master",
     "commit": "03c8e67eb7293c404845b3982db895d59c0d1538"
   },
+  "aider.nvim": {
+    "branch": "main",
+    "commit": "a34a03635a130f16a56e6a50b211bb72cc1aff96"
+  },
   "automkdir.nvim": {
     "branch": "main",
     "commit": "7a9335514f37ecd76d024b747db67d6939861b0e"
@@ -23,14 +27,6 @@
     "branch": "main",
     "commit": "0b2437bcc12b4021614dc41fcea9d0f136d94063"
   },
-  "copilot.lua": {
-    "branch": "master",
-    "commit": "30321e33b03cb924fdcd6a806a0dc6fa0b0eafb9"
-  },
-  "dressing.nvim": {
-    "branch": "master",
-    "commit": "2d7c2db2507fa3c4956142ee607431ddb2828639"
-  },
   "friendly-snippets": {
     "branch": "main",
     "commit": "efff286dd74c22f731cdec26a70b46e5b203c619"
@@ -42,10 +38,6 @@
   "glance.nvim": {
     "branch": "master",
     "commit": "cb19b86349cbe634eec0ea768b9a27fdd6d24f34"
-  },
-  "img-clip.nvim": {
-    "branch": "main",
-    "commit": "24c13df08e3fe66624bed5350a2a780f77f1f65b"
   },
   "jinja.vim": {
     "branch": "master",
@@ -78,10 +70,6 @@
   "mini.icons": {
     "branch": "main",
     "commit": "ec61af6e606fc89ee3b1d8f2f20166a3ca917a36"
-  },
-  "mini.pick": {
-    "branch": "main",
-    "commit": "12ea14f8e285d1bcc909116685fdbb129a89d546"
   },
   "noice.nvim": {
     "branch": "main",
@@ -146,10 +134,6 @@
   "quicker.nvim": {
     "branch": "master",
     "commit": "1798be71cdcb15fb84fa8054148a56e17fd391dc"
-  },
-  "render-markdown.nvim": {
-    "branch": "main",
-    "commit": "9721ffe230ec90e49c49ee33b5ca44c3fc689214"
   },
   "rose-pine": {
     "branch": "main",
