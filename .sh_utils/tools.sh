@@ -433,7 +433,7 @@ invert_color() {
 
     local input="$1"
     local output
-    
+
     if [ $# -eq 2 ]; then
         output="$2"
     else
@@ -478,19 +478,19 @@ process_image() {
     fi
 
     local input="$1"
-    
+
     # First make background transparent
     if ! transparent_bg "$input"; then
         error "Failed to make background transparent"
         return 1
     fi
-    
+
     # Then invert colors
     if ! invert_color "$input"; then
         error "Failed to invert colors"
         return 1
     fi
-    
+
     return 0
 }
 # invert_lightness() {

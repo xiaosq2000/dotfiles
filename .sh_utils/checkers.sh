@@ -151,13 +151,13 @@ check_git_config() {
 		fi
 		if [[ ! $(cat $HOME/.gitconfig | grep 'email') ]]; then
 			warning "You are recommended to execute:
-    
+
     ${INDENT}git config --global user.email \"<YOUR_EMAIL>\"
     "
 		fi
 		if [[ ! $(cat $HOME/.gitconfig | grep 'name') ]]; then
 			warning "You are recommended to execute:
-    
+
     ${INDENT}git config --global user.name \"<YOUR_NAME>\"
     "
 		fi

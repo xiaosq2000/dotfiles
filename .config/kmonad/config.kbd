@@ -1,7 +1,7 @@
 ;; KMonad configuration for HHKB-style layout
 ;;
 ;; Note:
-;; 1. Arrow keys are disabled. 
+;; 1. Arrow keys are disabled.
 ;; 2. Right control keys are mapped to FN.
 ;; 3. Capslock is mapped to control.
 ;;
@@ -36,12 +36,12 @@
  caps a    s    d    f    g    h    j    k    l    ;    '    ret
  lsft z    x    c    v    b    n    m    ,    .    /    rsft
  lctl      lalt           spc            ralt      rctl
- left up   right down  
+ left up   right down
 )
 
 (defalias
  fn (layer-toggle function)
- 
+
  ;; Volume control aliases
  vm KeyMute
  vd KeyVolumeDown
@@ -54,7 +54,7 @@
  lctl a    s    d    f    g    h    j    k    l    ;    '    ret
  lsft z    x    c    v    b    n    m    ,    .    /    rsft
  XX        lalt           spc            ralt      @fn
- XX   XX   XX   XX    
+ XX   XX   XX   XX
 )
 
 (deflayer function

@@ -155,7 +155,7 @@ download_zsh_plugins() {
         git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
             completed "Done"
-        else 
+        else
             error "Failed"
         fi
     fi
@@ -164,7 +164,7 @@ download_zsh_plugins() {
         git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
             completed "Done"
-        else 
+        else
             error "Failed"
         fi
     fi
@@ -173,7 +173,7 @@ download_zsh_plugins() {
         git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
             completed "Done"
-        else 
+        else
             error "Failed"
         fi
     fi
@@ -182,7 +182,7 @@ download_zsh_plugins() {
         git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
             completed "Done"
-        else 
+        else
             error "Failed"
         fi
     fi
@@ -191,7 +191,7 @@ download_zsh_plugins() {
         git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode" 1>/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
             completed "Done"
-        else 
+        else
             error "Failed"
         fi
     fi
@@ -200,7 +200,7 @@ download_zsh_plugins() {
     #     git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux 1>/dev/null 2>&1
     #     if [[ $? -eq 0 ]]; then
     #         completed "Done"
-    #     else 
+    #     else
     #         error "Failed"
     #     fi
     # fi
@@ -225,7 +225,7 @@ setup_kitty() {
         autoload -Uz edit-command-line
         zle -N edit-command-line
 
-        function kitty_scrollback_edit_command_line() { 
+        function kitty_scrollback_edit_command_line() {
           local VISUAL='${XDG_DATA_HOME}/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
           zle edit-command-line
           zle kill-whole-line
@@ -244,7 +244,7 @@ setup_kitty
 
 download_zsh_plugins
 
-export NVM_DIR="${XDG_CONFIG_HOME}/nvm" 
+export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
 eval "$(starship init zsh)"

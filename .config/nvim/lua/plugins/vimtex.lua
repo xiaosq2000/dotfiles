@@ -25,7 +25,7 @@ return {
         vim.g.vimtex_parser_bib_backend = 'bibtex'
         vim.g.vimtex_quickfix_mode = 0
         vim.g.vimtex_complete_close_braces = 1
-        -- Keymaps 
+        -- Keymaps
         -- TODO: use luasnip instead
         vim.keymap.set('i', '<A-i>', '\\item ', { buffer = false })
     end

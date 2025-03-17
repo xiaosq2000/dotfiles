@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Thanks to Robert McCabe,
 # https://github.com/rjmccabe3701/linux_config/blob/master/scripts/update_display.sh
- 
+
 # This was inspired by
 # https://gist.github.com/mikeboiko/b6e50210b4fb351b036f1103ea3c18a9
 

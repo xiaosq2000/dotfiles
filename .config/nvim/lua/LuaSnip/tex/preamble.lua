@@ -220,7 +220,7 @@ return {
 
 % Usage: \annotatedFigureBoxCustom{1: bottom-left}{2: top-right}{3: label}{4: label-position}{5: box-color}{6: label-color}{7: border-color}{8: text-color}
 \newcommand*\annotatedFigureBoxCustom[8]{
-    \draw[#5,ultra thick] (#1) rectangle (#2); 
+    \draw[#5,ultra thick] (#1) rectangle (#2);
     \node at (#4) [fill=#6,thick,shape=rectangle,draw=#7,inner sep=2.5pt,font=\small\sffamily,text=#8] { #3 };
 }
 % \annotatedFigureBox{bottom-left}{top-right}{label}{label-position}

@@ -20,9 +20,9 @@ export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 if [ -d "${XDG_DATA_HOME}/tmux/plugins/tpm" ]; then
     info "Deleting ${XDG_DATA_HOME}/tmux/plugins/tpm"
     rm -rf "${XDG_DATA_HOME}/tmux/plugins/tpm"
-fi 
+fi
 info "Installing the latest tpm"
-git clone --depth 1 https://github.com/tmux-plugins/tpm ${XDG_DATA_HOME}/tmux/plugins/tpm 1>/dev/null 2>&1 
+git clone --depth 1 https://github.com/tmux-plugins/tpm ${XDG_DATA_HOME}/tmux/plugins/tpm 1>/dev/null 2>&1
 if [ $? -eq 0 ]; then
     completed "tpm version: $(cd ${XDG_DATA_HOME}/tmux/plugins/tpm && git reflog HEAD | head -n 1 | cut -d' ' -f1)"
 else

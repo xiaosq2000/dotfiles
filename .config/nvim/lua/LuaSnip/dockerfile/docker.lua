@@ -39,7 +39,7 @@ RUN mkdir <>-${<>_VERSION} && tar -zxf <>-${<>_VERSION}.tar.gz --strip-component
 # build & install <>
 ARG <>_GIT_REFERENCE
 RUN git clone --config http.proxy="${http_proxy}" --config https.proxy="${https_proxy}" "<>" <> && \
-    cd <> && \ 
+    cd <> && \
     git checkout ${<>_GIT_REFERENCE} && \
     cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 && \
     cmake --build build -j ${COMPILE_JOBS} && \

@@ -39,7 +39,7 @@ Default:
         # ref: https://unix.stackexchange.com/a/565636
         if read -qs "?Do you want to proceed and replace everything? (y/N)"; then
             >&2 echo -e "\nYour choice: $REPLY"
-        else 
+        else
             >&2 echo -e "\nYour choice: $REPLY"
             return 0;
         fi
@@ -66,7 +66,7 @@ manual_uninstall() {
         error "${INSTALL_MANIFEST} is not found."
         return 1;
     fi
-    sudo <$INSTALL_MANIFEST xargs -I % rm % 
+    sudo <$INSTALL_MANIFEST xargs -I % rm %
     if [[ -d "${DEST_DIR}" ]]; then
         debug "Remove empty folders in ${DEST_DIR}"
         sudo find ${DEST_DIR} -type d -empty -delete
@@ -126,9 +126,9 @@ ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
 
         debug "Setup colcon_cd"
         if [ -f "/usr/share/colcon_cd/function/colcon_cd.sh" ]; then
-            source "/usr/share/colcon_cd/function/colcon_cd.sh" 
+            source "/usr/share/colcon_cd/function/colcon_cd.sh"
             export _colcon_cd_root="/opt/ros/${ROS_DISTRO}"
-        else 
+        else
             warning "colcon_cd not found."
             warning "Try 'sudo apt install python3-colcon-common-extensions'"
         fi
@@ -136,7 +136,7 @@ ${INDENT}ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}
         debug "Setup colcon tab completion"
         if [ -f "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh" ]; then
             source "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.zsh"
-        else 
+        else
             warning "colcon-argcomplete.zsh not found."
             warning "Try 'sudo apt install python3-colcon-common-extensions'"
         fi
@@ -149,7 +149,7 @@ setup_texlive() {
         prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/info"
         prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/man"
         prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/bin/x86_64-linux"
-    fi 
+    fi
 }
 
 help() {
@@ -188,7 +188,7 @@ ${INDENT}prepend_env
 ${INDENT}append_env
 ${INDENT}remove_from_env
 
-${INDENT}manual_install 
+${INDENT}manual_install
 ${INDENT}manual_uninstall
 
 ${INDENT}command_with_email_notification \"<COMMAND>\"
@@ -203,4 +203,3 @@ ${INDENT}gif2mp4 <FILENAME_WITHOUT_EXTENSION>
 ${INDENT}mp42png <FILENAME_WITHOUT_EXTENSION>
 "
 }
-

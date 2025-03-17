@@ -23,22 +23,22 @@ $bibtex_use = 2;
 $clean_ext = '
     # Standard LaTeX auxiliary files
     aux bbl bcf fdb_latexmk fls log run tdo
-    
+
     # Table of contents, list of figures, etc.
     lof lot lol toc
-    
+
     # Beamer presentation files
     nav snm vrb
-    
+
     # Bibliography auxiliary files
     run.xml %R-blx.bib
-    
+
     # SyncTeX files
     synctex.gz synctex.gz(busy)
-    
+
     # Engine-specific auxiliary files
     xelatex*.fls lualatex*.fls
-    
+
     # Temporary and backup files
     *~ *.bak *.backup
 
