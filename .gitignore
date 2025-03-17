@@ -6,6 +6,7 @@
 !README.md
 
 !.pre-commit-config.yaml
+!.aider.conf.yml
 
 !.bashrc
 
