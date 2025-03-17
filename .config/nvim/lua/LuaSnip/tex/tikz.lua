@@ -11,19 +11,20 @@ local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
 
 local get_visual = function(args, parent)
-    if (#parent.snippet.env.LS_SELECT_RAW > 0) then
-        return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
-    else -- If LS_SELECT_RAW is empty, return a blank insert node
-        return sn(nil, i(1))
-    end
+	if #parent.snippet.env.LS_SELECT_RAW > 0 then
+		return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
+	else -- If LS_SELECT_RAW is empty, return a blank insert node
+		return sn(nil, i(1))
+	end
 end
 return {
-    --------------------------------------------------------------------------------
-    ----------------------------- equation annotation ------------------------------
-    --------------------------------------------------------------------------------
-    s(
-        { trig = "preamble-equation-annotation", dscr = "ref: https://github.com/synercys/annotated_latex_equations" },
-        fmta([[
+	--------------------------------------------------------------------------------
+	----------------------------- equation annotation ------------------------------
+	--------------------------------------------------------------------------------
+	s(
+		{ trig = "preamble-equation-annotation", dscr = "ref: https://github.com/synercys/annotated_latex_equations" },
+		fmta(
+			[[
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%% equation annotation by TikZ %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,61 +61,82 @@ return {
         }%
     }[\PackageError{annotatedEquation}{Undefined option to annotatedEquation #1}{}]%
 }%
-    ]]
-        , {})
-    ),
-    s({ trig = "env-eqan", dscr = 'environment of annotated equation' },
-        fmta(
-            [[
+    ]],
+			{}
+		)
+	),
+	s(
+		{ trig = "env-eqan", dscr = "environment of annotated equation" },
+		fmta(
+			[[
 \begin{annotatedEquationEnv}
     <>
 \end{annotatedEquationEnv}
     ]],
-            { i(1, "Use \\annotatedEquation here.") }
-        )
-    ),
-    s({ trig = "mn", dscr = 'tikzmarknode' },
-        fmta(
-            [[
+			{ i(1, "Use \\annotatedEquation here.") }
+		)
+	),
+	s(
+		{ trig = "mn", dscr = "tikzmarknode" },
+		fmta(
+			[[
 \tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}
     ]],
-            { i(1, "0"), rep(1), d(2, get_visual) }
-        )
-    ),
-    s({ trig = "mno", dscr='tikzmarknode with beamer overlay' },
-        fmta(
-            [[
+			{ i(1, "0"), rep(1), d(2, get_visual) }
+		)
+	),
+	s(
+		{ trig = "mno", dscr = "tikzmarknode with beamer overlay" },
+		fmta(
+			[[
 \alt<<<>>>{\tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}}{<>}
      ]],
-            { i(1, "+(1)-"), i(2, "0"), rep(2), d(3, get_visual), rep(3) }
-        )
-    ),
-    s({ trig = "eqan", dscr = 'annotated equation'  },
-        fmta(
-            [[
+			{ i(1, "+(1)-"), i(2, "0"), rep(2), d(3, get_visual), rep(3) }
+		)
+	),
+	s(
+		{ trig = "eqan", dscr = "annotated equation" },
+		fmta(
+			[[
 \annotatedEquation{<>}{n<>}{<>}{0em}{<>em}{<>}{<>}{<>}{<>}
     ]],
-            { c(1, { t("colorseries"), t("color") }), i(2, "0"), c(3, { t("south"), t("north") }), i(4,
-                "-0.5"), c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
-                i(6, "annotation-color-series"), i(7, "annotation"), c(8, { t("east"), t("west") }) }
-        )
-    ),
-    s({ trig = "eqano", dscr = 'equation annotation with beamer overlay' },
-        fmta(
-            [[
+			{
+				c(1, { t("colorseries"), t("color") }),
+				i(2, "0"),
+				c(3, { t("south"), t("north") }),
+				i(4, "-0.5"),
+				c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
+				i(6, "annotation-color-series"),
+				i(7, "annotation"),
+				c(8, { t("east"), t("west") }),
+			}
+		)
+	),
+	s(
+		{ trig = "eqano", dscr = "equation annotation with beamer overlay" },
+		fmta(
+			[[
 \only<<<>>>{\annotatedEquation{color}{n<>}{<>}{0em}{<>em}{<>}{annotation-color-series!![<>]}{<>}{<>}}
     ]],
-            { i(1, "+(1)-"), i(2, "0"), c(3, { t("south"), t("north") }), i(4,
-                "-0.5"), c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
-                rep(2),
-                i(6, "annotation"), c(7, { t("east"), t("west") }) }
-        )
-    ),
-    --------------------------------------------------------------------------------
-    ------------------------------ figure annotation -------------------------------
-    --------------------------------------------------------------------------------
-    s({ trig = "preamble-figure-annotation" },
-        fmta([[
+			{
+				i(1, "+(1)-"),
+				i(2, "0"),
+				c(3, { t("south"), t("north") }),
+				i(4, "-0.5"),
+				c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
+				rep(2),
+				i(6, "annotation"),
+				c(7, { t("east"), t("west") }),
+			}
+		)
+	),
+	--------------------------------------------------------------------------------
+	------------------------------ figure annotation -------------------------------
+	--------------------------------------------------------------------------------
+	s(
+		{ trig = "preamble-figure-annotation" },
+		fmta(
+			[[
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%% figure annotation by TikZ  %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -153,26 +175,38 @@ return {
     \end{tikzpicture}
 }
 \newcommand*\figureBox[4]{\draw[#3,#4,rounded corners] (#1) rectangle (#2);}
-    ]], {})
-    ),
-    s({ trig = "env-figan" },
-        fmta([[
+    ]],
+			{}
+		)
+	),
+	s(
+		{ trig = "env-figan" },
+		fmta(
+			[[
 \begin{annotatedFigureEnv}
     {\includegraphics[width=0.7\linewidth]{<>}}
     <>
 \end{annotatedFigureEnv}
-    ]], { i(1, "example-image"), i(2, "figure-annotation") })
-    ),
-    s({ trig = "figan", desr = "annotated figure: bottom-left, top-right, label, label-position" },
-        fmta([[
+    ]],
+			{ i(1, "example-image"), i(2, "figure-annotation") }
+		)
+	),
+	s(
+		{ trig = "figan", desr = "annotated figure: bottom-left, top-right, label, label-position" },
+		fmta(
+			[[
 \annotatedFigure{<>}{<>}{<>}{<>}
-    ]], { i(1, "0,0"), i(2, "1,1"), i(3, "annotation"), rep(1) })
-    ),
-    --------------------------------------------------------------------------------
-    ----------------------------------- timeline -----------------------------------
-    --------------------------------------------------------------------------------
-    s({ trig = "timeline-example" },
-        fmta([[
+    ]],
+			{ i(1, "0,0"), i(2, "1,1"), i(3, "annotation"), rep(1) }
+		)
+	),
+	--------------------------------------------------------------------------------
+	----------------------------------- timeline -----------------------------------
+	--------------------------------------------------------------------------------
+	s(
+		{ trig = "timeline-example" },
+		fmta(
+			[[
     \begin{tikzpicture}
 		\usetikzlibrary{calc}
 
@@ -233,13 +267,17 @@ return {
 		};
 	\end{tikzpicture}
 
-    ]], {})
-    ),
-    --------------------------------------------------------------------------------
-    ---------------------------------- help grid -----------------------------------
-    --------------------------------------------------------------------------------
-    s({ trig = "tikz-help-grid" },
-        fmta([[
+    ]],
+			{}
+		)
+	),
+	--------------------------------------------------------------------------------
+	---------------------------------- help grid -----------------------------------
+	--------------------------------------------------------------------------------
+	s(
+		{ trig = "tikz-help-grid" },
+		fmta(
+			[[
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% tikz help grid %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -291,13 +329,17 @@ return {
     major line width/.initial=2pt,
 }
 \makeatother
-    ]], {})
-    ),
-    --------------------------------------------------------------------------------
-    ----------------------------------- mindmap  -----------------------------------
-    --------------------------------------------------------------------------------
-    s({ trig = "example-mindmap" },
-        fmta([[
+    ]],
+			{}
+		)
+	),
+	--------------------------------------------------------------------------------
+	----------------------------------- mindmap  -----------------------------------
+	--------------------------------------------------------------------------------
+	s(
+		{ trig = "example-mindmap" },
+		fmta(
+			[[
 \resizebox{!}{0.7\textheight}{
     \begin{tikzpicture}
         \usetikzlibrary{mindmap}
@@ -366,13 +408,17 @@ return {
         };
     \end{tikzpicture}
 }
-    ]], {})
-    ),
-    --------------------------------------------------------------------------------
-    ----------------------------------- taxonomy -----------------------------------
-    --------------------------------------------------------------------------------
-    s({ trig = "preamble-taxonomy" },
-        fmta([[
+    ]],
+			{}
+		)
+	),
+	--------------------------------------------------------------------------------
+	----------------------------------- taxonomy -----------------------------------
+	--------------------------------------------------------------------------------
+	s(
+		{ trig = "preamble-taxonomy" },
+		fmta(
+			[[
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Taxonomy by TikZ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -439,10 +485,14 @@ return {
                 }{},
         }
 }
-        ]], {})
-    ),
-    s({ trig = "example-taxonomy" },
-        fmta([[
+        ]],
+			{}
+		)
+	),
+	s(
+		{ trig = "example-taxonomy" },
+		fmta(
+			[[
 \tikzset{
     key/.style={
             draw=OrangeRed,
@@ -541,6 +591,8 @@ return {
         \node [my node for tree, draw=Cyan, below of = trick node] (convention) {convention};
     \end{tikzpicture}
 }
-    ]], {})
-    ),
+    ]],
+			{}
+		)
+	),
 }

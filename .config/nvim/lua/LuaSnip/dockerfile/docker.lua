@@ -10,19 +10,28 @@ local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
 
 local get_visual = function(args, parent)
-    if (#parent.snippet.env.LS_SELECT_RAW > 0) then
-        return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
-    else -- If LS_SELECT_RAW is empty, return a blank insert node
-        return sn(nil, i(1))
-    end
+	if #parent.snippet.env.LS_SELECT_RAW > 0 then
+		return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
+	else -- If LS_SELECT_RAW is empty, return a blank insert node
+		return sn(nil, i(1))
+	end
 end
 return {
-    s({trig="apt"}, fmta([[
+	s(
+		{ trig = "apt" },
+		fmta(
+			[[
 sudo apt-get update && sudo apt-get install -qy --no-install-recommends \
 <> && \
 sudo rm -rf /var/lib/apt/lists/* && \
-    ]], {i(1, "packages")})),
-    s({ trig = "build-local" }, fmta([[
+    ]],
+			{ i(1, "packages") }
+		)
+	),
+	s(
+		{ trig = "build-local" },
+		fmta(
+			[[
 # build & install <>
 ARG <>_VERSION
 COPY --chown=${DOCKER_USER}:${DOCKER_USER} ./downloads/<>-${<>_VERSION}.tar.gz .
@@ -33,9 +42,27 @@ RUN mkdir <>-${<>_VERSION} && tar -zxf <>-${<>_VERSION}.tar.gz --strip-component
     cmake --install build --prefix ${XDG_PREFIX_HOME} && \
     cd .. && rm -r <>*
     ]],
-        { i(1, "eigen"), i(2, "EIGEN"), rep(1), rep(2), rep(1), rep(2), rep(1), rep(2), rep(1), rep(2), rep(1), rep(2),
-            rep(1) })),
-    s({ trig = "build-git" }, fmta([[
+			{
+				i(1, "eigen"),
+				i(2, "EIGEN"),
+				rep(1),
+				rep(2),
+				rep(1),
+				rep(2),
+				rep(1),
+				rep(2),
+				rep(1),
+				rep(2),
+				rep(1),
+				rep(2),
+				rep(1),
+			}
+		)
+	),
+	s(
+		{ trig = "build-git" },
+		fmta(
+			[[
 # build & install <>
 ARG <>_GIT_REFERENCE
 RUN git clone --config http.proxy="${http_proxy}" --config https.proxy="${https_proxy}" "<>" <> && \
@@ -46,5 +73,7 @@ RUN git clone --config http.proxy="${http_proxy}" --config https.proxy="${https_
     cmake --install build --prefix ${XDG_PREFIX_HOME} && \
     rm -r <>*
     ]],
-        { i(1, "eigen"), i(2, "EIGEN"), i(3, "url"), rep(1), rep(1), rep(2), rep(1) })),
+			{ i(1, "eigen"), i(2, "EIGEN"), i(3, "url"), rep(1), rep(1), rep(2), rep(1) }
+		)
+	),
 }

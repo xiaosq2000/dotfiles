@@ -10,17 +10,18 @@ local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
 
 local get_visual = function(args, parent)
-    if (#parent.snippet.env.LS_SELECT_RAW > 0) then
-        return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
-    else -- If LS_SELECT_RAW is empty, return a blank insert node
-        return sn(nil, i(1))
-    end
+	if #parent.snippet.env.LS_SELECT_RAW > 0 then
+		return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
+	else -- If LS_SELECT_RAW is empty, return a blank insert node
+		return sn(nil, i(1))
+	end
 end
 
 return {
-    s({ trig = "beamer-preamble-all-in-one" },
-        fmta(
-            [[
+	s(
+		{ trig = "beamer-preamble-all-in-one" },
+		fmta(
+			[[
 \documentclass[10pt,aspectratio=1610]{beamer}
 \usetheme[subsectionpage=progressbar,progressbar=frametitle,block=fill]{moloch}
 \mode<<presentation>>
@@ -207,12 +208,14 @@ return {
 % 	\printbibliography[heading=none]
 % \end{frame}
 \end{document}
-    ]], {}
-        )
-    ),
-    s({ trig = "figure-annotation-preamble" },
-        fmta(
-            [[
+    ]],
+			{}
+		)
+	),
+	s(
+		{ trig = "figure-annotation-preamble" },
+		fmta(
+			[[
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% figure annotation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -250,11 +253,14 @@ return {
 \colorlet{2_annotate_color}{green!60}
 \colorlet{3_marknode_color}{um-red!15}
 \colorlet{3_annotate_color}{um-red!55}
-    ]], {}
-        )
-    ),
-    s({ trig = "hyperref", dscr = "" },
-        fmta([[
+    ]],
+			{}
+		)
+	),
+	s(
+		{ trig = "hyperref", dscr = "" },
+		fmta(
+			[[
             \usepackage{hyperref}
             \hypersetup{
                 colorlinks=true,
@@ -266,7 +272,8 @@ return {
                 urlcolor=.,
                 citecolor=.,
             }
-        ]]
-        , {})
-    ),
+        ]],
+			{}
+		)
+	),
 }

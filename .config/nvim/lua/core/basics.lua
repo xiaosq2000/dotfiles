@@ -5,7 +5,7 @@ vim.g.mapleader = "\\"
 local opts = { noremap = true, silent = true }
 
 vim.keymap.set({ "i" }, "jk", "<esc>", opts)
-vim.keymap.set('t', '<Esc>', [[<C-\><C-n>]], opts)
+vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]], opts)
 
 vim.keymap.set({ "n", "v" }, "j", "gj", opts)
 vim.keymap.set({ "n", "v" }, "gj", "j", opts)
@@ -17,7 +17,7 @@ vim.g.loaded_netrwPlugin = 1
 vim.keymap.set("n", "<leader>ec", "<cmd>vsp ~/.config/nvim/<cr>", opts)
 
 -- copy to system clipboard
-vim.keymap.set("v", "<enter>", "\"+y", opts)
+vim.keymap.set("v", "<enter>", '"+y', opts)
 vim.keymap.set("n", "<leader>yp", ":let @+ = expand('%:p')<cr>", opts)
 vim.keymap.set("n", "<leader>yr", ":let @+ = expand('%')<cr>", opts)
 
@@ -72,7 +72,6 @@ vim.opt.termguicolors = true
 ------------------------------------- wrap -------------------------------------
 --------------------------------------------------------------------------------
 vim.opt.wrap = true
-
 
 --------------------------------------------------------------------------------
 --------------------------------- status line ----------------------------------

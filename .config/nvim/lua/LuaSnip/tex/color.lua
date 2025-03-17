@@ -10,26 +10,29 @@ local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
 
 local get_visual = function(args, parent)
-    if (#parent.snippet.env.LS_SELECT_RAW > 0) then
-        return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
-    else -- If LS_SELECT_RAW is empty, return a blank insert node
-        return sn(nil, i(1))
-    end
+	if #parent.snippet.env.LS_SELECT_RAW > 0 then
+		return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
+	else -- If LS_SELECT_RAW is empty, return a blank insert node
+		return sn(nil, i(1))
+	end
 end
 
 return {
-    s({ trig = "tc", dscr = 'textcolor' },
-        fmta("\\textcolor{<>}{<>}", { i(1, "color"), d(2, get_visual) })
-    ),
-    s({ trig = "rc", dscr = 'resetcolorseries' },
-        fmta([[
+	s({ trig = "tc", dscr = "textcolor" }, fmta("\\textcolor{<>}{<>}", { i(1, "color"), d(2, get_visual) })),
+	s(
+		{ trig = "rc", dscr = "resetcolorseries" },
+		fmta(
+			[[
 \resetcolorseries[<>]{marknode-color-series}
 \resetcolorseries[<>]{annotation-color-series}
-        ]], { i(1, "4"), rep(1) })
-    ),
-    s({ trig = "colors", dscr = 'color palette' },
-        fmta(
-            [[
+        ]],
+			{ i(1, "4"), rep(1) }
+		)
+	),
+	s(
+		{ trig = "colors", dscr = "color palette" },
+		fmta(
+			[[
 % \usepackage[dvipsnames]{xcolor}
 
 % official color palette @ university of macau
@@ -113,7 +116,8 @@ return {
 \definecolorseries{annotation-color-series}{hsb}{last}[hsb]{0.0,0.8,0.65}[hsb]{0.99,0.8,0.65}
 \resetcolorseries[12]{marknode-color-series}
 \resetcolorseries[12]{annotation-color-series}
-    ]], {}
-        )
-    ),
+    ]],
+			{}
+		)
+	),
 }

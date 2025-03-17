@@ -1,3 +1,3 @@
 return {
-    "mateuszwieloch/automkdir.nvim"
+	"mateuszwieloch/automkdir.nvim",
 }

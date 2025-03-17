@@ -27,24 +27,30 @@ local ms = ls.multi_snippet
 local k = require("luasnip.nodes.key_indexer").new_key
 
 local get_visual = function(args, parent)
-    if (#parent.snippet.env.LS_SELECT_RAW > 0) then
-        return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
-    else -- If LS_SELECT_RAW is empty, return a blank insert node
-        return sn(nil, i(1))
-    end
+	if #parent.snippet.env.LS_SELECT_RAW > 0 then
+		return sn(nil, i(1, parent.snippet.env.LS_SELECT_RAW))
+	else -- If LS_SELECT_RAW is empty, return a blank insert node
+		return sn(nil, i(1))
+	end
 end
 
 return {
-    s({ trig = "mwe" },
-        fmta([[
+	s(
+		{ trig = "mwe" },
+		fmta(
+			[[
         project("Hello World")
         cmake_minimum_required(VERSION 3.16)
         set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
         add_executable(main main.cpp)
-        ]], {})
-    ),
-    s({ trig = "opencv" },
-        fmta([[
+        ]],
+			{}
+		)
+	),
+	s(
+		{ trig = "opencv" },
+		fmta(
+			[[
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 add_executable(opencv-test ./src/opencv_test.cpp)
@@ -53,6 +59,8 @@ install(
   TARGETS opencv-test
   DESTINATION lib/${PROJECT_NAME}
 )
-        ]], {})
-    ),
+        ]],
+			{}
+		)
+	),
 }

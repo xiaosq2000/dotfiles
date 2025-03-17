@@ -9,5 +9,5 @@
 -- ]% : Move to end of indent-block scope.
 -- The above all take a {count}.
 return {
-    "jeetsukumaran/vim-indentwise"
+	"jeetsukumaran/vim-indentwise",
 }

@@ -10,8 +10,10 @@ local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
 
 return {
-    s({ trig = "typefaces" },
-        fmta([[
+	s(
+		{ trig = "typefaces" },
+		fmta(
+			[[
 \usepackage{fontawesome5}
 \usepackage[no-math]{fontspec}
     \setmainfont{Source Serif 4}
@@ -24,7 +26,8 @@ return {
     \setCJKmainfont{思源宋体}
     \setCJKsansfont{思源黑体}
     \setCJKmonofont{思源等宽}
-    ]], {}
-        )
-    )
+    ]],
+			{}
+		)
+	),
 }
