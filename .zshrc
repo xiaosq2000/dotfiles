@@ -97,10 +97,11 @@ fi
 alias ohmyzsh="${EDITOR} ${HOME}/.oh-my-zsh"
 alias zshconfig="${EDITOR} ${HOME}/.zshrc"
 alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
-alias kittyconfig="${EDITOR} $XDG_CONFIG_HOME/kitty/kitty.conf"
 alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
 alias sshconfig="${EDITOR} ${HOME}/.ssh/config"
+alias aiderconfig="${EDITOR} ${HOME}/.aider.conf.yml"
 alias starshipconfig="${EDITOR} ${XDG_CONFIG_HOME}/starship.toml"
+alias kittyconfig="${EDITOR} $XDG_CONFIG_HOME/kitty/kitty.conf"
 alias alacrittyconfig="${EDITOR} $XDG_CONFIG_HOME/alacritty/alacritty.toml"
 
 alias cl="tput clear"
