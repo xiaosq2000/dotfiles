@@ -1,9 +1,11 @@
-# Reference: 
+# Reference:
 # https://stackoverflow.com/a/29932318/11393911
 
 /*
 
 !README.md
+
+!.pre-commit-config.yaml
 
 !.bashrc
 
