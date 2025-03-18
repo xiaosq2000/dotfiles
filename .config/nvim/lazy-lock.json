@@ -27,6 +27,10 @@
     "branch": "main",
     "commit": "0b2437bcc12b4021614dc41fcea9d0f136d94063"
   },
+  "diffview.nvim": {
+    "branch": "main",
+    "commit": "4516612fe98ff56ae0415a259ff6361a89419b0a"
+  },
   "friendly-snippets": {
     "branch": "main",
     "commit": "efff286dd74c22f731cdec26a70b46e5b203c619"
