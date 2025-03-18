@@ -150,6 +150,9 @@ setup_texlive() {
         prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/man"
         prepend_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/bin/x86_64-linux"
     fi
+    if [[ -d "${XDG_DATA_HOME}/../texlive/${TEXLIVE_VERSION}/bin/x86_64-linux" ]]; then
+        prepend_env PATH "${XDG_DATA_HOME}/../texlive/${TEXLIVE_VERSION}/bin/x86_64-linux"
+    fi
 }
 
 help() {
