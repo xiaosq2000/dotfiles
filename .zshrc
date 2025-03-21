@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-zshrc_start_time=$(date +%s%N)
+# zshrc_start_time=$(date +%s%N)
 
 source ~/.sh_utils/basics.sh
 source ~/.sh_utils/helpers.sh
@@ -196,6 +196,15 @@ download_zsh_plugins() {
             error "Failed"
         fi
     fi
+    if [[ ! -d "${ZSH_CUSTOM}/plugins/fzf-tab" ]]; then
+        info "Installing the latest fzf-tab"
+        git clone --depth 1 https://github.com/Aloxaf/fzf-tab "${ZSH_CUSTOM}/plugins/fzf-tab" 1>/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            completed "Done"
+        else
+            error "Failed"
+        fi
+    fi
     # if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
     #     info "Installing the latest catppuccin/tmux"
     #     git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux 1>/dev/null 2>&1
@@ -261,22 +270,6 @@ prepend_env PATH "${HOME}/.google-drive-upload/bin"
 # Add pixi to PATH first
 prepend_env PATH "${HOME}/.pixi/bin"
 
-if [ -f ~/.fzf.zsh ]; then
-    source ~/.fzf.zsh
-    export FZF_CTRL_R_OPTS="
---bind 'ctrl-y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)+abort'
---color header:italic
---header 'Press CTRL-Y to copy command into clipboard'"
-    # Print tree structure in the preview window
-    export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-    # # Theme: Rose Pine Main
-    # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#191724,hl:#ebbcba --color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba --color=border:#403d52,header:#31748f,gutter:#191724 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
-    # # Theme: Rose Pine Moon
-    # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#232136,hl:#ea9a97 --color=fg+:#e0def4,bg+:#393552,hl+:#ea9a97 --color=border:#44415a,header:#3e8fb0,gutter:#232136 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
-    # Theme: Rose Pine Dawn
-    export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
-fi
-
 if [ -x "$XDG_PREFIX_HOME/bin/yazi" ]; then
 	function y() {
 		local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
@@ -286,6 +279,8 @@ if [ -x "$XDG_PREFIX_HOME/bin/yazi" ]; then
 		fi
 		rm -f -- "$tmp"
 	}
+else
+    warning "yazi not found."
 fi
 
 source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
@@ -302,20 +297,64 @@ zvm_config() {
 
 source "$ZSH_CUSTOM/plugins/zsh-vi-mode/zsh-vi-mode.zsh"
 
+################################################################################
+############################ fzf-tab configuration #############################
+################################################################################
+# disable sort when completing `git checkout`
+zstyle ':completion:*:git-checkout:*' sort false
+# set descriptions format to enable group support
+# NOTE: don't use escape sequences (like '%F{red}%d%f') here, fzf-tab will ignore them
+zstyle ':completion:*:descriptions' format '[%d]'
+# set list-colors to enable filename colorizing
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+# force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
+zstyle ':completion:*' menu no
+# preview directory's content with eza when completing cd
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+# custom fzf flags
+# NOTE: fzf-tab does not follow FZF_DEFAULT_OPTS by default
+zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
+# To make fzf-tab follow FZF_DEFAULT_OPTS.
+# NOTE: This may lead to unexpected behavior since some flags break this plugin. See Aloxaf/fzf-tab#455.
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
+# switch group using `<` and `>`
+zstyle ':fzf-tab:*' switch-group '<' '>'
+
 plugins=(
     git
     git-auto-fetch
     docker
     docker-compose
-    # The following are manually installed plugins
+    web-search
+    fzf-tab
     conda-zsh-completion
     zsh-syntax-highlighting
     zsh-autosuggestions
     zsh-vi-mode
-    web-search
 )
 
 source $ZSH/oh-my-zsh.sh
+
+if [ -f ~/.fzf.zsh ]; then
+    source ~/.fzf.zsh
+    if has kitten; then
+        export FZF_CTRL_R_OPTS="--bind 'ctrl-y:execute-silent(echo -n {2..} | kitten clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+    elif has wl-copy; then
+        export FZF_CTRL_R_OPTS="--bind 'ctrl-y:execute-silent(echo -n {2..} | wl-copy)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+    elif has xclipboard; then
+        export FZF_CTRL_R_OPTS="--bind 'ctrl-y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+    fi
+    # Print tree structure in the preview window
+    export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
+    # # Theme: Rose Pine Main
+    # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#191724,hl:#ebbcba --color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba --color=border:#403d52,header:#31748f,gutter:#191724 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
+    # # Theme: Rose Pine Moon
+    # export FZF_DEFAULT_OPTS="--color=fg:#908caa,bg:#232136,hl:#ea9a97 --color=fg+:#e0def4,bg+:#393552,hl+:#ea9a97 --color=border:#44415a,header:#3e8fb0,gutter:#232136 --color=spinner:#f6c177,info:#9ccfd8 --color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
+    # Theme: Rose Pine Dawn
+    export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
+else
+    warning "fzf not found."
+fi
 
 # pixi shell-completion
 eval "$(pixi completion --shell zsh)"
@@ -336,6 +375,6 @@ setup_texlive
 safely_source "${HOME}/.secrets/llm_api_keys.sh"
 
 # echo "Type \"help\" to display supported handy commands."
-zshrc_end_time=$(date +%s%N)
-zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-debug "$zshrc_duration ms$RESET to start up zsh."
+# zshrc_end_time=$(date +%s%N)
+# zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+# info "$zshrc_duration ms$RESET to start up zsh."
