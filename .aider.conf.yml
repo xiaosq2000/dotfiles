@@ -18,7 +18,7 @@
 # Main model:
 
 # Specify the model to use for the main chat
-model: deepseek/deepseek-coder
+model: deepseek/deepseek-reasoner
 
 ########################
 # API Keys and settings:
@@ -92,23 +92,23 @@ model: deepseek/deepseek-coder
 ## Timeout in seconds for API calls (default: None)
 #timeout: xxx
 
-## Specify what edit format the LLM should use (default depends on model)
-#edit-format: xxx
+# Specify what edit format the LLM should use (default depends on model)
+edit-format: diff
 
-## Use architect edit format for the main chat
-#architect: false
+# Use architect edit format for the main chat (default: false)
+architect: true
 
 ## Enable/disable automatic acceptance of architect changes (default: True)
 #auto-accept-architect: true
 
-## Specify the model to use for commit messages and chat history summarization (default depends on --model)
-#weak-model: xxx
+# Specify the model to use for commit messages and chat history summarization (default depends on --model)
+weak-model: deepseek/deepseek-chat
 
-## Specify the model to use for editor tasks (default depends on --model)
-#editor-model: xxx
+# Specify the model to use for editor tasks (default depends on --model)
+editor-model: deepseek/deepseek-chat
 
 ## Specify the edit format for the editor model (default: depends on editor model)
-#editor-edit-format: xxx
+# editor-edit-format: xxx
 
 ## Only work with models that have meta-data available (default: True)
 #show-model-warnings: true
@@ -120,7 +120,7 @@ model: deepseek/deepseek-coder
 # Cache settings:
 
 ## Enable caching of prompts (default: False)
-#cache-prompts: false
+cache-prompts: true
 
 ## Number of times to ping at 5min intervals to keep prompt cache warm (default: 0)
 #cache-keepalive-pings: false
@@ -375,9 +375,13 @@ auto-lint: false
 #  - xxx
 #  - yyy
 #  - zzz
+read:
+ - .rules/
+ - .cursorrules
+ - .aiderrules
 
 ## Use VI editing mode in the terminal (default: False)
-vim: true
+# vim: false
 
 ## Specify the language to use in the chat (default: None, uses system settings)
 #chat-language: xxx
@@ -409,8 +413,8 @@ env-file: .env.aider
 ## Enable/disable fancy input with history and completion (default: True)
 #fancy-input: true
 
-# Enable/disable multi-line input mode with Meta-Enter to submit (default: False)
-multiline: true
+# # Enable/disable multi-line input mode with Meta-Enter to submit (default: False)
+# multiline: false
 
 # Enable/disable terminal bell notifications when LLM responses are ready (default: False)
 notifications: true
