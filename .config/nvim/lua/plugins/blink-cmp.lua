@@ -5,7 +5,7 @@ return {
 	dependencies = {
 		{ "rafamadriz/friendly-snippets" },
 		{ "L3MON4D3/LuaSnip", version = "v2.*" },
-		"Kaiser-Yang/blink-cmp-avante",
+		{ "micangl/cmp-vimtex", dependencies = { "saghen/blink.compat", version = "*" } },
 	},
 
 	-- use a release tag to download pre-built binaries
@@ -60,19 +60,17 @@ return {
 			preset = "luasnip",
 		},
 		sources = {
-			default = { "lsp", "path", "snippets", "buffer", "avante" },
+			default = { "lsp", "path", "snippets", "buffer", "vimtex" },
 			providers = {
 				path = {
 					opts = {
 						show_hidden_files_by_default = true,
 					},
 				},
-				avante = {
-					module = "blink-cmp-avante",
-					name = "Avante",
-					opts = {
-						-- options for blink-cmp-avante
-					},
+				vimtex = {
+					name = "vimtex",
+					module = "blink.compat.source",
+					score_offset = 100,
 				},
 			},
 		},

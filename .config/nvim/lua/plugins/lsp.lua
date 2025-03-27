@@ -23,7 +23,7 @@ return {
 					"dockerls",
 					"docker_compose_language_service",
 					"jsonls",
-					"texlab",
+					-- "texlab", # BUG:
 					"taplo",
 				},
 			})
@@ -77,24 +77,58 @@ return {
 		end,
 	},
 	-- non-LSP tools configurator, like linters and formatters.
+	-- {
+	--     "jay-babu/mason-null-ls.nvim",
+	--     event = { "BufReadPre", "BufNewFile" },
+	--     dependencies = {
+	--         "williamboman/mason.nvim",
+	--         "nvimtools/none-ls.nvim",
+	--     },
+	--     config = function()
+	--         local null_ls = require("null-ls")
+	--         require("mason-null-ls").setup({
+	--             ensure_installed = { "shfmt" },
+	--         })
+	--         require("null-ls").setup({
+	--             sources = {
+	--                 null_ls.builtins.formatting.shfmt,
+	--             },
+	--         })
+	--     end,
+	-- },
+	--
 	{
-		"jay-babu/mason-null-ls.nvim",
-		event = { "BufReadPre", "BufNewFile" },
-		dependencies = {
-			"williamboman/mason.nvim",
-			"nvimtools/none-ls.nvim",
-		},
+		"stevearc/conform.nvim",
+		dependencies = { "williamboman/mason.nvim" },
 		config = function()
-			local null_ls = require("null-ls")
-			require("mason-null-ls").setup({
-				ensure_installed = { "shfmt" },
-			})
-			require("null-ls").setup({
-				sources = {
-					null_ls.builtins.formatting.shfmt,
+			require("conform").setup({
+				formatters_by_ft = {
+					lua = { "stylua" },
+					python = { "ruff" },
+					cpp = { "clang-format" },
+					c = { "clang-format" },
+					sh = { "beautysh" },
+					toml = { "taplo" },
+					tex = { "latexindent" },
 				},
 			})
 		end,
+		keys = {
+			{
+				"<space>f",
+				function()
+					require("conform").format({
+						lsp_fallback = true,
+						async = true,
+						timeout_ms = 1000,
+					})
+				end,
+			},
+		},
+	},
+	{
+		"zapling/mason-conform.nvim",
+		dependencies = { "stevearc/conform.nvim", "williamboman/mason.nvim" },
 	},
 	{
 		"neovim/nvim-lspconfig",
