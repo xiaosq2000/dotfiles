@@ -45,7 +45,7 @@
   },
   "fzf-lua": {
     "branch": "main",
-    "commit": "ac6a34ea39831ec71c14f72075facf377ea9a00d"
+    "commit": "89ff12300e9a768f4890a8e02bb6a3f5d97f9a65"
   },
   "glance.nvim": {
     "branch": "master",
@@ -81,7 +81,7 @@
   },
   "mini.icons": {
     "branch": "main",
-    "commit": "ec61af6e606fc89ee3b1d8f2f20166a3ca917a36"
+    "commit": "86a633f0dffcfd80110bac86681dbf4b5c37ba5c"
   },
   "mini.pairs": {
     "branch": "main",
@@ -105,7 +105,7 @@
   },
   "nvim-lspconfig": {
     "branch": "master",
-    "commit": "c3cb73a75bbf58a82764c563c17bcf87bdd89595"
+    "commit": "85e0dd26b710e834a105d679200d01e326a3d2b0"
   },
   "nvim-notify": {
     "branch": "master",
@@ -117,7 +117,7 @@
   },
   "nvim-treesitter": {
     "branch": "master",
-    "commit": "da5825bf70cc2ea7eacd1e60c32c07baf19adeba"
+    "commit": "aece1062335a9e856636f5da12d8a06c7615ce8a"
   },
   "nvim-ufo": {
     "branch": "main",
@@ -185,7 +185,7 @@
   },
   "vimtex": {
     "branch": "master",
-    "commit": "bcb14eb6e3739f0c1902115a710292bc37c62d2e"
+    "commit": "528c0671d4d579e1ce126e8958b388a67586d282"
   },
   "which-key.nvim": {
     "branch": "main",
@@ -193,6 +193,6 @@
   },
   "yazi.nvim": {
     "branch": "main",
-    "commit": "9694c227f62dc197b9909cb59b78526775068a22"
+    "commit": "b5596b981df9cdb219ece29eea60cd52f149c319"
   }
 }
