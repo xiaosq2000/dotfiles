@@ -1,4 +1,7 @@
 #!/usr/env/bin zsh
+has() {
+  command -v "$1" 1>/dev/null 2>&1
+}
 auto_conda() {
 	local autoenv_zsh_content='has() {
     command -v "$1" 1>/dev/null 2>&1
@@ -96,8 +99,8 @@ command_with_email_notification() {
 	echo "" >>email.txt
 	echo "$body" >>email.txt
 
-    if ! [ command -v "mstmp" 1>/dev/null 2>&1 ]; then
-        echo "Error: mstmp is not found."
+    if ! has msmtp; then
+        echo "Error: msmtp is not found."
         echo "Please Install and configure msmtp."
     fi
 
