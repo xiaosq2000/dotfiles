@@ -96,6 +96,11 @@ command_with_email_notification() {
 	echo "" >>email.txt
 	echo "$body" >>email.txt
 
+    if ! [ command -v "mstmp" 1>/dev/null 2>&1 ]; then
+        echo "Error: mstmp is not found."
+        echo "Please Install and configure msmtp."
+    fi
+
 	msmtp -a default "$email" <email.txt
 	rm email.txt
 
