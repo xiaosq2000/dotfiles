@@ -4,4 +4,6 @@ set sandbox none
 set recolor true
 set recolor-keephue true
 
-include rose-pine
+map y feedkeys ":exec zsh -c \"echo \"$FILE\" | xclip -selection clipboard && notify-send 'Copied file path into clipboard'\"<Return>"
+
+include rose-pine-dawn
