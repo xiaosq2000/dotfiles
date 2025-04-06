@@ -118,6 +118,8 @@ alias ta="tmux a"
 alias s='web_search google'
 # alias s='kitten ssh'
 
+alias cdusb='cd /media/$USER/"$(ls -t /media/$USER/ | head -n1)"'
+
 export ARCHFLAGS="-arch $(uname -m)"
 export NUMCPUS=$(grep -c '^processor' /proc/cpuinfo)
 alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
