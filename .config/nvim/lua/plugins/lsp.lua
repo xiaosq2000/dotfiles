@@ -16,6 +16,7 @@ return {
 				ensure_installed = {
 					"ruff",
 					"pyright",
+					"clangd",
 					"cmake",
 					"bashls",
 					"lua_ls",
@@ -76,27 +77,6 @@ return {
 			})
 		end,
 	},
-	-- non-LSP tools configurator, like linters and formatters.
-	-- {
-	--     "jay-babu/mason-null-ls.nvim",
-	--     event = { "BufReadPre", "BufNewFile" },
-	--     dependencies = {
-	--         "williamboman/mason.nvim",
-	--         "nvimtools/none-ls.nvim",
-	--     },
-	--     config = function()
-	--         local null_ls = require("null-ls")
-	--         require("mason-null-ls").setup({
-	--             ensure_installed = { "shfmt" },
-	--         })
-	--         require("null-ls").setup({
-	--             sources = {
-	--                 null_ls.builtins.formatting.shfmt,
-	--             },
-	--         })
-	--     end,
-	-- },
-	--
 	{
 		"stevearc/conform.nvim",
 		dependencies = { "williamboman/mason.nvim" },
