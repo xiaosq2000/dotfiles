@@ -11,7 +11,7 @@ startup_mode="Maximized"
 title = "Terminal"
 
 [font]
-normal = { family = "FiraCode Nerd Font", style = "Regular" }
+normal = { family = "MapleMono NF CN", style = "Regular" }
 size = 18
 offset = { x = 0, y = 0 }
 
