@@ -160,7 +160,7 @@ cache-prompts: true
 
 # Use colors suitable for a light terminal background (default: False)
 # rose-pine-dawn theme
-light-mode: true
+light-mode: False
 
 ## Enable/disable pretty, colorized output (default: True)
 #pretty: true
@@ -203,7 +203,7 @@ completion-menu-current-color: #f2e9e1
 
 # Set the markdown code theme (default: default, other options include monokai, solarized-dark, solarized-light, or a Pygments builtin style, see https://pygments.org/styles for available themes)
 # TODO
-code-theme: solarized-light
+code-theme: solarized-dark
 
 ## Show diffs when committing changes (default: False)
 #show-diffs: false
