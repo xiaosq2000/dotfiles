@@ -50,7 +50,12 @@ TRANSLATIONS=(
     ["If not working, wait a couple of seconds."]="若未正常启动，稍等几秒后再尝试上网。"
     ["If still not working, you are suggested to execute following commands to print log and ask for help."]="若始终无法正常使用，请执行如下指令获取日志，寻求技术支持。"
     ["Available handy commands for networking proxy"]="网络代理相关的快捷命令："
+    ["FAILED_DETECT_PUBLIC_IP"]="在 {} 秒内未能检测到公共 IP。请检查您的网络。"
 )
+
+has() {
+  command -v "$1" 1>/dev/null 2>&1
+}
 
 # Terminal colors with fallback - Bash and ZSH compatible
 setup_colors() {
@@ -75,13 +80,22 @@ setup_colors() {
     fi
 }
 
-# Detect system locale
+# Detect system locale, allowing override with FORCE_LANG
 detect_language() {
-    local lang=${LANG:-en_US.UTF-8}
-    case "$lang" in
-        zh_CN* | zh_SG*) echo "zh_CN" ;;
-        *) echo "en_US" ;;
-    esac
+    if [[ -n "${FORCE_LANG}" ]]; then
+        # Use forced language if set
+        case "$FORCE_LANG" in
+            zh_CN* | zh_SG*) echo "zh_CN" ;;
+            *) echo "en_US" ;; # Default to English if FORCE_LANG is set but not Chinese
+        esac
+    else
+        # Fallback to system LANG variable
+        local lang=${LANG:-en_US.UTF-8}
+        case "$lang" in
+            zh_CN* | zh_SG*) echo "zh_CN" ;;
+            *) echo "en_US" ;;
+        esac
+    fi
 }
 
 # Translation function with fallback - Bash and ZSH compatible
@@ -118,10 +132,20 @@ get_script_path() {
 }
 
 check_public_ip() {
-    local ipinfo=$(curl --silent ipinfo.io)
+    local timeout=${1:-1} # Default timeout is 1 second
+    local ipinfo
+    ipinfo=$(curl --silent --max-time "$timeout" ipinfo.io)
 
-    if [ $? -ne 0 ] || [ -z "$ipinfo" ]; then
-        error "$(translate 'NETWORK_CHECK_FAILED')"
+    if [ $? -ne 0 ]; then
+        local error_msg=$(translate 'FAILED_DETECT_PUBLIC_IP')
+        error "${error_msg//\{\}/$timeout}" # Replace {} with timeout value
+        return 1
+    fi
+
+    if [ -z "$ipinfo" ]; then
+        # Handle case where curl succeeds but returns empty output (less likely but possible)
+        local error_msg=$(translate 'FAILED_DETECT_PUBLIC_IP')
+        error "${error_msg//\{\}/$timeout}" # Replace {} with timeout value
         return 1
     fi
 
@@ -162,10 +186,6 @@ get_proxy_config() {
     return 0
 }
 
-has() {
-  command -v "$1" 1>/dev/null 2>&1
-}
-
 check_port_availability() {
     if [[ -z $1 ]]; then
         error "An argument, the port number, should be given."
@@ -188,6 +208,38 @@ check_port_availability() {
     else
         error "port $1 is ${BOLD}unavaiable${RESET}.";
     fi
+}
+
+# Set proxy environment variables for current shell only
+set_local_proxy() {
+    # Set environment variables without service management
+    export http_proxy="http://${DEFAULT_PROXY_HOST}:${DEFAULT_PROXY_PORT}"
+    export https_proxy="http://${DEFAULT_PROXY_HOST}:${DEFAULT_PROXY_PORT}"
+    export ftp_proxy="ftp://${DEFAULT_PROXY_HOST}:${DEFAULT_PROXY_PORT}"
+    export socks_proxy="socks5://${DEFAULT_PROXY_HOST}:${DEFAULT_PROXY_PORT}"
+    export HTTP_PROXY="$http_proxy"
+    export HTTPS_PROXY="$https_proxy"
+    export FTP_PROXY="$ftp_proxy"
+    export SOCKS_PROXY="$socks_proxy"
+
+    # Set git proxy for current shell only
+    # Reference: https://git-scm.com/docs/git-config#ENVIRONMENT
+    export GIT_CONFIG_COUNT=2
+    export GIT_CONFIG_KEY_0="http.proxy"
+    export GIT_CONFIG_VALUE_0="$http_proxy"
+    export GIT_CONFIG_KEY_1="https.proxy"
+    export GIT_CONFIG_VALUE_1="$https_proxy"
+}
+
+# Unset proxy environment variables for current shell only
+unset_local_proxy() {
+    # Unset environment variables
+    unset {http,https,ftp,socks,all,no}_proxy
+    unset {HTTP,HTTPS,FTP,SOCKS,ALL,NO}_PROXY
+
+    # Unset git proxy config for current shell
+    unset GIT_CONFIG_COUNT
+    unset GIT_CONFIG_{KEY,VALUE}_{0..1}
 }
 
 # Set proxy configuration
@@ -231,54 +283,6 @@ set_proxy() {
     info "$(translate 'If not working, wait a couple of seconds.')"
     info "$(translate 'If still not working, you are suggested to execute following commands to print log and ask for help.')"
     echo -e "${INDENT}${GREEN}${BOLD}\$${RESET} VERBOSE=true check_proxy_status \n${INDENT}${GREEN}${BOLD}\$${RESET} check_public_ip"
-}
-
-# Generic function to configure shell RC files
-network_management_configure_shell_rc() {
-    local rc_file="$1"
-    local rc_name="$2"
-    local translate_prefix="$3"
-
-    local script_path
-    script_path=$(get_script_path) || return 1
-
-    if [[ ! -f "$script_path" ]]; then
-        error "$(translate 'SCRIPT_NOT_FOUND')"
-        return 1
-    fi
-
-    if [[ ! -f "$rc_file" ]]; then
-        error "$(translate "${translate_prefix}_NOT_FOUND")"
-        return 1
-    fi
-
-    # Create backup if it doesn't exist
-    local backup="${rc_file}.backup"
-    if [[ ! -f "$backup" ]]; then
-        cp "$rc_file" "$backup"
-        info "$(translate "${translate_prefix}_BACKUP_CREATED"): ${backup}"
-    fi
-
-    # Check if source line already exists
-    local source_line="source ${script_path}"
-    if grep -q "^[[:space:]]*source[[:space:]]*${script_path}" "$rc_file"; then
-        return 0
-    fi
-
-    # Add newline if the file doesn't end with one
-    [[ -s "$rc_file" && -z "$(tail -c1 "$rc_file")" ]] || echo "" >> "$rc_file"
-
-    {
-        echo "# Network proxy management configuration"
-        echo "$source_line"
-        echo ""
-    } >> "$rc_file"
-
-    info "$(translate "${translate_prefix}_ADDED"): ${source_line}"
-
-    echo
-    info "$(translate 'To apply changes, run:')"
-    echo -e "\n${INDENT}$ source ${rc_file}"
 }
 
 # Unset proxy configuration
@@ -420,14 +424,64 @@ network_management_configure_all_shells() {
     return 0
 }
 
+# Generic function to configure shell RC files
+network_management_configure_shell_rc() {
+    local rc_file="$1"
+    local rc_name="$2"
+    local translate_prefix="$3"
+
+    local script_path
+    script_path=$(get_script_path) || return 1
+
+    if [[ ! -f "$script_path" ]]; then
+        error "$(translate 'SCRIPT_NOT_FOUND')"
+        return 1
+    fi
+
+    if [[ ! -f "$rc_file" ]]; then
+        error "$(translate "${translate_prefix}_NOT_FOUND")"
+        return 1
+    fi
+
+    # Create backup if it doesn't exist
+    local backup="${rc_file}.backup"
+    if [[ ! -f "$backup" ]]; then
+        cp "$rc_file" "$backup"
+        info "$(translate "${translate_prefix}_BACKUP_CREATED"): ${backup}"
+    fi
+
+    # Check if source line already exists
+    local source_line="source ${script_path}"
+    if grep -q "^[[:space:]]*source[[:space:]]*${script_path}" "$rc_file"; then
+        return 0
+    fi
+
+    # Add newline if the file doesn't end with one
+    [[ -s "$rc_file" && -z "$(tail -c1 "$rc_file")" ]] || echo "" >> "$rc_file"
+
+    {
+        echo "# Network proxy management configuration"
+        echo "$source_line"
+        echo ""
+    } >> "$rc_file"
+
+    info "$(translate "${translate_prefix}_ADDED"): ${source_line}"
+
+    echo
+    info "$(translate 'To apply changes, run:')"
+    echo -e "\n${INDENT}$ source ${rc_file}"
+}
+
 # Main script initialization
 setup_colors
 INDENT='    '
 if [[ $VERBOSE == "true" ]]; then
     # Show available commands
     echo "$(translate "Available handy commands for networking proxy")"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} set_proxy"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} unset_proxy"
+    echo "${INDENT}${GREEN}${BOLD}\$${RESET} set_proxy       # Global proxy with service management"
+    echo "${INDENT}${GREEN}${BOLD}\$${RESET} unset_proxy     # Remove global proxy config"
+    echo "${INDENT}${GREEN}${BOLD}\$${RESET} set_local_proxy # Set proxy for current shell only"
+    echo "${INDENT}${GREEN}${BOLD}\$${RESET} unset_local_proxy # Remove current shell proxy"
     echo "${INDENT}${GREEN}${BOLD}\$${RESET} check_private_ip"
     echo "${INDENT}${GREEN}${BOLD}\$${RESET} check_public_ip"
     echo "${INDENT}${GREEN}${BOLD}\$${RESET} check_proxy_status"
