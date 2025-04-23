@@ -96,7 +96,7 @@ model: deepseek/deepseek-reasoner
 edit-format: diff
 
 # Use architect edit format for the main chat (default: false)
-architect: true
+architect: false
 
 ## Enable/disable automatic acceptance of architect changes (default: True)
 #auto-accept-architect: true
