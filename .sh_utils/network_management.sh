@@ -138,7 +138,7 @@ check_public_ip() {
 
     if [ $? -ne 0 ]; then
         local error_msg=$(translate 'FAILED_DETECT_PUBLIC_IP')
-        error "${error_msg//\{\}/$timeout}" # Replace {} with timeout value
+        warning "${error_msg//\{\}/$timeout}" # Replace {} with timeout value
         return 1
     fi
 
