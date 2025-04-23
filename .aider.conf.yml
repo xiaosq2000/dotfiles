@@ -159,8 +159,7 @@ cache-prompts: true
 #dark-mode: false
 
 # Use colors suitable for a light terminal background (default: False)
-# rose-pine-dawn theme
-light-mode: False
+#light-mode: false
 
 ## Enable/disable pretty, colorized output (default: True)
 #pretty: true
@@ -169,40 +168,52 @@ light-mode: False
 #stream: true
 
 # Set the color for user input (default: #00cc00)
-# rose-pine-dawn: pine
-user-input-color: #286983
+# rose-pine (dawn, main): pine
+# user-input-color: #286983
+user-input-color: #31748f
 
 ## Set the color for tool output (default: None)
 # tool-output-color: "xxx"
 
 # Set the color for tool error messages (default: #FF2222)
-# rose-pine-dawn: love
-tool-error-color: #b4637a
+# rose-pine (dawn, main): love
+# tool-error-color: #b4637a
+tool-error-color: #eb6f92
 
 # Set the color for tool warning messages (default: #FFA500)
-# rose-pine-dawn: gold
-tool-warning-color: #ea9d34
+# rose-pine-dawn (dawn, main): gold
+# tool-warning-color: #ea9d34
+tool-warning-color: #f6c177
 
 # Set the color for assistant output (default: #0088ff)
-# rose-pine-dawn: foam
-assistant-output-color: #56949f
+# rose-pine-dawn (dawn, main): foam
+# assistant-output-color: #56949f
+assistant-output-color: #9ccfd8
 
 ## Set the color for the completion menu (default: terminal's default text color)
 #completion-menu-color: "xxx"
+# rose-pine-dawn (dawn, main): foam
+# completion-menu-color: #56949f
+completion-menu-color: #9ccfd8
 
 # Set the background color for the completion menu (default: terminal's default background color)
-# rose-pine-dawn: overlay
-completion-menu-bg-color: #f2e9e1
+# rose-pine-dawn (dawn, main): overlay
+# completion-menu-bg-color: #f2e9e1
+completion-menu-bg-color: #26233a
 
 # Set the color for the current item in the completion menu (default: terminal's default background color)
-# rose-pine-dawn: overlay
-completion-menu-current-color: #f2e9e1
+# rose-pine-dawn (dawn, main): base
+# completion-menu-current-color: #faf4ed
+completion-menu-current-color: #191724
 
 ## Set the background color for the current item in the completion menu (default: terminal's default text color)
 #completion-menu-current-bg-color: "xxx"
+# rose-pine-dawn (dawn, main): text
+# completion-menu-current-bg-color: #575279
+completion-menu-current-bg-color: #e0def4
 
 # Set the markdown code theme (default: default, other options include monokai, solarized-dark, solarized-light, or a Pygments builtin style, see https://pygments.org/styles for available themes)
-# TODO
+# TODO:
 code-theme: solarized-dark
 
 ## Show diffs when committing changes (default: False)
