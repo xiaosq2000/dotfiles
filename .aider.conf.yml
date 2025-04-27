@@ -18,7 +18,8 @@
 # Main model:
 
 # Specify the model to use for the main chat
-model: deepseek/deepseek-reasoner
+# model: deepseek/deepseek-reasoner
+model: gemini
 
 ########################
 # API Keys and settings:
@@ -93,7 +94,7 @@ model: deepseek/deepseek-reasoner
 #timeout: xxx
 
 # Specify what edit format the LLM should use (default depends on model)
-edit-format: diff
+edit-format: diff-fenced
 
 # Use architect edit format for the main chat (default: false)
 architect: false
