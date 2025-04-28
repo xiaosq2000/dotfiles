@@ -259,7 +259,7 @@ set_proxy() {
     export HTTPS_PROXY="http://${proxy_host}:${proxy_port}"
     export FTP_PROXY="ftp://${proxy_host}:${proxy_port}"
     export SOCKS_PROXY="socks5://${proxy_host}:${proxy_port}"
-    export no_proxy="localhost,127.0.0.0/8,::1,host.docker.internal"
+    export no_proxy="localhost,127.0.0.0/8,::1,host.docker.internal,.um.edu.mo"
     export NO_PROXY="${no_proxy}"
 
     # Configure git proxy
@@ -277,7 +277,11 @@ set_proxy() {
             dconf write "/system/proxy/${protocol}/host" "'${proxy_host}'"
             dconf write "/system/proxy/${protocol}/port" "${proxy_port}"
         done
-        dconf write /system/proxy/ignore-hosts "'${no_proxy}'"
+        # Format no_proxy for dconf (GVariant string array)
+        local formatted_no_proxy
+        formatted_no_proxy=$(echo "$no_proxy" | sed "s/,/','/g")
+        formatted_no_proxy="['${formatted_no_proxy}']"
+        dconf write /system/proxy/ignore-hosts "${formatted_no_proxy}"
     fi
     info "$(translate 'Done!')"
     info "$(translate 'If not working, wait a couple of seconds.')"
