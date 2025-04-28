@@ -16,6 +16,11 @@ $pdf_mode = 4;
 # ----- Engine Configuration -----
 $lualatex = 'lualatex --shell-escape --file-line-error --synctex=1 %O %S';
 
+# ----- Output Directory -----
+# Place auxiliary and output files in the 'build' subdirectory
+$out_dir = 'build';
+$aux_dir = 'build';
+
 # ----- Bibliography Settings -----
 $bibtex_use = 2;
 
