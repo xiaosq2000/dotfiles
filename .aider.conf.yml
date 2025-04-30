@@ -104,9 +104,12 @@ architect: false
 
 # Specify the model to use for commit messages and chat history summarization (default depends on --model)
 weak-model: deepseek/deepseek-chat
+# weak-model: gemini
 
 # Specify the model to use for editor tasks (default depends on --model)
-editor-model: deepseek/deepseek-chat
+# editor-model: deepseek/deepseek-chat
+# editor-model: gemini
+editor-model: sonnet
 
 ## Specify the edit format for the editor model (default: depends on editor model)
 # editor-edit-format: xxx
