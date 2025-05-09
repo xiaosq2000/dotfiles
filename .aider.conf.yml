@@ -94,7 +94,7 @@ model: gemini
 #timeout: xxx
 
 # Specify what edit format the LLM should use (default depends on model)
-edit-format: diff-fenced
+# edit-format: udiff-simple
 
 # Use architect edit format for the main chat (default: false)
 architect: false
@@ -104,7 +104,7 @@ architect: false
 
 # Specify the model to use for commit messages and chat history summarization (default depends on --model)
 weak-model: deepseek/deepseek-chat
-# weak-model: gemini
+# weak-model: gemini-2.5-flash-preview-04-17
 
 # Specify the model to use for editor tasks (default depends on --model)
 # editor-model: deepseek/deepseek-chat

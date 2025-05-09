@@ -17,64 +17,92 @@ return {
 					"ruff",
 					"pyright",
 					"clangd",
-					"cmake",
-					"bashls",
 					"lua_ls",
+					"bashls",
 					"marksman",
+					"cmake",
 					"dockerls",
 					"docker_compose_language_service",
 					"jsonls",
-					-- "texlab", # BUG:
 					"taplo",
+					-- "texlab", # BUG:
 				},
 			})
-			local on_attach = function(client)
-				if client.name == "ruff" then
-					-- Disable hover in favor of Pyright
-					client.server_capabilities.hoverProvider = false
-				end
-			end
-			require("mason-lspconfig").setup_handlers({
-				-- The first entry (without a key) will be the default handler
-				-- and will be called for each installed server that doesn't have
-				-- a dedicated handler.
-				function(server_name) -- default handler (optional)
-					require("lspconfig")[server_name].setup({})
+			vim.api.nvim_create_autocmd("LspAttach", {
+				group = vim.api.nvim_create_augroup("lsp_attach_disable_ruff_hover", { clear = true }),
+				callback = function(args)
+					local client = vim.lsp.get_client_by_id(args.data.client_id)
+					if client == nil then
+						return
+					end
+					if client.name == "ruff" then
+						-- Disable hover in favor of Pyright
+						client.server_capabilities.hoverProvider = false
+					end
 				end,
-				["lua_ls"] = function()
-					require("lspconfig").lua_ls.setup({
-						settings = {
-							Lua = {
-								diagnostics = {
-									globals = { "vim" },
-								},
-							},
-						},
-					})
-				end,
-				["ruff"] = function()
-					require("lspconfig").ruff.setup({
-						on_attach = on_attach,
-					})
-				end,
-				["pyright"] = function()
-					require("lspconfig").pyright.setup({
-						on_attach = on_attach,
-						settings = {
-							pyright = {
-								-- Using Ruff's import organizer
-								disableOrganizeImports = true,
-							},
-							python = {
-								analysis = {
-									-- Ignore all files for analysis to exclusively use Ruff for linting
-									ignore = { "*" },
-								},
-							},
-						},
-					})
-				end,
+				desc = "LSP: Disable hover capability from Ruff",
 			})
+			require("lspconfig").pyright.setup({
+				settings = {
+					pyright = {
+						-- Using Ruff's import organizer
+						disableOrganizeImports = true,
+					},
+					python = {
+						analysis = {
+							-- Ignore all files for analysis to exclusively use Ruff for linting
+							ignore = { "*" },
+						},
+					},
+				},
+			})
+			-- local on_attach = function(client)
+			-- 	if client.name == "ruff" then
+			-- 		-- Disable hover in favor of Pyright
+			-- 		client.server_capabilities.hoverProvider = false
+			-- 	end
+			-- end
+			-- require("mason-lspconfig").setup_handlers({
+			-- 	-- The first entry (without a key) will be the default handler
+			-- 	-- and will be called for each installed server that doesn't have
+			-- 	-- a dedicated handler.
+			-- 	function(server_name) -- default handler (optional)
+			-- 		require("lspconfig")[server_name].setup({})
+			-- 	end,
+			-- 	["lua_ls"] = function()
+			-- 		require("lspconfig").lua_ls.setup({
+			-- 			settings = {
+			-- 				Lua = {
+			-- 					diagnostics = {
+			-- 						globals = { "vim" },
+			-- 					},
+			-- 				},
+			-- 			},
+			-- 		})
+			-- 	end,
+			-- 	["ruff"] = function()
+			-- 		require("lspconfig").ruff.setup({
+			-- 			on_attach = on_attach,
+			-- 		})
+			-- 	end,
+			-- 	["pyright"] = function()
+			-- 		require("lspconfig").pyright.setup({
+			-- 			on_attach = on_attach,
+			-- 			settings = {
+			-- 				pyright = {
+			-- 					-- Using Ruff's import organizer
+			-- 					disableOrganizeImports = true,
+			-- 				},
+			-- 				python = {
+			-- 					analysis = {
+			-- 						-- Ignore all files for analysis to exclusively use Ruff for linting
+			-- 						ignore = { "*" },
+			-- 					},
+			-- 				},
+			-- 			},
+			-- 		})
+			-- 	end,
+			-- })
 		end,
 	},
 	{
@@ -84,7 +112,14 @@ return {
 			require("conform").setup({
 				formatters_by_ft = {
 					lua = { "stylua" },
-					python = { "ruff" },
+					python = {
+						-- To fix auto-fixable lint errors.
+						"ruff_fix",
+						-- To run the Ruff formatter.
+						"ruff_format",
+						-- To organize the imports.
+						"ruff_organize_imports",
+					},
 					cpp = { "clang-format" },
 					c = { "clang-format" },
 					sh = { "beautysh" },
@@ -199,12 +234,12 @@ return {
 				desc = "Go to next diagnostic",
 			},
 			{
-				"<space>c",
+				"<space>co",
 				":copen<CR>",
 				desc = "Open quickfix window",
 			},
 			{
-				"<space>x",
+				"<space>cx",
 				":cclose<CR>",
 				desc = "Close quickfix window",
 			},
@@ -230,5 +265,13 @@ return {
 			{ "gy", "<CMD>Glance type_definitions<CR>" },
 			{ "gm", "<CMD>Glance implementations<CR>" },
 		},
+	},
+	{
+		"mfussenegger/nvim-lint",
+		config = function()
+			require("lint").linters_by_ft = {
+				python = { "ruff", "mypy" },
+			}
+		end,
 	},
 }
