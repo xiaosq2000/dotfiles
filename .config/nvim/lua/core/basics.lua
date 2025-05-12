@@ -22,17 +22,15 @@ vim.keymap.set("n", "<leader>yp", ":let @+ = expand('%:p')<cr>", opts)
 vim.keymap.set("n", "<leader>yr", ":let @+ = expand('%')<cr>", opts)
 
 -- comment block, ref: https://vi.stackexchange.com/a/421
--- Todo: adapt to indent
--- Todo: elegantly
+-- TODO: adapt to indent elegantly
 vim.keymap.set({ "n", "i" }, "<leader>c/", "<esc><cmd>center 80<cr>hhv0r/A<space><esc>40A/<esc>d80<bar>YppVr/kk.", opts)
 vim.keymap.set({ "n", "i" }, "<leader>c%", "<esc><cmd>center 80<cr>hhv0r%A<space><esc>40A%<esc>d80<bar>YppVr%kk.", opts)
 vim.keymap.set({ "n", "i" }, "<leader>c-", "<esc><cmd>center 80<cr>hhv0r-A<space><esc>40A-<esc>d80<bar>YppVr-kk.", opts)
 vim.keymap.set({ "n", "i" }, "<leader>c#", "<esc><cmd>center 80<cr>hhv0r#A<space><esc>40A#<esc>d80<bar>YppVr#kk.", opts)
--- Todo: comment with ctrl+/ like vscode
 
 -- count specfic characters before cursor on the current line
 -- ref: https://stackoverflow.com/a/63521765
--- Todo: to substitute variables.
+-- TODO: to substitute variables.
 vim.keymap.set({ "n" }, "<leader>cl", ":echo count(getline('.')[0:getpos('.')[2]-1], '*')", opts)
 
 --------------------------------------------------------------------------------
@@ -78,3 +76,11 @@ vim.opt.wrap = true
 --------------------------------------------------------------------------------
 -- views can only be fully collapsed with the global statusline
 vim.opt.laststatus = 3
+
+--------------------------------------------------------------------------------
+--------------------------------- diagnostics ----------------------------------
+--------------------------------------------------------------------------------
+-- vim.diagnostic.config({
+--     virtual_text = true,
+--     virtual_lines = true
+-- })
