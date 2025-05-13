@@ -32,6 +32,7 @@ return {
 	},
 	{
 		"neovim/nvim-lspconfig",
+		dependencies = { "DNLHC/glance.nvim" },
 		config = function()
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("lsp_attach_disable_ruff_hover", { clear = true }),
@@ -68,6 +69,10 @@ return {
 				callback = function()
 					require("which-key").add({
 						{ "K", vim.lsp.buf.hover },
+						{ "grd", "<CMD>Glance definitions<CR>", desc = "vim.lsp.buf.definitions()" },
+						{ "grr", "<CMD>Glance references<CR>", desc = "vim.lsp.buf.references()" },
+						{ "gry", "<CMD>Glance type_definitions<CR>", desc = "vim.lsp.buf.type_definitions()" },
+						{ "gri", "<CMD>Glance implementations<CR>", desc = "vim.lsp.buf.implementations()" },
 						{ "grk", vim.lsp.buf.signature_help, desc = "vim.lsp.buf.signature_help" },
 						{ "grD", vim.lsp.buf.declaration, desc = "vim.lsp.buf.declaration" },
 						{
@@ -116,21 +121,7 @@ return {
 	{
 		-- A pretty preview window for Neovim that provides VSCode-like peek preview functionality for LSP locations. Glance enables you to preview, navigate, and edit LSP-provided code locations without leaving your current context.
 		"dnlhc/glance.nvim",
-		dependencies = { "neovim/nvim-lspconfig" },
 		cmd = "Glance",
-		config = function()
-			vim.api.nvim_create_autocmd("LspAttach", {
-				group = vim.api.nvim_create_augroup("UserLspConfig", {}),
-				callback = function()
-					require("which-key").add(
-						{ "grd", "<CMD>Glance definitions<CR>", desc = "vim.lsp.buf.definitions()" },
-						{ "grr", "<CMD>Glance references<CR>", desc = "vim.lsp.buf.references()" },
-						{ "gry", "<CMD>Glance type_definitions<CR>", desc = "vim.lsp.buf.type_definitions()" },
-						{ "gri", "<CMD>Glance implementations<CR>", desc = "vim.lsp.buf.implementations()" }
-					)
-				end,
-			})
-		end,
 	},
 	{
 		"stevearc/conform.nvim",
@@ -175,6 +166,7 @@ return {
 		config = function()
 			require("lint").linters_by_ft = {
 				python = { "ruff", "mypy" },
+				c = { "cpplint", "clang-tidy" },
 			}
 		end,
 	},
