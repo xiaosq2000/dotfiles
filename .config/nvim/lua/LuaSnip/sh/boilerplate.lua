@@ -33,40 +33,40 @@ return {
 			{}
 		)
 	),
-	s(
-		{ trig = "logging" },
-		fmta(
-			[[
-INDENT='    '
-BOLD="$(tput bold 2\>\>/dev/null || printf '')"
-GREY="$(tput setaf 0 2\>\>/dev/null || printf '')"
-UNDERLINE="$(tput smul 2\>\>/dev/null || printf '')"
-RED="$(tput setaf 1 2\>\>/dev/null || printf '')"
-GREEN="$(tput setaf 2 2\>\>/dev/null || printf '')"
-YELLOW="$(tput setaf 3 2\>\>/dev/null || printf '')"
-BLUE="$(tput setaf 4 2\>\>/dev/null || printf '')"
-MAGENTA="$(tput setaf 5 2\>\>/dev/null || printf '')"
-RESET="$(tput sgr0 2\>\>/dev/null || printf '')"
-error() {
-	printf '%s\n' "${BOLD}${RED}ERROR:${RESET} $*" >>&2
-}
-warning() {
-	printf '%s\n' "${BOLD}${YELLOW}WARNING:${RESET} $*"
-}
-info() {
-	printf '%s\n' "${BOLD}${GREEN}INFO:${RESET} $*"
-}
-debug() {
-	printf '%s\n' "${BOLD}${GREY}DEBUG:${RESET} $*"
-}
-completed() {
-	printf '%s\n' "${BOLD}${GREEN}✓${RESET} $*"
-}
-
-        ]],
-			{}
-		)
-	),
+	--     s(
+	--         { trig = "logging" },
+	--         fmta(
+	--             [[
+	-- INDENT='    '
+	-- BOLD="$(tput bold 2\>\>/dev/null || printf '')"
+	-- GREY="$(tput setaf 0 2\>\>/dev/null || printf '')"
+	-- UNDERLINE="$(tput smul 2\>\>/dev/null || printf '')"
+	-- RED="$(tput setaf 1 2\>\>/dev/null || printf '')"
+	-- GREEN="$(tput setaf 2 2\>\>/dev/null || printf '')"
+	-- YELLOW="$(tput setaf 3 2\>\>/dev/null || printf '')"
+	-- BLUE="$(tput setaf 4 2\>\>/dev/null || printf '')"
+	-- MAGENTA="$(tput setaf 5 2\>\>/dev/null || printf '')"
+	-- RESET="$(tput sgr0 2\>\>/dev/null || printf '')"
+	-- error() {
+	-- 	printf '%s\n' "${BOLD}${RED}ERROR:${RESET} $*" \>\>&2
+	-- }
+	-- warning() {
+	-- 	printf '%s\n' "${BOLD}${YELLOW}WARNING:${RESET} $*"
+	-- }
+	-- info() {
+	-- 	printf '%s\n' "${BOLD}${GREEN}INFO:${RESET} $*"
+	-- }
+	-- debug() {
+	-- 	printf '%s\n' "${BOLD}${GREY}DEBUG:${RESET} $*"
+	-- }
+	-- completed() {
+	-- 	printf '%s\n' "${BOLD}${GREEN}✓${RESET} $*"
+	-- }
+	--
+	--         ]],
+	--             {}
+	--         )
+	--     ),
 	s(
 		{
 			trig = "arguments",
