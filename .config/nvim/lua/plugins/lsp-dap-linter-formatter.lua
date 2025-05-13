@@ -134,7 +134,7 @@ return {
 	},
 	{
 		"stevearc/conform.nvim",
-		dependencies = { "williamboman/mason.nvim" },
+		dependencies = { "williamboman/mason.nvim", "folke/which-key.nvim" },
 		config = function()
 			require("conform").setup({
 				formatters_by_ft = {
@@ -154,9 +154,7 @@ return {
 					tex = { "latexindent" },
 				},
 			})
-		end,
-		keys = {
-			{
+			require("which-key").add({
 				"<space>f",
 				function()
 					require("conform").format({
@@ -165,8 +163,8 @@ return {
 						timeout_ms = 1000,
 					})
 				end,
-			},
-		},
+			})
+		end,
 	},
 	{
 		"zapling/mason-conform.nvim",
