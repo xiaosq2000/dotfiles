@@ -2,6 +2,7 @@ return {
 	{
 		-- portable package manager to easily install and manage LSP servers, DAP servers, linters, and formatters.
 		"williamboman/mason.nvim",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		config = function()
 			require("mason").setup()
 		end,
@@ -9,6 +10,7 @@ return {
 	{
 		-- a bridge between nvim-lspconfig and mason.
 		"williamboman/mason-lspconfig.nvim",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		dependencies = { "williamboman/mason.nvim" },
 		config = function()
 			require("mason-lspconfig").setup({
@@ -32,6 +34,7 @@ return {
 	},
 	{
 		"neovim/nvim-lspconfig",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		dependencies = { "DNLHC/glance.nvim" },
 		config = function()
 			vim.api.nvim_create_autocmd("LspAttach", {
@@ -121,10 +124,12 @@ return {
 	{
 		-- A pretty preview window for Neovim that provides VSCode-like peek preview functionality for LSP locations. Glance enables you to preview, navigate, and edit LSP-provided code locations without leaving your current context.
 		"dnlhc/glance.nvim",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		cmd = "Glance",
 	},
 	{
 		"stevearc/conform.nvim",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		dependencies = { "williamboman/mason.nvim", "folke/which-key.nvim" },
 		config = function()
 			require("conform").setup({
@@ -159,10 +164,12 @@ return {
 	},
 	{
 		"zapling/mason-conform.nvim",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		dependencies = { "stevearc/conform.nvim", "williamboman/mason.nvim" },
 	},
 	{
 		"mfussenegger/nvim-lint",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		config = function()
 			require("lint").linters_by_ft = {
 				python = { "ruff", "mypy" },
@@ -172,9 +179,11 @@ return {
 	},
 	{
 		"mfussenegger/nvim-dap",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 	},
 	{
 		"mfussenegger/nvim-dap-python",
+		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		dependencies = { "mfussenegger/nvim-dap" },
 	},
 }
