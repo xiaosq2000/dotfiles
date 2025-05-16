@@ -4,7 +4,18 @@ return {
 	dependencies = { "nvim-tree/nvim-web-devicons" },
 	-- or if using mini.icons/mini.nvim
 	-- dependencies = { "echasnovski/mini.icons" },
-	opts = {},
+	opts = {
+		previewers = {
+			builtin = {
+				-- fzf-lua is very fast, but it really struggled to preview a couple files
+				-- in a repo. Those files were very big JavaScript files (1MB, minified, all on a single line).
+				-- It turns out it was Treesitter having trouble parsing the files.
+				-- With this change, the previewer will not add syntax highlighting to files larger than 100KB
+				-- (Yes, I know you shouldn't have 100KB minified files in source control.)
+				syntax_limit_b = 1024 * 100, -- 100KB
+			},
+		},
+	},
 	keys = {
 		-- Use the new which-key spec format for lazy loading
 		{
@@ -98,11 +109,30 @@ return {
 			end,
 			desc = "Resume last search",
 		},
+		{
+			"<space>fe",
+			function()
+				require("fzf-lua").lsp_live_workspace_symbols({
+					cwd_only = true,
+					actions = {
+						["ctrl-e"] = function(_, opts)
+							require("fzf-lua").actions.toggle_opt(opts, "cwd_only")
+						end,
+					},
+				})
+			end,
+		},
 	},
 	config = function()
 		require("fzf-lua").setup({
 			"hide",
 			fzf_opts = { ["--cycle"] = true },
+			keymap = {
+				fzf = {
+					-- use ctrl-q to select all items and convert to quickfix list
+					["ctrl-q"] = "select-all+accept",
+				},
+			},
 		})
 	end,
 }

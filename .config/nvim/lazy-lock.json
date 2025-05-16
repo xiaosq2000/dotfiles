@@ -21,7 +21,7 @@
   },
   "blink.cmp": {
     "branch": "main",
-    "commit": "54cbaac2064fe6198ec55b636b53cc8c9791ead3"
+    "commit": "022521a8910a5543b0251b21c9e1a1e989745796"
   },
   "blink.compat": {
     "branch": "main",
@@ -49,7 +49,7 @@
   },
   "fzf-lua": {
     "branch": "main",
-    "commit": "5af306b30f699513669efdf51cf50a6deab53968"
+    "commit": "57f393bb1859be3c0a4f6e45252b57a910df8be2"
   },
   "glance.nvim": {
     "branch": "master",
@@ -81,7 +81,7 @@
   },
   "mason.nvim": {
     "branch": "main",
-    "commit": "7c7318e8bae7e3536ef6b9e86b9e38e74f2e125e"
+    "commit": "888d6ee499d8089a3a4be4309d239d6be1c1e6c0"
   },
   "mini.icons": {
     "branch": "main",
@@ -125,7 +125,7 @@
   },
   "nvim-lspconfig": {
     "branch": "master",
-    "commit": "5a137448fd921a0c5d3939cb75e60d21f64e4606"
+    "commit": "ac1dfbe3b60e5e23a2cff90e3bd6a3bc88031a57"
   },
   "nvim-notify": {
     "branch": "master",
@@ -145,7 +145,7 @@
   },
   "nvim-web-devicons": {
     "branch": "master",
-    "commit": "f1420728f59843eb2ef084406b3d0201a0a0932d"
+    "commit": "1fb58cca9aebbc4fd32b086cb413548ce132c127"
   },
   "obsidian.nvim": {
     "branch": "main",
@@ -165,7 +165,7 @@
   },
   "quicker.nvim": {
     "branch": "master",
-    "commit": "7349ca233d3238ab8e19a3d197f9c9438af52e96"
+    "commit": "51d3926f183c2d98fbc237cc237ae0926839af3a"
   },
   "rose-pine": {
     "branch": "main",
@@ -217,6 +217,6 @@
   },
   "yazi.nvim": {
     "branch": "main",
-    "commit": "82873628a2b78dce48b5bcf8d1d8ed14f0ee985f"
+    "commit": "613b256ea9fed51027575d2818e4eba1ad1e3bc7"
   }
 }
