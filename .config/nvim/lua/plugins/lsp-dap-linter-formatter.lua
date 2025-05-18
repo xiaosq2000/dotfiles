@@ -173,7 +173,17 @@ return {
 		config = function()
 			require("lint").linters_by_ft = {
 				python = { "ruff", "mypy" },
-				c = { "cpplint", "clang-tidy" },
+				cpp = { "cpplint" },
+			}
+			vim.api.nvim_create_autocmd({ "BufWritePost" }, {
+				callback = function()
+					require("lint").try_lint()
+				end,
+			})
+			require("lint").linters.cpplint.args = {
+				"--filter=-whitespace/line_length",
+				"-readability/todo",
+				"-legal/copyright",
 			}
 		end,
 	},
