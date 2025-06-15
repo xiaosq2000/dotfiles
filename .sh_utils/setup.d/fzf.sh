@@ -24,7 +24,7 @@ if [ -d "$HOME/.fzf" ]; then
 fi
 git clone --depth=1 https://github.com/junegunn/fzf.git $HOME/.fzf
 cd $HOME/.fzf
-${HOME}/.fzf/install --key-bindings --completion --no-update-rc --xdg
+${HOME}/.fzf/install --all --no-update-rc --xdg
 if [ $? -eq 0 ]; then
     source "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh
 	completed "fzf version: $(fzf --version | cut -d' ' -f1)"
