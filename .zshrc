@@ -294,7 +294,7 @@ zvm_config() {
     ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
     # Solve the conflicts with fzf
     # https://github.com/jeffreytse/zsh-vi-mode?tab=readme-ov-file#execute-extra-commands
-    zvm_after_init_commands+=('[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh')
+    zvm_after_init_commands+=('[ -f "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh ] && source "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh')
 }
 
 source "$ZSH_CUSTOM/plugins/zsh-vi-mode/zsh-vi-mode.zsh"
@@ -338,8 +338,8 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
-if [ -f ~/.fzf.zsh ]; then
-    source ~/.fzf.zsh
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh ]; then
+    source "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh
     if has kitten; then
         export FZF_CTRL_R_OPTS="--bind 'ctrl-y:execute-silent(echo -n {2..} | kitten clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
     elif has wl-copy; then
@@ -377,8 +377,8 @@ setup_texlive
 
 safely_source "${HOME}/.secrets/llm_api_keys.sh"
 
-FORCE_LANG=zh_CN set_local_proxy
-check_public_ip 0.7
+# FORCE_LANG=zh_CN set_local_proxy
+check_public_ip 3
 
 # echo "Type \"help\" to display supported handy commands."
 # zshrc_end_time=$(date +%s%N)

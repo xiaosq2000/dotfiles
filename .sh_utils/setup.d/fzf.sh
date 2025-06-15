@@ -22,11 +22,11 @@ if [ -d "$HOME/.fzf" ]; then
 	info "Deleting ~/.fzf"
 	rm -rf "$HOME/.fzf"
 fi
-git clone --depth=1 https://github.com/junegunn/fzf.git $HOME/.fzf 1>/dev/null 2>&1
+git clone --depth=1 https://github.com/junegunn/fzf.git $HOME/.fzf
 cd $HOME/.fzf
-${HOME}/.fzf/install --key-bindings --completion --no-update-rc --xdg 1>/dev/null 2>&1
+${HOME}/.fzf/install --key-bindings --completion --no-update-rc --xdg
 if [ $? -eq 0 ]; then
-	source $HOME/.fzf.bash
+    source "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh
 	completed "fzf version: $(fzf --version | cut -d' ' -f1)"
 else
 	error "Failed to install fzf"
