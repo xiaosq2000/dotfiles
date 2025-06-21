@@ -377,8 +377,8 @@ setup_texlive
 
 safely_source "${HOME}/.secrets/llm_api_keys.sh"
 
-# FORCE_LANG=zh_CN set_local_proxy
-check_public_ip 3
+FORCE_LANG=zh_CN set_local_proxy
+FORCE_LANG=zh_CN check_public_ip 3
 
 # echo "Type \"help\" to display supported handy commands."
 # zshrc_end_time=$(date +%s%N)
