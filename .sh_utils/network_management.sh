@@ -6,12 +6,12 @@ PROTOCOL=${PROTOCOL:-trojan}
 DEFAULT_PROXY_HOST="127.0.0.1"
 DEFAULT_PROXY_PORT=1080
 TIMEOUT=10
-LOG_PREFIX="[Network Proxy] "
 
-# Internationalization Support
+# Chinese Support
 # Using typeset -A to ensure ZSH compatibility for associative arrays
 typeset -A TRANSLATIONS
 TRANSLATIONS=(
+    ["Network Proxy"]="网络代理"
     ["ERROR"]="错误"
     ["WARNING"]="警告"
     ["INFO"]="信息"
@@ -63,7 +63,7 @@ TRANSLATIONS=(
 )
 
 _has() {
-  command -v "$1" 1>/dev/null 2>&1
+    command -v "$1" 1>/dev/null 2>&1
 }
 
 # Terminal colors with fallback - Bash and ZSH compatible
@@ -123,7 +123,7 @@ _translate() {
         case "$text" in
             BASHRC_*) key_as_text=${TRANSLATIONS[$text]} ;;
             ZSHRC_*) key_as_text=${TRANSLATIONS[$text]} ;;
-            # Add other key prefixes if needed
+                # Add other key prefixes if needed
         esac
         # Fallback to text if not found
         echo "${key_as_text:-$text}"
@@ -132,11 +132,11 @@ _translate() {
 
 
 # Logging functions - ZSH compatible
-_error() { printf '%s\n' "${LOG_PREFIX}${BOLD}${RED}$(_translate 'ERROR'):${RESET} $*" >&2; }
-_warning() { printf '%s\n' "${LOG_PREFIX}${BOLD}${YELLOW}$(_translate 'WARNING'):${RESET} $*"; }
-_info() { printf '%s\n' "${LOG_PREFIX}${BOLD}${GREEN}$(_translate 'INFO'):${RESET} $*"; }
+_error() { printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${RED}$(_translate 'ERROR'):${RESET} $*" >&2; }
+_warning() { printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${YELLOW}$(_translate 'WARNING'):${RESET} $*"; }
+_info() { printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${GREEN}$(_translate 'INFO'):${RESET} $*"; }
 _debug() {
-    [[ $VERBOSE == true ]] && printf '%s\n' "${LOG_PREFIX}${BOLD}${GREY}$(_translate 'DEBUG'):${RESET} $*"
+    [[ $VERBOSE == true ]] && printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${GREY}$(_translate 'DEBUG'):${RESET} $*"
 }
 
 # Get script path - ZSH compatible
