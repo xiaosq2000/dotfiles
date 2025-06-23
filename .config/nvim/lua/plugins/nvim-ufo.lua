@@ -1,6 +1,7 @@
 return {
 	{
 		"kevinhwang91/nvim-ufo",
+		-- enabled = false,
 		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
 		dependencies = { "kevinhwang91/promise-async", "neovim/nvim-lspconfig", "rmagatti/auto-session" },
 		config = function()
@@ -51,10 +52,10 @@ return {
 			require("ufo").setup({
 				fold_virt_text_handler = handler,
 			})
-			require("which-key").add(
-				{ "zR", require("ufo").openAllFolds, desc = "Open all folds" },
-				{ "zM", require("ufo").closeAllFolds, desc = "Close all folds" }
-			)
+			-- require("which-key").add(
+			-- 	{ "zR", require("ufo").openAllFolds, desc = "Open all folds" },
+			-- 	{ "zM", require("ufo").closeAllFolds, desc = "Close all folds" }
+			-- )
 		end,
 	},
 }
