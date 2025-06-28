@@ -57,3 +57,7 @@
 !.config/btop/
 
 !.config/lazygit/
+
+!.config/themes
+!.config/themes/rose-pine/starship
+
