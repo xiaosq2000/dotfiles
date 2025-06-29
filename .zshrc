@@ -251,6 +251,9 @@ setup_kitty() {
     else
         debug "kitty not found at ${XDG_PREFIX_HOME}/bin/kitty"
     fi
+    if [[ "$TERM" == "xterm-kitty" ]]; then
+        alias ssh="kitten ssh"
+    fi
 }
 setup_kitty
 
