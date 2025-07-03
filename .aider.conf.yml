@@ -104,7 +104,7 @@ architect: false
 
 # Specify the model to use for commit messages and chat history summarization (default depends on --model)
 # weak-model: deepseek/deepseek-chat
-weak-model: gemini/gemini-2.5-flash-preview-05-20
+weak-model: gemini/gemini-2.5-flash
 
 # Specify the model to use for editor tasks (default depends on --model)
 # editor-model: deepseek/deepseek-chat
