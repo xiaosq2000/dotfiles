@@ -11,7 +11,11 @@ return {
         -- a bridge between nvim-lspconfig and mason.
         "williamboman/mason-lspconfig.nvim",
         enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
-        dependencies = { "williamboman/mason.nvim" },
+        opts = {},
+        dependencies = {
+            { "mason-org/mason.nvim", opts = {} },
+            "neovim/nvim-lspconfig",
+        },
         config = function()
             require("mason-lspconfig").setup({
                 automatic_installation = true,
@@ -38,54 +42,20 @@ return {
         enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
         dependencies = { "DNLHC/glance.nvim" },
         config = function()
-            vim.o.foldenable = true
-            vim.o.foldlevel = 99
-            vim.o.foldmethod = "expr"
-            vim.o.foldtext = ""
-            vim.opt.foldcolumn = "0"
-            vim.opt.fillchars:append({ fold = " " })
-            -- Default to treesitter folding
-            vim.o.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
-            -- Prefer LSP folding if client supports it
-            vim.api.nvim_create_autocmd('LspAttach', {
-                callback = function(args)
-                    local client = vim.lsp.get_client_by_id(args.data.client_id)
-                    if client:supports_method('textDocument/foldingRange') then
-                        local win = vim.api.nvim_get_current_win()
-                        vim.wo[win][0].foldexpr = 'v:lua.vim.lsp.foldexpr()'
-                    end
-                end,
-            })
             vim.api.nvim_create_autocmd("LspAttach", {
-                group = vim.api.nvim_create_augroup("lsp_attach_disable_ruff_hover", { clear = true }),
+                group = vim.api.nvim_create_augroup('lsp_attach_disable_ruff_hover', { clear = true }),
                 callback = function(args)
                     local client = vim.lsp.get_client_by_id(args.data.client_id)
                     if client == nil then
                         return
                     end
-                    if client.name == "ruff" then
+                    if client.name == 'ruff' then
                         -- Disable hover in favor of Pyright
                         client.server_capabilities.hoverProvider = false
                     end
                 end,
-                desc = "LSP: Disable hover capability from Ruff",
+                desc = 'LSP: Disable hover capability from Ruff',
             })
-            vim.lsp.config("pyright", {
-                settings = {
-                    pyright = {
-                        -- Using Ruff's import organizer
-                        disableOrganizeImports = true,
-                    },
-                    python = {
-                        analysis = {
-                            -- Ignore all files for analysis to exclusively use Ruff for linting
-                            ignore = { "*" },
-                        },
-                    },
-                },
-            })
-            -- Use LspAttach autocommand to only map the following keys
-            -- after the language server attaches to the current buffer
             vim.api.nvim_create_autocmd("LspAttach", {
                 group = vim.api.nvim_create_augroup("UserLspConfig", {}),
                 callback = function()
@@ -115,6 +85,7 @@ return {
                         },
                     })
                 end,
+                desc = 'LSP: Custom keymappings',
             })
         end,
         keys = {
