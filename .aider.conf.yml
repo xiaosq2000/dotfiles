@@ -97,7 +97,7 @@ model: gemini/gemini-2.5-pro
 # edit-format: udiff-simple
 
 # Use architect edit format for the main chat (default: false)
-architect: false
+# architect: false
 
 ## Enable/disable automatic acceptance of architect changes (default: True)
 #auto-accept-architect: true
@@ -127,7 +127,7 @@ editor-model: sonnet
 cache-prompts: true
 
 ## Number of times to ping at 5min intervals to keep prompt cache warm (default: 0)
-#cache-keepalive-pings: false
+cache-keepalive-pings: 1
 
 ###################
 # Repomap settings:
@@ -218,7 +218,7 @@ completion-menu-current-bg-color: #e0def4
 
 # Set the markdown code theme (default: default, other options include monokai, solarized-dark, solarized-light, or a Pygments builtin style, see https://pygments.org/styles for available themes)
 # TODO:
-code-theme: solarized-dark
+code-theme: default
 
 ## Show diffs when committing changes (default: False)
 #show-diffs: false
@@ -269,7 +269,7 @@ dirty-commits: false
 #skip-sanity-check-repo: false
 
 ## Enable/disable watching files for ai coding comments (default: False)
-#watch-files: false
+watch-files: true
 
 ########################
 # Fixing and committing:
