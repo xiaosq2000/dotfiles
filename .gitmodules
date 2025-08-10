@@ -3,4 +3,4 @@
 	url = git@github.com:xiaosq2000/.secrets.git
 [submodule ".config/themes/rose-pine/starship"]
 	path = .config/themes/rose-pine/starship
-	url = https://github.com/rose-pine/starship
+	url = https://github.com/xiaosq2000/starship
