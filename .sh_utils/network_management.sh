@@ -49,6 +49,11 @@ TRANSLATIONS=(
     ["port {} is not specified in the firewall rules and may not be allowed to use."]="端口 {} 未在防火墙规则中指定，可能不允许使用。"
     ["port {} is not in use."]="端口 {} 未被使用。"
     ["port {} is unavailable."]="端口 {} 不可用。"
+    ["Set Docker daemon proxy settings."]="正在配置 Docker 守护进程代理设置。"
+    ["Unset Docker daemon proxy settings."]="正在移除 Docker 守护进程代理设置。"
+    ["Docker daemon restarted successfully."]="Docker 守护进程重启成功。"
+    ["Failed to restart Docker daemon."]="Docker 守护进程重启失败。"
+    ["Docker is not installed or not available."]="Docker 未安装或不可用。"
 )
 
 _has() {
@@ -241,6 +246,68 @@ _unset_proxy_env_vars() {
     unset {HTTP,HTTPS,FTP,SOCKS,ALL,NO}_PROXY
 }
 
+# Configure Docker daemon proxy settings
+set_docker_proxy() {
+    local proxy_host proxy_port
+    if ! _get_proxy_config proxy_host proxy_port; then
+        return 1
+    fi
+
+    if ! command -v docker >/dev/null 2>&1; then
+        _warning "$(_translate 'Docker is not installed or not available.')"
+        return 0
+    fi
+
+    _debug "$(_translate 'Set Docker daemon proxy settings.')"
+
+    # Create Docker systemd service directory if it doesn't exist
+    local docker_service_dir="/etc/systemd/system/docker.service.d"
+    if [[ ! -d "$docker_service_dir" ]]; then
+        sudo mkdir -p "$docker_service_dir"
+    fi
+
+    # Create proxy configuration file
+    local proxy_conf="$docker_service_dir/http-proxy.conf"
+    sudo tee "$proxy_conf" > /dev/null <<EOF
+[Service]
+Environment="HTTP_PROXY=http://${proxy_host}:${proxy_port}"
+Environment="HTTPS_PROXY=http://${proxy_host}:${proxy_port}"
+Environment="NO_PROXY=localhost,127.0.0.0/8,::1,host.docker.internal,.um.edu.mo"
+EOF
+
+    # Reload systemd and restart Docker
+    sudo systemctl daemon-reload
+    if sudo systemctl restart docker; then
+        _debug "$(_translate 'Docker daemon restarted successfully.')"
+    else
+        _warning "$(_translate 'Failed to restart Docker daemon.')"
+        return 1
+    fi
+}
+
+# Remove Docker daemon proxy settings
+unset_docker_proxy() {
+    if ! command -v docker >/dev/null 2>&1; then
+        return 0
+    fi
+
+    _debug "$(_translate 'Unset Docker daemon proxy settings.')"
+
+    local proxy_conf="/etc/systemd/system/docker.service.d/http-proxy.conf"
+    if [[ -f "$proxy_conf" ]]; then
+        sudo rm -f "$proxy_conf"
+
+        # Reload systemd and restart Docker
+        sudo systemctl daemon-reload
+        if sudo systemctl restart docker; then
+            _debug "$(_translate 'Docker daemon restarted successfully.')"
+        else
+            _warning "$(_translate 'Failed to restart Docker daemon.')"
+            return 1
+        fi
+    fi
+}
+
 # Set proxy environment variables for current shell only
 set_local_proxy() {
     local proxy_host proxy_port
@@ -301,6 +368,7 @@ set_proxy() {
         formatted_no_proxy="['${formatted_no_proxy}']"
         dconf write /system/proxy/ignore-hosts "${formatted_no_proxy}"
     fi
+
     # _info "$(_translate 'Done!')"
     _info "$(_translate 'If not working, wait a couple of seconds.')"
     _info "$(_translate 'If still not working, you are suggested to execute following commands to print log and ask for help.')"
