@@ -268,6 +268,9 @@ set_docker_proxy() {
     local proxy_conf="$docker_service_dir/http-proxy.conf"
     sudo tee "$proxy_conf" > /dev/null <<EOF
 [Service]
+Environment="http_proxy=http://${proxy_host}:${proxy_port}"
+Environment="https_proxy=http://${proxy_host}:${proxy_port}"
+Environment="no_proxy=localhost,127.0.0.0/8,::1,host.docker.internal,.um.edu.mo"
 Environment="HTTP_PROXY=http://${proxy_host}:${proxy_port}"
 Environment="HTTPS_PROXY=http://${proxy_host}:${proxy_port}"
 Environment="NO_PROXY=localhost,127.0.0.0/8,::1,host.docker.internal,.um.edu.mo"
