@@ -3,7 +3,7 @@
 # Script to install dotfiles from https://github.com/xiaosq2000/dotfiles
 # Modified to work in both interactive and headless environments
 #
-# CAUTION: Backup first! All your dotfiles will be REPLACED.
+# WARNING: Backup first! All your dotfiles will be REPLACED.
 
 set -e # Exit immediately if a command exits with a non-zero status
 
@@ -134,6 +134,18 @@ git branch -u origin/main main >/dev/null 2>&1 &
 pid=$!
 spinner $pid
 success "Upstream branch set"
+
+# Initialize all submodules
+step "Initializing all submodules (optional)"
+if git submodule update --init >/dev/null 2>&1; then
+    success "All submodules initialized"
+else
+    if [ "$INTERACTIVE" = true ]; then
+        echo -e "${YELLOW}Skipping submodule initialization due to an error (continuing).${NC}"
+    else
+        echo "SKIP: Submodule initialization failed; continuing."
+    fi
+fi
 
 # Footer
 if [ "$INTERACTIVE" = true ]; then
