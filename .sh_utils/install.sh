@@ -34,7 +34,7 @@ for arg in "$@"; do
             echo ""
             echo "Options:"
             echo "  -y, --yes           Skip confirmation prompt and proceed with installation"
-            echo "  --with-binaries     Install additional binaries (e.g., Neovim)"
+            echo "  --with-binaries     Install additional binaries (e.g., Neovim, Starship, node, fzf, yazi, plugins/tools for zsh and git)"
             echo "  -h, --help          Show this help message"
             echo ""
             echo "When using with curl, pass arguments like this:"
@@ -186,6 +186,102 @@ if [ "$INSTALL_BINARIES" = true ]; then
         fi
     else
         msg_warning "Neovim setup script not found at $NEOVIM_SCRIPT"
+    fi
+
+    # Check if git tools setup script exists
+    GIT_SCRIPT="$HOME/.sh_utils/setup.d/git.sh"
+    if [ -f "$GIT_SCRIPT" ]; then
+        msg_info "Running Git tools installation script..."
+
+        # Make script executable and run it
+        chmod +x "$GIT_SCRIPT"
+        if bash "$GIT_SCRIPT"; then
+            msg_success "Git tools (lazygit, difftastic) installed successfully"
+        else
+            msg_warning "Git tools installation encountered an error"
+        fi
+    else
+        msg_warning "Git tools setup script not found at $GIT_SCRIPT"
+    fi
+
+    # Check if starship setup script exists
+    STARSHIP_SCRIPT="$HOME/.sh_utils/setup.d/starship.sh"
+    if [ -f "$STARSHIP_SCRIPT" ]; then
+        msg_info "Running Starship installation script..."
+
+        # Make script executable and run it
+        chmod +x "$STARSHIP_SCRIPT"
+        if bash "$STARSHIP_SCRIPT"; then
+            msg_success "Starship installed successfully"
+        else
+            msg_warning "Starship installation encountered an error"
+        fi
+    else
+        msg_warning "Starship setup script not found at $STARSHIP_SCRIPT"
+    fi
+
+    # Check if node setup script exists
+    NODE_SCRIPT="$HOME/.sh_utils/setup.d/node.sh"
+    if [ -f "$NODE_SCRIPT" ]; then
+        msg_info "Running Node.js installation script..."
+
+        # Make script executable and run it
+        chmod +x "$NODE_SCRIPT"
+        if bash "$NODE_SCRIPT"; then
+            msg_success "Node.js (nvm, node, tree-sitter) installed successfully"
+        else
+            msg_warning "Node.js installation encountered an error"
+        fi
+    else
+        msg_warning "Node.js setup script not found at $NODE_SCRIPT"
+    fi
+
+    # Check if fzf setup script exists
+    FZF_SCRIPT="$HOME/.sh_utils/setup.d/fzf.sh"
+    if [ -f "$FZF_SCRIPT" ]; then
+        msg_info "Running fzf installation script..."
+
+        # Make script executable and run it
+        chmod +x "$FZF_SCRIPT"
+        if bash "$FZF_SCRIPT"; then
+            msg_success "fzf installed successfully"
+        else
+            msg_warning "fzf installation encountered an error"
+        fi
+    else
+        msg_warning "fzf setup script not found at $FZF_SCRIPT"
+    fi
+
+    # Check if yazi setup script exists
+    YAZI_SCRIPT="$HOME/.sh_utils/setup.d/yazi.sh"
+    if [ -f "$YAZI_SCRIPT" ]; then
+        msg_info "Running yazi installation script..."
+
+        # Make script executable and run it
+        chmod +x "$YAZI_SCRIPT"
+        if bash "$YAZI_SCRIPT"; then
+            msg_success "yazi installed successfully"
+        else
+            msg_warning "yazi installation encountered an error"
+        fi
+    else
+        msg_warning "yazi setup script not found at $YAZI_SCRIPT"
+    fi
+
+    # Check if zsh setup script exists
+    ZSH_SCRIPT="$HOME/.sh_utils/setup.d/zsh.sh"
+    if [ -f "$ZSH_SCRIPT" ]; then
+        msg_info "Running zsh installation script..."
+
+        # Make script executable and run it
+        chmod +x "$ZSH_SCRIPT"
+        if bash "$ZSH_SCRIPT"; then
+            msg_success "zsh (oh-my-zsh and plugins) installed successfully"
+        else
+            msg_warning "zsh installation encountered an error"
+        fi
+    else
+        msg_warning "zsh setup script not found at $ZSH_SCRIPT"
     fi
 else
     msg_info "Skipping binary installation (use --with-binaries to install)"
