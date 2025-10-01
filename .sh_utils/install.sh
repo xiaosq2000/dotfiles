@@ -2,8 +2,6 @@
 
 # Script to install dotfiles from https://github.com/xiaosq2000/dotfiles
 # Modified to work in both interactive and headless environments
-#
-# WARNING: Backup first! All your dotfiles will be REPLACED.
 
 set -e # Exit immediately if a command exits with a non-zero status
 
@@ -75,6 +73,26 @@ spinner() {
     fi
 }
 
+# Function to prompt for confirmation
+confirm_installation() {
+    echo -e "\n${BOLD}${RED}⚠️  WARNING: Backup first! All your dotfiles will be REPLACED.${NC}\n"
+    echo -e "${YELLOW}This will overwrite existing configuration files in your home directory.${NC}"
+    echo -e "${YELLOW}Make sure you have backed up any important dotfiles before proceeding.${NC}\n"
+
+    read -p "Do you want to continue? (yes/no): " response
+
+    case "$response" in
+        [yY][eE][sS]|[yY])
+            echo -e "\n${GREEN}Proceeding with installation...${NC}"
+            return 0
+            ;;
+        *)
+            echo -e "\n${RED}Installation cancelled.${NC}"
+            exit 0
+            ;;
+    esac
+}
+
 # Header
 if [ "$INTERACTIVE" = true ]; then
     clear
@@ -86,6 +104,11 @@ if [ "$INTERACTIVE" = true ]; then
     echo -e "${NC}"
 else
     echo "DOTFILES INSTALLER (https://github.com/xiaosq2000)"
+fi
+
+# Prompt for confirmation in interactive mode
+if [ "$INTERACTIVE" = true ]; then
+    confirm_installation
 fi
 
 # Change to home directory
@@ -136,9 +159,9 @@ spinner $pid
 success "Upstream branch set"
 
 # Initialize all submodules
-step "Initializing all submodules (optional)"
-if git submodule update --init >/dev/null 2>&1; then
-    success "All submodules initialized"
+step "Initializing git submodules (optional)"
+if git submodule update --init ~/.config/themes/rose-pine/starship >/dev/null 2>&1; then
+    success "starship's rose-pine theme initialized"
 else
     if [ "$INTERACTIVE" = true ]; then
         echo -e "${YELLOW}Skipping submodule initialization due to an error (continuing).${NC}"
