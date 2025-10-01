@@ -53,224 +53,121 @@ for arg in "$@"; do
     esac
 done
 
-# Detect if we're in an interactive environment
-if [ -t 1 ] && [ -z "$DOCKER_CONTAINER" ]; then
-    # We're in an interactive terminal and not in a Docker container
-    INTERACTIVE=true
-else
-    # We're in a non-interactive or Docker environment
-    INTERACTIVE=false
-fi
-
-# Colors and formatting (only used in interactive mode)
-if [ "$INTERACTIVE" = true ]; then
-    BOLD="\033[1m"
-    GREEN="\033[0;32m"
-    BLUE="\033[0;34m"
-    YELLOW="\033[0;33m"
-    RED="\033[0;31m"
-    NC="\033[0m" # No Color
-    CHECK_MARK="${GREEN}✓${NC}"
-    ARROW="${BLUE}→${NC}"
-else
-    BOLD=""
-    GREEN=""
-    BLUE=""
-    YELLOW=""
-    RED=""
-    NC=""
-    CHECK_MARK="✓"
-    ARROW=">"
-fi
-
-# Function for displaying step information
-step() {
-    if [ "$INTERACTIVE" = true ]; then
-        echo -e "\n${ARROW} ${BOLD}$1${NC}"
-    else
-        echo "$1"
-    fi
-}
-
-# Function for displaying success messages
-success() {
-    if [ "$INTERACTIVE" = true ]; then
-        echo -e "${CHECK_MARK} ${GREEN}$1${NC}"
-    else
-        echo "DONE: $1"
-    fi
-}
-
-# Function to show a simple spinner
-spinner() {
-    if [ "$INTERACTIVE" = true ]; then
-        local pid=$1
-        local delay=0.1
-        local spinstr='|/-\'
-        while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-            local temp=${spinstr#?}
-            printf " [%c]  " "$spinstr"
-            local spinstr=$temp${spinstr%"$temp"}
-            sleep $delay
-            printf "\b\b\b\b\b\b"
-        done
-        printf "    \b\b\b\b"
-    else
-        # In non-interactive mode, just wait for the process
-        wait $1
-    fi
-}
+# Source the UI library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/ui.sh"
 
 # Function to prompt for confirmation
 confirm_installation() {
-    echo -e "\n${BOLD}${RED}⚠️  WARNING: Backup first! All your dotfiles will be REPLACED.${NC}\n"
-    echo -e "${YELLOW}This will overwrite existing configuration files in your home directory.${NC}"
-    echo -e "${YELLOW}Make sure you have backed up any important dotfiles before proceeding.${NC}\n"
+    echo ""
+    msg_warning "BACKUP FIRST! All your dotfiles will be REPLACED."
+    echo ""
+    msg_info "This will overwrite existing configuration files in your home directory."
+    msg_info "Make sure you have backed up any important dotfiles before proceeding."
+    echo ""
 
     read -p "Do you want to continue? (yes/no): " response
 
     case "$response" in
         [yY][eE][sS]|[yY])
-            echo -e "\n${GREEN}Proceeding with installation...${NC}"
+            msg_success "Proceeding with installation..."
             return 0
             ;;
         *)
-            echo -e "\n${RED}Installation cancelled.${NC}"
+            msg_error "Installation cancelled."
             exit 0
             ;;
     esac
 }
 
 # Header
-if [ "$INTERACTIVE" = true ]; then
-    clear
-    echo -e "${BOLD}${BLUE}"
-    echo '╔════════════════════════════════════════════════════════════╗'
-    echo '║                   DOTFILES INSTALLER                       ║'
-    echo '║          https://github.com/xiaosq2000/dotfiles            ║'
-    echo '╚════════════════════════════════════════════════════════════╝'
-    echo -e "${NC}"
-else
-    echo "DOTFILES INSTALLER (https://github.com/xiaosq2000)"
-fi
+msg_header "DOTFILES INSTALLER - https://github.com/xiaosq2000/dotfiles"
 
 # Prompt for confirmation in interactive mode (unless skipped)
 if [ "$INTERACTIVE" = true ] && [ "$SKIP_CONFIRMATION" = false ]; then
     confirm_installation
 elif [ "$SKIP_CONFIRMATION" = true ]; then
-    if [ "$INTERACTIVE" = true ]; then
-        echo -e "${YELLOW}Skipping confirmation (--yes flag provided)${NC}"
-    else
-        echo "Skipping confirmation (--yes flag provided)"
-    fi
+    msg_info "Skipping confirmation (--yes flag provided)"
 fi
 
 # Change to home directory
-step "Changing to home directory"
+msg_step "Changing to home directory"
 cd ~
-success "Changed to home directory: $(pwd)"
+msg_success "Changed to home directory: $(pwd)"
 
 # Initialize git repository
-step "Initializing git repository in home directory"
+msg_step "Initializing git repository in home directory"
 git init >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-success "Git repository initialized"
+msg_success "Git repository initialized"
 
 # Add remote origin
-step "Adding remote origin"
+msg_step "Adding remote origin"
 git remote add origin https://github.com/xiaosq2000/dotfiles >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-success "Remote origin added"
+msg_success "Remote origin added"
 
 # Fetch all branches
-step "Fetching all branches (this may take a moment)"
+msg_step "Fetching all branches (this may take a moment)"
 git fetch --all >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-success "All branches fetched"
+msg_success "All branches fetched"
 
 # Reset to match origin/main
-step "Resetting to origin/main"
+msg_step "Resetting to origin/main"
 git reset --hard origin/main >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-success "Reset to origin/main complete"
+msg_success "Reset to origin/main complete"
 
 # Rename branch to main
-step "Renaming branch to main"
+msg_step "Renaming branch to main"
 git branch -M main >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-success "Branch renamed to main"
+msg_success "Branch renamed to main"
 
 # Set upstream branch
-step "Setting upstream branch"
+msg_step "Setting upstream branch"
 git branch -u origin/main main >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-success "Upstream branch set"
+msg_success "Upstream branch set"
 
 # Initialize all submodules
-step "Initializing git submodules (optional)"
+msg_step "Initializing git submodules (optional)"
 if git submodule update --init ~/.config/themes/rose-pine/starship >/dev/null 2>&1; then
-    success "starship's rose-pine theme initialized"
+    msg_success "starship's rose-pine theme initialized"
 else
-    if [ "$INTERACTIVE" = true ]; then
-        echo -e "${YELLOW}Skipping submodule initialization due to an error (continuing).${NC}"
-    else
-        echo "SKIP: Submodule initialization failed; continuing."
-    fi
+    msg_warning "Skipping submodule initialization due to an error (continuing)"
 fi
 
 # Install binaries if requested
 if [ "$INSTALL_BINARIES" = true ]; then
-    step "Installing additional binaries"
-    
+    msg_step "Installing additional binaries"
+
     # Check if neovim setup script exists
     NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
     if [ -f "$NEOVIM_SCRIPT" ]; then
-        if [ "$INTERACTIVE" = true ]; then
-            echo -e "${BLUE}Running Neovim installation script...${NC}"
-        else
-            echo "Running Neovim installation script..."
-        fi
-        
+        msg_info "Running Neovim installation script..."
+
         # Make script executable and run it
         chmod +x "$NEOVIM_SCRIPT"
         if bash "$NEOVIM_SCRIPT"; then
-            success "Neovim installed successfully"
+            msg_success "Neovim installed successfully"
         else
-            if [ "$INTERACTIVE" = true ]; then
-                echo -e "${YELLOW}Warning: Neovim installation encountered an error${NC}"
-            else
-                echo "WARNING: Neovim installation encountered an error"
-            fi
+            msg_warning "Neovim installation encountered an error"
         fi
     else
-        if [ "$INTERACTIVE" = true ]; then
-            echo -e "${YELLOW}Warning: Neovim setup script not found at $NEOVIM_SCRIPT${NC}"
-        else
-            echo "WARNING: Neovim setup script not found at $NEOVIM_SCRIPT"
-        fi
+        msg_warning "Neovim setup script not found at $NEOVIM_SCRIPT"
     fi
 else
-    if [ "$INTERACTIVE" = true ]; then
-        echo -e "\n${YELLOW}Skipping binary installation (use --with-binaries to install)${NC}"
-    else
-        echo "Skipping binary installation (use --with-binaries to install)"
-    fi
+    msg_info "Skipping binary installation (use --with-binaries to install)"
 fi
 
 # Footer
-if [ "$INTERACTIVE" = true ]; then
-    echo -e "\n${BOLD}${GREEN}"
-    echo '╔════════════════════════════════════════════════════════════╗'
-    echo '║                 INSTALLATION COMPLETE!                     ║'
-    echo '╚════════════════════════════════════════════════════════════╝'
-    echo -e "${NC}"
-    echo -e "Your dotfiles have been successfully installed!"
-else
-    echo "INSTALLATION COMPLETE! Your dotfiles have been successfully installed."
-fi
+msg_footer "INSTALLATION COMPLETE!"
+msg_success "Your dotfiles have been successfully installed!"
