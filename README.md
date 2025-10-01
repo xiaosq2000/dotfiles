@@ -1,12 +1,6 @@
-# dotfiles
-
-## Installation
-
 > [!CAUTION]
-> Backup first! All your dotfiles will be **REPLACED**.
-
-Prerequistes: `zsh` and `oh-my-zsh`
+> It replaces all your dotfiles. Backup first.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils/install.sh | bash
+curl -fsSL "https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils/install.sh" | bash -s -- --yes [--with-binaries]
 ```
