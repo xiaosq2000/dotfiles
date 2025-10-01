@@ -7,71 +7,6 @@ source ~/.sh_utils/checkers.sh
 source ~/.sh_utils/network_management.sh
 source ~/.sh_utils/tools.sh
 
-export USER=$USERNAME
-export HOME=${HOME:-/home/$USER}
-export UID=${UID:-$(id -u)}
-export GID=${GID:-$(id -g)}
-
-export LANG=${LANG:-"en_US.UTF-8"}
-export LC_ALL=${LC_ALL:-"en_US.UTF-8"}
-export LC_CTYPE=${LC_CTYPE:-"en_US.UTF-8"}
-
-# XDG Directory Specification
-# Reference: https://specifications.freedesktop.org/basedir-spec/latest/
-export XDG_DATA_HOME=${XDG_DATA_HOME:-"$HOME/.local/share"}
-export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-"$HOME/.config"}
-export XDG_STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
-export XDG_CACHE_HOME=${XDG_CACHE_HOME:-"$HOME/.cache"}
-export XDG_DATA_DIRS=${XDG_DATA_DIRS:-"/usr/local/share:/usr/share"}
-export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-"/etc/xdg"}
-export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-"/run/user/$(id -u)"}
-export XDG_DESKTOP_DIR=${XDG_DESKTOP_DIR:-"$HOME/Desktop"}
-export XDG_DOWNLOAD_DIR=${XDG_DOWNLOAD_DIR:-"$HOME/Downloads"}
-export XDG_DOCUMENTS_DIR=${XDG_DOCUMENTS_DIR:-"$HOME/Documents"}
-export XDG_MUSIC_DIR=${XDG_MUSIC_DIR:-"$HOME/Music"}
-export XDG_PICTURES_DIR=${XDG_PICTURES_DIR:-"$HOME/Pictures"}
-export XDG_VIDEOS_DIR=${XDG_VIDEOS_DIR:-"$HOME/Videos"}
-export XDG_TEMPLATES_DIR=${XDG_TEMPLATES_DIR:-"$HOME/Templates"}
-export XDG_PUBLICSHARE_DIR=${XDG_PUBLICSHARE_DIR:-"$HOME/Public"}
-# Non-standard XDG variables.
-export XDG_PREFIX_HOME="${HOME}/.local"
-export XDG_PREFIX_DIR="/usr/local"
-# Add XDG vars into envs
-prepend_env PATH "${XDG_PREFIX_HOME}/bin" "${XDG_PREFIX_DIR}/bin"
-prepend_env LD_LIBRARY_PATH "${XDG_PREFIX_HOME}/lib" "${XDG_PREFIX_DIR}/lib"
-prepend_env MANPATH "${XDG_PREFIX_HOME}/man" "${XDG_PREFIX_DIR}/man"
-
-################################################################################
-# Condas:
-# micromamba is preferred rather than miniconda
-# >>> personal miniconda initialization >>>
-__conda_setup="$("${XDG_PREFIX_HOME}/miniconda3/bin/conda" 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "${XDG_PREFIX_HOME}/miniconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="${XDG_PREFIX_HOME}/miniconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< personal miniconda initialization <<<
-
-# >>> personal micromamba initialization >>>
-export MAMBA_EXE="${XDG_PREFIX_HOME}/bin/micromamba";
-export MAMBA_ROOT_PREFIX="${XDG_DATA_HOME}/micromamba";
-__mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__mamba_setup"
-    alias conda=micromamba
-else
-    alias micromamba="$MAMBA_EXE"  # Fallback on help from mamba activate
-    alias conda="$MAMBA_EXE"       # Fallback on help from mamba activate
-fi
-unset __mamba_setup
-# <<< personal micromamba initialization <<<
-
 # Preferred editors:
 if has "nvim"; then
     export SUDO_EDITOR='nvim'
@@ -155,72 +90,6 @@ HIST_STAMPS="dd/mm/yyyy"
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
 
-download_zsh_plugins() {
-    if [[ ! -d "${ZSH_CUSTOM}/plugins/conda-zsh-completion" ]]; then
-        info "Installing the latest conda-zsh-completion"
-        git clone --depth 1 https://github.com/conda-incubator/conda-zsh-completion "${ZSH_CUSTOM}/plugins/conda-zsh-completion" 1>/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            completed "Done"
-        else
-            error "Failed"
-        fi
-    fi
-    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]]; then
-        info "Installing the latest zsh-syntax-highlighting"
-        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" 1>/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            completed "Done"
-        else
-            error "Failed"
-        fi
-    fi
-    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]]; then
-        info "Installing the latest zsh-autosuggestions"
-        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions.git "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" 1>/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            completed "Done"
-        else
-            error "Failed"
-        fi
-    fi
-    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-autoenv" ]]; then
-        info "Installing the latest zsh-autoenv"
-        git clone --depth 1 https://github.com/Tarrasch/zsh-autoenv "${ZSH_CUSTOM}/plugins/zsh-autoenv" 1>/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            completed "Done"
-        else
-            error "Failed"
-        fi
-    fi
-    if [[ ! -d "${ZSH_CUSTOM}/plugins/zsh-vi-mode" ]]; then
-        info "Installing the latest zsh-vi-mode"
-        git clone --depth 1 https://github.com/jeffreytse/zsh-vi-mode "${ZSH_CUSTOM}/plugins/zsh-vi-mode" 1>/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            completed "Done"
-        else
-            error "Failed"
-        fi
-    fi
-    if [[ ! -d "${ZSH_CUSTOM}/plugins/fzf-tab" ]]; then
-        info "Installing the latest fzf-tab"
-        git clone --depth 1 https://github.com/Aloxaf/fzf-tab "${ZSH_CUSTOM}/plugins/fzf-tab" 1>/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            completed "Done"
-        else
-            error "Failed"
-        fi
-    fi
-    # if [[ ! -d "${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux" ]]; then
-    #     info "Installing the latest catppuccin/tmux"
-    #     git clone --depth 1 https://github.com/catppuccin/tmux.git ${XDG_DATA_HOME}/tmux/plugins/catppuccin/tmux 1>/dev/null 2>&1
-    #     if [[ $? -eq 0 ]]; then
-    #         completed "Done"
-    #     else
-    #         error "Failed"
-    #     fi
-    # fi
-}
-
 setup_kitty() {
     if [[ -x "${XDG_PREFIX_HOME}/bin/kitty" ]]; then
         if has gsettings; then
@@ -262,8 +131,6 @@ setup_kitty
 
 FORCE_LANG=zh_CN set_local_proxy
 FORCE_LANG=zh_CN check_public_ip 3
-
-download_zsh_plugins
 
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"

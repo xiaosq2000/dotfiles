@@ -371,9 +371,9 @@ set_proxy() {
     fi
 
     # _info "$(_translate 'Done!')"
-    _info "$(_translate 'If not working, wait a couple of seconds.')"
-    _info "$(_translate 'If still not working, you are suggested to execute following commands to print log and ask for help.')"
-    echo -e "${INDENT}${GREEN}${BOLD}\$${RESET} VERBOSE=true check_proxy_status \n${INDENT}${GREEN}${BOLD}\$${RESET} check_public_ip"
+    # _info "$(_translate 'If not working, wait a couple of seconds.')"
+    # _info "$(_translate 'If still not working, you are suggested to execute following commands to print log and ask for help.')"
+    # echo -e "${INDENT}${GREEN}${BOLD}\$${RESET} VERBOSE=true check_proxy_status \n${INDENT}${GREEN}${BOLD}\$${RESET} check_public_ip"
 }
 
 # Unset proxy configuration
