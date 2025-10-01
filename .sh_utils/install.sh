@@ -53,9 +53,22 @@ for arg in "$@"; do
     esac
 done
 
+# Determine if script is being piped (e.g., from curl)
+if [ ! -f "${BASH_SOURCE[0]}" ]; then
+    # Script is being piped, download ui.sh to a temporary location
+    TEMP_DIR=$(mktemp -d)
+    UI_LIB="$TEMP_DIR/ui.sh"
+    curl -fsSL "https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils/lib/ui.sh" -o "$UI_LIB"
+    CLEANUP_TEMP=true
+else
+    # Script is being executed directly
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    UI_LIB="$SCRIPT_DIR/lib/ui.sh"
+    CLEANUP_TEMP=false
+fi
+
 # Source the UI library
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib/ui.sh"
+source "$UI_LIB"
 
 # Function to prompt for confirmation
 confirm_installation() {
@@ -79,6 +92,16 @@ confirm_installation() {
             ;;
     esac
 }
+
+# Cleanup function
+cleanup() {
+    if [ "$CLEANUP_TEMP" = true ] && [ -n "${TEMP_DIR:-}" ] && [ -d "$TEMP_DIR" ]; then
+        rm -rf "$TEMP_DIR"
+    fi
+}
+
+# Set trap to cleanup on exit
+trap cleanup EXIT
 
 # Header
 msg_header "DOTFILES INSTALLER - https://github.com/xiaosq2000/dotfiles"
