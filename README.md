@@ -1,3 +1,10 @@
+## Prerequisites
+
+- `zsh` version >= 5.9
+- A [Nerd Font](https://www.nerdfonts.com/) installed and enabled in your terminal.
+
+## Quick Install
+
 > [!CAUTION]
 > It replaces all your dotfiles. Backup first.
 
