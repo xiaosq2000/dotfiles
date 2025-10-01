@@ -2,8 +2,56 @@
 
 # Script to install dotfiles from https://github.com/xiaosq2000/dotfiles
 # Modified to work in both interactive and headless environments
+#
+# Usage:
+#   Direct execution:
+#     bash install.sh [OPTIONS]
+#
+#   One-liner with curl:
+#     curl -fsSL "https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils/install.sh" | bash -s -- [OPTIONS]
+#
+#   Examples:
+#     curl -fsSL "https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils/install.sh" | bash -s -- -y
+#     curl -fsSL "https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils/install.sh" | bash -s -- -y --with-binaries
 
 set -e # Exit immediately if a command exits with a non-zero status
+
+# Parse command-line arguments
+SKIP_CONFIRMATION=false
+INSTALL_BINARIES=false
+for arg in "$@"; do
+    case $arg in
+        -y|--yes)
+            SKIP_CONFIRMATION=true
+            shift
+            ;;
+        --with-binaries)
+            INSTALL_BINARIES=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  -y, --yes           Skip confirmation prompt and proceed with installation"
+            echo "  --with-binaries     Install additional binaries (e.g., Neovim)"
+            echo "  -h, --help          Show this help message"
+            echo ""
+            echo "When using with curl, pass arguments like this:"
+            echo "  curl -fsSL \"URL\" | bash -s -- [OPTIONS]"
+            echo ""
+            echo "Examples:"
+            echo "  curl -fsSL \"URL\" | bash -s -- -y"
+            echo "  curl -fsSL \"URL\" | bash -s -- -y --with-binaries"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Use -h or --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Detect if we're in an interactive environment
 if [ -t 1 ] && [ -z "$DOCKER_CONTAINER" ]; then
@@ -99,16 +147,22 @@ if [ "$INTERACTIVE" = true ]; then
     echo -e "${BOLD}${BLUE}"
     echo '╔════════════════════════════════════════════════════════════╗'
     echo '║                   DOTFILES INSTALLER                       ║'
-    echo '║              https://github.com/xiaosq2000                 ║'
+    echo '║          https://github.com/xiaosq2000/dotfiles            ║'
     echo '╚════════════════════════════════════════════════════════════╝'
     echo -e "${NC}"
 else
     echo "DOTFILES INSTALLER (https://github.com/xiaosq2000)"
 fi
 
-# Prompt for confirmation in interactive mode
-if [ "$INTERACTIVE" = true ]; then
+# Prompt for confirmation in interactive mode (unless skipped)
+if [ "$INTERACTIVE" = true ] && [ "$SKIP_CONFIRMATION" = false ]; then
     confirm_installation
+elif [ "$SKIP_CONFIRMATION" = true ]; then
+    if [ "$INTERACTIVE" = true ]; then
+        echo -e "${YELLOW}Skipping confirmation (--yes flag provided)${NC}"
+    else
+        echo "Skipping confirmation (--yes flag provided)"
+    fi
 fi
 
 # Change to home directory
@@ -167,6 +221,45 @@ else
         echo -e "${YELLOW}Skipping submodule initialization due to an error (continuing).${NC}"
     else
         echo "SKIP: Submodule initialization failed; continuing."
+    fi
+fi
+
+# Install binaries if requested
+if [ "$INSTALL_BINARIES" = true ]; then
+    step "Installing additional binaries"
+    
+    # Check if neovim setup script exists
+    NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
+    if [ -f "$NEOVIM_SCRIPT" ]; then
+        if [ "$INTERACTIVE" = true ]; then
+            echo -e "${BLUE}Running Neovim installation script...${NC}"
+        else
+            echo "Running Neovim installation script..."
+        fi
+        
+        # Make script executable and run it
+        chmod +x "$NEOVIM_SCRIPT"
+        if bash "$NEOVIM_SCRIPT"; then
+            success "Neovim installed successfully"
+        else
+            if [ "$INTERACTIVE" = true ]; then
+                echo -e "${YELLOW}Warning: Neovim installation encountered an error${NC}"
+            else
+                echo "WARNING: Neovim installation encountered an error"
+            fi
+        fi
+    else
+        if [ "$INTERACTIVE" = true ]; then
+            echo -e "${YELLOW}Warning: Neovim setup script not found at $NEOVIM_SCRIPT${NC}"
+        else
+            echo "WARNING: Neovim setup script not found at $NEOVIM_SCRIPT"
+        fi
+    fi
+else
+    if [ "$INTERACTIVE" = true ]; then
+        echo -e "\n${YELLOW}Skipping binary installation (use --with-binaries to install)${NC}"
+    else
+        echo "Skipping binary installation (use --with-binaries to install)"
     fi
 fi
 
