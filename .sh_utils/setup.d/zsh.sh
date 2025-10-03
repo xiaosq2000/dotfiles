@@ -9,18 +9,24 @@ source "$UI_LIB"
 
 msg_header "ZSH SETUP"
 
-# Install oh-my-zsh
-msg_step "Installing oh-my-zsh"
-if /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null 2>&1; then
-    msg_success "oh-my-zsh installed successfully"
+# Install oh-my-zsh if not already installed
+ZSH="${ZSH:-${HOME}/.oh-my-zsh}"
+if [ -f "$ZSH/oh-my-zsh.sh" ]; then
+    msg_info "oh-my-zsh already installed at $ZSH"
 else
-    msg_error "Failed to install oh-my-zsh"
-    exit 1
+    msg_step "Installing oh-my-zsh"
+    if (unset ZSH; /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc >/dev/null 2>&1); then
+        msg_success "oh-my-zsh installed successfully"
+    else
+        msg_error "Failed to install oh-my-zsh"
+        exit 1
+    fi
 fi
 
 # Install zsh plugins within oh-my-zsh
-ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
+ZSH_CUSTOM=${ZSH_CUSTOM:-${ZSH}/custom}
 
+if [ -f "$ZSH/oh-my-zsh.sh" ]; then
 msg_step "Installing zsh plugins"
 
 msg_info "Installing conda-zsh-completion..."
@@ -63,6 +69,9 @@ if git clone --depth 1 https://github.com/Aloxaf/fzf-tab "${ZSH_CUSTOM}/plugins/
     msg_success "fzf-tab installed"
 else
     msg_warning "Failed to install fzf-tab (may already exist)"
+fi
+else
+    msg_warning "oh-my-zsh not installed; skipping zsh plugin installation"
 fi
 
 msg_footer "ZSH SETUP COMPLETE!"
