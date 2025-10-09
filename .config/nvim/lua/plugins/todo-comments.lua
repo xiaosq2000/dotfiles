@@ -21,6 +21,7 @@ return {
 				TEST = { icon = "⏲ ", color = "test", alt = { "TESTING", "PASSED", "FAILED" } },
 				PARAM = { icon = "", alt = { "param", "return" } },
 				DESC = { icon = "", color = "hint", alt = { "brief", "par", "file" } },
+				COND = { icon = "", color = "warning", alt = { "pre", "post" } },
 			},
 			highlight = {
 				before = "", -- "fg" or "bg" or empty

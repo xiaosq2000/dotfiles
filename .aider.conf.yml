@@ -261,6 +261,40 @@ dirty-commits: false
 
 ## Specify a custom prompt for generating commit messages
 #commit-prompt: xxx
+commit-prompt: |
+  You are an expert software engineer that generates professional Git commit messages based on the provided diffs.
+
+  Review the provided context and diffs which are about to be committed to a git repo.
+  Analyze the changes carefully to understand their purpose, scope, and impact.
+
+  Generate a commit message following the Conventional Commits specification with the following structure:
+
+  <type>(<scope>): <subject>
+
+  <body>
+
+  <footer>
+
+  Guidelines:
+  - <type>: Use one of: feat, fix, docs, style, refactor, perf, test, build, ci, chore
+  - <scope>: Optional. The area of codebase affected (e.g., api, auth, ui, parser)
+  - <subject>: Brief summary in imperative mood, lowercase, no period, max 72 characters
+  - <body>: Detailed explanation of WHAT changed and WHY (not HOW - the diff shows that)
+    * Wrap at 72 characters per line
+    * Explain the motivation for the change
+    * Contrast with previous behavior if relevant
+    * Reference any side effects or consequences
+  - <footer>: Optional. Include breaking changes (BREAKING CHANGE:) or issue references (Fixes #123)
+
+  Requirements:
+  - Use imperative mood (e.g., "add feature" not "added" or "adds")
+  - Separate subject from body with a blank line
+  - Separate body from footer with a blank line
+  - Be specific and descriptive in the body
+  - Focus on why the change was made, not how it was implemented
+
+  Reply only with the formatted commit message, without any additional commentary or explanations outside the commit message structure.
+
 
 ## Perform a dry run without modifying files (default: False)
 #dry-run: false
