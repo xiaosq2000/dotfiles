@@ -144,6 +144,8 @@ prepend_env PATH "${HOME}/.google-drive-upload/bin"
 # Installation: curl -fsSL https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 bash
 # Add pixi to PATH first
 prepend_env PATH "${HOME}/.pixi/bin"
+# pixi shell-completion
+if has pixi; then eval "$(pixi completion --shell zsh)"; fi
 
 if [ -x "$XDG_PREFIX_HOME/bin/yazi" ]; then
 	function y() {
@@ -231,9 +233,6 @@ if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh ]; then
 else
     warning "fzf not found."
 fi
-
-# pixi shell-completion
-eval "$(pixi completion --shell zsh)"
 
 # Add a newline
 precmd() {
