@@ -129,9 +129,6 @@ setup_kitty() {
 }
 setup_kitty
 
-FORCE_LANG=zh_CN set_local_proxy
-FORCE_LANG=zh_CN check_public_ip 3
-
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
@@ -252,6 +249,11 @@ safely_source "${HOME}/.secrets/ros.sh"
 setup_texlive
 
 safely_source "${HOME}/.secrets/llm_api_keys.sh"
+
+if systemctl is-active --quiet "sing-box-$PROTOCOL.service" 2>/dev/null; then
+    FORCE_LANG=zh_CN set_local_proxy
+    FORCE_LANG=zh_CN check_public_ip 3
+fi
 
 # echo "Type \"help\" to display supported handy commands."
 # zshrc_end_time=$(date +%s%N)
