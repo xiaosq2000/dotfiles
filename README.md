@@ -1,6 +1,7 @@
 ## Prerequisites
 
-- `zsh` version >= 5.9
+- `zsh` version >= 5.8
+- `jq`
 - A [Nerd Font](https://www.nerdfonts.com/) installed and enabled in your terminal.
 
 ## Quick Install
