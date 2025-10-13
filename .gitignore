@@ -5,6 +5,7 @@
 
 !README.md
 
+!.githooks
 !.pre-commit-config.yaml
 !.aider.conf.yml
 

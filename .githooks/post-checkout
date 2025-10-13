@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -e
+
+submodule_ssh_config=".secrets/ssh/config"
+user_ssh_config="$HOME/.ssh/config"
+
+if [ ! -f "$submodule_ssh_config" ]; then
+    exit 0
+fi
+
+if [ -f "$user_ssh_config" ]; then
+    timestamp=$(date +"%Y%m%d-%H%M%S")
+    backup_file="$user_ssh_config.bak.$timestamp"
+    echo "Backing up '$user_ssh_config' to '$backup_file'"
+    cp "$user_ssh_config" "$backup_file"
+fi
+
+echo "Installing '$submodule_ssh_config' to '$user_ssh_config'"
+install -m 600 "$submodule_ssh_config" "$user_ssh_config"
