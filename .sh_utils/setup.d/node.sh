@@ -29,6 +29,33 @@ npm install -g tree-sitter-cli 1>/dev/null 2>&1
 if [ $? -eq 0 ]; then
 	msg_success "$(tree-sitter --version)"
 else
-	msg_error "Failed to install tree-sitter"
+	msg_error "Failed to install tree-sitter-cli"
+	exit 1
+fi
+
+msg_step "Installing deno" 
+npm install -g deno 1>/dev/null 2>&1
+if [ $? -eq 0 ]; then
+	msg_success "$(deno --version | head -n 1)"
+else
+	msg_error "Failed to install deno"
+	exit 1
+fi
+
+msg_step "Installing claude code" 
+npm install -g @anthropic-ai/claude-code 1>/dev/null 2>&1
+if [ $? -eq 0 ]; then
+	msg_success "$(claude --version)"
+else
+	msg_error "Failed to install deno"
+	exit 1
+fi
+
+msg_step "Installing codex" 
+npm install -g @openai/codex 1>/dev/null 2>&1
+if [ $? -eq 0 ]; then
+	msg_success "$(codex --version)"
+else
+	msg_error "Failed to install codex"
 	exit 1
 fi
