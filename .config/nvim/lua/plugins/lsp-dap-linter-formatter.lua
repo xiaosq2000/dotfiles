@@ -177,13 +177,13 @@ return {
 			}
 		end,
 	},
-	{
-		"mfussenegger/nvim-dap",
-		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
-	},
-	{
-		"mfussenegger/nvim-dap-python",
-		enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
-		dependencies = { "mfussenegger/nvim-dap" },
-	},
+	-- {
+	-- 	"mfussenegger/nvim-dap",
+	-- 	enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
+	-- },
+	-- {
+	-- 	"mfussenegger/nvim-dap-python",
+	-- 	enabled = vim.env.KITTY_SCROLLBACK_NVIM ~= "true",
+	-- 	dependencies = { "mfussenegger/nvim-dap" },
+	-- },
 }
