@@ -19,32 +19,68 @@ fi
 
 msg_header "YAZI INSTALLATION"
 
+# Use a dedicated temp directory instead of CWD
+TMP_DIR="$(mktemp -d -t yazi-install-XXXXXXXX)"
+# Ensure cleanup on exit
+cleanup() {
+    [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ] && rm -rf "$TMP_DIR" || true
+}
+trap cleanup EXIT INT TERM
+
+# Parse arguments
+FORCE_SOURCE=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -f|--force-source)
+            FORCE_SOURCE=1
+            shift
+            ;;
+        -h|--help)
+            msg_info "Usage: $(basename "$0") [--force-source]"
+            exit 0
+            ;;
+        *)
+            msg_error "Unknown option: $1"
+            msg_info "Usage: $(basename "$0") [--force-source]"
+            exit 2
+            ;;
+    esac
+done
+
 # Get glibc version
 msg_step "Checking glibc version"
 glibc_version=$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)
 glibc_num=$(echo "$glibc_version" | awk -F. '{print $1 * 100 + $2}')
+
+# Minimum glibc required for latest prebuilt yazi binary
+REQUIRED_GLIBC="${REQUIRED_GLIBC:-2.39}"
+required_glibc_num=$(echo "$REQUIRED_GLIBC" | awk -F. '{print $1 * 100 + $2}')
+
 msg_success "glibc version: $glibc_version"
 
 # Set installation directory
-XDG_PREFIX_HOME="$HOME/.local"
+XDG_PREFIX_HOME="${XDG_PREFIX_HOME:-$HOME/.local}"
 mkdir -p "$XDG_PREFIX_HOME/bin"
 
-if ((glibc_num >= 232)); then
+if ((glibc_num >= required_glibc_num)) && (( FORCE_SOURCE == 0 )); then
     msg_step "Installing the latest yazi (linux, x86_64, gnu)"
 
-    # Get download URL for latest release
+    # Get download URL for latest release (avoid grep -P for portability)
     msg_info "Fetching latest release information..."
     download_url=$(curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | \
-        grep -oP '(?<="browser_download_url": ")[^"]*yazi-x86_64-unknown-linux-gnu\.zip')
+        sed -n 's/.*"browser_download_url": "\(.*yazi-x86_64-unknown-linux-gnu.zip\)".*/\1/p' | head -n1)
 
     if [ -z "$download_url" ]; then
         msg_error "Failed to get download URL"
         exit 1
     fi
 
-    # Download yazi
+    # Download yazi to temp dir
     msg_info "Downloading yazi..."
-    curl -sS -L --fail --retry 3 --retry-delay 1 -o yazi-x86_64-unknown-linux-gnu.zip "$download_url" &
+    (
+      cd "$TMP_DIR"
+      curl -sS -L --fail --retry 3 --retry-delay 1 -o yazi-x86_64-unknown-linux-gnu.zip "$download_url"
+    ) &
     pid=$!
     spinner $pid
     if ! wait $pid; then
@@ -54,7 +90,9 @@ if ((glibc_num >= 232)); then
 
     # Extract archive
     msg_info "Extracting archive..."
-    unzip -qq yazi-x86_64-unknown-linux-gnu.zip &
+    (
+      cd "$TMP_DIR" && unzip -qq yazi-x86_64-unknown-linux-gnu.zip
+    ) &
     pid=$!
     spinner $pid
     if ! wait $pid; then
@@ -64,26 +102,23 @@ if ((glibc_num >= 232)); then
 
     # Copy binaries
     msg_info "Installing binaries to $XDG_PREFIX_HOME/bin/"
-    cp yazi-x86_64-unknown-linux-gnu/ya* "$XDG_PREFIX_HOME/bin/"
+    if [ -d "$TMP_DIR/yazi-x86_64-unknown-linux-gnu" ]; then
+        cp "$TMP_DIR"/yazi-x86_64-unknown-linux-gnu/ya* "$XDG_PREFIX_HOME/bin/" 2>/dev/null || true
+        cp "$TMP_DIR"/yazi-x86_64-unknown-linux-gnu/yazi "$XDG_PREFIX_HOME/bin/" 2>/dev/null || true
+    else
+        msg_error "Extracted directory not found"
+        exit 1
+    fi
 
-    # Cleanup
-    msg_info "Cleaning up temporary files..."
-    rm -r yazi-x86_64-unknown-linux-gnu*
+    # Cleanup of temp dir happens via trap
 
     msg_success "yazi installed from pre-built binary"
 else
-    msg_warning "glibc version < 2.32, building from source (this may take several minutes)"
-
-    # Get latest version tag
-    msg_step "Fetching latest yazi version"
-    YAZI_VERSION=$(curl -s "https://api.github.com/repos/sxyazi/yazi/releases/latest" | \
-        grep -Po '"tag_name": "v\K[^"]*')
-
-    if [ -z "$YAZI_VERSION" ]; then
-        msg_error "Failed to get yazi version"
-        exit 1
+    if (( FORCE_SOURCE )); then
+        msg_warning "Force source build requested; building from source (this may take several minutes)"
+    else
+        msg_warning "glibc version < $REQUIRED_GLIBC, building from source (this may take several minutes)"
     fi
-    msg_success "Latest version: v$YAZI_VERSION"
 
     # Check if cargo is installed
     if ! command -v cargo &> /dev/null; then
@@ -94,18 +129,33 @@ else
 
     # Clone repository
     msg_step "Cloning yazi repository"
-    git clone https://github.com/sxyazi/yazi >/dev/null 2>&1 &
+    (
+      cd "$TMP_DIR" && git clone --quiet https://github.com/sxyazi/yazi
+    ) &
     pid=$!
     spinner $pid
-    wait $pid
+    if ! wait $pid; then
+        msg_error "Failed to clone repository"
+        exit 1
+    fi
     msg_success "Repository cloned"
 
-    cd yazi
-
-    # Checkout specific version
-    msg_step "Checking out version v$YAZI_VERSION"
-    git checkout "$YAZI_VERSION" >/dev/null 2>&1
-    msg_success "Checked out v$YAZI_VERSION"
+    # Determine latest tag in the repo to avoid API parsing issues
+    pushd "$TMP_DIR/yazi" >/dev/null
+    msg_step "Detecting latest version tag"
+    # Ensure tags are available (in case clone didn't fetch all tags)
+    git fetch --tags --quiet || true
+    LATEST_TAG=$(git describe --tags "$(git rev-list --tags --max-count=1)" 2>/dev/null || true)
+    if [ -z "$LATEST_TAG" ]; then
+        msg_warning "Could not determine latest tag; using default branch"
+    else
+        msg_info "Latest tag: $LATEST_TAG"
+        if ! git checkout --quiet "$LATEST_TAG"; then
+            msg_warning "Checkout of $LATEST_TAG failed; staying on default branch"
+        else
+            msg_success "Checked out $LATEST_TAG"
+        fi
+    fi
 
     # Build yazi
     msg_step "Building yazi (this may take several minutes)"
@@ -113,18 +163,31 @@ else
     cargo build --release --locked >/dev/null 2>&1 &
     pid=$!
     spinner $pid
-    wait $pid
+    if ! wait $pid; then
+        msg_error "Build failed. Check your Rust toolchain and dependencies."
+        exit 1
+    fi
     msg_success "Build completed"
 
     # Install binaries
     msg_step "Installing binaries to $XDG_PREFIX_HOME/bin/"
-    mv target/release/yazi target/release/ya "$XDG_PREFIX_HOME/bin/"
+    installed_any=0
+    if [ -f "target/release/yazi" ]; then
+        cp "target/release/yazi" "$XDG_PREFIX_HOME/bin/" && installed_any=1
+    fi
+    if [ -f "target/release/ya" ]; then
+        cp "target/release/ya" "$XDG_PREFIX_HOME/bin/" && installed_any=1
+    fi
+    if [ "$installed_any" -eq 0 ]; then
+        msg_error "No expected binaries found in target/release"
+        popd >/dev/null
+        exit 1
+    fi
     msg_success "Binaries installed"
 
     # Cleanup
-    cd ..
-    msg_info "Cleaning up build directory..."
-    rm -rf yazi
+    popd >/dev/null
+    msg_info "Build directory will be cleaned up"
 
     msg_success "yazi built and installed from source"
 fi
