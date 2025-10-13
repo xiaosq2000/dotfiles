@@ -33,7 +33,7 @@ else
 	exit 1
 fi
 
-msg_step "Installing deno" 
+msg_step "Installing deno"
 npm install -g deno 1>/dev/null 2>&1
 if [ $? -eq 0 ]; then
 	msg_success "$(deno --version | head -n 1)"
@@ -42,7 +42,7 @@ else
 	exit 1
 fi
 
-msg_step "Installing claude code" 
+msg_step "Installing claude code"
 npm install -g @anthropic-ai/claude-code 1>/dev/null 2>&1
 if [ $? -eq 0 ]; then
 	msg_success "$(claude --version)"
@@ -51,7 +51,7 @@ else
 	exit 1
 fi
 
-msg_step "Installing codex" 
+msg_step "Installing codex"
 npm install -g @openai/codex 1>/dev/null 2>&1
 if [ $? -eq 0 ]; then
 	msg_success "$(codex --version)"
