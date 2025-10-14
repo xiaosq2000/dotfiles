@@ -161,7 +161,7 @@ else
 fi
 
 # source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
-source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
+# source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
 
 # Configure zsh-vi-mode
 # ref: https://github.com/jeffreytse/zsh-vi-mode?tab=readme-ov-file#configuration-function
@@ -199,15 +199,16 @@ zstyle ':fzf-tab:*' switch-group '<' '>'
 ################################################################################
 
 plugins=(
-    git
-    git-auto-fetch
+    conda-zsh-completion
     docker
     docker-compose
-    web-search
+    dotenv
     fzf-tab
-    conda-zsh-completion
-    zsh-syntax-highlighting
+    git
+    git-auto-fetch
+    web-search
     zsh-autosuggestions
+    zsh-syntax-highlighting
     zsh-vi-mode
 )
 
@@ -242,12 +243,10 @@ precmd() {
 check_git_config
 check_x11_wayland
 
-safely_source "${HOME}/.secrets/ros.sh"
+# safely_source "${HOME}/.secrets/ros.sh"
 # setup_ros2
 
 setup_texlive
-
-safely_source "${HOME}/.secrets/llm_api_keys.sh"
 
 if systemctl is-active --quiet "sing-box-$PROTOCOL.service" 2>/dev/null; then
     FORCE_LANG=zh_CN set_local_proxy
