@@ -10,11 +10,28 @@ if [ ! -f "$submodule_ssh_config" ]; then
 fi
 
 if [ -f "$user_ssh_config" ]; then
-    timestamp=$(date +"%Y%m%d-%H%M%S")
-    backup_file="$user_ssh_config.bak.$timestamp"
+    # timestamp=$(date +"%Y%m%d-%H%M%S")
+    # backup_file="$user_ssh_config.bak.$timestamp"
+    backup_file="$user_ssh_config.bak"
     echo "Backing up '$user_ssh_config' to '$backup_file'"
     cp "$user_ssh_config" "$backup_file"
 fi
 
 echo "Installing '$submodule_ssh_config' to '$user_ssh_config'"
 install -m 600 "$submodule_ssh_config" "$user_ssh_config"
+
+submodule_env_file=".secrets/env"
+user_env_file="$HOME/.env"
+
+if [ ! -f "$submodule_env_file" ]; then
+    exit 0
+fi
+
+if [ -f "$user_env_file" ]; then
+    backup_file="$user_env_file.bak"
+    echo "Backing up '$user_env_file' to '$backup_file'"
+    cp "$user_env_file" "$backup_file"
+fi
+
+echo "Installing '$submodule_env_file' to '$user_env_file'"
+install -m 600 "$submodule_env_file" "$user_env_file"
