@@ -425,8 +425,6 @@ auto-lint: false
 #  - yyy
 #  - zzz
 read:
- - .rules/
- - .cursorrules
  - .aiderrules
 
 ## Use VI editing mode in the terminal (default: False)
