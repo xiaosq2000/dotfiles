@@ -90,6 +90,9 @@ HIST_STAMPS="dd/mm/yyyy"
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
 
+################################################################################
+################################ kitty terminal ################################
+################################################################################
 setup_kitty() {
     if [[ -x "${XDG_PREFIX_HOME}/bin/kitty" ]]; then
         if has gsettings; then
@@ -101,25 +104,31 @@ setup_kitty() {
         else
             warning "gsettings not found - cannot set kitty as default terminal"
         fi
+
+        # Execute the following only if zsh >= 5.9, AI!
         # IMPORTANT: kitty-scrollback.nvim only supports zsh 5.9 or greater for command-line editing,
         # please check your version by running: zsh --version
 
-        # add the following environment variables to your zsh config (e.g., ~/.zshrc)
+        autoload -Uz is-at-least
+        if is-at-least 5.9; then
+            # add the following environment variables to your zsh config (e.g., ~/.zshrc)
+            autoload -Uz edit-command-line
+            zle -N edit-command-line
 
-        autoload -Uz edit-command-line
-        zle -N edit-command-line
+            function kitty_scrollback_edit_command_line() {
+              local VISUAL='${XDG_DATA_HOME}/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
+              zle edit-command-line
+              zle kill-whole-line
+            }
+            zle -N kitty_scrollback_edit_command_line
 
-        function kitty_scrollback_edit_command_line() {
-          local VISUAL='${XDG_DATA_HOME}/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
-          zle edit-command-line
-          zle kill-whole-line
-        }
-        zle -N kitty_scrollback_edit_command_line
-
-        bindkey '^x^e' kitty_scrollback_edit_command_line
-        # [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode
-        # by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS
-        # export KITTY_SCROLLBACK_NVIM_EDIT_ARGS=''
+            bindkey '^x^e' kitty_scrollback_edit_command_line
+            # [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode
+            # by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS
+            # export KITTY_SCROLLBACK_NVIM_EDIT_ARGS=''
+        else
+            warning "zsh < 5.9 detected; skipping kitty-scrollback.nvim command-line integration"
+        fi
     else
         debug "kitty not found at ${XDG_PREFIX_HOME}/bin/kitty"
     fi
@@ -129,17 +138,32 @@ setup_kitty() {
 }
 setup_kitty
 
+################################################################################
+##################################### node #####################################
+################################################################################
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
+################################################################################
+################################### starship ###################################
+################################################################################
 eval "$(starship init zsh)"
 
+################################################################################
+##################################### rust #####################################
+################################################################################
 [ -f "$HOME/.cargo/env" ] && \. "$HOME/.cargo/env"
 
+################################################################################
+##################################### deno #####################################
+################################################################################
 [ -f "$HOME/.deno/env" ] && \. "$HOME/.deno/env"
 
 prepend_env PATH "${HOME}/.google-drive-upload/bin"
 
+################################################################################
+##################################### pixi #####################################
+################################################################################
 # https://github.com/prefix-dev/pixi/
 # Installation: curl -fsSL https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 bash
 # Add pixi to PATH first
@@ -147,6 +171,9 @@ prepend_env PATH "${HOME}/.pixi/bin"
 # pixi shell-completion
 if has pixi; then eval "$(pixi completion --shell zsh)"; fi
 
+################################################################################
+##################################### yazi #####################################
+################################################################################
 if [ -x "$XDG_PREFIX_HOME/bin/yazi" ]; then
 	function y() {
 		local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
@@ -160,10 +187,9 @@ else
     warning "yazi not found."
 fi
 
-# source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
-# source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
-
-# Configure zsh-vi-mode
+################################################################################
+########################## zsh-vi-mode configuration ###########################
+################################################################################
 # ref: https://github.com/jeffreytse/zsh-vi-mode?tab=readme-ov-file#configuration-function
 zvm_config() {
     ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
@@ -196,7 +222,9 @@ zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
 zstyle ':fzf-tab:*' use-fzf-default-opts yes
 # switch group using `<` and `>`
 zstyle ':fzf-tab:*' switch-group '<' '>'
-################################################################################
+
+# source "${XDG_CONFIG_HOME}/zsh/catppuccin_latte-zsh-syntax-highlighting.zsh"
+# source "${ZSH_CUSTOM}/plugins/zsh-autoenv/autoenv.zsh"
 
 plugins=(
     conda-zsh-completion
@@ -242,9 +270,6 @@ precmd() {
 
 check_git_config
 check_x11_wayland
-
-# safely_source "${HOME}/.secrets/ros.sh"
-# setup_ros2
 
 setup_texlive
 
