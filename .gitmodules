@@ -5,5 +5,5 @@
 	path = .config/themes/rose-pine/starship
 	url = https://github.com/xiaosq2000/starship
 [submodule "/home/shuqixiao/.config/themes/rose-pine/gnome-terminal"]
-	path = /home/shuqixiao/.config/themes/rose-pine/gnome-terminal
+	path = .config/themes/rose-pine/gnome-terminal
 	url = https://github.com/xiaosq2000/gnome-terminal
