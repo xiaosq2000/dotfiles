@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+set -eu
+
+# Ensure pixi is installed (without modifying PATH)
+if command -v pixi >/dev/null 2>&1; then
+    PIXI_BIN="$(command -v pixi)"
+elif [ -x "$HOME/.pixi/bin/pixi" ]; then
+    PIXI_BIN="$HOME/.pixi/bin/pixi"
+else
+    curl -fsSL https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 sh
+    if [ -x "$HOME/.pixi/bin/pixi" ]; then
+        PIXI_BIN="$HOME/.pixi/bin/pixi"
+    elif command -v pixi >/dev/null 2>&1; then
+        PIXI_BIN="$(command -v pixi)"
+    else
+        echo "pixi installation failed or is not on PATH" >&2
+        exit 1
+    fi
+fi
+
+# If tools are missing from PATH, install them globally via pixi.
+# Mapping: binary_name:package_name
+ensure_tools="starship:starship gh:gh btop:btop rg:ripgrep fastfetch:fastfetch"
+
+missing_packages=""
+for item in $ensure_tools; do
+    bin_name="${item%%:*}"
+    pkg_name="${item#*:}"
+    if ! command -v "$bin_name" >/dev/null 2>&1; then
+        case " $missing_packages " in
+            *" $pkg_name "*) ;;
+            *) missing_packages="$missing_packages $pkg_name" ;;
+        esac
+    fi
+done
+
+if [ -n "$missing_packages" ]; then
+    pkgs="${missing_packages# }"
+    # shellcheck disable=SC2086
+    set -- $pkgs
+    "$PIXI_BIN" global install "$@"
+fi

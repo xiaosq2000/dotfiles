@@ -22,7 +22,7 @@ return {
 				ensure_installed = {
 					"ruff",
 					"pyright",
-					"clangd",
+					-- "clangd", # not supported for linux-arm64
 					"lua_ls",
 					"bashls",
 					"marksman",
