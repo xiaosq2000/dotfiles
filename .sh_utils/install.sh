@@ -34,7 +34,7 @@ for arg in "$@"; do
             echo ""
             echo "Options:"
             echo "  -y, --yes           Skip confirmation prompt and proceed with installation"
-            echo "  --with-binaries     Install additional binaries (e.g., Neovim, Starship, node, fzf, yazi, plugins/tools for zsh and git)"
+            echo "  --with-binaries     Install additional binaries (e.g., uv, pixi, Neovim, Starship, node, fzf, yazi, plugins/tools for zsh and git)"
             echo "  -h, --help          Show this help message"
             echo ""
             echo "When using with curl, pass arguments like this:"
@@ -234,6 +234,54 @@ if [ "$INSTALL_BINARIES" = true ]; then
         fi
     else
         msg_warning "Node.js setup script not found at $NODE_SCRIPT"
+    fi
+
+    # Check if uv setup script exists
+    UV_SCRIPT="$HOME/.sh_utils/setup.d/uv.sh"
+    if [ -f "$UV_SCRIPT" ]; then
+        msg_info "Running uv installation script..."
+
+        # Make script executable and run it
+        chmod +x "$UV_SCRIPT"
+        if bash "$UV_SCRIPT"; then
+            msg_success "uv installed successfully"
+        else
+            msg_warning "uv installation encountered an error"
+        fi
+    else
+        msg_warning "uv setup script not found at $UV_SCRIPT"
+    fi
+
+    # Check if aider setup script exists
+    AIDER_SCRIPT="$HOME/.sh_utils/setup.d/aider.sh"
+    if [ -f "$AIDER_SCRIPT" ]; then
+        msg_info "Running Aider installation script..."
+
+        # Make script executable and run it
+        chmod +x "$AIDER_SCRIPT"
+        if bash "$AIDER_SCRIPT"; then
+            msg_success "Aider installed successfully"
+        else
+            msg_warning "Aider installation encountered an error"
+        fi
+    else
+        msg_warning "Aider setup script not found at $AIDER_SCRIPT"
+    fi
+
+    # Check if pixi setup script exists
+    PIXI_SCRIPT="$HOME/.sh_utils/setup.d/pixi.sh"
+    if [ -f "$PIXI_SCRIPT" ]; then
+        msg_info "Running pixi installation script..."
+
+        # Make script executable and run it
+        chmod +x "$PIXI_SCRIPT"
+        if bash "$PIXI_SCRIPT"; then
+            msg_success "pixi installed successfully"
+        else
+            msg_warning "pixi installation encountered an error"
+        fi
+    else
+        msg_warning "pixi setup script not found at $PIXI_SCRIPT"
     fi
 
     # Check if fzf setup script exists
