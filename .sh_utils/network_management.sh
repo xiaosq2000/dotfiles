@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# Load UI utilities for consistent CLI output
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE:-$0}")" >/dev/null 2>&1 && pwd)"
+if [ -f "$SCRIPT_DIR/lib/ui.sh" ]; then
+    # shellcheck disable=SC1090
+    . "$SCRIPT_DIR/lib/ui.sh"
+fi
+
 # Script configuration
 VERBOSE=${VERBOSE:-false}
 PROTOCOL=${PROTOCOL:-trojan}
@@ -40,7 +47,7 @@ TRANSLATIONS=(
     ["If not working, wait a couple of seconds."]="代理设置已应用。如果无法连接，请稍等几秒后重试。"
     ["If still not working, you are suggested to execute following commands to print log and ask for help."]="如果问题仍然存在，请运行以下命令进行诊断并寻求帮助："
     ["Available handy commands for networking proxy"]="网络代理助手 - 可用命令："
-    ["FAILED_DETECT_PUBLIC_IP"]="在 {} 秒内检测公共 IP 失败。请检查您的网络连接。"
+    ["Failed to detect public IP in {} seconds."]="在 {} 秒内检测公共 IP 失败。请检查您的网络连接。"
     ["Failed to determine WSL host IP address."]="未能确定 WSL 主机 IP 地址。无法设置代理。"
     ["Failed to get private IP"]="获取私有 IP 失败。"
     ["An argument, the port number, should be given."]="需要提供端口号作为参数。"
@@ -60,28 +67,7 @@ _has() {
     command -v "$1" 1>/dev/null 2>&1
 }
 
-# Terminal colors with fallback - Bash and ZSH compatible
-_setup_colors() {
-    if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
-        BOLD="$(tput bold 2>/dev/null || echo '')"
-        GREY="$(tput setaf 0 2>/dev/null || echo '')"
-        RED="$(tput setaf 1 2>/dev/null || echo '')"
-        GREEN="$(tput setaf 2 2>/dev/null || echo '')"
-        YELLOW="$(tput setaf 3 2>/dev/null || echo '')"
-        # BLUE="$(tput setaf 4 2>/dev/null || echo '')"
-        MAGENTA="$(tput setaf 5 2>/dev/null || echo '')"
-        RESET="$(tput sgr0 2>/dev/null || echo '')"
-    else
-        BOLD=""
-        GREY=""
-        RED=""
-        GREEN=""
-        YELLOW=""
-        # BLUE=""
-        MAGENTA=""
-        RESET=""
-    fi
-}
+# UI colors are provided by ui.sh; no local setup needed.
 
 # Detect system locale, allowing override with FORCE_LANG
 _detect_language() {
@@ -127,32 +113,99 @@ _translate() {
 
 
 # Logging functions - ZSH compatible
-_error() { printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${RED}$(_translate 'ERROR'):${RESET} $*" >&2; }
-_warning() { printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${YELLOW}$(_translate 'WARNING'):${RESET} $*"; }
-_info() { printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${GREEN}$(_translate 'INFO'):${RESET} $*"; }
+_error() { msg_error "[$(_translate 'Network Proxy')] $*"; }
+_warning() { msg_warning "[$(_translate 'Network Proxy')] $*"; }
+_info() { msg_info "[$(_translate 'Network Proxy')] $*"; }
 _debug() {
-    [[ $VERBOSE == true ]] && printf '%s\n' "[$(_translate 'Network Proxy')] ${BOLD}${GREY}$(_translate 'DEBUG'):${RESET} $*"
+    [[ $VERBOSE == true ]] && msg_info "[$(_translate 'Network Proxy')] $(_translate 'DEBUG'): $*"
 }
 
 check_public_ip() {
     local timeout=${1:-1} # Default timeout is 1 second
     local ipinfo
-    if ! ipinfo=$(curl --silent --max-time "$timeout" ipinfo.io); then
+    local tmp_file
+    tmp_file="$(mktemp)"
+
+    # Run request with optional spinner; avoid job-control noise in zsh
+    if ! command -v curl >/dev/null 2>&1; then
         local error_msg
-        error_msg=$(_translate 'FAILED_DETECT_PUBLIC_IP')
+        error_msg=$(_translate 'Failed to detect public IP in {} seconds.')
         _warning "${error_msg//\{\}/$timeout}" # Replace {} with timeout value
+        rm -f "$tmp_file"
         return 1
     fi
+
+    local curl_status
+    if [ "${INTERACTIVE:-false}" = true ] && command -v spinner >/dev/null 2>&1; then
+        # Suppress job-control noise while backgrounding
+        if [ -n "${ZSH_VERSION:-}" ]; then
+            setopt local_options nomonitor
+        fi
+        # In Bash, temporarily disable job control (monitor) to avoid [1] PID and "Done" messages
+        local restore_bash_monitor=""
+        if [ -n "${BASH_VERSION:-}" ]; then
+            if [[ -o monitor ]]; then
+                restore_bash_monitor="on"
+                set +m
+            else
+                restore_bash_monitor="off"
+            fi
+        fi
+        ( curl --silent --max-time "$timeout" ipinfo.io >"$tmp_file" 2>/dev/null ) & local curl_pid=$!
+        spinner "$curl_pid"
+        wait "$curl_pid"
+        curl_status=$?
+        # Restore Bash job-control state if it was altered
+        if [ -n "${BASH_VERSION:-}" ] && [ "$restore_bash_monitor" = "on" ]; then
+            set -m
+        fi
+    else
+        # Synchronous call when not interactive or spinner unavailable
+        curl --silent --max-time "$timeout" ipinfo.io >"$tmp_file" 2>/dev/null
+        curl_status=$?
+    fi
+
+    if [ "$curl_status" -ne 0 ]; then
+        local error_msg
+        error_msg=$(_translate 'Failed to detect public IP in {} seconds.')
+        _warning "${error_msg//\{\}/$timeout}" # Replace {} with timeout value
+        rm -f "$tmp_file"
+        return 1
+    fi
+
+    ipinfo="$(cat "$tmp_file" 2>/dev/null)"
+    rm -f "$tmp_file"
 
     if [ -z "$ipinfo" ]; then
         # Handle case where curl succeeds but returns empty output (less likely but possible)
         local error_msg
-        error_msg=$(_translate 'FAILED_DETECT_PUBLIC_IP')
+        error_msg=$(_translate 'Failed to detect public IP in {} seconds.')
         _error "${error_msg//\{\}/$timeout}" # Replace {} with timeout value
         return 1
     fi
 
-    echo -e "${MAGENTA}$(_translate 'Internet:')${RESET}\n${INDENT}$(echo "$ipinfo" | grep --color=never -e '\"ip\"' -e '\"city\"' | sed 's/^[ \t]*//' | awk '{print}' ORS=' ')"
+    local ip city
+    if command -v jq >/dev/null 2>&1; then
+        ip=$(echo "$ipinfo" | jq -r '.ip // empty')
+        city=$(echo "$ipinfo" | jq -r '.city // empty')
+    else
+        ip=$(printf "%s\n" "$ipinfo" | grep -m1 '"ip"' | sed -E 's/.*"ip"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/' | tr -d '\r')
+        city=$(printf "%s\n" "$ipinfo" | grep -m1 '"city"' | sed -E 's/.*"city"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/' | tr -d '\r')
+    fi
+
+    if [ -n "$city" ] && [ -n "$ip" ]; then
+        # msg_info "$(_translate 'Internet:')" "${city}, ${ip}"
+        msg_info "${city}, ${ip}"
+    elif [ -n "$ip" ]; then
+        msg_info "$ip"
+    elif [ -n "$city" ]; then
+        msg_info "$city"
+    else
+        local error_msg
+        error_msg=$(_translate 'Failed to detect public IP in {} seconds.')
+        _warning "${error_msg//\{\}/$timeout}"
+        return 1
+    fi
     return 0
 }
 
@@ -163,7 +216,8 @@ check_private_ip() {
         return 1
     fi
 
-    echo -e "${MAGENTA}$(_translate 'LAN:')${RESET}\n${INDENT}\"ip\": \"${private_ip}\","
+    # msg_info "$(_translate 'LAN:')"
+    echo "${INDENT}\"ip\": \"${private_ip}\","
     return 0
 }
 
@@ -236,7 +290,7 @@ _set_proxy_env_vars() {
     export HTTPS_PROXY="$https_proxy"
     export FTP_PROXY="$ftp_proxy"
     export SOCKS_PROXY="$socks_proxy"
-    export no_proxy="localhost,127.0.0.0/8,::1,host.docker.internal,.um.edu.mo"
+    export no_proxy="localhost,127.0.0.0/8,::1,host.docker.internal"
     export NO_PROXY="${no_proxy}"
 }
 
@@ -270,10 +324,10 @@ set_docker_proxy() {
 [Service]
 Environment="http_proxy=http://${proxy_host}:${proxy_port}"
 Environment="https_proxy=http://${proxy_host}:${proxy_port}"
-Environment="no_proxy=localhost,127.0.0.0/8,::1,host.docker.internal,.um.edu.mo"
+Environment="no_proxy=localhost,127.0.0.0/8,::1,host.docker.internal"
 Environment="HTTP_PROXY=http://${proxy_host}:${proxy_port}"
 Environment="HTTPS_PROXY=http://${proxy_host}:${proxy_port}"
-Environment="NO_PROXY=localhost,127.0.0.0/8,::1,host.docker.internal,.um.edu.mo"
+Environment="NO_PROXY=localhost,127.0.0.0/8,::1,host.docker.internal"
 EOF
 
     # Reload systemd and restart Docker
@@ -419,7 +473,7 @@ check_proxy_status() {
         done
         echo
 
-        echo -e "$(_translate 'VPN_STATUS'): ${RESET}"
+        msg_info "$(_translate 'VPN_STATUS'):"
         if [[ $(uname -r) =~ WSL2 ]]; then
             _warning "$(_translate 'Unknown. For WSL2, the VPN client is probably running on the host machine. Please check manually.')"
         elif [[ -f /.dockerenv ]]; then
@@ -435,18 +489,17 @@ check_proxy_status() {
 
 
 # Main script initialization
-_setup_colors
 INDENT='    '
 if [[ $VERBOSE == "true" ]]; then
     # Show available commands
-    _translate "Available handy commands for networking proxy"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} set_proxy         # Global proxy with service management"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} unset_proxy       # Remove global proxy config"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} set_local_proxy   # Set proxy for current shell only"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} unset_local_proxy # Remove current shell proxy"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} check_private_ip"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} check_public_ip"
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} check_proxy_status"
+    msg_header "$(_translate 'Available handy commands for networking proxy')"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} set_proxy         # Global proxy with service management"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} unset_proxy       # Remove global proxy config"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} set_local_proxy   # Set proxy for current shell only"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} unset_local_proxy # Remove current shell proxy"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} check_private_ip"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} check_public_ip"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} check_proxy_status"
     echo
-    echo "${INDENT}${GREEN}${BOLD}\$${RESET} check_port_availability <PORT>"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} check_port_availability <PORT>"
 fi
