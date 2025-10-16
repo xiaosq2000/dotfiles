@@ -278,9 +278,9 @@ check_x11_wayland
 
 setup_texlive
 
-if systemctl is-active --quiet "sing-box-$PROTOCOL.service" 2>/dev/null; then
-    FORCE_LANG=zh_CN set_local_proxy
-    FORCE_LANG=zh_CN check_public_ip 5
+if [ -n PROTOCOL ] && has systemctl && systemctl is-active --quiet "sing-box-$PROTOCOL.service" 2>/dev/null; then
+    if has set_local_proxy; then set_local_proxy; else error "command set_local_proxy not found"; fi
+    if has check_public_ip; then check_public_ip; else error "command check_public_ip not found"; fi
 fi
 
 # echo "Type \"help\" to display supported handy commands."
