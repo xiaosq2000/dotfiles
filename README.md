@@ -15,7 +15,4 @@ curl -fsSL "https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils
 
 ## TODO
 
-- uv
-- pixi
-- aider
 - typefaces
