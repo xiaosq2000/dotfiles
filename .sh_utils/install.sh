@@ -34,7 +34,7 @@ for arg in "$@"; do
             echo ""
             echo "Options:"
             echo "  -y, --yes           Skip confirmation prompt and proceed with installation"
-            echo "  --with-binaries     Install additional binaries (e.g., uv, pixi, Neovim, Starship, node, fzf, yazi, plugins/tools for zsh and git)"
+            echo "  --with-binaries     Install additional binaries (will prompt in interactive mode if not specified)"
             echo "  -h, --help          Show this help message"
             echo ""
             echo "When using with curl, pass arguments like this:"
@@ -68,6 +68,7 @@ else
 fi
 
 # Source the UI library
+# shellcheck disable=SC1090
 source "$UI_LIB"
 
 # Function to prompt for confirmation
@@ -93,6 +94,24 @@ confirm_installation() {
     esac
 }
 
+# Function to prompt for binaries
+confirm_binary_installation() {
+    echo ""
+    info "Optional: Install additional developer binaries (Neovim, Git tools, Node.js, uv, Aider, pixi, fzf, yazi, zsh, typefaces)."
+    echo ""
+    read -p "Do you want to install additional binaries? (yes/no): " response
+    case "$response" in
+        [yY][eE][sS]|[yY])
+            success "Will install additional binaries..."
+            return 0
+            ;;
+        *)
+            info "You chose not to install additional binaries."
+            return 1
+            ;;
+    esac
+}
+
 # Cleanup function
 cleanup() {
     if [ "$CLEANUP_TEMP" = true ] && [ -n "${TEMP_DIR:-}" ] && [ -d "$TEMP_DIR" ]; then
@@ -111,6 +130,16 @@ if [ "$INTERACTIVE" = true ] && [ "$SKIP_CONFIRMATION" = false ]; then
     confirm_installation
 elif [ "$SKIP_CONFIRMATION" = true ]; then
     info "Skipping confirmation (--yes flag provided)"
+fi
+
+# Prompt for binary installation in interactive mode (if not specified)
+if [ "$INTERACTIVE" = true ] && [ "$INSTALL_BINARIES" = false ]; then
+    if confirm_binary_installation; then
+        INSTALL_BINARIES=true
+        info "Binary installation enabled via interactive prompt"
+    else
+        info "Binary installation skipped via interactive prompt"
+    fi
 fi
 
 # Change to home directory
@@ -175,7 +204,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if neovim setup script exists
     NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
     if [ -f "$NEOVIM_SCRIPT" ]; then
-        info "Running Neovim installation script..."
+        info "running Neovim installation script..."
 
         # Make script executable and run it
         chmod +x "$NEOVIM_SCRIPT"
@@ -191,7 +220,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if git tools setup script exists
     GIT_SCRIPT="$HOME/.sh_utils/setup.d/git.sh"
     if [ -f "$GIT_SCRIPT" ]; then
-        info "Running Git tools installation script..."
+        info "running Git tools installation script..."
 
         # Make script executable and run it
         chmod +x "$GIT_SCRIPT"
@@ -204,26 +233,26 @@ if [ "$INSTALL_BINARIES" = true ]; then
         warning "Git tools setup script not found at $GIT_SCRIPT"
     fi
 
-    # Check if starship setup script exists
-    STARSHIP_SCRIPT="$HOME/.sh_utils/setup.d/starship.sh"
-    if [ -f "$STARSHIP_SCRIPT" ]; then
-        info "Running Starship installation script..."
-
-        # Make script executable and run it
-        chmod +x "$STARSHIP_SCRIPT"
-        if bash "$STARSHIP_SCRIPT"; then
-            success "Starship installed successfully"
-        else
-            warning "Starship installation encountered an error"
-        fi
-    else
-        warning "Starship setup script not found at $STARSHIP_SCRIPT"
-    fi
+    # # Check if starship setup script exists
+    # STARSHIP_SCRIPT="$HOME/.sh_utils/setup.d/starship.sh"
+    # if [ -f "$STARSHIP_SCRIPT" ]; then
+    #     info "running Starship installation script..."
+    #
+    #     # Make script executable and run it
+    #     chmod +x "$STARSHIP_SCRIPT"
+    #     if bash "$STARSHIP_SCRIPT"; then
+    #         success "Starship installed successfully"
+    #     else
+    #         warning "Starship installation encountered an error"
+    #     fi
+    # else
+    #     warning "Starship setup script not found at $STARSHIP_SCRIPT"
+    # fi
 
     # Check if node setup script exists
     NODE_SCRIPT="$HOME/.sh_utils/setup.d/node.sh"
     if [ -f "$NODE_SCRIPT" ]; then
-        info "Running Node.js installation script..."
+        info "running Node.js installation script..."
 
         # Make script executable and run it
         chmod +x "$NODE_SCRIPT"
@@ -239,7 +268,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if uv setup script exists
     UV_SCRIPT="$HOME/.sh_utils/setup.d/uv.sh"
     if [ -f "$UV_SCRIPT" ]; then
-        info "Running uv installation script..."
+        info "running uv installation script..."
 
         # Make script executable and run it
         chmod +x "$UV_SCRIPT"
@@ -255,7 +284,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if aider setup script exists
     AIDER_SCRIPT="$HOME/.sh_utils/setup.d/aider.sh"
     if [ -f "$AIDER_SCRIPT" ]; then
-        info "Running Aider installation script..."
+        info "running Aider installation script..."
 
         # Make script executable and run it
         chmod +x "$AIDER_SCRIPT"
@@ -271,7 +300,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if pixi setup script exists
     PIXI_SCRIPT="$HOME/.sh_utils/setup.d/pixi.sh"
     if [ -f "$PIXI_SCRIPT" ]; then
-        info "Running pixi installation script..."
+        info "running pixi installation script..."
 
         # Make script executable and run it
         chmod +x "$PIXI_SCRIPT"
@@ -287,7 +316,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if fzf setup script exists
     FZF_SCRIPT="$HOME/.sh_utils/setup.d/fzf.sh"
     if [ -f "$FZF_SCRIPT" ]; then
-        info "Running fzf installation script..."
+        info "running fzf installation script..."
 
         # Make script executable and run it
         chmod +x "$FZF_SCRIPT"
@@ -303,7 +332,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if yazi setup script exists
     YAZI_SCRIPT="$HOME/.sh_utils/setup.d/yazi.sh"
     if [ -f "$YAZI_SCRIPT" ]; then
-        info "Running yazi installation script..."
+        info "running yazi installation script..."
 
         # Make script executable and run it
         chmod +x "$YAZI_SCRIPT"
@@ -319,7 +348,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
     # Check if zsh setup script exists
     ZSH_SCRIPT="$HOME/.sh_utils/setup.d/zsh.sh"
     if [ -f "$ZSH_SCRIPT" ]; then
-        info "Running zsh installation script..."
+        info "running zsh installation script..."
 
         # Make script executable and run it
         chmod +x "$ZSH_SCRIPT"
@@ -331,10 +360,26 @@ if [ "$INSTALL_BINARIES" = true ]; then
     else
         warning "zsh setup script not found at $ZSH_SCRIPT"
     fi
+
+    # Check if typefaces setup script exists
+    TYPEFACES_SCRIPT="$HOME/.sh_utils/setup.d/typefaces.sh"
+    if [ -f "$TYPEFACES_SCRIPT" ]; then
+        info "running typefaces installation script..."
+
+        # Make script executable and run it
+        chmod +x "$TYPEFACES_SCRIPT"
+        if bash "$TYPEFACES_SCRIPT"; then
+            success "typefaces (maple mono...) installed successfully"
+        else
+            warning "typefaces (maple mono...) installation encountered an error"
+        fi
+    else
+        warning "typefaces setup script not found at $TYPEFACES_SCRIPT"
+    fi
 else
-    info "Skipping binary installation (use --with-binaries to install)"
+    if [ "$INTERACTIVE" != true ]; then
+        info "skipping binary installation (use --with-binaries to install)"
+    fi
 fi
 
-# Footer
-footer "INSTALLATION COMPLETE!"
-success "Your dotfiles have been successfully installed!"
+success "installation complete"

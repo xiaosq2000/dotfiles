@@ -17,7 +17,7 @@ else
     exit 1
 fi
 
-header "YAZI INSTALLATION"
+header "yazi - https://yazi-rs.github.io/"
 
 # Use a dedicated temp directory instead of CWD
 TMP_DIR="$(mktemp -d -t yazi-install-XXXXXXXX)"
@@ -78,8 +78,8 @@ if ((glibc_num >= required_glibc_num)) && (( FORCE_SOURCE == 0 )); then
     # Download yazi to temp dir
     info "Downloading yazi..."
     (
-      cd "$TMP_DIR"
-      curl -sS -L --fail --retry 3 --retry-delay 1 -o yazi-x86_64-unknown-linux-gnu.zip "$download_url"
+        cd "$TMP_DIR"
+        curl -sS -L --fail --retry 3 --retry-delay 1 -o yazi-x86_64-unknown-linux-gnu.zip "$download_url"
     ) &
     pid=$!
     spinner $pid
@@ -91,7 +91,7 @@ if ((glibc_num >= required_glibc_num)) && (( FORCE_SOURCE == 0 )); then
     # Extract archive
     info "Extracting archive..."
     (
-      cd "$TMP_DIR" && unzip -qq yazi-x86_64-unknown-linux-gnu.zip
+        cd "$TMP_DIR" && unzip -qq yazi-x86_64-unknown-linux-gnu.zip
     ) &
     pid=$!
     spinner $pid
@@ -130,7 +130,7 @@ else
     # Clone repository
     step "Cloning yazi repository"
     (
-      cd "$TMP_DIR" && git clone --quiet https://github.com/sxyazi/yazi
+        cd "$TMP_DIR" && git clone --quiet https://github.com/sxyazi/yazi
     ) &
     pid=$!
     spinner $pid
@@ -197,7 +197,7 @@ step "Verifying installation"
 if [ -x "$XDG_PREFIX_HOME/bin/yazi" ]; then
     yazi_version=$("$XDG_PREFIX_HOME/bin/yazi" --version | cut -d' ' -f2)
     success "yazi version: $yazi_version"
-    footer "YAZI INSTALLATION COMPLETE!"
+    footer "yazi - https://yazi-rs.github.io/"
 else
     error "Failed to install yazi - binary not found or not executable"
     exit 1

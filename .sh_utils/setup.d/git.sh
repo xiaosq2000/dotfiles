@@ -2,68 +2,24 @@
 set -euo pipefail
 
 # Load UI library for consistent CLI output
-if ! declare -F step >/dev/null 2>&1; then
-    UI_LIB="${UI_LIB:-$HOME/.sh_utils/lib/ui.sh}"
-    if [ -f "$UI_LIB" ]; then
-        # shellcheck source=/dev/null
-        source "$UI_LIB"
-    else
-        # Fallback minimal UI if ui.sh is unavailable
-        step()    { echo "STEP: $*"; }
-        success() { echo "DONE: $*"; }
-        error()   { echo "ERROR: $*" >&2; }
-        warning() { echo "WARNING: $*"; }
-        info()    { echo "INFO: $*"; }
-    fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+UI_LIB="${UI_LIB:-$SCRIPT_DIR/../lib/ui.sh}"
+if [ -f "$UI_LIB" ]; then
+    # shellcheck source=../lib/ui.sh
+    source "$UI_LIB"
+else
+    echo "error: $UI_LIB not found"
+    exit 1
 fi
 
 # Load platform detection utilities
-if ! declare -F plat_id >/dev/null 2>&1; then
-    PLATFORM_LIB="${PLATFORM_LIB:-$HOME/.sh_utils/lib/platform.sh}"
-    if [ -f "$PLATFORM_LIB" ]; then
-        # shellcheck source=/dev/null
-        source "$PLATFORM_LIB"
-    else
-        # Minimal fallback if platform.sh is unavailable
-        plat_os() {
-            case "$(uname -s)" in
-                Linux) echo linux ;;
-                Darwin) echo darwin ;;
-                *) echo unknown ;;
-            esac
-        }
-        plat_arch() {
-            case "$(uname -m)" in
-                x86_64|amd64) echo amd64 ;;
-                arm64|aarch64) echo arm64 ;;
-                *) echo unknown ;;
-            esac
-        }
-        plat_id() {
-            printf "%s-%s\n" "$(plat_os)" "$(plat_arch)"
-        }
-        plat_id_sep() {
-            local sep="${1:-_}"
-            printf "%s%s%s\n" "$(plat_os)" "$sep" "$(plat_arch)"
-        }
-        plat_arch_alias() {
-            local style="${1:-}"
-            case "$style:$(plat_arch)" in
-                lazygit:amd64) echo x86_64 ;;
-                lazygit:arm64) echo arm64 ;;
-                *) echo ;;
-            esac
-        }
-        plat_rust_triple() {
-            case "$(plat_id)" in
-                linux-amd64) echo x86_64-unknown-linux-gnu ;;
-                linux-arm64) echo aarch64-unknown-linux-gnu ;;
-                darwin-amd64) echo x86_64-apple-darwin ;;
-                darwin-arm64) echo aarch64-apple-darwin ;;
-                *) echo ;;
-            esac
-        }
-    fi
+PLATFORM_LIB="${PLATFORM_LIB:-$SCRIPT_DIR/../lib/platform.sh}"
+if [ -f "$PLATFORM_LIB" ]; then
+    # shellcheck source=../lib/platform.sh
+    source "$PLATFORM_LIB"
+else
+    error "$PLATFORM_LIB not found"
+    exit 1
 fi
 
 PREFIX="${XDG_PREFIX_HOME:-$HOME/.local}"
@@ -81,18 +37,18 @@ ensure_deps() {
 }
 
 install_lazygit() {
-    step "Installing the latest lazygit"
+    step "installing the latest lazygit"
     local version
     version="$(curl -fsSL "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | sed -nE 's/.*"tag_name":[[:space:]]*"v([^"]+)".*/\1/p' | head -n1)"
     if [ -z "${version:-}" ]; then
-        error "Unable to determine latest lazygit version"
+        error "unable to determine latest lazygit version"
         exit 1
     fi
     local os arch_token tarball
     os="$(plat_os)"
     arch_token="$(plat_arch_alias lazygit)"
     if [ -z "${arch_token:-}" ] || [ "$os" = "unknown" ]; then
-        error "Unsupported platform for lazygit: $(plat_id)"
+        error "unsupported platform for lazygit: $(plat_id)"
         exit 1
     fi
     tarball="lazygit_${version}_${os}_${arch_token}.tar.gz"
@@ -101,20 +57,21 @@ install_lazygit() {
     install -Dm755 lazygit "$BIN_DIR/lazygit"
     rm -f lazygit.tar.gz lazygit
     if "$BIN_DIR/lazygit" --version >/dev/null 2>&1; then
-        local v="$("$BIN_DIR/lazygit" --version | cut -d ',' -f 4 | cut -d '=' -f 2)"
+        local v
+        v="$("$BIN_DIR/lazygit" --version | cut -d ',' -f 4 | cut -d '=' -f 2)"
         success "lazygit version: ${v}"
     else
-        error "Failed to install lazygit"
+        error "failed to install lazygit"
         exit 1
     fi
 }
 
 install_difftastic() {
-    step "Installing the latest difftastic (difft)"
+    step "installing the latest difftastic (difft)"
     local triple asset
     triple="$(plat_rust_triple)"
     if [ -z "${triple:-}" ]; then
-        error "Unsupported platform for difftastic: $(plat_id)"
+        error "unsupported platform for difftastic: $(plat_id)"
         exit 1
     fi
     asset="difft-${triple}.tar.gz"
@@ -123,20 +80,24 @@ install_difftastic() {
     install -Dm755 difft "$BIN_DIR/difft"
     rm -f difft.tar.gz difft
     if "$BIN_DIR/difft" --version >/dev/null 2>&1; then
-        local v="$("$BIN_DIR/difft" --version | head -n 1 | cut -d ' ' -f 2)"
+        local v
+        v="$("$BIN_DIR/difft" --version | head -n 1 | cut -d ' ' -f 2)"
         success "difft version: ${v}"
     else
-        error "Failed to install difft"
+        error "failed to install difft"
         exit 1
     fi
 }
 
 main() {
-    info "Installing Git tooling to $BIN_DIR"
     mkdir -p "$BIN_DIR"
     ensure_deps
+    header "lazygit - https://github.com/jesseduffield/lazygit"
     install_lazygit
+    footer "lazygit - https://github.com/jesseduffield/lazygit"
+    header "difftastic - https://github.com/Wilfred/difftastic"
     install_difftastic
+    footer "difftastic - https://github.com/Wilfred/difftastic"
 }
 
 main "$@"

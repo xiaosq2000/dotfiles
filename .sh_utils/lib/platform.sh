@@ -37,6 +37,8 @@ plat_arch_alias() {
     case "$style:$(plat_arch)" in
         lazygit:amd64) echo x86_64 ;;
         lazygit:arm64) echo arm64 ;;
+        fzf:amd64) echo amd64 ;;
+        fzf:arm64) echo arm64 ;;
         *) echo ;;
     esac
 }

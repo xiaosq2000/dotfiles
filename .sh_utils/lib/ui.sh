@@ -137,7 +137,7 @@ step() {
 # Display a header (for main scripts)
 header() {
     if [ "$INTERACTIVE" = true ]; then
-        printf '\n%s\n\n' "${BOLD}${BLUE}==> $*${RESET}"
+        printf '\n%s\n' "${BOLD}${MAGENTA}==> $*${RESET}"
     else
         printf '==> %s\n' "$*"
     fi
@@ -146,7 +146,7 @@ header() {
 # Display a footer (for main scripts)
 footer() {
     if [ "$INTERACTIVE" = true ]; then
-        printf '\n%s\n\n' "${BOLD}${GREEN}<== $*${RESET}"
+        printf '\n%s\n' "${BOLD}${MAGENTA}<== $*${RESET}"
     else
         printf '<== %s\n' "$*"
     fi
