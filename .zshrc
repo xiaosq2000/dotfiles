@@ -52,7 +52,6 @@ alias t="tmux"
 alias ta="tmux a"
 
 alias s='web_search google'
-# alias s='kitten ssh'
 
 alias cdusb='cd /media/$USER/"$(ls -t /media/$USER/ | head -n1)"'
 
@@ -91,52 +90,81 @@ HIST_STAMPS="dd/mm/yyyy"
 ZSH_CUSTOM=${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}
 
 ################################################################################
-################################ kitty terminal ################################
+################################### terminal ###################################
 ################################################################################
-setup_kitty() {
-    if [[ -x "${XDG_PREFIX_HOME}/bin/kitty" ]]; then
-        if has gsettings; then
-            if gsettings set org.gnome.desktop.default-applications.terminal exec "${XDG_PREFIX_HOME}/bin/kitty" 2>/dev/null; then
-                debug "Set kitty as default terminal"
-            else
-                error "Failed to set kitty as default terminal"
-            fi
+set_kitty_as_default() {
+    local KITTY_BIN
+
+    if has kitty; then
+        KITTY_BIN="$(command -v kitty)"
+    elif [ -x "${XDG_PREFIX_HOME}/bin/kitty" ]; then
+        KITTY_BIN="${XDG_PREFIX_HOME}/bin/kitty"
+    elif [ -x "/usr/bin/kitty" ]; then
+        KITTY_BIN="/usr/bin/kitty"
+    else
+        warning "kitty not found"
+        return
+    fi
+
+    # For gnome, set kitty as default terminal
+    if has gsettings; then
+        if gsettings set org.gnome.desktop.default-applications.terminal exec "$KITTY_BIN" 2>/dev/null; then
+            debug "Set kitty as default terminal"
         else
-            warning "gsettings not found - cannot set kitty as default terminal"
-        fi
-
-        # Execute the following only if zsh >= 5.9, AI!
-        # IMPORTANT: kitty-scrollback.nvim only supports zsh 5.9 or greater for command-line editing,
-        # please check your version by running: zsh --version
-
-        autoload -Uz is-at-least
-        if is-at-least 5.9; then
-            # add the following environment variables to your zsh config (e.g., ~/.zshrc)
-            autoload -Uz edit-command-line
-            zle -N edit-command-line
-
-            function kitty_scrollback_edit_command_line() {
-              local VISUAL='${XDG_DATA_HOME}/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
-              zle edit-command-line
-              zle kill-whole-line
-            }
-            zle -N kitty_scrollback_edit_command_line
-
-            bindkey '^x^e' kitty_scrollback_edit_command_line
-            # [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode
-            # by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS
-            # export KITTY_SCROLLBACK_NVIM_EDIT_ARGS=''
-        else
-            warning "zsh < 5.9 detected; skipping kitty-scrollback.nvim command-line integration"
+            error "Failed to set kitty as default terminal"
         fi
     else
-        debug "kitty not found at ${XDG_PREFIX_HOME}/bin/kitty"
-    fi
-    if [[ "$TERM" == "xterm-kitty" ]]; then
-        alias ssh="kitten ssh"
+        warning "gsettings not found - cannot set kitty as default terminal"
     fi
 }
-setup_kitty
+if [ "$TERM" = "xterm-kitty" ] && has kitten; then
+    # Set kitty-scrollback.nvim
+    # NOTE: kitty-scrollback.nvim only supports zsh 5.9 or greater for command-line editing,
+    autoload -Uz is-at-least
+    if is-at-least 5.9; then
+        # add the following environment variables to your zsh config (e.g., ~/.zshrc)
+        autoload -Uz edit-command-line
+        zle -N edit-command-line
+
+        function kitty_scrollback_edit_command_line() {
+          local VISUAL='${XDG_DATA_HOME}/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
+          zle edit-command-line
+          zle kill-whole-line
+        }
+        zle -N kitty_scrollback_edit_command_line
+
+        bindkey '^x^e' kitty_scrollback_edit_command_line
+        # [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode
+        # by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS
+        # export KITTY_SCROLLBACK_NVIM_EDIT_ARGS=''
+    else
+        warning "zsh < 5.9 detected; skipping kitty-scrollback.nvim command-line integration"
+    fi
+    # Set kitty's "Truly convenient SSH"
+    alias ssh="kitten ssh"
+fi
+set_gnome_terminal_as_default() {
+    local GNOME_TERMINAL_BIN
+
+    if has gnome-terminal; then
+        GNOME_TERMINAL_BIN="$(command -v gnome-terminal)"
+    elif [ -x "/usr/bin/gnome-terminal" ]; then
+        GNOME_TERMINAL_BIN="/usr/bin/gnome-terminal"
+    else
+        warning "gnome-terminal not found"
+        return
+    fi
+
+    if has gsettings; then
+        if gsettings set org.gnome.desktop.default-applications.terminal exec "$GNOME_TERMINAL_BIN" 2>/dev/null; then
+            debug "Set gnome-terminal as default terminal"
+        else
+            error "Failed to set gnome-terminal as default terminal"
+        fi
+    else
+        warning "gsettings not found - cannot set gnome-terminal as default terminal"
+    fi
+}
 
 ################################################################################
 ################################### starship ###################################
