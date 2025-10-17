@@ -73,21 +73,21 @@ source "$UI_LIB"
 # Function to prompt for confirmation
 confirm_installation() {
     echo ""
-    msg_warning "BACKUP FIRST! All your dotfiles will be REPLACED."
+    warning "BACKUP FIRST! All your dotfiles will be REPLACED."
     echo ""
-    msg_info "This will overwrite existing configuration files in your home directory."
-    msg_info "Make sure you have backed up any important dotfiles before proceeding."
+    info "This will overwrite existing configuration files in your home directory."
+    info "Make sure you have backed up any important dotfiles before proceeding."
     echo ""
 
     read -p "Do you want to continue? (yes/no): " response
 
     case "$response" in
         [yY][eE][sS]|[yY])
-            msg_success "Proceeding with installation..."
+            success "Proceeding with installation..."
             return 0
             ;;
         *)
-            msg_error "Installation cancelled."
+            error "Installation cancelled."
             exit 0
             ;;
     esac
@@ -104,237 +104,237 @@ cleanup() {
 trap cleanup EXIT
 
 # Header
-msg_header "DOTFILES INSTALLER - https://github.com/xiaosq2000/dotfiles"
+header "DOTFILES INSTALLER - https://github.com/xiaosq2000/dotfiles"
 
 # Prompt for confirmation in interactive mode (unless skipped)
 if [ "$INTERACTIVE" = true ] && [ "$SKIP_CONFIRMATION" = false ]; then
     confirm_installation
 elif [ "$SKIP_CONFIRMATION" = true ]; then
-    msg_info "Skipping confirmation (--yes flag provided)"
+    info "Skipping confirmation (--yes flag provided)"
 fi
 
 # Change to home directory
-msg_step "Changing to home directory"
+step "Changing to home directory"
 cd ~
-msg_success "Changed to home directory: $(pwd)"
+success "Changed to home directory: $(pwd)"
 
 # Initialize git repository
-msg_step "Initializing git repository in home directory"
+step "Initializing git repository in home directory"
 git init >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-msg_success "Git repository initialized"
+success "Git repository initialized"
 
 # Add remote origin
-msg_step "Adding remote origin"
+step "Adding remote origin"
 git remote add origin https://github.com/xiaosq2000/dotfiles >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-msg_success "Remote origin added"
+success "Remote origin added"
 
 # Fetch all branches
-msg_step "Fetching all branches (this may take a moment)"
+step "Fetching all branches (this may take a moment)"
 git fetch --all >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-msg_success "All branches fetched"
+success "All branches fetched"
 
 # Reset to match origin/main
-msg_step "Resetting to origin/main"
+step "Resetting to origin/main"
 git reset --hard origin/main >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-msg_success "Reset to origin/main complete"
+success "Reset to origin/main complete"
 
 # Rename branch to main
-msg_step "Renaming branch to main"
+step "Renaming branch to main"
 git branch -M main >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-msg_success "Branch renamed to main"
+success "Branch renamed to main"
 
 # Set upstream branch
-msg_step "Setting upstream branch"
+step "Setting upstream branch"
 git branch -u origin/main main >/dev/null 2>&1 &
 pid=$!
 spinner $pid
-msg_success "Upstream branch set"
+success "Upstream branch set"
 
 # Initialize all submodules
-msg_step "Initializing git submodules (optional)"
+step "Initializing git submodules (optional)"
 if git submodule update --init ~/.config/themes/rose-pine/starship >/dev/null 2>&1; then
-    msg_success "starship's rose-pine theme initialized"
+    success "starship's rose-pine theme initialized"
 else
-    msg_warning "Skipping submodule initialization due to an error (continuing)"
+    warning "Skipping submodule initialization due to an error (continuing)"
 fi
 
 # Install binaries if requested
 if [ "$INSTALL_BINARIES" = true ]; then
-    msg_step "Installing additional binaries"
+    step "Installing additional binaries"
 
     # Check if neovim setup script exists
     NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
     if [ -f "$NEOVIM_SCRIPT" ]; then
-        msg_info "Running Neovim installation script..."
+        info "Running Neovim installation script..."
 
         # Make script executable and run it
         chmod +x "$NEOVIM_SCRIPT"
         if bash "$NEOVIM_SCRIPT"; then
-            msg_success "Neovim installed successfully"
+            success "Neovim installed successfully"
         else
-            msg_warning "Neovim installation encountered an error"
+            warning "Neovim installation encountered an error"
         fi
     else
-        msg_warning "Neovim setup script not found at $NEOVIM_SCRIPT"
+        warning "Neovim setup script not found at $NEOVIM_SCRIPT"
     fi
 
     # Check if git tools setup script exists
     GIT_SCRIPT="$HOME/.sh_utils/setup.d/git.sh"
     if [ -f "$GIT_SCRIPT" ]; then
-        msg_info "Running Git tools installation script..."
+        info "Running Git tools installation script..."
 
         # Make script executable and run it
         chmod +x "$GIT_SCRIPT"
         if bash "$GIT_SCRIPT"; then
-            msg_success "Git tools (lazygit, difftastic) installed successfully"
+            success "Git tools (lazygit, difftastic) installed successfully"
         else
-            msg_warning "Git tools installation encountered an error"
+            warning "Git tools installation encountered an error"
         fi
     else
-        msg_warning "Git tools setup script not found at $GIT_SCRIPT"
+        warning "Git tools setup script not found at $GIT_SCRIPT"
     fi
 
     # Check if starship setup script exists
     STARSHIP_SCRIPT="$HOME/.sh_utils/setup.d/starship.sh"
     if [ -f "$STARSHIP_SCRIPT" ]; then
-        msg_info "Running Starship installation script..."
+        info "Running Starship installation script..."
 
         # Make script executable and run it
         chmod +x "$STARSHIP_SCRIPT"
         if bash "$STARSHIP_SCRIPT"; then
-            msg_success "Starship installed successfully"
+            success "Starship installed successfully"
         else
-            msg_warning "Starship installation encountered an error"
+            warning "Starship installation encountered an error"
         fi
     else
-        msg_warning "Starship setup script not found at $STARSHIP_SCRIPT"
+        warning "Starship setup script not found at $STARSHIP_SCRIPT"
     fi
 
     # Check if node setup script exists
     NODE_SCRIPT="$HOME/.sh_utils/setup.d/node.sh"
     if [ -f "$NODE_SCRIPT" ]; then
-        msg_info "Running Node.js installation script..."
+        info "Running Node.js installation script..."
 
         # Make script executable and run it
         chmod +x "$NODE_SCRIPT"
         if bash "$NODE_SCRIPT"; then
-            msg_success "Node.js (nvm, node, tree-sitter) installed successfully"
+            success "Node.js (nvm, node, tree-sitter) installed successfully"
         else
-            msg_warning "Node.js installation encountered an error"
+            warning "Node.js installation encountered an error"
         fi
     else
-        msg_warning "Node.js setup script not found at $NODE_SCRIPT"
+        warning "Node.js setup script not found at $NODE_SCRIPT"
     fi
 
     # Check if uv setup script exists
     UV_SCRIPT="$HOME/.sh_utils/setup.d/uv.sh"
     if [ -f "$UV_SCRIPT" ]; then
-        msg_info "Running uv installation script..."
+        info "Running uv installation script..."
 
         # Make script executable and run it
         chmod +x "$UV_SCRIPT"
         if bash "$UV_SCRIPT"; then
-            msg_success "uv installed successfully"
+            success "uv installed successfully"
         else
-            msg_warning "uv installation encountered an error"
+            warning "uv installation encountered an error"
         fi
     else
-        msg_warning "uv setup script not found at $UV_SCRIPT"
+        warning "uv setup script not found at $UV_SCRIPT"
     fi
 
     # Check if aider setup script exists
     AIDER_SCRIPT="$HOME/.sh_utils/setup.d/aider.sh"
     if [ -f "$AIDER_SCRIPT" ]; then
-        msg_info "Running Aider installation script..."
+        info "Running Aider installation script..."
 
         # Make script executable and run it
         chmod +x "$AIDER_SCRIPT"
         if bash "$AIDER_SCRIPT"; then
-            msg_success "Aider installed successfully"
+            success "Aider installed successfully"
         else
-            msg_warning "Aider installation encountered an error"
+            warning "Aider installation encountered an error"
         fi
     else
-        msg_warning "Aider setup script not found at $AIDER_SCRIPT"
+        warning "Aider setup script not found at $AIDER_SCRIPT"
     fi
 
     # Check if pixi setup script exists
     PIXI_SCRIPT="$HOME/.sh_utils/setup.d/pixi.sh"
     if [ -f "$PIXI_SCRIPT" ]; then
-        msg_info "Running pixi installation script..."
+        info "Running pixi installation script..."
 
         # Make script executable and run it
         chmod +x "$PIXI_SCRIPT"
         if bash "$PIXI_SCRIPT"; then
-            msg_success "pixi installed successfully"
+            success "pixi installed successfully"
         else
-            msg_warning "pixi installation encountered an error"
+            warning "pixi installation encountered an error"
         fi
     else
-        msg_warning "pixi setup script not found at $PIXI_SCRIPT"
+        warning "pixi setup script not found at $PIXI_SCRIPT"
     fi
 
     # Check if fzf setup script exists
     FZF_SCRIPT="$HOME/.sh_utils/setup.d/fzf.sh"
     if [ -f "$FZF_SCRIPT" ]; then
-        msg_info "Running fzf installation script..."
+        info "Running fzf installation script..."
 
         # Make script executable and run it
         chmod +x "$FZF_SCRIPT"
         if bash "$FZF_SCRIPT"; then
-            msg_success "fzf installed successfully"
+            success "fzf installed successfully"
         else
-            msg_warning "fzf installation encountered an error"
+            warning "fzf installation encountered an error"
         fi
     else
-        msg_warning "fzf setup script not found at $FZF_SCRIPT"
+        warning "fzf setup script not found at $FZF_SCRIPT"
     fi
 
     # Check if yazi setup script exists
     YAZI_SCRIPT="$HOME/.sh_utils/setup.d/yazi.sh"
     if [ -f "$YAZI_SCRIPT" ]; then
-        msg_info "Running yazi installation script..."
+        info "Running yazi installation script..."
 
         # Make script executable and run it
         chmod +x "$YAZI_SCRIPT"
         if bash "$YAZI_SCRIPT"; then
-            msg_success "yazi installed successfully"
+            success "yazi installed successfully"
         else
-            msg_warning "yazi installation encountered an error"
+            warning "yazi installation encountered an error"
         fi
     else
-        msg_warning "yazi setup script not found at $YAZI_SCRIPT"
+        warning "yazi setup script not found at $YAZI_SCRIPT"
     fi
 
     # Check if zsh setup script exists
     ZSH_SCRIPT="$HOME/.sh_utils/setup.d/zsh.sh"
     if [ -f "$ZSH_SCRIPT" ]; then
-        msg_info "Running zsh installation script..."
+        info "Running zsh installation script..."
 
         # Make script executable and run it
         chmod +x "$ZSH_SCRIPT"
         if bash "$ZSH_SCRIPT"; then
-            msg_success "zsh (oh-my-zsh and plugins) installed successfully"
+            success "zsh (oh-my-zsh and plugins) installed successfully"
         else
-            msg_warning "zsh installation encountered an error"
+            warning "zsh installation encountered an error"
         fi
     else
-        msg_warning "zsh setup script not found at $ZSH_SCRIPT"
+        warning "zsh setup script not found at $ZSH_SCRIPT"
     fi
 else
-    msg_info "Skipping binary installation (use --with-binaries to install)"
+    info "Skipping binary installation (use --with-binaries to install)"
 fi
 
 # Footer
-msg_footer "INSTALLATION COMPLETE!"
-msg_success "Your dotfiles have been successfully installed!"
+footer "INSTALLATION COMPLETE!"
+success "Your dotfiles have been successfully installed!"

@@ -2,18 +2,18 @@
 set -euo pipefail
 
 # Load UI library for consistent CLI output
-if ! declare -F msg_step >/dev/null 2>&1; then
+if ! declare -F step >/dev/null 2>&1; then
     UI_LIB="${UI_LIB:-$HOME/.sh_utils/lib/ui.sh}"
     if [ -f "$UI_LIB" ]; then
         # shellcheck source=/dev/null
         source "$UI_LIB"
     else
         # Fallback minimal UI if ui.sh is unavailable
-        msg_step()    { echo "STEP: $*"; }
-        msg_success() { echo "DONE: $*"; }
-        msg_error()   { echo "ERROR: $*" >&2; }
-        msg_warning() { echo "WARNING: $*"; }
-        msg_info()    { echo "INFO: $*"; }
+        step()    { echo "STEP: $*"; }
+        success() { echo "DONE: $*"; }
+        error()   { echo "ERROR: $*" >&2; }
+        warning() { echo "WARNING: $*"; }
+        info()    { echo "INFO: $*"; }
     fi
 fi
 
@@ -75,24 +75,24 @@ ensure_deps() {
         command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
     done
     if [ ${#missing[@]} -gt 0 ]; then
-        msg_error "Missing required commands: ${missing[*]}"
+        error "Missing required commands: ${missing[*]}"
         exit 1
     fi
 }
 
 install_lazygit() {
-    msg_step "Installing the latest lazygit"
+    step "Installing the latest lazygit"
     local version
     version="$(curl -fsSL "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | sed -nE 's/.*"tag_name":[[:space:]]*"v([^"]+)".*/\1/p' | head -n1)"
     if [ -z "${version:-}" ]; then
-        msg_error "Unable to determine latest lazygit version"
+        error "Unable to determine latest lazygit version"
         exit 1
     fi
     local os arch_token tarball
     os="$(plat_os)"
     arch_token="$(plat_arch_alias lazygit)"
     if [ -z "${arch_token:-}" ] || [ "$os" = "unknown" ]; then
-        msg_error "Unsupported platform for lazygit: $(plat_id)"
+        error "Unsupported platform for lazygit: $(plat_id)"
         exit 1
     fi
     tarball="lazygit_${version}_${os}_${arch_token}.tar.gz"
@@ -102,19 +102,19 @@ install_lazygit() {
     rm -f lazygit.tar.gz lazygit
     if "$BIN_DIR/lazygit" --version >/dev/null 2>&1; then
         local v="$("$BIN_DIR/lazygit" --version | cut -d ',' -f 4 | cut -d '=' -f 2)"
-        msg_success "lazygit version: ${v}"
+        success "lazygit version: ${v}"
     else
-        msg_error "Failed to install lazygit"
+        error "Failed to install lazygit"
         exit 1
     fi
 }
 
 install_difftastic() {
-    msg_step "Installing the latest difftastic (difft)"
+    step "Installing the latest difftastic (difft)"
     local triple asset
     triple="$(plat_rust_triple)"
     if [ -z "${triple:-}" ]; then
-        msg_error "Unsupported platform for difftastic: $(plat_id)"
+        error "Unsupported platform for difftastic: $(plat_id)"
         exit 1
     fi
     asset="difft-${triple}.tar.gz"
@@ -124,15 +124,15 @@ install_difftastic() {
     rm -f difft.tar.gz difft
     if "$BIN_DIR/difft" --version >/dev/null 2>&1; then
         local v="$("$BIN_DIR/difft" --version | head -n 1 | cut -d ' ' -f 2)"
-        msg_success "difft version: ${v}"
+        success "difft version: ${v}"
     else
-        msg_error "Failed to install difft"
+        error "Failed to install difft"
         exit 1
     fi
 }
 
 main() {
-    msg_info "Installing Git tooling to $BIN_DIR"
+    info "Installing Git tooling to $BIN_DIR"
     mkdir -p "$BIN_DIR"
     ensure_deps
     install_lazygit

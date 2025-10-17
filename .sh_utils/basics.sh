@@ -1,89 +1,14 @@
-#!/usr/env/bin bash
+#!/usr/bin/env bash
 
-################################################################################
-###################################### UX ######################################
-################################################################################
-
-DEBUG=false
-INDENT='    '
-BOLD="$(tput bold 2>/dev/null || printf '')"
-GREY="$(tput setaf 0 2>/dev/null || printf '')"
-UNDERLINE="$(tput smul 2>/dev/null || printf '')"
-RED="$(tput setaf 1 2>/dev/null || printf '')"
-GREEN="$(tput setaf 2 2>/dev/null || printf '')"
-YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
-BLUE="$(tput setaf 4 2>/dev/null || printf '')"
-MAGENTA="$(tput setaf 5 2>/dev/null || printf '')"
-RESET="$(tput sgr0 2>/dev/null || printf '')"
-
-# Detect Nerd Font support
-has_nerd_font() {
-    # Check if terminal supports UTF-8
-    if [[ "$LANG" != *"UTF-8"* ]] && [[ "$LC_ALL" != *"UTF-8"* ]]; then
-        return 1
+UI_LIB="$HOME/.sh_utils/lib/ui.sh"
+if [ -f "$UI_LIB" ]; then
+    # shellcheck source=lib/ui.sh
+    if ! source "$UI_LIB"; then
+        echo "error: failed to load ui library"
     fi
-
-    # Check for known terminals/fonts that support Nerd Fonts
-    if [[ -n "$KITTY_WINDOW_ID" ]] || \
-        [[ -n "$ALACRITTY_SOCKET" ]] || \
-        [[ -n "$WEZTERM_EXECUTABLE" ]] || \
-        [[ "$TERM_PROGRAM" == "iTerm.app" ]] || \
-        [[ "$TERM_PROGRAM" == "WezTerm" ]] || \
-        [[ "$TERM" == *"kitty"* ]] || \
-        [[ "$TERM" == *"alacritty"* ]]; then
-        return 0
-    fi
-
-    # Check if a Nerd Font is explicitly set
-    if [[ -n "$NERD_FONT" ]] || [[ "$USE_NERD_FONT" == "true" ]]; then
-        return 0
-    fi
-
-    return 1
-}
-
-# Set icons based on Nerd Font support
-if has_nerd_font; then
-    ICON_ERROR="󰅚 "
-    ICON_WARNING="󰀪 "
-    ICON_INFO="󰋽 "
-    ICON_DEBUG="󰃤 "
-    ICON_SUCCESS="󰄬 "
 else
-    ICON_ERROR=""
-    ICON_WARNING=""
-    ICON_INFO=""
-    ICON_DEBUG=""
-    ICON_SUCCESS=""
+    echo "error: UI library not found at $UI_LIB"
 fi
-
-error() {
-    printf '%s\n' "${BOLD}${RED}${ICON_ERROR}error:${RESET} $*" >&2
-}
-warning() {
-    printf '%s\n' "${BOLD}${YELLOW}${ICON_WARNING}warning:${RESET} $*"
-}
-info() {
-    printf '%s\n' "${BOLD}${BLUE}${ICON_INFO}info:${RESET} $*"
-}
-debug() {
-    local debug_enabled=false
-    for var in DEBUG debug VERBOSE verbose; do
-        eval "local value=\"\$$var\""
-        case "$value" in
-            [Tt][Rr][Uu][Ee]|1|[Oo][Nn]|[Yy][Ee][Ss])
-                debug_enabled=true
-                break
-                ;;
-        esac
-    done
-    if [ "$debug_enabled" = "true" ]; then
-        printf '%s\n' "${BOLD}${ICON_DEBUG}debug:${RESET} $*"
-    fi
-}
-completed() {
-    printf '%s\n' "${BOLD}${GREEN}${ICON_SUCCESS}success:${RESET} $*"
-}
 
 ################################################################################
 ################################ Handy Commands ################################
@@ -95,6 +20,7 @@ has() {
 
 safely_source() {
     if [[ -f "$1" ]]; then
+        # shellcheck disable=SC1090
         source "$1"
     else
         warning "$1 is not found."
@@ -146,36 +72,42 @@ export XDG_PREFIX_DIR="/usr/local"
 #   prepend_env PATH "$HOME/.local/bin" "/usr/local/bin"
 prepend_env() {
     if [[ -z "$1" || -z "$2" ]]; then
-        error "$0: At least 2 arguments are required.\nFor example:
-        ${INDENT}$0 PATH "$HOME/.local/bin" "/usr/local/bin"\n
-        "
-        return 1;
+        hint "$0: At least 2 arguments are required. Example: $0 PATH $HOME/.local/bin /usr/local/bin"
+        return 1
     fi
 
     local env_var_name="$1"
     shift
-    local args=("${@}")
 
-    if [[ -z "${(P)env_var_name}" ]]; then
+    # Read current value of the target env var (works in both bash and zsh)
+    local current
+    eval "current=\"\${$env_var_name-}\""
+
+    if [[ -z "$current" ]]; then
         debug "$0: $env_var_name doesn't exist previously."
-        export ${env_var_name}=""
     fi
 
-    for (( i = $#args; i > 0; i-- )); do
-        dir=${args[i]}
+    # Build the new value by prepending each arg in reverse order
+    local newval="$current"
+    local i dir
+    for (( i=$#; i>=1; i-- )); do
+        eval "dir=\${$i}"
         if [[ ! -d "$dir" ]]; then
             debug "$0: $dir doesn't exist."
         fi
-        if [[ ":${(P)env_var_name}:" != *":$dir:"* ]]; then
-            if [[ -z "${(P)env_var_name}" ]]; then
-                eval "export ${env_var_name}=\"$dir\""
+        if [[ ":$newval:" != *":$dir:"* ]]; then
+            if [[ -n "$newval" ]]; then
+                newval="$dir:$newval"
             else
-                eval "export ${env_var_name}=\"$dir:\${${env_var_name}}\""
+                newval="$dir"
             fi
         else
             debug "$0: $dir pre-exists in ${env_var_name} and nothing happens."
         fi
     done
+
+    # Export the updated value (works in both bash and zsh)
+    eval "export ${env_var_name}=\"\$newval\""
 }
 
 # append_env VAR_NAME DIR1 [DIR2 ...]
@@ -188,35 +120,41 @@ prepend_env() {
 #   append_env PATH "/usr/local/bin" "$HOME/.local/bin"
 append_env() {
     if [[ -z "$1" || -z "$2" ]]; then
-        error "$0: At least 2 arguments are required.\nFor example:
-        ${INDENT}$0 PATH "$HOME/.local/bin" "/usr/local/bin"
-        "
-        return 1;
+        hint "$0: At least 2 arguments are required. Example: $0 PATH /usr/local/bin $HOME/.local/bin"
+        return 1
     fi
 
     local env_var_name="$1"
     shift
-    local args=("${@}")
 
-    if [[ -z "${(P)env_var_name}" ]]; then
+    # Read current value of the target env var (works in both bash and zsh)
+    local current
+    eval "current=\"\${$env_var_name-}\""
+
+    if [[ -z "$current" ]]; then
         debug "$0: $env_var_name doesn't exist previously."
-        export ${env_var_name}=""
     fi
 
-    for dir in "${args[@]}"; do
+    local newval="$current"
+    local i dir
+    for (( i=1; i<=$#; i++ )); do
+        eval "dir=\${$i}"
         if [[ ! -d "$dir" ]]; then
             debug "$0: $dir doesn't exist."
         fi
-        if [[ ":${(P)env_var_name}:" != *":$dir:"* ]]; then
-            if [[ -z "${(P)env_var_name}" ]]; then
-                eval "export ${env_var_name}=\"$dir\""
+        if [[ ":$newval:" != *":$dir:"* ]]; then
+            if [[ -n "$newval" ]]; then
+                newval="$newval:$dir"
             else
-                eval "export ${env_var_name}=\"\${${env_var_name}}:$dir\""
+                newval="$dir"
             fi
         else
             warning "$0: $dir pre-exists in ${env_var_name} and nothing happens."
         fi
     done
+
+    # Export the updated value (works in both bash and zsh)
+    eval "export ${env_var_name}=\"\$newval\""
 }
 
 # remove_from_env VAR_NAME PATH_TO_REMOVE
@@ -228,28 +166,31 @@ append_env() {
 #   remove_from_env PATH "$HOME/.local/bin"
 remove_from_env() {
     if [[ -z "$1" || -z "$2" ]]; then
-        error "$0: 2 arguments are required.\nFor example:
-        ${INDENT}\$ $0 PATH "$HOME/.local/bin"
-        "
-        return 1;
+        hint "$0: Two arguments are required. Example: $0 PATH $HOME/.local/bin"
+        return 1
     fi
     local env_var_name="$1"
     local path_to_remove="$2"
-    local current_value="${(P)env_var_name}"
+    local current_value
+    eval "current_value=\"\${$env_var_name-}\""
 
     if [[ ! -d "$path_to_remove" ]]; then
         debug "$0: $path_to_remove doesn't exist."
     fi
 
-    current_value="${current_value//:$path_to_remove:/:}"
-    current_value="${current_value//:$path_to_remove/}"
-    current_value="${current_value//$path_to_remove:/}"
+    # Remove all occurrences as a distinct path segment
+    local padded=":$current_value:"
+    padded="${padded//:$path_to_remove:/:}"
+    # Trim leading/trailing colon
+    padded="${padded#:}"
+    padded="${padded%:}"
+    current_value="$padded"
 
-    if [[ -z $current_value ]]; then
+    if [[ -z "$current_value" ]]; then
         debug "$0: $1 is unset since it's an empty string now."
-        unset $env_var_name
+        eval "unset ${env_var_name}"
     else
-        eval "export ${env_var_name}=\"${current_value}\""
+        eval "export ${env_var_name}=\"\$current_value\""
     fi
 }
 
