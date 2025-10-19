@@ -188,6 +188,7 @@ setup_yazi() {
         warning "yazi not found."
     fi
 }
+setup_yazi
 
 ################################################################################
 ###################### fzf - A command-line fuzzy finder #######################
@@ -253,7 +254,7 @@ zvm_config() {
     ZVM_SYSTEM_CLIPBOARD_ENABLED=true
     # Solve the conflicts with fzf
     # ref: https://github.com/jeffreytse/zsh-vi-mode?tab=readme-ov-file#execute-extra-commands
-    zvm_after_init_commands+=('[ -f "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh ] && source "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh')
+    zvm_after_init_commands+=('setup_fzf')
 }
 source "$ZSH_CUSTOM/plugins/zsh-vi-mode/zsh-vi-mode.zsh"
 
@@ -263,18 +264,20 @@ plugins=(
     docker-compose
     dotenv
     fzf-tab  # fzf-tab needs to be loaded after compinit, but before plugins which will wrap widgets, such as zsh-autosuggestions or fast-syntax-highlighting
+    gh
     git
     git-auto-fetch
+    git-lfs
+    pre-commit
+    ssh
     web-search
     zsh-autosuggestions
+    zsh-ssh
     zsh-syntax-highlighting
     zsh-vi-mode
 )
 
 source $ZSH/oh-my-zsh.sh
-
-setup_fzf
-setup_yazi
 
 # nodejs
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"

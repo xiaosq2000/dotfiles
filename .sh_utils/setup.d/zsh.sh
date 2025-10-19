@@ -60,6 +60,7 @@ if [ -f "$ZSH/oh-my-zsh.sh" ]; then
     clone_or_update "https://github.com/zsh-users/zsh-autosuggestions.git" "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" "zsh-autosuggestions"
     clone_or_update "https://github.com/jeffreytse/zsh-vi-mode" "${ZSH_CUSTOM}/plugins/zsh-vi-mode" "zsh-vi-mode"
     clone_or_update "https://github.com/Aloxaf/fzf-tab" "${ZSH_CUSTOM}/plugins/fzf-tab" "fzf-tab"
+    clone_or_update "https://github.com/sunlei/zsh-ssh" "${ZSH_CUSTOM}/plugins/zsh-ssh" "zsh-ssh"
 else
     warning "oh-my-zsh not installed; skipping zsh plugin installation"
 fi
