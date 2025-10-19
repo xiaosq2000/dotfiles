@@ -33,7 +33,7 @@ fi
 
 # If tools are missing from PATH, install them globally via pixi.
 # Mapping: binary_name:package_name
-ensure_tools="zsh:zsh gh:gh btop:btop rg:ripgrep fastfetch:fastfetch fd:fd-find"
+ensure_tools="zsh:zsh git-lfs:git-lfs gh:gh btop:btop rg:ripgrep fastfetch:fastfetch fd:fd-find speedtest:speedtest-cli"
 
 missing_packages=""
 for item in $ensure_tools; do
