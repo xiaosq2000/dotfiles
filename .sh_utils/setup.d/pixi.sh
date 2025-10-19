@@ -33,7 +33,7 @@ fi
 
 # If tools are missing from PATH, install them globally via pixi.
 # Mapping: binary_name:package_name
-ensure_tools="starship:starship gh:gh btop:btop rg:ripgrep fastfetch:fastfetch nvitop:nvitop fd:fd-find"
+ensure_tools="zsh:zsh gh:gh btop:btop rg:ripgrep fastfetch:fastfetch fd:fd-find"
 
 missing_packages=""
 for item in $ensure_tools; do
@@ -41,7 +41,7 @@ for item in $ensure_tools; do
     pkg_name="${item#*:}"
     if ! command -v "$bin_name" >/dev/null 2>&1; then
         debug "Missing '$bin_name'; will install package '$pkg_name'"
-        info "to download $pkg_name"
+        info "downloading $pkg_name"
         case " $missing_packages " in
             *" $pkg_name "*) ;;
             *) missing_packages="$missing_packages $pkg_name" ;;
