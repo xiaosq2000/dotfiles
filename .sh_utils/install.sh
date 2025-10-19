@@ -97,7 +97,7 @@ confirm_installation() {
 # Function to prompt for binaries
 confirm_binary_installation() {
     echo ""
-    info "Optional: Install additional developer binaries (Neovim, Git tools, Node.js, uv, Aider, pixi, fzf, yazi, zsh, typefaces)."
+    info "Optional: Install additional developer binaries (Neovim, Git tools, Node.js, Rust, uv, pixi, Aider, fzf, yazi, zsh, typefaces)."
     echo ""
     read -p "Do you want to install additional binaries? (yes/no): " response
     case "$response" in
@@ -123,7 +123,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Header
-header "DOTFILES INSTALLER - https://github.com/xiaosq2000/dotfiles"
+header "dotfiles - https://github.com/xiaosq2000/dotfiles"
 
 # Prompt for confirmation in interactive mode (unless skipped)
 if [ "$INTERACTIVE" = true ] && [ "$SKIP_CONFIRMATION" = false ]; then
@@ -201,103 +201,6 @@ fi
 if [ "$INSTALL_BINARIES" = true ]; then
     step "Installing additional binaries"
 
-    # Check if neovim setup script exists
-    NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
-    if [ -f "$NEOVIM_SCRIPT" ]; then
-        info "running Neovim installation script..."
-
-        # Make script executable and run it
-        chmod +x "$NEOVIM_SCRIPT"
-        if bash "$NEOVIM_SCRIPT"; then
-            success "Neovim installed successfully"
-        else
-            warning "Neovim installation encountered an error"
-        fi
-    else
-        warning "Neovim setup script not found at $NEOVIM_SCRIPT"
-    fi
-
-    # Check if git tools setup script exists
-    GIT_SCRIPT="$HOME/.sh_utils/setup.d/git.sh"
-    if [ -f "$GIT_SCRIPT" ]; then
-        info "running Git tools installation script..."
-
-        # Make script executable and run it
-        chmod +x "$GIT_SCRIPT"
-        if bash "$GIT_SCRIPT"; then
-            success "Git tools (lazygit, difftastic) installed successfully"
-        else
-            warning "Git tools installation encountered an error"
-        fi
-    else
-        warning "Git tools setup script not found at $GIT_SCRIPT"
-    fi
-
-    # # Check if starship setup script exists
-    # STARSHIP_SCRIPT="$HOME/.sh_utils/setup.d/starship.sh"
-    # if [ -f "$STARSHIP_SCRIPT" ]; then
-    #     info "running Starship installation script..."
-    #
-    #     # Make script executable and run it
-    #     chmod +x "$STARSHIP_SCRIPT"
-    #     if bash "$STARSHIP_SCRIPT"; then
-    #         success "Starship installed successfully"
-    #     else
-    #         warning "Starship installation encountered an error"
-    #     fi
-    # else
-    #     warning "Starship setup script not found at $STARSHIP_SCRIPT"
-    # fi
-
-    # Check if node setup script exists
-    NODE_SCRIPT="$HOME/.sh_utils/setup.d/node.sh"
-    if [ -f "$NODE_SCRIPT" ]; then
-        info "running Node.js installation script..."
-
-        # Make script executable and run it
-        chmod +x "$NODE_SCRIPT"
-        if bash "$NODE_SCRIPT"; then
-            success "Node.js (nvm, node, tree-sitter) installed successfully"
-        else
-            warning "Node.js installation encountered an error"
-        fi
-    else
-        warning "Node.js setup script not found at $NODE_SCRIPT"
-    fi
-
-    # Check if uv setup script exists
-    UV_SCRIPT="$HOME/.sh_utils/setup.d/uv.sh"
-    if [ -f "$UV_SCRIPT" ]; then
-        info "running uv installation script..."
-
-        # Make script executable and run it
-        chmod +x "$UV_SCRIPT"
-        if bash "$UV_SCRIPT"; then
-            success "uv installed successfully"
-        else
-            warning "uv installation encountered an error"
-        fi
-    else
-        warning "uv setup script not found at $UV_SCRIPT"
-    fi
-
-    # Check if aider setup script exists
-    AIDER_SCRIPT="$HOME/.sh_utils/setup.d/aider.sh"
-    if [ -f "$AIDER_SCRIPT" ]; then
-        info "running Aider installation script..."
-
-        # Make script executable and run it
-        chmod +x "$AIDER_SCRIPT"
-        if bash "$AIDER_SCRIPT"; then
-            success "Aider installed successfully"
-        else
-            warning "Aider installation encountered an error"
-        fi
-    else
-        warning "Aider setup script not found at $AIDER_SCRIPT"
-    fi
-
-    # Check if pixi setup script exists
     PIXI_SCRIPT="$HOME/.sh_utils/setup.d/pixi.sh"
     if [ -f "$PIXI_SCRIPT" ]; then
         info "running pixi installation script..."
@@ -313,39 +216,51 @@ if [ "$INSTALL_BINARIES" = true ]; then
         warning "pixi setup script not found at $PIXI_SCRIPT"
     fi
 
-    # Check if fzf setup script exists
-    FZF_SCRIPT="$HOME/.sh_utils/setup.d/fzf.sh"
-    if [ -f "$FZF_SCRIPT" ]; then
-        info "running fzf installation script..."
+    UV_SCRIPT="$HOME/.sh_utils/setup.d/uv.sh"
+    if [ -f "$UV_SCRIPT" ]; then
+        info "running uv installation script..."
 
         # Make script executable and run it
-        chmod +x "$FZF_SCRIPT"
-        if bash "$FZF_SCRIPT"; then
-            success "fzf installed successfully"
+        chmod +x "$UV_SCRIPT"
+        if bash "$UV_SCRIPT"; then
+            success "uv installed successfully"
         else
-            warning "fzf installation encountered an error"
+            warning "uv installation encountered an error"
         fi
     else
-        warning "fzf setup script not found at $FZF_SCRIPT"
+        warning "uv setup script not found at $UV_SCRIPT"
     fi
 
-    # Check if yazi setup script exists
-    YAZI_SCRIPT="$HOME/.sh_utils/setup.d/yazi.sh"
-    if [ -f "$YAZI_SCRIPT" ]; then
-        info "running yazi installation script..."
+    RUST_SCRIPT="$HOME/.sh_utils/setup.d/rust.sh"
+    if [ -f "$RUST_SCRIPT" ]; then
+        info "running rust installation script..."
 
         # Make script executable and run it
-        chmod +x "$YAZI_SCRIPT"
-        if bash "$YAZI_SCRIPT"; then
-            success "yazi installed successfully"
+        chmod +x "$RUST_SCRIPT"
+        if bash "$RUST_SCRIPT"; then
+            success "rust installed successfully"
         else
-            warning "yazi installation encountered an error"
+            warning "rust installation encountered an error"
         fi
     else
-        warning "yazi setup script not found at $YAZI_SCRIPT"
+        warning "rust setup script not found at $RUST_SCRIPT"
     fi
 
-    # Check if zsh setup script exists
+    NODEJS_SCRIPT="$HOME/.sh_utils/setup.d/node.sh"
+    if [ -f "$NODEJS_SCRIPT" ]; then
+        info "running Node.js installation script..."
+
+        # Make script executable and run it
+        chmod +x "$NODEJS_SCRIPT"
+        if bash "$NODEJS_SCRIPT"; then
+            success "Node.js (nvm, node, tree-sitter) installed successfully"
+        else
+            warning "Node.js installation encountered an error"
+        fi
+    else
+        warning "Node.js setup script not found at $NODEJS_SCRIPT"
+    fi
+
     ZSH_SCRIPT="$HOME/.sh_utils/setup.d/zsh.sh"
     if [ -f "$ZSH_SCRIPT" ]; then
         info "running zsh installation script..."
@@ -361,7 +276,81 @@ if [ "$INSTALL_BINARIES" = true ]; then
         warning "zsh setup script not found at $ZSH_SCRIPT"
     fi
 
-    # Check if typefaces setup script exists
+    GIT_SCRIPT="$HOME/.sh_utils/setup.d/git.sh"
+    if [ -f "$GIT_SCRIPT" ]; then
+        info "running Git tools installation script..."
+
+        # Make script executable and run it
+        chmod +x "$GIT_SCRIPT"
+        if bash "$GIT_SCRIPT"; then
+            success "Git tools (lazygit, difftastic) installed successfully"
+        else
+            warning "Git tools installation encountered an error"
+        fi
+    else
+        warning "Git tools setup script not found at $GIT_SCRIPT"
+    fi
+
+    NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
+    if [ -f "$NEOVIM_SCRIPT" ]; then
+        info "running Neovim installation script..."
+
+        # Make script executable and run it
+        chmod +x "$NEOVIM_SCRIPT"
+        if bash "$NEOVIM_SCRIPT"; then
+            success "Neovim installed successfully"
+        else
+            warning "Neovim installation encountered an error"
+        fi
+    else
+        warning "Neovim setup script not found at $NEOVIM_SCRIPT"
+    fi
+
+    FZF_SCRIPT="$HOME/.sh_utils/setup.d/fzf.sh"
+    if [ -f "$FZF_SCRIPT" ]; then
+        info "running fzf installation script..."
+
+        # Make script executable and run it
+        chmod +x "$FZF_SCRIPT"
+        if bash "$FZF_SCRIPT"; then
+            success "fzf installed successfully"
+        else
+            warning "fzf installation encountered an error"
+        fi
+    else
+        warning "fzf setup script not found at $FZF_SCRIPT"
+    fi
+
+    YAZI_SCRIPT="$HOME/.sh_utils/setup.d/yazi.sh"
+    if [ -f "$YAZI_SCRIPT" ]; then
+        info "running yazi installation script..."
+
+        # Make script executable and run it
+        chmod +x "$YAZI_SCRIPT"
+        if bash "$YAZI_SCRIPT"; then
+            success "yazi installed successfully"
+        else
+            warning "yazi installation encountered an error"
+        fi
+    else
+        warning "yazi setup script not found at $YAZI_SCRIPT"
+    fi
+
+    AIDER_SCRIPT="$HOME/.sh_utils/setup.d/aider.sh"
+    if [ -f "$AIDER_SCRIPT" ]; then
+        info "running Aider installation script..."
+
+        # Make script executable and run it
+        chmod +x "$AIDER_SCRIPT"
+        if bash "$AIDER_SCRIPT"; then
+            success "Aider installed successfully"
+        else
+            warning "Aider installation encountered an error"
+        fi
+    else
+        warning "Aider setup script not found at $AIDER_SCRIPT"
+    fi
+
     TYPEFACES_SCRIPT="$HOME/.sh_utils/setup.d/typefaces.sh"
     if [ -f "$TYPEFACES_SCRIPT" ]; then
         info "running typefaces installation script..."

@@ -23,12 +23,12 @@ else
     fi
 fi
 
+header "zsh plugins"
+
 # Install zsh plugins within oh-my-zsh
 ZSH_CUSTOM=${ZSH_CUSTOM:-${ZSH}/custom}
 
 if [ -f "$ZSH/oh-my-zsh.sh" ]; then
-    step "installing zsh plugins"
-
     # Helper to clone or update a plugin repository
     clone_or_update() {
         local repo_url="$1"
@@ -58,11 +58,8 @@ if [ -f "$ZSH/oh-my-zsh.sh" ]; then
     clone_or_update "https://github.com/conda-incubator/conda-zsh-completion" "${ZSH_CUSTOM}/plugins/conda-zsh-completion" "conda-zsh-completion"
     clone_or_update "https://github.com/zsh-users/zsh-syntax-highlighting.git" "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
     clone_or_update "https://github.com/zsh-users/zsh-autosuggestions.git" "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" "zsh-autosuggestions"
-    # clone_or_update "https://github.com/Tarrasch/zsh-autoenv" "${ZSH_CUSTOM}/plugins/zsh-autoenv" "zsh-autoenv"
     clone_or_update "https://github.com/jeffreytse/zsh-vi-mode" "${ZSH_CUSTOM}/plugins/zsh-vi-mode" "zsh-vi-mode"
     clone_or_update "https://github.com/Aloxaf/fzf-tab" "${ZSH_CUSTOM}/plugins/fzf-tab" "fzf-tab"
 else
     warning "oh-my-zsh not installed; skipping zsh plugin installation"
 fi
-
-footer "oh-my-zsh - https://ohmyz.sh/"
