@@ -351,6 +351,21 @@ if [ "$INSTALL_BINARIES" = true ]; then
         warning "Aider setup script not found at $AIDER_SCRIPT"
     fi
 
+    LAZYDOCKER_SCRIPT="$HOME/.sh_utils/setup.d/lazydocker.sh"
+    if [ -f "$LAZYDOCKER_SCRIPT" ]; then
+        info "running lazydocker installation script..."
+
+        # Make script executable and run it
+        chmod +x "$LAZYDOCKER_SCRIPT"
+        if bash "$LAZYDOCKER_SCRIPT"; then
+            success "lazydocker installed successfully"
+        else
+            warning "lazydocker installation encountered an error"
+        fi
+    else
+        warning "lazydocker setup script not found at $LAZYDOCKER_SCRIPT"
+    fi
+
     TYPEFACES_SCRIPT="$HOME/.sh_utils/setup.d/typefaces.sh"
     if [ -f "$TYPEFACES_SCRIPT" ]; then
         info "running typefaces installation script..."

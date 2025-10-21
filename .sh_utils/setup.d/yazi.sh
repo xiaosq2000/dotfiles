@@ -3,19 +3,11 @@
 # Script to install yazi file manager
 # Uses the shared UI library for consistent output
 
-set -e # Exit immediately if a command exits with a non-zero status
-
-# Determine script directory and source UI library
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
+set -euo pipefail
 
 # Source the UI library
-if [ -f "$UI_LIB" ]; then
-    source "$UI_LIB"
-else
-    echo "ERROR: UI library not found at $UI_LIB"
-    exit 1
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/ui.sh"
 
 header "yazi - https://yazi-rs.github.io/"
 

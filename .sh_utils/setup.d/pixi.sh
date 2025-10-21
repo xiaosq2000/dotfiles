@@ -40,14 +40,13 @@ for item in $ensure_tools; do
     bin_name="${item%%:*}"
     pkg_name="${item#*:}"
     if ! command -v "$bin_name" >/dev/null 2>&1; then
-        debug "Missing '$bin_name'; will install package '$pkg_name'"
-        info "downloading $pkg_name"
+        info "'$bin_name' not found; package '$pkg_name' will be installed"
         case " $missing_packages " in
             *" $pkg_name "*) ;;
             *) missing_packages="$missing_packages $pkg_name" ;;
         esac
     else
-        debug "$bin_name is already installed at $(command -v "$bin_name")"
+        info "$bin_name is already installed at $(command -v "$bin_name")"
     fi
 done
 
