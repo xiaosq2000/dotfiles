@@ -62,6 +62,8 @@ done
 if [ -n "$missing_packages" ]; then
     pkgs="${missing_packages# }"
     # shellcheck disable=SC2086
-    set -- $pkgs
-    "$UV_BIN" tool install "$@"
+    for pkg in $pkgs; do
+        info "installing '$pkg' via uv"
+        "$UV_BIN" tool install "$pkg"
+    done
 fi
