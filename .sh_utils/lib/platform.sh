@@ -11,6 +11,15 @@ plat_os() {
     esac
 }
 
+# Title-cased OS token for GitHub release assets (e.g., Linux, Darwin)
+plat_os_title() {
+    case "$(plat_os)" in
+        linux) echo Linux ;;
+        darwin) echo Darwin ;;
+        *) echo ;;
+    esac
+}
+
 plat_arch() {
     case "$(uname -m 2>/dev/null || echo unknown)" in
         x86_64|amd64) echo amd64 ;;
@@ -30,19 +39,6 @@ plat_id_sep() {
     printf "%s%s%s\n" "$(plat_os)" "$sep" "$(plat_arch)"
 }
 
-# Arch aliases for project-specific asset naming
-# Usage: plat_arch_alias lazygit
-plat_arch_alias() {
-    local style="${1:-}"
-    case "$style:$(plat_arch)" in
-        lazygit:amd64) echo x86_64 ;;
-        lazygit:arm64) echo arm64 ;;
-        fzf:amd64) echo amd64 ;;
-        fzf:arm64) echo arm64 ;;
-        *) echo ;;
-    esac
-}
-
 # Rust target triple for difftastic
 plat_rust_triple() {
     case "$(plat_id)" in
@@ -50,6 +46,19 @@ plat_rust_triple() {
         linux-arm64) echo aarch64-unknown-linux-gnu ;;
         darwin-amd64) echo x86_64-apple-darwin ;;
         darwin-arm64) echo aarch64-apple-darwin ;;
+        *) echo ;;
+    esac
+}
+
+# Arch aliases for project-specific asset naming
+# Usage: plat_arch_alias lazygit
+plat_arch_alias() {
+    local style="${1:-}"
+    case "$style:$(plat_arch)" in
+        lazygit:amd64) echo x86_64 ;;
+        lazygit:arm64) echo arm64 ;;
+        lazydocker:amd64) echo x86_64 ;;
+        lazydocker:arm64) echo arm64 ;;
         *) echo ;;
     esac
 }

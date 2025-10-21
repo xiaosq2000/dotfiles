@@ -128,7 +128,7 @@ spinner() {
 # Display a step/action being performed
 step() {
     if [ "$INTERACTIVE" = true ]; then
-        printf '\n%s\n' "${BLUE}${ICON_STEP} ${BOLD}$*${RESET}"
+        printf '%s\n' "${BLUE}${ICON_STEP} ${BOLD}$*${RESET}"
     else
         printf 'step: %s\n' "$*"
     fi

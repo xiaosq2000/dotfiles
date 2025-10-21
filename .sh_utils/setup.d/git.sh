@@ -37,6 +37,7 @@ ensure_deps() {
 }
 
 install_lazygit() {
+    header "lazygit - https://github.com/jesseduffield/lazygit"
     step "installing the latest lazygit"
     local version
     version="$(curl -fsSL "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | sed -nE 's/.*"tag_name":[[:space:]]*"v([^"]+)".*/\1/p' | head -n1)"
@@ -67,6 +68,7 @@ install_lazygit() {
 }
 
 install_difftastic() {
+    header "difftastic - https://github.com/Wilfred/difftastic"
     step "installing the latest difftastic (difft)"
     local triple asset
     triple="$(plat_rust_triple)"
@@ -92,12 +94,8 @@ install_difftastic() {
 main() {
     mkdir -p "$BIN_DIR"
     ensure_deps
-    header "lazygit - https://github.com/jesseduffield/lazygit"
     install_lazygit
-    footer "lazygit - https://github.com/jesseduffield/lazygit"
-    header "difftastic - https://github.com/Wilfred/difftastic"
     install_difftastic
-    footer "difftastic - https://github.com/Wilfred/difftastic"
 }
 
 main "$@"
