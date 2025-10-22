@@ -23,7 +23,7 @@ FONTS_BASE="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
 
 ensure_deps() {
     local missing=()
-    for cmd in curl unzip fc-cache sed mktemp find; do
+    for cmd in curl unzip tar fc-cache sed mktemp find; do
         command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
     done
     if [ ${#missing[@]} -gt 0 ]; then
@@ -35,9 +35,20 @@ ensure_deps() {
 # Resolve the latest GitHub release tag for a repo ("owner/name")
 github_latest_tag() {
     local repo="${1:?repo is required (owner/name)}"
-    curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
-        | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' \
-        | head -n1
+    local tag=""
+    local json
+
+    # Try releases/latest (may not exist for some repos)
+    json="$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" 2>/dev/null || true)"
+    tag="$(printf '%s\n' "$json" | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -n1)"
+
+    if [ -z "$tag" ]; then
+        # Fallback to tags endpoint (returns most recent tags first)
+        json="$(curl -fsSL "https://api.github.com/repos/${repo}/tags?per_page=1" 2>/dev/null || true)"
+        tag="$(printf '%s\n' "$json" | sed -nE 's/.*"name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -n1)"
+    fi
+
+    printf '%s\n' "$tag"
 }
 
 # Load a typeface tuple into shell variables for a given id.
@@ -47,23 +58,63 @@ load_spec() {
 
     # shellcheck disable=SC2034  # variables intentionally exported to caller
     case "$req_id" in
-        "MapleMono-NF-CN-unhinted")
-            id="MapleMono-NF-CN-unhinted"
+        "maplemono-nf-cn-unhinted")
+            id="maplemono-nf-cn-unhinted"
             name="Maple Mono (NF CN unhinted)"
             exts="ttf"
             source="github"
             repo="subframe7536/maple-font"
-            tag="latest" # will resolve via GitHub API
+            tag="latest"
             asset="MapleMono-NF-CN-unhinted.zip"
             install_dir="$FONTS_BASE/$id"
             ;;
-        "tex-gyre-adventor")
-            id="tex-gyre-adventor"
-            name="TeX Gyre Adventor"
+        "fira")
+            id="fira"
+            name="Fira (Sans & Mono)"
+            exts="otf"
+            source="github-archive"
+            repo="mozilla/Fira"
+            tag="latest"
+            archive="zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "nerd-font-fira-code")
+            id="nerd-font-fira-code"
+            name="FiraCode Nerd Font"
+            exts="ttf"
+            source="github"
+            repo="ryanoasis/nerd-fonts"
+            tag="latest"
+            asset="FiraCode.zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "tex-gyre-pagella")
+            id="tex-gyre-pagella"
+            name="TeX Gyre Pagella"
             exts="otf"
             source="url"
-            url="https://www.gust.org.pl/projects/e-foundry/tex-gyre/adventor/qag2_501otf.zip"
+            url="https://www.gust.org.pl/projects/e-foundry/tex-gyre/pagella/qpl2_501otf.zip"
             version="2.501"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "source-sans")
+            id="source-sans"
+            name="Source Sans"
+            exts="otf"
+            source="github"
+            repo="adobe-fonts/source-sans"
+            tag="3.052R"  # TODO: support "latest" tag
+            asset="OTF-source-sans-3.052R.zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "source-serif")
+            id="source-serif"
+            name="Source Serif"
+            exts="otf"
+            source="github"
+            repo="adobe-fonts/source-serif"
+            tag="4.005R"  # TODO: support "latest" tag
+            asset="source-serif-4.005_Desktop.zip"
             install_dir="$FONTS_BASE/$id"
             ;;
         "source-han-sans-sc")
@@ -72,8 +123,38 @@ load_spec() {
             exts="otf"
             source="github"
             repo="adobe-fonts/source-han-sans"
-            tag="latest" # will resolve via GitHub API
+            tag="latest"
             asset="09_SourceHanSansSC.zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "source-han-serif-cn")
+            id="source-han-serif-cn"
+            name="Source Han Serif (CN)"
+            exts="otf"
+            source="github"
+            repo="adobe-fonts/source-han-serif"
+            tag="latest"
+            asset="14_SourceHanSerifCN.zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "apple-color-emoji")
+            id="apple-color-emoji"
+            name="Apple Color Emoji"
+            exts="ttf"
+            source="github"
+            repo="samuelngs/apple-emoji-linux"
+            tag="latest"
+            asset="AppleColorEmoji.ttf"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "noto-color-emoji")
+            id="noto-color-emoji"
+            name="Noto Color Emoji"
+            exts="ttf"
+            repo="googlefonts/noto-emoji"
+            source="github-archive"
+            tag="latest"
+            archive="zip"
             install_dir="$FONTS_BASE/$id"
             ;;
         *)
@@ -119,6 +200,20 @@ install_typeface() {
         fi
         # shellcheck disable=SC2154
         download_url="https://github.com/${repo}/releases/download/${ref}/${asset}"
+    elif [ "${source}" = "github-archive" ]; then
+        # shellcheck disable=SC2154
+        if [ "${tag}" = "latest" ]; then
+            ref="$(github_latest_tag "${repo}")"
+            if [ -z "${ref:-}" ]; then
+                error "unable to resolve latest tag for ${name} (${repo})"
+                return 1
+            fi
+        else
+            ref="${tag}"
+        fi
+        # shellcheck disable=SC2154
+        local arch="${archive:-zip}"
+        download_url="https://github.com/${repo}/archive/refs/tags/${ref}.${arch}"
     elif [ "${source}" = "url" ]; then
         # shellcheck disable=SC2154
         ref="${version:?version required for source=url}"
@@ -148,21 +243,53 @@ install_typeface() {
     step "downloading ${filename}"
     curl -fsSLo "$tmpd/$filename" "$download_url"
 
-    step "extracting ${filename}"
-    unzip -o -q "$tmpd/$filename" -d "$tmpd/extract"
-
-    # Copy only the allowed font extensions, flattened into dest
+    # Detect whether the asset is an archive or a direct font file
     local copied=0
-    # shellcheck disable=SC2154
-    for ext in $exts; do
-        while IFS= read -r -d '' f; do
-            cp -f "$f" "$dest/"
-            copied=1
-        done < <(find "$tmpd/extract" -type f -iname "*.${ext}" -print0)
-    done
+    case "${filename,,}" in
+        *.zip)
+            step "extracting ${filename}"
+            unzip -o -q "$tmpd/$filename" -d "$tmpd/extract"
+            # Copy only the allowed font extensions, flattened into dest
+            # shellcheck disable=SC2154
+            for ext in $exts; do
+                while IFS= read -r -d '' f; do
+                    cp -f "$f" "$dest/"
+                    copied=1
+                done < <(find "$tmpd/extract" -type f -iname "*.${ext}" -print0)
+            done
+            ;;
+        *.tar.gz|*.tgz)
+            step "extracting ${filename}"
+            mkdir -p "$tmpd/extract"
+            tar -xzf "$tmpd/$filename" -C "$tmpd/extract"
+            # Copy only the allowed font extensions, flattened into dest
+            # shellcheck disable=SC2154
+            for ext in $exts; do
+                while IFS= read -r -d '' f; do
+                    cp -f "$f" "$dest/"
+                    copied=1
+                done < <(find "$tmpd/extract" -type f -iname "*.${ext}" -print0)
+            done
+            ;;
+        *.ttf|*.otf|*.ttc|*.otc)
+            # If the direct-asset extension is allowed by this spec, copy it
+            # shellcheck disable=SC2154
+            for ext in $exts; do
+                if [[ "${filename,,}" == *".${ext}" ]]; then
+                    cp -f "$tmpd/$filename" "$dest/"
+                    copied=1
+                    break
+                fi
+            done
+            ;;
+        *)
+            error "unsupported asset type for ${name}: ${filename}"
+            return 1
+            ;;
+    esac
 
     if [ "$copied" -eq 0 ]; then
-        error "no .ttf/.otf files found for ${name} after extraction"
+        error "no font files found for ${name} (expected: $exts)"
         return 1
     fi
 
@@ -182,9 +309,16 @@ main() {
 
     # Registry of typeface ids to install
     local FONT_IDS=(
-        "MapleMono-NF-CN-unhinted"
-        "tex-gyre-adventor"
+        "maplemono-nf-cn-unhinted"
+        "fira"
+        "nerd-font-fira-code"
+        "tex-gyre-pagella"
+        "source-sans"
+        "source-serif"
         "source-han-sans-sc"
+        "source-han-serif-cn"
+        "apple-color-emoji"
+        "noto-color-emoji"
     )
 
     for font_id in "${FONT_IDS[@]}"; do
@@ -193,8 +327,6 @@ main() {
 
     step "refreshing font cache"
     fc-cache -f "$FONTS_BASE" >/dev/null 2>&1 || true
-
-    footer "typefaces installation"
 }
 
 main "$@"
