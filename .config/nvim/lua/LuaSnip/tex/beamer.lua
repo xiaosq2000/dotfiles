@@ -30,9 +30,7 @@ return {
 		fmta(
 			[[
 \begin{frame}[c]
-    \mode<<presentation>>{\vfill}
     <>
-    \mode<<presentation>>{\vfill}
 \end{frame}
     ]],
 			{ i(1, "some content") }

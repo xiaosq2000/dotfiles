@@ -19,6 +19,7 @@ set -e # Exit immediately if a command exits with a non-zero status
 # Parse command-line arguments
 SKIP_CONFIRMATION=false
 INSTALL_BINARIES=false
+INSTALL_TYPEFACES=false
 for arg in "$@"; do
     case $arg in
         -y|--yes)
@@ -29,12 +30,17 @@ for arg in "$@"; do
             INSTALL_BINARIES=true
             shift
             ;;
+        --with-typefaces)
+            INSTALL_TYPEFACES=true
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
             echo "  -y, --yes           Skip confirmation prompt and proceed with installation"
             echo "  --with-binaries     Install additional binaries (will prompt in interactive mode if not specified)"
+            echo "  --with-typefaces    Install typefaces"
             echo "  -h, --help          Show this help message"
             echo ""
             echo "When using with curl, pass arguments like this:"
@@ -43,6 +49,7 @@ for arg in "$@"; do
             echo "Examples:"
             echo "  curl -fsSL \"URL\" | bash -s -- -y"
             echo "  curl -fsSL \"URL\" | bash -s -- -y --with-binaries"
+            echo "  curl -fsSL \"URL\" | bash -s -- -y --with-typefaces"
             exit 0
             ;;
         *)
@@ -97,7 +104,7 @@ confirm_installation() {
 # Function to prompt for binaries
 confirm_binary_installation() {
     echo ""
-    info "Optional: Install additional developer binaries (Neovim, Git tools, Node.js, Rust, uv, pixi, Aider, fzf, yazi, zsh, typefaces)."
+    info "Optional: Install additional developer binaries (Neovim, Git tools, Node.js, Rust, uv, pixi, Aider, fzf, yazi, zsh)."
     echo ""
     read -p "Do you want to install additional binaries? (yes/no): " response
     case "$response" in
@@ -107,6 +114,24 @@ confirm_binary_installation() {
             ;;
         *)
             info "You chose not to install additional binaries."
+            return 1
+            ;;
+    esac
+}
+
+# Function to prompt for typefaces
+confirm_typefaces_installation() {
+    echo ""
+    info "Optional: Install typefaces (e.g., Maple Mono and others)."
+    echo ""
+    read -p "Do you want to install typefaces? (yes/no): " response
+    case "$response" in
+        [yY][eE][sS]|[yY])
+            success "Will install typefaces..."
+            return 0
+            ;;
+        *)
+            info "You chose not to install typefaces."
             return 1
             ;;
     esac
@@ -139,6 +164,16 @@ if [ "$INTERACTIVE" = true ] && [ "$INSTALL_BINARIES" = false ]; then
         info "Binary installation enabled via interactive prompt"
     else
         info "Binary installation skipped via interactive prompt"
+    fi
+fi
+
+# Prompt for typefaces installation in interactive mode (if not specified)
+if [ "$INTERACTIVE" = true ] && [ "$INSTALL_TYPEFACES" = false ]; then
+    if confirm_typefaces_installation; then
+        INSTALL_TYPEFACES=true
+        info "Typeface installation enabled via interactive prompt"
+    else
+        info "Typeface installation skipped via interactive prompt"
     fi
 fi
 
@@ -366,6 +401,16 @@ if [ "$INSTALL_BINARIES" = true ]; then
         warning "lazydocker setup script not found at $LAZYDOCKER_SCRIPT"
     fi
 
+    # (typefaces installation handled separately)
+else
+    if [ "$INTERACTIVE" != true ] && [ "$INSTALL_TYPEFACES" = false ]; then
+        info "skipping binary installation (use --with-binaries to install)"
+    fi
+fi
+
+# Install typefaces if requested
+if [ "$INSTALL_TYPEFACES" = true ]; then
+    step "Installing typefaces"
     TYPEFACES_SCRIPT="$HOME/.sh_utils/setup.d/typefaces.sh"
     if [ -f "$TYPEFACES_SCRIPT" ]; then
         info "running typefaces installation script..."
@@ -379,10 +424,6 @@ if [ "$INSTALL_BINARIES" = true ]; then
         fi
     else
         warning "typefaces setup script not found at $TYPEFACES_SCRIPT"
-    fi
-else
-    if [ "$INTERACTIVE" != true ]; then
-        info "skipping binary installation (use --with-binaries to install)"
     fi
 fi
 
