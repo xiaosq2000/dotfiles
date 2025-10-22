@@ -71,6 +71,7 @@ if _has_nerd_font; then
     ICON_SUCCESS="󰄬 "
     ICON_HINT="󰛿 "
     ICON_STEP="󰛿 "
+    ICON_ROS=" "
 else
     ICON_ERROR=""
     ICON_WARNING=""
@@ -79,6 +80,7 @@ else
     ICON_SUCCESS=""
     ICON_HINT=""
     ICON_STEP=""
+    ICON_ROS=""
 fi
 
 # Core message helpers (prefer snippet style)
@@ -103,6 +105,7 @@ debug() {
         printf '%s\n' "${BOLD}${DIM}${UNDERLINE}${ICON_DEBUG}debug:${RESET} $*"
     fi
 }
+msg() { printf '%s\n' "$*"; }
 
 # Simple spinner for long-running operations
 spinner() {

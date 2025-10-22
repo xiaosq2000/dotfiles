@@ -149,7 +149,7 @@ append_env() {
                 newval="$dir"
             fi
         else
-            warning "$0: $dir pre-exists in ${env_var_name} and nothing happens."
+            debug "$0: $dir pre-exists in ${env_var_name} and nothing happens."
         fi
     done
 
