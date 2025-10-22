@@ -93,28 +93,6 @@ software_overview() {
     exec 2>/dev/tty
 }
 
-check_port_availability() {
-    if [[ -z $1 ]]; then
-        error "An argument, the port number, should be given."
-        return 1
-    fi
-    if [[ $(sudo ufw status | head -n 1 | awk '{ print $2;}') == "active" ]]; then
-        info "ufw is active."
-        if [[ -z $(sudo ufw status | grep "$1") ]]; then
-            warning "port $1 is not specified in the firewall rules and may not be allowed to use."
-        else
-            sudo ufw status | grep "$1"
-        fi
-    else
-        info "ufw is inactive."
-    fi
-    if [[ -z $(sudo lsof -i:$1) ]]; then
-        info "port $1 is not in use."
-    else
-        error "port $1 is ${BOLD}unavaiable${RESET}."
-    fi
-}
-
 hardware_overview() {
     local WIDTH=32
     hardware_overview_helper() {
@@ -142,45 +120,4 @@ hardware_overview() {
     fi
     echo
     unfunction hardware_overview_helper
-}
-
-check_git_config() {
-    if has "git"; then
-        if [[ ! -f $HOME/.gitconfig ]]; then
-            touch $HOME/.gitconfig
-        fi
-        if [[ ! $(cat $HOME/.gitconfig | grep 'email') ]]; then
-            warning "You are recommended to execute:
-
-    ${INDENT}git config --global user.email \"<YOUR_EMAIL>\"
-            "
-        fi
-        if [[ ! $(cat $HOME/.gitconfig | grep 'name') ]]; then
-            warning "You are recommended to execute:
-
-    ${INDENT}git config --global user.name \"<YOUR_NAME>\"
-            "
-        fi
-    fi
-}
-
-check_x11_wayland() {
-    if [[ "$XDG_SESSION_TYPE" == "wayland" ]]; then
-        debug "Using Wayland."
-        # reference: https://unix.stackexchange.com/a/359244/523957
-        __xhost_command="xhost +SI:localuser:$(id -un) >/dev/null 2>&1"
-        debug "Executes '$__xhost_command'"
-        eval "$__xhost_command"
-    fi
-}
-
-display_typefaces() {
-    # ref: https://stackoverflow.com/a/49313231/11393911
-    fc-list -f "%{family}\n" | grep -i "$1" | sort -t: -u -k1,1
-    if [ -z $1 ]; then
-        info "A hint of the typeface family name could be given as an argument.
-        For example:
-            $0 fira
-        "
-    fi
 }
