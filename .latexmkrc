@@ -11,6 +11,20 @@
 # 3: Use dvipdf to convert DVI to PDF
 # 4: Use lualatex
 # 5: Use xelatex
+
+# ----- PATH adjustments for latexminted wrapper -----
+BEGIN {
+    require Cwd;
+    require File::Basename;
+    require Config;
+    my $rcdir = File::Basename::dirname(Cwd::abs_path(__FILE__));
+    my $scripts = $rcdir . '/scripts';
+    if (-d $scripts) {
+        # Prepend the scripts dir so our latexminted wrapper takes precedence on PATH
+        $ENV{PATH} = $scripts . $Config::Config{path_sep} . $ENV{PATH};
+    }
+}
+
 $pdf_mode = 4;
 
 # ----- Engine Configuration -----
@@ -25,31 +39,19 @@ $aux_dir = 'build';
 $bibtex_use = 2;
 
 # ----- Clean-up Configuration -----
-$clean_ext = '
-    # Standard LaTeX auxiliary files
-    aux bbl bcf fdb_latexmk fls log run tdo
+# Standard LaTeX auxiliary files
+$clean_ext = 'aux bbl bcf fdb_latexmk fls log run tdo ' .
+             'lof lot lol toc ' .
+             'nav snm vrb ' .
+             'run.xml %R-blx.bib ' .
+             'synctex.gz synctex.gz(busy) ' .
+             '*~ *.bak *.backup';
 
-    # Table of contents, list of figures, etc.
-    lof lot lol toc
+# Minted files (directory and its contents)
+$clean_ext .= ' _minted-%R/* _minted-%R';
 
-    # Beamer presentation files
-    nav snm vrb
-
-    # Bibliography auxiliary files
-    run.xml %R-blx.bib
-
-    # SyncTeX files
-    synctex.gz synctex.gz(busy)
-
-    # Engine-specific auxiliary files
-    xelatex*.fls lualatex*.fls
-
-    # Temporary and backup files
-    *~ *.bak *.backup
-
-    # Minted files
-    $clean_ext .= " _minted-%R/* _minted-%R";
-';
+# LuaLaTeX scratch directories like "luatex.tQ5OTp"
+$clean_ext .= ' luatex.*';
 
 $clean_full_ext = $clean_ext;
 
@@ -63,4 +65,4 @@ $force_mode = 1;
 $show_time = 1;
 
 # ----- Advanced Settings -----
-$max_repeat = 5;
+$max_repeat = 3;

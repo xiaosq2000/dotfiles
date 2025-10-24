@@ -19,22 +19,22 @@ local get_visual = function(args, parent)
 end
 
 return {
+	s(
+		{ trig = "frm", dscr = "frame" },
+		fmta(
+			[[
+\begin{frame}
+    <>
+\end{frame}
+    ]],
+			{ i(1, "foo") }
+		)
+	),
 	s({ trig = "at", dscr = "alert" }, fmta("\\alert{<>}", { d(1, get_visual) })),
 	s({ trig = "uc", dscr = "uncover" }, fmta("\\uncover<<<>>>{<>}", { i(1, "+(1)-"), d(2, get_visual) })),
 	s(
 		{ trig = "md", dscr = "mode" },
 		fmta("\\mode<<<>>>{<>}", { c(1, { t({ "presentation" }), t({ "article" }) }), d(2, get_visual) })
-	),
-	s(
-		{ trig = "frm", dscr = "frame" },
-		fmta(
-			[[
-\begin{frame}[c]
-    <>
-\end{frame}
-    ]],
-			{ i(1, "some content") }
-		)
 	),
 	s({ trig = "pv" }, fmta("\\mode<<presentation>>{\\vfill}", {})),
 }
