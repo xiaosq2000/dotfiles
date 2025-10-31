@@ -183,6 +183,9 @@ shopt -s cdspell 2>/dev/null || true
 # History timestamp similar to zsh's HIST_STAMPS
 HISTTIMEFORMAT="%d/%m/%Y %T "
 
+# CUDA
+type prepend_env >/dev/null 2>&1 && prepend_env PATH "/usr/local/cuda/bin"
+
 # Tool completions
 has pixi && eval "$(pixi completion --shell bash)"
 has gh && eval "$(gh completion -s bash)"
