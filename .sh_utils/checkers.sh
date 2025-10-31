@@ -1,4 +1,29 @@
-#!/usr/env/bin bash
+#!/usr/bin/env bash
+
+# Cross-shell compatibility shims (works for bash and zsh)
+# Provide 'has' if not already defined
+if ! command -v has >/dev/null 2>&1; then
+    has() { command -v "$1" >/dev/null 2>&1; }
+fi
+# Provide 'unfunction' for bash (maps to unset -f)
+if ! command -v unfunction >/dev/null 2>&1; then
+    unfunction() { unset -f "$@" 2>/dev/null || true; }
+fi
+# Provide minimal UI fallbacks if ui.sh wasn't sourced
+if ! command -v error >/dev/null 2>&1; then
+    error() { printf 'error: %s\n' "$*" >&2; }
+fi
+if ! command -v warning >/dev/null 2>&1; then
+    warning() { printf 'warning: %s\n' "$*"; }
+fi
+if ! command -v info >/dev/null 2>&1; then
+    info() { printf '%s\n' "$*"; }
+fi
+if ! command -v debug >/dev/null 2>&1; then
+    debug() { :; }
+fi
+# Safe default for INDENT if unset
+: "${INDENT:=  }"
 display_xdg_envs() {
     echo "${BLUE}XDG Environment Variables:${RESET}"
     echo "${INDENT}XDG_DATA_HOME=$XDG_DATA_HOME"
@@ -14,7 +39,8 @@ display_xdg_envs() {
 }
 
 software_overview() {
-    exec 2>/dev/null
+    # Silence stderr locally and restore it afterwards (safe when sourced)
+    exec {__saved_stderr}>&2 2>/dev/null
     echo "${BLUE}Software Overview: ${RESET}"
     local WIDTH=16
     software_overview_helper() {
@@ -35,11 +61,16 @@ software_overview() {
         fi
         local unaliased_name
         local print_only_not_found="false"
-        if [[ $(which $cli_name | grep 'alias') ]]; then
-            unaliased_name="$(which $cli_name | awk '{ print $4; }')"
-        else
-            unaliased_name="$cli_name"
-        fi
+        # Resolve aliases portably across bash and zsh
+        case "$(type -t "$cli_name" 2>/dev/null)" in
+            alias)
+                # Extract the first word of the alias expansion as the command
+                unaliased_name=$(alias "$cli_name" 2>/dev/null | sed -E "s/^alias $cli_name='(.*)'$/\1/" | awk '{print $1}')
+                ;;
+            *)
+                unaliased_name="$cli_name"
+                ;;
+        esac
         if has "$unaliased_name"; then
             if [[ ! $print_only_not_found == "true" ]]; then
                 printf "$format" "$unaliased_name" "$version"
@@ -89,35 +120,11 @@ software_overview() {
         software_overview_helper "${INDENT}${GREEN}%-${WIDTH}s${RESET}%s\n" "ROS" "${ROS_DISTRO}"
     fi
     echo
-    unfunction software_overview_helper
-    exec 2>/dev/tty
-}
-
-hardware_overview() {
-    local WIDTH=32
-    hardware_overview_helper() {
-        printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "$1" "$2"
-    }
-    echo "${BLUE}Hardware Overview:${RESET}"
-    hardware_overview_helper "CPU Device:" "$(cat /proc/cpuinfo | grep ^'model name' | sed -n '1p' | grep -oP '(?<=: ).*')"
-    hardware_overview_helper "CPU Processing Units:" "$(nproc --all)"
-    if [ -f "/proc/driver/nvidia/version" ]; then
-        if [ ! -x "$(command -v nvidia-smi)" ]; then
-            error "command \"nvidia-smi\" not found."
-        else
-            hardware_overview_helper "NVIDIA GPU Device:" "$(nvidia-smi -L | sed 's/([^)]*)//g')"
-        fi
-        hardware_overview_helper "NVIDIA Driver Version:" "$(grep -oP 'NVRM version:\s+NVIDIA UNIX\s+\S+\s+Kernel Module\s+\K[0-9.]+' /proc/driver/nvidia/version)"
-    else
-        error "NVIDIA Driver not found."
+    # Clean up helper regardless of shell
+    if [ "$(type -t software_overview_helper 2>/dev/null)" = "function" ]; then
+        unset -f software_overview_helper 2>/dev/null || unfunction software_overview_helper 2>/dev/null || true
     fi
-    hardware_overview_helper "Available Memory:" "$(free -mh | grep ^Mem | awk '{ print $7; }')/$(free -mh | grep ^Mem | awk '{ print $2; }')"
-    if [[ ! $(uname -r | grep 'WSL2') && ! -f /.dockerenv ]]; then
-        hardware_overview_helper "Available Storage:" "$(df -h --total | grep --color=never 'total' | awk '{ print $4 }')/$(df -h --total | grep --color=never 'total' | awk '{ print $2 }')"
-    else
-        # the results of 'total' field will be doubled if inside a docker container.
-        hardware_overview_helper "Available Storage:" "$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $4 }')/$(df -h --total | grep --color=never '/etc/hosts' | awk '{ print $2 }')"
-    fi
-    echo
-    unfunction hardware_overview_helper
+    # Restore stderr
+    exec 2>&${__saved_stderr}
+    exec {__saved_stderr}>&-
 }
