@@ -78,6 +78,26 @@ load_spec() {
             archive="zip"
             install_dir="$FONTS_BASE/$id"
             ;;
+        "mona-sans")
+            id="mona-sans"
+            name="Mona Sans"
+            exts="otf"
+            source="github"
+            repo="github/mona-sans"
+            tag="latest"
+            asset="MonaSans.zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "hubot-sans")
+            id="hubot-sans"
+            name="Hubot Sans"
+            exts="otf"
+            source="github"
+            repo="github/hubot-sans"
+            tag="latest"
+            asset="Hubot-Sans.zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
         "nerd-font-fira-code")
             id="nerd-font-fira-code"
             name="FiraCode Nerd Font"
@@ -311,6 +331,8 @@ main() {
     local FONT_IDS=(
         "maplemono-nf-cn-unhinted"
         "fira"
+        "mona-sans"
+        "hubot-sans"
         "nerd-font-fira-code"
         "tex-gyre-pagella"
         "source-sans"
