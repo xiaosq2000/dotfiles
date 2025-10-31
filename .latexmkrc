@@ -65,4 +65,4 @@ $force_mode = 1;
 $show_time = 1;
 
 # ----- Advanced Settings -----
-$max_repeat = 3;
+$max_repeat = 5;
