@@ -42,7 +42,7 @@ info "uv is available at $UV_BIN"
 
 # If tools are missing from PATH, install them globally via uv.
 # Mapping: binary_name:package_name
-ensure_tools="pre-commit:pre-commit nvitop:nvitop"
+ensure_tools="pre-commit:pre-commit nvitop:nvitop hf:huggingface_hub"
 
 missing_packages=""
 for item in $ensure_tools; do
