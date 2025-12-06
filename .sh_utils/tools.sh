@@ -670,8 +670,7 @@ EOF
         output="${base}-dark.${ext}"
     fi
 
-    convert $input -colorspace HSL -channel L -negate -colorspace S
-RGB $output
+    convert $input -colorspace HSL -channel L -negate -colorspace SRGB $output
     return $?
 }
 
