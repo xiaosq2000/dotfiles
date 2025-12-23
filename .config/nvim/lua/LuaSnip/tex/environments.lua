@@ -146,6 +146,7 @@ return {
 		fmta(
 			[[
     \begin{minipage}[<>]{<>\linewidth}
+        \centering
         <>
     \end{minipage}
     ]],
