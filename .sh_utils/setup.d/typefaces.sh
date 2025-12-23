@@ -117,6 +117,16 @@ load_spec() {
             version="2.501"
             install_dir="$FONTS_BASE/$id"
             ;;
+        "libertinus")
+            id="libertinus"
+            name="Libertinus"
+            exts="ttf"
+            source="github"
+            repo="alerque/libertinus"
+            tag="v7.051"  # TODO: support "latest" tag
+            asset="Libertinus-7.051.zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
         "source-sans")
             id="source-sans"
             name="Source Sans"
@@ -335,6 +345,7 @@ main() {
         "hubot-sans"
         "nerd-font-fira-code"
         "tex-gyre-pagella"
+        "libertinus"
         "source-sans"
         "source-serif"
         "source-han-sans-sc"

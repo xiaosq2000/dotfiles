@@ -625,6 +625,50 @@ EOF
 	fi
 }
 
+jpeg2png() {
+	if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -ne 1 ]; then
+		cat << 'EOF'
+Usage: jpeg2png <image-path-w/o-ext>
+
+Convert JPEG to PNG using ImageMagick convert.
+
+Arguments:
+  <image-path-w/o-ext>  Base name of the file (e.g., "photo" for "photo.jpeg")
+
+Requirements:
+  - ImageMagick's convert must be installed
+
+Example:
+  jpeg2png photo
+  # Converts photo.jpeg to photo.png
+EOF
+		[ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
+	fi
+
+	if has convert; then
+		local input="$1.jpeg"
+		local output="$1.png"
+
+		if [ ! -f "$input" ]; then
+		e	error "Input file '$input' not found"
+			return 1
+		fi
+
+		convert "$input" "$output"
+
+		if [ $? -eq 0 ]; then
+			completed "Successfully converted $input to $output"
+			return 0
+		else
+			error "Conversion failed"
+			return 1
+		fi
+	else
+		error "convert not found."
+		return 1
+	fi
+}
+
 invert_color() {
     if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 1 ] || [ $# -gt 2 ]; then
         cat << 'EOF'
