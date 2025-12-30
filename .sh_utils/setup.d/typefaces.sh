@@ -120,7 +120,7 @@ load_spec() {
         "libertinus")
             id="libertinus"
             name="Libertinus"
-            exts="ttf"
+            exts="otf"
             source="github"
             repo="alerque/libertinus"
             tag="v7.051"  # TODO: support "latest" tag
@@ -341,8 +341,8 @@ main() {
     local FONT_IDS=(
         "maplemono-nf-cn-unhinted"
         "fira"
-        "mona-sans"
-        "hubot-sans"
+        # "mona-sans"
+        # "hubot-sans"
         "nerd-font-fira-code"
         "tex-gyre-pagella"
         "libertinus"
