@@ -1,3 +1,4 @@
 git:
+  # https://github.com/jesseduffield/lazygit/blob/master/docs/Custom_Pagers.md
   pagers:
-    - externalDiffCommand: difft --color=always --display=inline --syntax-highlight=on --tab-width=2
+    - useExternalDiffGitConfig: true

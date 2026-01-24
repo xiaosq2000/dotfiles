@@ -85,6 +85,8 @@ install_difftastic() {
         local v
         v="$("$BIN_DIR/difft" --version | head -n 1 | cut -d ' ' -f 2)"
         success "difft version: ${v}"
+        git config --global diff.external "difft"
+        success "use difft as your default diff tool"
     else
         error "failed to install difft"
         exit 1
