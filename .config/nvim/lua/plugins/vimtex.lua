@@ -14,7 +14,7 @@ return {
             ["executable"] = "latexmk",
             ["hooks"] = "",
             ["options"] = {
-                "-pdflatex=lualatex",
+                -- "-pdflatex=lualatex",
                 "-shell-escape",
                 "-verbose",
                 "-file-line-error",
