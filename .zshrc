@@ -306,6 +306,9 @@ tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
 # uv shell completion
 if has uv; then eval "$(uv generate-shell-completion zsh)"; fi
 
+# codex shell completion
+if has codex; then eval "$(codex completion zsh)"; fi
+
 check_git_config() {
     if has "git"; then
         if [[ ! -f $HOME/.gitconfig ]]; then
