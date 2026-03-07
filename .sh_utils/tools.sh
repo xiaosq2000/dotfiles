@@ -1011,7 +1011,7 @@ EOF
     fi
 
     info "Trimming video from $start for $duration..."
-    if ffmpeg -i "$input" -ss "$start" -t "$duration" -c copy "$output" 2>&1 | grep -q "error"; then
+    if ffmpeg -ss "$start" -i "$input" -t "$duration" -c copy -avoid_negative_ts make_zero "$output" 2>&1 | grep -q "error"; then
         error "Trim failed"
         return 1
     fi
