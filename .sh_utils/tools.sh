@@ -1078,6 +1078,132 @@ EOF
     completed "Created: $output"
 }
 
+insert_image() {
+    if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 3 ]; then
+        cat << 'EOF'
+Usage: insert_image <video> <image> <duration> [position] [output]
+
+Insert a still image (displayed for N seconds) before or after a video clip.
+
+Arguments:
+  <video>      Path to input video file
+  <image>      Path to image file (png, jpg, etc.)
+  <duration>   How long to display the image (seconds)
+  [position]   "before" (default) or "after"
+  [output]     Path to output file (default: <video>_with_image.<ext>)
+
+Processing:
+  - Probes original video for resolution, fps, and audio presence
+  - Generates a temp video from the image matching those properties
+  - Concatenates using the concat demuxer (no re-encoding of main video)
+  - Handles aspect ratio mismatches by scaling and padding the image
+
+Requirements:
+  - ffmpeg and ffprobe must be installed
+
+Examples:
+  insert_image video.mp4 logo.png 3
+  # Shows logo.png for 3 seconds, then plays video.mp4
+
+  insert_image video.mp4 title.jpg 5 after result.mp4
+  # Plays video.mp4, then shows title.jpg for 5 seconds
+EOF
+        [ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
+    fi
+
+    if ! has ffmpeg || ! has ffprobe; then
+        error "ffmpeg and ffprobe are required"
+        return 1
+    fi
+
+    local video="$1"
+    local image="$2"
+    local duration="$3"
+    local position="${4:-before}"
+    local output="${5:-${video%.*}_with_image.${video##*.}}"
+
+    if [ ! -f "$video" ]; then
+        error "Video file not found: $video"
+        return 1
+    fi
+
+    if [ ! -f "$image" ]; then
+        error "Image file not found: $image"
+        return 1
+    fi
+
+    if [ "$position" != "before" ] && [ "$position" != "after" ]; then
+        error "Position must be 'before' or 'after', got: $position"
+        return 1
+    fi
+
+    # Probe the original video for properties
+    local width height fps has_audio
+    width=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$video")
+    height=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$video")
+    fps=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "$video")
+    has_audio=$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_type -of csv=p=0 "$video" 2>/dev/null)
+
+    if [ -z "$width" ] || [ -z "$height" ] || [ -z "$fps" ]; then
+        error "Failed to probe video properties"
+        return 1
+    fi
+
+    # Create temp directory and ensure cleanup
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    trap "rm -rf '$tmpdir'" EXIT
+
+    local img_video="$tmpdir/image_clip.mp4"
+
+    info "Generating image clip (${width}x${height}, ${fps} fps, ${duration}s)..."
+
+    if [ -n "$has_audio" ]; then
+        # Generate image video with silent audio
+        ffmpeg -y -loop 1 -i "$image" -f lavfi -i anullsrc=r=44100:cl=stereo \
+            -vf "scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1" \
+            -c:v libx264 -pix_fmt yuv420p -r "$fps" \
+            -c:a aac -shortest -t "$duration" \
+            "$img_video" 2>/dev/null
+    else
+        # Generate image video without audio
+        ffmpeg -y -loop 1 -i "$image" \
+            -vf "scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1" \
+            -c:v libx264 -pix_fmt yuv420p -r "$fps" \
+            -t "$duration" \
+            "$img_video" 2>/dev/null
+    fi
+
+    if [ ! -f "$img_video" ]; then
+        error "Failed to generate image clip"
+        rm -rf "$tmpdir"
+        trap - EXIT
+        return 1
+    fi
+
+    # Build concat file based on position
+    local concat_file="$tmpdir/concat.txt"
+    if [ "$position" = "before" ]; then
+        echo "file '$(realpath "$img_video")'" > "$concat_file"
+        echo "file '$(realpath "$video")'" >> "$concat_file"
+    else
+        echo "file '$(realpath "$video")'" > "$concat_file"
+        echo "file '$(realpath "$img_video")'" >> "$concat_file"
+    fi
+
+    info "Concatenating ($position video)..."
+    if ! ffmpeg -y -f concat -safe 0 -i "$concat_file" -c copy "$output" 2>/dev/null; then
+        error "Concatenation failed"
+        rm -rf "$tmpdir"
+        trap - EXIT
+        return 1
+    fi
+
+    rm -rf "$tmpdir"
+    trap - EXIT
+    completed "Created: $output (image $position video)"
+}
+
 resize_image() {
     if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 2 ]; then
         cat << 'EOF'
@@ -1602,6 +1728,7 @@ list_media_tools() {
     echo "VIDEO PROCESSING:"
     echo "  trim_video <in> <start> <dur> [out] - Trim video segment"
     echo "  concat_videos <out> <v1> <v2> ...   - Merge multiple videos"
+    echo "  insert_image <vid> <img> <dur> [pos] [out] - Add image before/after video"
     echo "  speedup_video <in> [factor] [out]    - Speed up video (default 2x)"
     echo "  compress_video <in> [crf] [out]     - Compress video (CRF 0-51)"
     echo "  mp42png <file> [frame]              - Extract frame as PNG"
