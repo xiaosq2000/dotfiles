@@ -581,6 +581,39 @@ EOF
 	fi
 }
 
+mkv2mp4() {
+	if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -ne 1 ]; then
+		cat << 'EOF'
+Usage: mkv2mp4 <video-path-w/o-ext>
+
+Convert MKV to MP4 by remuxing (stream copy, no re-encoding).
+
+Arguments:
+  <video-path-w/o-ext>  Base name of the file (e.g., "video" for "video.mkv")
+
+Encoding settings:
+  - Video codec: copy (no re-encoding)
+  - Audio codec: copy (no re-encoding)
+
+Requirements:
+  - ffmpeg must be installed
+
+Example:
+  mkv2mp4 recording
+  # Converts recording.mkv to recording.mp4
+EOF
+		[ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
+	fi
+
+	if has ffmpeg; then
+		local input="$1.mkv"
+		local output="$1.mp4"
+		ffmpeg -i "$input" -c copy "$output"
+	else
+		error "ffmpeg not found."
+	fi
+}
+
 jpg2png() {
 	if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -ne 1 ]; then
 		cat << 'EOF'
@@ -1184,6 +1217,92 @@ EOF
     completed "Created: $output"
 }
 
+speedup_video() {
+    if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 1 ]; then
+        cat << 'EOF'
+Usage: speedup_video <input> [factor=2.0] [output]
+
+Speed up a video by a given factor using ffmpeg.
+
+Arguments:
+  <input>   Path to input video file
+  [factor]  Speed multiplier (default: 2.0, must be > 0)
+  [output]  Path to output file (default: <input>_speedup.<ext>)
+
+Details:
+  - Video speed uses the setpts filter (PTS/factor)
+  - Audio speed uses atempo filter (chained for factors > 2.0,
+    since atempo only supports 0.5-2.0 per instance)
+  - Factors < 0.5 also chain atempo filters accordingly
+
+Requirements:
+  - ffmpeg must be installed
+
+Examples:
+  speedup_video video.mp4
+  # Creates video_speedup.mp4 at 2x speed
+
+  speedup_video video.mp4 4
+  # Creates video_speedup.mp4 at 4x speed
+
+  speedup_video video.mp4 1.5 fast.mp4
+  # Creates fast.mp4 at 1.5x speed
+EOF
+        [ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
+    fi
+
+    if ! has ffmpeg; then
+        error "ffmpeg not found"
+        return 1
+    fi
+
+    local input="$1"
+    local factor="${2:-2.0}"
+    local ext="${input##*.}"
+    local base="${input%.*}"
+    local output="${3:-${base}_speedup.${ext}}"
+
+    if [ ! -f "$input" ]; then
+        error "Input file not found: $input"
+        return 1
+    fi
+
+    # Build atempo filter chain (each atempo limited to 0.5-2.0 range)
+    local atempo_filter=""
+    local remaining="$factor"
+    while (( $(echo "$remaining > 2.0" | bc -l) )); do
+        if [ -z "$atempo_filter" ]; then
+            atempo_filter="atempo=2.0"
+        else
+            atempo_filter="${atempo_filter},atempo=2.0"
+        fi
+        remaining=$(echo "$remaining / 2.0" | bc -l)
+    done
+    while (( $(echo "$remaining < 0.5" | bc -l) )); do
+        if [ -z "$atempo_filter" ]; then
+            atempo_filter="atempo=0.5"
+        else
+            atempo_filter="${atempo_filter},atempo=0.5"
+        fi
+        remaining=$(echo "$remaining / 0.5" | bc -l)
+    done
+    if [ -z "$atempo_filter" ]; then
+        atempo_filter="atempo=${remaining}"
+    else
+        atempo_filter="${atempo_filter},atempo=${remaining}"
+    fi
+
+    local video_filter="setpts=PTS/${factor}"
+
+    info "Speeding up video by ${factor}x..."
+    if ! ffmpeg -i "$input" -filter:v "$video_filter" -filter:a "$atempo_filter" -y "$output" 2>/dev/null; then
+        error "Speed up failed"
+        return 1
+    fi
+
+    completed "Created: $output"
+}
+
 compress_video() {
     if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 1 ]; then
         cat << 'EOF'
@@ -1477,11 +1596,13 @@ list_media_tools() {
     echo "  gif2mp4 <file>              - Convert GIF to MP4"
     echo "  avi2mp4 <file>              - Convert AVI to MP4"
     echo "  mp42avi <file>              - Convert MP4 to AVI"
+    echo "  mkv2mp4 <file>              - Convert MKV to MP4 (remux)"
     echo "  video2gif <file> [fps] [width] - Convert video to animated GIF"
     echo ""
     echo "VIDEO PROCESSING:"
     echo "  trim_video <in> <start> <dur> [out] - Trim video segment"
     echo "  concat_videos <out> <v1> <v2> ...   - Merge multiple videos"
+    echo "  speedup_video <in> [factor] [out]    - Speed up video (default 2x)"
     echo "  compress_video <in> [crf] [out]     - Compress video (CRF 0-51)"
     echo "  mp42png <file> [frame]              - Extract frame as PNG"
     echo "  mp3mp42mp4 <audio> <video> <out> [opts] - Combine MP3 + MP4"
