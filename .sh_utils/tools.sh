@@ -333,6 +333,187 @@ EOF
 	fi
 }
 
+concat_pdfs() {
+	if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 3 ]; then
+		cat << 'EOF'
+Usage: concat_pdfs <output.pdf> <input1.pdf> <input2.pdf> [input3.pdf...]
+
+Concatenate multiple PDF files into one using Ghostscript.
+
+Arguments:
+  <output.pdf>   Path to output PDF file
+  <input1.pdf>   First PDF to include
+  <input2.pdf>   Second PDF to include
+  [input3.pdf..] Additional PDFs (optional)
+
+PDFs are merged in the order specified.
+
+Requirements:
+  - Ghostscript (gs) must be installed
+
+Examples:
+  concat_pdfs merged.pdf chapter1.pdf chapter2.pdf chapter3.pdf
+  # Merges three PDFs into merged.pdf
+EOF
+		[ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
+	fi
+
+	if ! has gs; then
+		error "Ghostscript (gs) not found."
+		return 1
+	fi
+
+	local output="$1"
+	shift
+
+	for file in "$@"; do
+		if [ ! -f "$file" ]; then
+			error "Input file not found: $file"
+			return 1
+		fi
+	done
+
+	info "Concatenating $# PDFs..."
+	if gs -dBATCH -dNOPAUSE -dQUIET -sDEVICE=pdfwrite -sOutputFile="$output" "$@"; then
+		completed "Created: $output ($# files merged)"
+		return 0
+	else
+		error "PDF concatenation failed"
+		return 1
+	fi
+}
+
+pdf2img() {
+	if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+		cat << 'EOF'
+Usage: pdf2img [options] <file-without-extension>
+
+Convert a PDF to a PNG or JPG image using ImageMagick convert.
+
+Options:
+  -f, --format FORMAT   Output format: png (default) or jpg
+  -d, --density DPI     Rasterization DPI (default: 300)
+  -q, --quality N       Output quality 1-100 (default: 100 for png, 92 for jpg)
+  -c, --concat          Vertically concatenate all pages into one tall image
+
+Arguments:
+  <file-without-extension>  Base name of the file (e.g., "document" for "document.pdf")
+
+Quality settings:
+  - Density is applied before input for proper rasterization
+  - Background: white (transparency flattened)
+  - PNG compression: level 9 (maximum lossless)
+
+Requirements:
+  - ImageMagick's convert must be installed
+
+Examples:
+  pdf2img document
+  # Converts document.pdf to document.png at 300 DPI
+
+  pdf2img -f jpg document
+  # Converts document.pdf to document.jpg
+
+  pdf2img -d 600 -q 100 document
+  # High-resolution 600 DPI conversion
+
+  pdf2img -c multi_page_doc
+  # Concatenates all pages of multi_page_doc.pdf into one tall image
+EOF
+		return 0
+	fi
+
+	local format="png"
+	local density=300
+	local quality=""
+	local concat=false
+
+	# Parse named arguments
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		-f | --format)
+			format="$2"
+			shift 2
+			;;
+		-d | --density)
+			density="$2"
+			shift 2
+			;;
+		-q | --quality)
+			quality="$2"
+			shift 2
+			;;
+		-c | --concat)
+			concat=true
+			shift
+			;;
+		*)
+			break
+			;;
+		esac
+	done
+
+	if [ $# -ne 1 ]; then
+		error "Missing required argument: <file-without-extension>"
+		echo "Usage: pdf2img [options] <file-without-extension>" >&2
+		return 1
+	fi
+
+	if [ "$format" != "png" ] && [ "$format" != "jpg" ]; then
+		error "Unsupported format '$format'. Use 'png' or 'jpg'."
+		return 1
+	fi
+
+	# Set default quality based on format
+	if [ -z "$quality" ]; then
+		if [ "$format" = "png" ]; then
+			quality=100
+		else
+			quality=92
+		fi
+	fi
+
+	if has convert; then
+		local input="$1.pdf"
+		local output="$1.$format"
+
+		if [ ! -f "$input" ]; then
+			error "Input file '$input' not found"
+			return 1
+		fi
+
+		info "Converting $input to $output (${density} DPI, quality ${quality})..."
+
+		local format_opts=""
+		if [ "$format" = "png" ]; then
+			format_opts="-define png:compression-level=9"
+		fi
+
+		if [ "$concat" = true ]; then
+			convert -density "$density" "$input" \
+				-background white -alpha remove -alpha off \
+				-quality "$quality" $format_opts -append "$output"
+		else
+			convert -density "$density" "$input" \
+				-background white -alpha remove -alpha off \
+				-quality "$quality" $format_opts "$output"
+		fi
+
+		if [ $? -eq 0 ]; then
+			local msg="Successfully converted $input to $output"
+			[ "$concat" = true ] && msg="$msg (concatenated)"
+			completed "$msg"
+			return 0
+		else
+			error "Conversion failed"
+			return 1
+		fi
+	else
+		error "convert not found. Install ImageMagick."
+		return 1
+	fi
+}
+
 mp3mp42mp4() {
 	if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
 		cat << 'EOF'
@@ -1696,6 +1877,216 @@ EOF
     fi
 }
 
+compress_image() {
+    if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 1 ]; then
+        cat << 'EOF'
+Usage: compress_image <input> [quality=85] [output]
+
+Compress a PNG or JPEG image using ImageMagick.
+
+Arguments:
+  <input>    Path to input image (png, jpg, jpeg)
+  [quality]  Compression quality 1-100 (default: 85)
+             JPEG: lower = smaller file, more artifacts
+             PNG: lossless compression only (quality ignored); strips metadata
+  [output]   Path to output file (default: <input>_compressed.<ext>)
+
+Processing:
+  - Strips metadata (EXIF, ICC profiles, comments, etc.)
+  - JPEG: lossy compression at specified quality + progressive encoding
+  - PNG: maximum lossless zlib compression (level 9)
+
+Requirements:
+  - ImageMagick's convert must be installed
+
+Examples:
+  compress_image photo.jpg
+  # Compresses photo.jpg at quality 85
+
+  compress_image photo.jpg 70 small.jpg
+  # Compresses at quality 70, saves to small.jpg
+
+  compress_image screenshot.png
+  # Strips metadata and applies max lossless compression
+EOF
+        [ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
+    fi
+
+    if ! has convert; then
+        error "ImageMagick's convert not found"
+        return 1
+    fi
+
+    local input="$1"
+    local quality="${2:-85}"
+    local output="${3:-${input%.*}_compressed.${input##*.}}"
+
+    if [ ! -f "$input" ]; then
+        error "Input file not found: $input"
+        return 1
+    fi
+
+    local ext="${input##*.}"
+    ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+
+    case "$ext" in
+        jpg|jpeg)
+            if [ "$quality" -lt 1 ] || [ "$quality" -gt 100 ]; then
+                error "Quality must be between 1 and 100"
+                return 1
+            fi
+            info "Compressing JPEG at quality $quality..."
+            if ! convert "$input" -strip -interlace Plane -quality "$quality" "$output"; then
+                error "Compression failed"
+                return 1
+            fi
+            ;;
+        png)
+            info "Compressing PNG (lossless, strip metadata)..."
+            if ! convert "$input" -strip -define png:compression-level=9 "$output"; then
+                error "Compression failed"
+                return 1
+            fi
+            ;;
+        *)
+            error "Unsupported format: $ext (supported: png, jpg, jpeg)"
+            return 1
+            ;;
+    esac
+
+    local orig_size=$(du -h "$input" | cut -f1)
+    local new_size=$(du -h "$output" | cut -f1)
+    completed "Compressed: $orig_size → $new_size ($output)"
+}
+
+concat_images() {
+    if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ $# -lt 2 ]; then
+        cat << 'EOF'
+Usage: concat_images [options] <image1> <image2> [image3...]
+
+Concatenate multiple images horizontally or vertically using ImageMagick.
+
+Options:
+  -v, --vertical    Stack images vertically (default: horizontal)
+  -g, --gap N       Gap between images in pixels (default: 0)
+  -b, --bg COLOR    Background/gap color (default: none/transparent)
+  -o, --output FILE Output file path (default: concat_h.<ext> or concat_v.<ext>)
+
+Arguments:
+  <image1> <image2> [image3...]  Two or more image files to concatenate
+
+Processing:
+  - Horizontal: images are placed left to right (+append)
+  - Vertical: images are stacked top to bottom (-append)
+  - Images with different dimensions are aligned to the top/left edge
+
+Requirements:
+  - ImageMagick's convert must be installed
+
+Examples:
+  concat_images a.png b.png
+  # Concatenates horizontally, saves to concat_h.png
+
+  concat_images -v a.png b.png c.png
+  # Stacks vertically, saves to concat_v.png
+
+  concat_images -g 10 -b white -o merged.png a.png b.png
+  # Horizontal with 10px white gap, saves to merged.png
+EOF
+        [ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
+    fi
+
+    if ! has convert; then
+        error "ImageMagick's convert not found"
+        return 1
+    fi
+
+    local vertical=false
+    local gap=0
+    local bg="none"
+    local output=""
+
+    # Parse named arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        -v | --vertical)
+            vertical=true
+            shift
+            ;;
+        -g | --gap)
+            gap="$2"
+            shift 2
+            ;;
+        -b | --bg)
+            bg="$2"
+            shift 2
+            ;;
+        -o | --output)
+            output="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+
+    if [ $# -lt 2 ]; then
+        error "At least two images are required"
+        return 1
+    fi
+
+    # Validate all input files exist
+    for img in "$@"; do
+        if [ ! -f "$img" ]; then
+            error "File not found: $img"
+            return 1
+        fi
+    done
+
+    # Determine default output name from first input extension
+    if [ -z "$output" ]; then
+        local ext="${1##*.}"
+        if [ "$vertical" = true ]; then
+            output="concat_v.$ext"
+        else
+            output="concat_h.$ext"
+        fi
+    fi
+
+    local append_flag="+append"
+    local direction="horizontally"
+    if [ "$vertical" = true ]; then
+        append_flag="-append"
+        direction="vertically"
+    fi
+
+    info "Concatenating $# images $direction..."
+
+    if [ "$gap" -gt 0 ] 2>/dev/null; then
+        # Insert gap by using -splice between images via a smush operation
+        # smush is like append but with a gap parameter
+        local smush_flag="+smush"
+        [ "$vertical" = true ] && smush_flag="-smush"
+
+        if convert "$@" -background "$bg" $smush_flag "$gap" "$output"; then
+            completed "Created: $output"
+            return 0
+        else
+            error "Concatenation failed"
+            return 1
+        fi
+    else
+        if convert "$@" -background "$bg" $append_flag "$output"; then
+            completed "Created: $output"
+            return 0
+        else
+            error "Concatenation failed"
+            return 1
+        fi
+    fi
+}
+
 list_media_tools() {
     # Display all available media conversion and processing tools
     echo ""
@@ -1716,6 +2107,8 @@ list_media_tools() {
     echo "  transparent_bg <in> [out] [color] [fuzz] - Make background transparent"
     echo "  process_image <input>              - Transparent bg + invert colors"
     echo "  add_watermark <in> <wm> [pos] [out] - Add watermark to image"
+    echo "  compress_image <in> [quality] [out]  - Compress PNG/JPEG image"
+    echo "  concat_images [opts] <img1> <img2>...  - Concat images h/v"
     echo ""
     echo "VIDEO CONVERSION:"
     echo "  webm2mp4 <file> [fps]       - Convert WebM to MP4"
@@ -1739,6 +2132,8 @@ list_media_tools() {
     echo ""
     echo "PDF:"
     echo "  compress_pdf <input> <output>  - Compress PDF file"
+    echo "  concat_pdfs <out> <in1> <in2>...  - Merge multiple PDFs"
+    echo "  pdf2img <file> [opts]          - Convert one-page PDF to PNG/JPG"
     echo ""
     echo "UTILITIES:"
     echo "  media_info <file>           - Show media file info"
