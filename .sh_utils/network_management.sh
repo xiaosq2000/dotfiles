@@ -58,6 +58,7 @@ TRANSLATIONS=(
     ["Docker daemon restarted successfully."]="Docker 守护进程重启成功。"
     ["Failed to restart Docker daemon."]="Docker 守护进程重启失败。"
     ["Docker is not installed or not available."]="Docker 未安装或不可用。"
+    ["Failed to get IP from 4.ipw.cn in {} seconds."]="在 {} 秒内从 4.ipw.cn 获取 IP 失败。请检查您的网络连接。"
 )
 
 _has() {
@@ -190,6 +191,130 @@ check_public_ip() {
 
     if [ -n "$city" ] && [ -n "$ip" ]; then
         # _info "$(_translate 'Internet:')" "${city}, ${ip}"
+        info "${city}, ${ip}"
+    elif [ -n "$ip" ]; then
+        info "$ip"
+    elif [ -n "$city" ]; then
+        info "$city"
+    else
+        local error_msg
+        error_msg=$(_translate 'Failed to detect public IP in {} seconds.')
+        _warning "${error_msg//\{\}/$timeout}"
+        return 1
+    fi
+    return 0
+}
+
+check_public_ip_cn() {
+    local timeout=${1:-$TIMEOUT}
+    local ip_raw
+    local tmp_ip
+    tmp_ip="$(mktemp)"
+    local tmp_loc
+    tmp_loc="$(mktemp)"
+
+    # Step 1: Get IP from 4.ipw.cn
+    if ! command -v curl >/dev/null 2>&1; then
+        local error_msg
+        error_msg=$(_translate 'Failed to get IP from 4.ipw.cn in {} seconds.')
+        _warning "${error_msg//\{\}/$timeout}"
+        rm -f "$tmp_ip" "$tmp_loc"
+        return 1
+    fi
+
+    local curl_status
+    if [ "${INTERACTIVE:-false}" = true ] && command -v spinner >/dev/null 2>&1; then
+        if [ -n "${ZSH_VERSION:-}" ]; then
+            setopt local_options nomonitor
+        fi
+        local restore_bash_monitor=""
+        if [ -n "${BASH_VERSION:-}" ]; then
+            if [[ -o monitor ]]; then
+                restore_bash_monitor="on"
+                set +m
+            else
+                restore_bash_monitor="off"
+            fi
+        fi
+        ( curl --silent --max-time "$timeout" 4.ipw.cn >"$tmp_ip" 2>/dev/null ) & local curl_pid=$!
+        spinner "$curl_pid"
+        wait "$curl_pid"
+        curl_status=$?
+        if [ -n "${BASH_VERSION:-}" ] && [ "$restore_bash_monitor" = "on" ]; then
+            set -m
+        fi
+    else
+        curl --silent --max-time "$timeout" 4.ipw.cn >"$tmp_ip" 2>/dev/null
+        curl_status=$?
+    fi
+
+    if [ "$curl_status" -ne 0 ]; then
+        local error_msg
+        error_msg=$(_translate 'Failed to get IP from 4.ipw.cn in {} seconds.')
+        _warning "${error_msg//\{\}/$timeout}"
+        rm -f "$tmp_ip" "$tmp_loc"
+        return 1
+    fi
+
+    ip_raw="$(cat "$tmp_ip" 2>/dev/null | tr -d '[:space:]')"
+    rm -f "$tmp_ip"
+
+    if [ -z "$ip_raw" ]; then
+        local error_msg
+        error_msg=$(_translate 'Failed to get IP from 4.ipw.cn in {} seconds.')
+        _warning "${error_msg//\{\}/$timeout}"
+        rm -f "$tmp_loc"
+        return 1
+    fi
+
+    # Step 2: Get location from ipinfo.io/$ip
+    if [ "${INTERACTIVE:-false}" = true ] && command -v spinner >/dev/null 2>&1; then
+        if [ -n "${ZSH_VERSION:-}" ]; then
+            setopt local_options nomonitor
+        fi
+        local restore_bash_monitor=""
+        if [ -n "${BASH_VERSION:-}" ]; then
+            if [[ -o monitor ]]; then
+                restore_bash_monitor="on"
+                set +m
+            else
+                restore_bash_monitor="off"
+            fi
+        fi
+        ( curl --silent --max-time "$timeout" "ipinfo.io/${ip_raw}" >"$tmp_loc" 2>/dev/null ) & local curl_pid=$!
+        spinner "$curl_pid"
+        wait "$curl_pid"
+        curl_status=$?
+        if [ -n "${BASH_VERSION:-}" ] && [ "$restore_bash_monitor" = "on" ]; then
+            set -m
+        fi
+    else
+        curl --silent --max-time "$timeout" "ipinfo.io/${ip_raw}" >"$tmp_loc" 2>/dev/null
+        curl_status=$?
+    fi
+
+    local ipinfo
+    if [ "$curl_status" -ne 0 ]; then
+        # Location lookup failed, but we still have the IP
+        info "$ip_raw"
+        rm -f "$tmp_loc"
+        return 0
+    fi
+
+    ipinfo="$(cat "$tmp_loc" 2>/dev/null)"
+    rm -f "$tmp_loc"
+
+    local ip city
+    ip="$ip_raw"
+    if [ -n "$ipinfo" ]; then
+        if command -v jq >/dev/null 2>&1; then
+            city=$(echo "$ipinfo" | jq -r '.city // empty')
+        else
+            city=$(printf "%s\n" "$ipinfo" | grep -m1 '"city"' | sed -E 's/.*"city"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/' | tr -d '\r')
+        fi
+    fi
+
+    if [ -n "$city" ] && [ -n "$ip" ]; then
         info "${city}, ${ip}"
     elif [ -n "$ip" ]; then
         info "$ip"
@@ -481,6 +606,7 @@ proxy_help() {
 
     echo "${INDENT}${GREEN}${BOLD}\$${NC} check_private_ip"
     echo "${INDENT}${GREEN}${BOLD}\$${NC} check_public_ip"
+    echo "${INDENT}${GREEN}${BOLD}\$${NC} check_public_ip_cn # Via 4.ipw.cn (China-friendly)"
     echo "${INDENT}${GREEN}${BOLD}\$${NC} check_proxy_status"
     echo "${INDENT}${GREEN}${BOLD}\$${NC} check_port_availability <PORT>"
 }
