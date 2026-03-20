@@ -61,3 +61,7 @@
 
 !.config/themes
 !.config/themes/rose-pine/starship
+
+!.config/opencode
+.config/opencode/*
+!.config/opencode/opencode.json
