@@ -5,6 +5,9 @@ source ~/.sh_utils/basics.sh
 source ~/.sh_utils/helpers.sh
 source ~/.sh_utils/checkers.sh
 source ~/.sh_utils/tools.sh
+# network proxy
+[ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh" 
+if has 'proxy'; then proxy local-on; fi
 
 # Preferred editors:
 if has "nvim"; then
@@ -306,8 +309,13 @@ tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
 # uv shell completion
 if has uv; then eval "$(uv generate-shell-completion zsh)"; fi
 
+################################################################################
+################################# coding agent #################################
+################################################################################
 # codex shell completion
 if has codex; then eval "$(codex completion zsh)"; fi
+# opencode
+prepend_env PATH "${HOME}/.opencode/bin"
 
 check_git_config() {
     if has "git"; then
@@ -434,13 +442,6 @@ setup_ros2() {
         hint "make sure ROS2 is ready; please specify environment variable \"ROS2_DISTRO\""
     fi
 }
-
-# network proxy
-source ~/.sh_utils/network_management.sh
-if [ -n VPN_PROTOCOL ] && has systemctl && systemctl is-active --quiet "sing-box-$VPN_PROTOCOL.service" 2>/dev/null; then
-    if has set_local_proxy; then set_local_proxy; else error "command set_local_proxy not found"; fi
-    # if has check_public_ip; then check_public_ip; else error "command check_public_ip not found"; fi
-fi
 
 # zshrc_end_time=$(date +%s%N)
 # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
