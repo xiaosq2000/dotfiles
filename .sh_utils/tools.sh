@@ -1615,12 +1615,12 @@ compress_video() {
         cat << 'EOF'
 Usage: compress_video <input> [crf=28] [output]
 
-Compress video using H.264 codec with adjustable quality control.
+Compress video with adjustable quality control.
 
 Arguments:
   <input>   Path to input video file
   [crf]     Constant Rate Factor, 0-51 (default: 28)
-  [output]  Path to output file (default: <input>_compressed.<ext>)
+  [output]  Path to output file (default: <input>_compressed.<same-format>)
 
 CRF quality guide:
   0-17   Visually lossless (very large files)
@@ -1630,9 +1630,9 @@ CRF quality guide:
   35+    Poor quality
 
 Encoding settings:
-  - Video codec: H.264 (libx264)
-  - Preset: medium (balanced speed/compression)
-  - Audio codec: AAC at 128k
+  - MP4/default output: H.264 (libx264), preset medium, AAC at 128k
+  - AVI output: MPEG-4, MP3 at 128k
+  - AVI output maps the CRF value to an AVI qscale internally
 
 Requirements:
   - ffmpeg must be installed
@@ -1643,6 +1643,9 @@ Examples:
 
   compress_video video.mp4 23 output.mp4
   # Compresses with CRF 23 (higher quality)
+
+  compress_video clip.avi
+  # Compresses clip.avi and saves as clip_compressed.avi
 EOF
         [ "$1" = "-h" ] || [ "$1" = "--help" ] && return 0 || return 1
     fi
@@ -1655,6 +1658,8 @@ EOF
     local input="$1"
     local crf="${2:-28}"
     local output="${3:-${input%.*}_compressed.${input##*.}}"
+    local output_ext="${output##*.}"
+    output_ext="${output_ext:l}"
 
     if [ ! -f "$input" ]; then
         error "Input file not found: $input"
@@ -1667,11 +1672,23 @@ EOF
         return 1
     fi
 
-    info "Compressing video with CRF=$crf..."
-    if ffmpeg -i "$input" -c:v libx264 -crf "$crf" -preset medium -c:a aac -b:a 128k "$output" 2>&1 | grep -q "error"; then
-        error "Compression failed"
-        return 1
-    fi
+    case "$output_ext" in
+        avi)
+            local qscale=$((1 + (crf * 30 / 51)))
+            info "Compressing AVI with CRF=$crf (qscale=$qscale)..."
+            if ffmpeg -i "$input" -c:v mpeg4 -qscale:v "$qscale" -c:a libmp3lame -b:a 128k "$output" 2>&1 | grep -qi "error"; then
+                error "Compression failed"
+                return 1
+            fi
+            ;;
+        *)
+            info "Compressing video with CRF=$crf..."
+            if ffmpeg -i "$input" -c:v libx264 -crf "$crf" -preset medium -c:a aac -b:a 128k "$output" 2>&1 | grep -qi "error"; then
+                error "Compression failed"
+                return 1
+            fi
+            ;;
+    esac
 
     local orig_size=$(du -h "$input" | cut -f1)
     local new_size=$(du -h "$output" | cut -f1)
@@ -2123,7 +2140,7 @@ list_media_tools() {
     echo "  concat_videos <out> <v1> <v2> ...   - Merge multiple videos"
     echo "  insert_image <vid> <img> <dur> [pos] [out] - Add image before/after video"
     echo "  speedup_video <in> [factor] [out]    - Speed up video (default 2x)"
-    echo "  compress_video <in> [crf] [out]     - Compress video (CRF 0-51)"
+    echo "  compress_video <in> [crf] [out]     - Compress video (MP4/AVI, keeps format)"
     echo "  mp42png <file> [frame]              - Extract frame as PNG"
     echo "  mp3mp42mp4 <audio> <video> <out> [opts] - Combine MP3 + MP4"
     echo ""
