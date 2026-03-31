@@ -66,3 +66,6 @@
 .config/opencode/*
 !.config/opencode/opencode.json
 !.config/opencode/opencode-notifier.json
+
+!.opencode
+.opencode/bin
