@@ -1,7 +1,6 @@
 ## Prerequisites
 
-- `curl`, `git`
-- `zsh` version >= 5.8
+- `zsh` version >= 5.8, `curl`, `git`, `unzip`
 - A [Nerd Font](https://www.nerdfonts.com/) installed and enabled in your terminal.
 
 ## Quick Install
@@ -15,5 +14,4 @@ curl -fsSL "https://raw.githubusercontent.com/xiaosq2000/dotfiles/main/.sh_utils
 
 ## TODO
 
-- typefaces
-- gnome-terminal
+- [ ] gnome-terminal
