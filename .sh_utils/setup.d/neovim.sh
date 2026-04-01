@@ -24,6 +24,7 @@ fi
 
 PREFIX="${XDG_PREFIX_HOME:-$HOME/.local}"
 BIN_DIR="$PREFIX/bin"
+REQUESTED_VERSION="${NVIM_VERSION:-}"
 
 cleanup() {
     debug "cleaning up temporary files"
@@ -42,6 +43,60 @@ ensure_deps() {
         error "Missing required commands: ${missing[*]}"
         exit 1
     fi
+}
+
+usage() {
+    printf '%s\n' "Usage: $(basename "$0") [--version VERSION]"
+    printf '%s\n' ""
+    printf '%s\n' "Options:"
+    printf '%s\n' "      --version VERSION  Install a specific Neovim release (for example: 0.11.0 or v0.11.0)"
+    printf '%s\n' "  -h, --help             Show this help"
+    printf '%s\n' ""
+    printf '%s\n' "Environment:"
+    printf '%s\n' "  NVIM_VERSION           Default version override when --version is not provided"
+}
+
+parse_args() {
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --version)
+                if [ $# -lt 2 ]; then
+                    error "missing value for --version"
+                    usage
+                    exit 1
+                fi
+                REQUESTED_VERSION="$2"
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                error "unknown argument: $1"
+                usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+normalize_version() {
+    local version
+    version="$1"
+
+    case "$version" in
+        ""|latest)
+            printf '%s\n' ""
+            ;;
+        v*)
+            printf '%s\n' "$version"
+            ;;
+        *)
+            printf 'v%s\n' "$version"
+            ;;
+    esac
 }
 
 # Compute the exact asset filename based on known neovim naming convention.
@@ -67,7 +122,7 @@ nvim_asset_name() {
 }
 
 resolve_release() {
-    local base latest_url
+    local base latest_url requested_version
     OS="$(plat_os)"
     ARCH="$(plat_arch)"
 
@@ -85,17 +140,25 @@ resolve_release() {
     debug "detected OS: $OS, architecture: $ARCH, looking for: $FILENAME"
 
     base="https://github.com/neovim/neovim/releases/latest"
-    DOWNLOAD_URL="$base/download/$FILENAME"
+    requested_version="$(normalize_version "$REQUESTED_VERSION")"
 
-    # Validate URL exists
-    if ! curl -fsI "$DOWNLOAD_URL" >/dev/null; then
-        error "asset not found at: $DOWNLOAD_URL"
-        exit 1
+    if [ -n "$requested_version" ]; then
+        VERSION="$requested_version"
+        DOWNLOAD_URL="https://github.com/neovim/neovim/releases/download/$VERSION/$FILENAME"
+        if ! curl -fsI "$DOWNLOAD_URL" >/dev/null; then
+            error "neovim $VERSION asset not found for $(plat_id): $FILENAME"
+            exit 1
+        fi
+    else
+        DOWNLOAD_URL="$base/download/$FILENAME"
+        if ! curl -fsI "$DOWNLOAD_URL" >/dev/null; then
+            error "latest neovim asset not found for $(plat_id): $FILENAME"
+            exit 1
+        fi
+
+        latest_url="$(curl -fsSL -o /dev/null -w "%{url_effective}" "$base")"
+        VERSION="${latest_url##*/}"
     fi
-
-    # Resolve latest version tag (e.g., v0.11.0 or stable)
-    latest_url="$(curl -fsSL -o /dev/null -w "%{url_effective}" "$base")"
-    VERSION="${latest_url##*/}"
 
     debug "version: $VERSION"
     debug "download URL: $DOWNLOAD_URL"
@@ -137,10 +200,19 @@ install_neovim() {
 }
 
 main() {
+    local normalized_version
+
+    parse_args "$@"
+    normalized_version="$(normalize_version "$REQUESTED_VERSION")"
+
     header "neovim - https://github.com/neovim/neovim"
     step "detecting system information"
     ensure_deps
-    step "resolving latest neovim release and asset URL"
+    if [ -n "$normalized_version" ]; then
+        step "resolving neovim $normalized_version release and asset URL"
+    else
+        step "resolving latest neovim release and asset URL"
+    fi
     resolve_release
     install_neovim
     hint "make sure $BIN_DIR is in your PATH"
