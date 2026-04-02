@@ -69,3 +69,8 @@
 
 !.opencode
 .opencode/bin
+
+!.claude
+.claude/*
+!.claude/skills
+
