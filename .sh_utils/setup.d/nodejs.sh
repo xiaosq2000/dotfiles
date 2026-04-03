@@ -24,14 +24,14 @@ else
     exit 1
 fi
 
-step "Installing tree-sitter-cli"
-npm install -g tree-sitter-cli 1>/dev/null 2>&1
-if [ $? -eq 0 ]; then
-    success "$(tree-sitter --version)"
-else
-    error "Failed to install tree-sitter-cli"
-    exit 1
-fi
+# step "Installing tree-sitter-cli"
+# npm install -g tree-sitter-cli 1>/dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     success "$(tree-sitter --version)"
+# else
+#     error "Failed to install tree-sitter-cli"
+#     exit 1
+# fi
 
 step "Installing deno"
 npm install -g deno 1>/dev/null 2>&1
