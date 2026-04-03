@@ -31,7 +31,7 @@ fi
 
 # If tools are missing from PATH, install them globally via cargo.
 # Mapping: binary_name:package_name
-ensure_tools="starship:starship tre:tre-command eza:eza"
+ensure_tools="starship:starship tre:tre-command eza:eza tree-sitter:tree-sitter-cli"
 
 missing_packages=""
 for item in $ensure_tools; do
