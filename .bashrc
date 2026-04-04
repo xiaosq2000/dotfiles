@@ -333,3 +333,7 @@ type safely_source >/dev/null 2>&1 && safely_source "$HOME/.sh_utils/network_man
 if [ -n "${VPN_PROTOCOL:-}" ] && has systemctl && systemctl is-active --quiet "sing-box-${VPN_PROTOCOL}.service" 2>/dev/null; then
     if has set_local_proxy; then set_local_proxy; else echo "error: command set_local_proxy not found"; fi
 fi
+
+# Network proxy management configuration (sing-box)
+[ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh"
+proxy shell on

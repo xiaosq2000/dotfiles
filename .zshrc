@@ -5,9 +5,6 @@ source ~/.sh_utils/basics.sh
 source ~/.sh_utils/helpers.sh
 source ~/.sh_utils/checkers.sh
 source ~/.sh_utils/tools.sh
-# network proxy
-[ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh" 
-if has 'proxy'; then proxy local-on; fi
 
 # Preferred editors:
 if has "nvim"; then
@@ -442,6 +439,10 @@ setup_ros2() {
         hint "make sure ROS2 is ready; please specify environment variable \"ROS2_DISTRO\""
     fi
 }
+
+# Network proxy management configuration (sing-box)
+[ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh"
+proxy shell on
 
 # zshrc_end_time=$(date +%s%N)
 # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
