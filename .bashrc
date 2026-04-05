@@ -336,4 +336,4 @@ fi
 
 # Network proxy management configuration (sing-box)
 [ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh"
-proxy shell on
+if has proxy; then proxy shell on; fi
