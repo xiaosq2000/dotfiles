@@ -442,7 +442,7 @@ setup_ros2() {
 
 # Network proxy management configuration (sing-box)
 [ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh"
-proxy shell on
+if has proxy; then proxy shell on; fi
 
 # zshrc_end_time=$(date +%s%N)
 # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
