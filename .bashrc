@@ -334,6 +334,4 @@ if [ -n "${VPN_PROTOCOL:-}" ] && has systemctl && systemctl is-active --quiet "s
     if has set_local_proxy; then set_local_proxy; else echo "error: command set_local_proxy not found"; fi
 fi
 
-# Network proxy management configuration (sing-box)
-[ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh"
 if has proxy; then proxy shell on; fi

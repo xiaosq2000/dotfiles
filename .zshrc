@@ -440,10 +440,10 @@ setup_ros2() {
     fi
 }
 
-# Network proxy management configuration (sing-box)
-[ -f "/usr/local/etc/sing-box/setup.sh" ] && source "/usr/local/etc/sing-box/setup.sh"
-if has proxy; then proxy shell on; fi
-
 # zshrc_end_time=$(date +%s%N)
 # zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
 # DEBUG=1 debug "$zshrc_duration ms$RESET to start up zsh."
+
+# Network proxy management configuration (sing-box)
+[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh"
+if has proxy; then proxy shell on; fi
