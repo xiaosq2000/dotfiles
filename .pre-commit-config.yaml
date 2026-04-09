@@ -1,4 +1,4 @@
-exclude: (.config/yazi/plugins)
+exclude: (.config/yazi/plugins|.config/nvim/lazy-lock.json)
 default_install_hook_types:
   - pre-commit
   - commit-msg
