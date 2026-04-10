@@ -4,14 +4,14 @@ source ~/.sh_utils/lib/ui.sh
 export NVM_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/nvm"
 
 step "Installing the latest nvm"
-mkdir -p ${NVM_DIR}
+mkdir -p "${NVM_DIR}"
 (unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash' 1>/dev/null 2>&1)
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 if [ $? -eq 0 ]; then
     success "nvm version: $(nvm --version)"
 else
     error "Failed to install nvm"
-    rm -rf $NVM_DIR
+    rm -rf "$NVM_DIR"
     exit 1
 fi
 
@@ -24,14 +24,14 @@ else
     exit 1
 fi
 
-# step "Installing tree-sitter-cli"
-# npm install -g tree-sitter-cli 1>/dev/null 2>&1
-# if [ $? -eq 0 ]; then
-#     success "$(tree-sitter --version)"
-# else
-#     error "Failed to install tree-sitter-cli"
-#     exit 1
-# fi
+step "Installing bw"
+npm install -g @bitwarden/cli 1>/dev/null 2>&1
+if [ $? -eq 0 ]; then
+    success "$(bw --version)"
+else
+    error "Failed to install bw"
+    exit 1
+fi
 
 step "Installing deno"
 npm install -g deno 1>/dev/null 2>&1
