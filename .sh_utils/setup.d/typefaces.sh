@@ -19,7 +19,7 @@ else
     exit 1
 fi
 
-FONTS_BASE="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
+FONTS_BASE="${FONTS_BASE:-${XDG_DATA_HOME:-$HOME/.local/share}/fonts}"
 
 ensure_deps() {
     local missing=()
