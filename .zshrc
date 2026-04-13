@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# zshrc_start_time=$(date +%s%N)
+zshrc_start_time=$(date +%s%N)
 
 source ~/.sh_utils/basics.sh
 source ~/.sh_utils/helpers.sh
@@ -10,22 +10,15 @@ source ~/.sh_utils/tools.sh
 if has "nvim"; then
     export SUDO_EDITOR='nvim'
     export EDITOR='nvim'
-    if has "git"; then
-        git config --global core.editor "nvim"
-    fi
 elif has "vim"; then
     export SUDO_EDITOR='vim'
     export EDITOR='vim'
-    if has "git"; then
-        git config --global core.editor "vim"
-    fi
 elif has "vi"; then
     export SUDO_EDITOR='vi'
     export EDITOR='vi'
-    if has "git"; then
-        git config --global core.editor "vi"
-    fi
 fi
+
+[[ -n ${EDITOR:-} ]] && export GIT_EDITOR="$EDITOR"
 
 # precmd() {
 #     echo;  # Add a newline
@@ -265,7 +258,6 @@ zvm_config() {
     # ref: https://github.com/jeffreytse/zsh-vi-mode?tab=readme-ov-file#execute-extra-commands
     zvm_after_init_commands+=('setup_fzf')
 }
-source "$ZSH_CUSTOM/plugins/zsh-vi-mode/zsh-vi-mode.zsh"
 
 plugins=(
     conda-zsh-completion
@@ -288,6 +280,7 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
+# eza
 if has eza; then
     alias ls='eza --group-directories-first --icons=auto'
     alias la='eza -a --group-directories-first --icons=auto'
@@ -297,7 +290,55 @@ fi
 
 # nodejs
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+_lazy_load_nvm() {
+    unfunction nvm node npm npx corepack pnpm pnpx yarn yarnpkg 2>/dev/null
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+}
+
+nvm() {
+    _lazy_load_nvm
+    nvm "$@"
+}
+
+node() {
+    _lazy_load_nvm
+    command node "$@"
+}
+
+npm() {
+    _lazy_load_nvm
+    command npm "$@"
+}
+
+npx() {
+    _lazy_load_nvm
+    command npx "$@"
+}
+
+corepack() {
+    _lazy_load_nvm
+    command corepack "$@"
+}
+
+pnpm() {
+    _lazy_load_nvm
+    command pnpm "$@"
+}
+
+pnpx() {
+    _lazy_load_nvm
+    command pnpx "$@"
+}
+
+yarn() {
+    _lazy_load_nvm
+    command yarn "$@"
+}
+
+yarnpkg() {
+    _lazy_load_nvm
+    command yarnpkg "$@"
+}
 
 # go
 prepend_env PATH "${HOME}/.local/go/bin"
@@ -315,7 +356,15 @@ prepend_env PATH "${HOME}/.google-drive-upload/bin"
 tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
 
 # uv shell completion
-if has uv; then eval "$(uv generate-shell-completion zsh)"; fi
+if has uv; then
+    _uv_completion_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_uv"
+    if [[ ! -s "$_uv_completion_cache" || "$(command -v uv)" -nt "$_uv_completion_cache" ]]; then
+        mkdir -p "${_uv_completion_cache:h}"
+        uv generate-shell-completion zsh >| "$_uv_completion_cache"
+    fi
+    source "$_uv_completion_cache"
+    unset _uv_completion_cache
+fi
 
 ################################################################################
 ################################# coding agent #################################
@@ -338,7 +387,6 @@ check_git_config() {
         fi
     fi
 }
-check_git_config
 
 check_x11_wayland() {
     if [[ "$XDG_SESSION_TYPE" == "wayland" ]]; then
@@ -451,10 +499,9 @@ setup_ros2() {
     fi
 }
 
-# zshrc_end_time=$(date +%s%N)
-# zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-# DEBUG=1 debug "$zshrc_duration ms$RESET to start up zsh."
-
-# Network proxy management configuration (sing-box)
 [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh"
 if has proxy; then proxy shell on; fi
+
+zshrc_end_time=$(date +%s%N)
+zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
+DEBUG=1 debug "$zshrc_duration ms$RESET to start up zsh."

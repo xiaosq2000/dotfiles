@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 
-source ~/.sh_utils/basics.sh
+if ! type safely_source >/dev/null 2>&1; then
+    source ~/.sh_utils/basics.sh
+fi
 
 _sh_utils_source_tool() {
     if type safely_source >/dev/null 2>&1; then
