@@ -290,55 +290,7 @@ fi
 
 # nodejs
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
-_lazy_load_nvm() {
-    unfunction nvm node npm npx corepack pnpm pnpx yarn yarnpkg 2>/dev/null
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-}
-
-nvm() {
-    _lazy_load_nvm
-    nvm "$@"
-}
-
-node() {
-    _lazy_load_nvm
-    command node "$@"
-}
-
-npm() {
-    _lazy_load_nvm
-    command npm "$@"
-}
-
-npx() {
-    _lazy_load_nvm
-    command npx "$@"
-}
-
-corepack() {
-    _lazy_load_nvm
-    command corepack "$@"
-}
-
-pnpm() {
-    _lazy_load_nvm
-    command pnpm "$@"
-}
-
-pnpx() {
-    _lazy_load_nvm
-    command pnpx "$@"
-}
-
-yarn() {
-    _lazy_load_nvm
-    command yarn "$@"
-}
-
-yarnpkg() {
-    _lazy_load_nvm
-    command yarnpkg "$@"
-}
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
 # go
 prepend_env PATH "${HOME}/.local/go/bin"
