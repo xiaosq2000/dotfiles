@@ -48,7 +48,7 @@ alias lg="lazygit"
 alias t="tmux"
 alias ta="tmux a"
 alias s='web_search google'
-alias cdusb='cd /media/$USER/"$(ls -t /media/$USER/ | head -n1)"'
+alias cdusb='cd /media/$USER/"$(command ls -t /media/$USER/ | head -n1)"'
 export ARCHFLAGS="-arch $(uname -m)"
 export NUMCPUS=$(grep -c '^processor' /proc/cpuinfo)
 alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
@@ -236,8 +236,12 @@ setup_fzf_tab() {
     zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
     # force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
     zstyle ':completion:*' menu no
-    # preview directory's content with eza when completing cd
-    zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+    # Preview directory content during cd completion.
+    if has eza; then
+        zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+    else
+        zstyle ':fzf-tab:complete:cd:*' fzf-preview 'command ls -1 --color=always $realpath'
+    fi
     # custom fzf flags
     # NOTE: fzf-tab does not follow FZF_DEFAULT_OPTS by default
     zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
@@ -283,6 +287,13 @@ plugins=(
 )
 
 source $ZSH/oh-my-zsh.sh
+
+if has eza; then
+    alias ls='eza --group-directories-first --icons=auto'
+    alias la='eza -a --group-directories-first --icons=auto'
+    alias ll='eza -la --group-directories-first --icons=auto --git'
+    alias lt='eza --tree --level=2 --icons=auto'
+fi
 
 # nodejs
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
