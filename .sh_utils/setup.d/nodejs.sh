@@ -3,6 +3,18 @@ source ~/.sh_utils/lib/ui.sh
 
 export NVM_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/nvm"
 
+refresh_nvm_default_symlink() {
+    local default_node_bin default_node_dir
+
+    default_node_bin="$(nvm which default 2>/dev/null)" || return 1
+    if [[ ! -x "$default_node_bin" ]]; then
+        return 1
+    fi
+
+    default_node_dir="$(dirname "$(dirname "$default_node_bin")")"
+    ln -sfn "$default_node_dir" "$NVM_DIR/default"
+}
+
 step "Installing the latest nvm"
 mkdir -p "${NVM_DIR}"
 (unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash' 1>/dev/null 2>&1)
@@ -16,8 +28,20 @@ else
 fi
 
 step "Installing the latest lts node.js"
-nvm install --lts node 1>/dev/null 2>&1
+nvm install --lts 1>/dev/null 2>&1
 if [ $? -eq 0 ]; then
+    if ! nvm alias default 'lts/*' 1>/dev/null 2>&1; then
+        error "Failed to set nvm default alias"
+        exit 1
+    fi
+    if ! nvm use --silent default 1>/dev/null 2>&1; then
+        error "Failed to activate the default node version"
+        exit 1
+    fi
+    if ! refresh_nvm_default_symlink; then
+        error "Failed to refresh the nvm default symlink"
+        exit 1
+    fi
     success "node version: $(node --version)"
 else
     error "Failed to install node"

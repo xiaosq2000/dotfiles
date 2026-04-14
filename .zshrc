@@ -290,7 +290,81 @@ fi
 
 # nodejs
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+if [[ -x "$NVM_DIR/default/bin/node" ]]; then
+    prepend_env PATH "$NVM_DIR/default/bin"
+fi
+
+refresh_nvm_default_symlink() {
+    local default_node_bin default_node_dir
+
+    default_node_bin="$(nvm which default 2>/dev/null)" || return 0
+    if [[ ! -x "$default_node_bin" ]]; then
+        return 0
+    fi
+
+    default_node_dir="${default_node_bin%/bin/node}"
+    [[ -n "$default_node_dir" ]] || return 0
+    command ln -sfn "$default_node_dir" "$NVM_DIR/default"
+}
+
+_lazy_load_nvm() {
+    unfunction nvm node npm npx corepack pnpm pnpx yarn yarnpkg 2>/dev/null
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+}
+
+nvm() {
+    local nvm_status
+
+    _lazy_load_nvm
+    nvm "$@"
+    nvm_status=$?
+
+    if (( nvm_status == 0 )); then
+        refresh_nvm_default_symlink
+    fi
+
+    return $nvm_status
+}
+
+node() {
+    _lazy_load_nvm
+    command node "$@"
+}
+
+npm() {
+    _lazy_load_nvm
+    command npm "$@"
+}
+
+npx() {
+    _lazy_load_nvm
+    command npx "$@"
+}
+
+corepack() {
+    _lazy_load_nvm
+    command corepack "$@"
+}
+
+pnpm() {
+    _lazy_load_nvm
+    command pnpm "$@"
+}
+
+pnpx() {
+    _lazy_load_nvm
+    command pnpx "$@"
+}
+
+yarn() {
+    _lazy_load_nvm
+    command yarn "$@"
+}
+
+yarnpkg() {
+    _lazy_load_nvm
+    command yarnpkg "$@"
+}
 
 # go
 prepend_env PATH "${HOME}/.local/go/bin"
