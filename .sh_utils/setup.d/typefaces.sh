@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Typeface installer (tuple-driven):
-# - Supports multiple typefaces (GitHub release or direct URL)
+# - Supports multiple typefaces (GitHub release, branch archive, or direct URL)
 # - Flattens archives and installs only desired font extensions (ttf/otf)
-# - Skips if already at recorded ref (tag or version)
+# - Skips if already at recorded ref (tag, branch head, or version)
 # - Refreshes font cache once after all installs
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,8 +51,21 @@ github_latest_tag() {
     printf '%s\n' "$tag"
 }
 
+# Resolve the current head commit SHA for a GitHub branch.
+github_branch_head_sha() {
+    local repo="${1:?repo is required (owner/name)}"
+    local branch="${2:?branch is required}"
+    local sha=""
+    local json
+
+    json="$(curl -fsSL "https://api.github.com/repos/${repo}/branches/${branch}" 2>/dev/null || true)"
+    sha="$(printf '%s\n' "$json" | sed -nE 's/.*"sha"[[:space:]]*:[[:space:]]*"([0-9a-f]+)".*/\1/p' | head -n1)"
+
+    printf '%s\n' "$sha"
+}
+
 # Load a typeface tuple into shell variables for a given id.
-# Exposes: id name exts source [repo tag asset] or [url version] install_dir
+# Exposes: id name exts source [repo tag asset] or [repo branch archive] or [url version] install_dir
 load_spec() {
     local req_id="${1:?id is required}"
 
@@ -172,9 +185,9 @@ load_spec() {
             name="Apple Color Emoji"
             exts="ttf"
             source="github"
-            repo="samuelngs/apple-emoji-linux"
+            repo="samuelngs/apple-emoji-ttf"
             tag="latest"
-            asset="AppleColorEmoji.ttf"
+            asset="AppleColorEmoji-Linux.ttf"
             install_dir="$FONTS_BASE/$id"
             ;;
         "noto-color-emoji")
@@ -184,6 +197,16 @@ load_spec() {
             repo="googlefonts/noto-emoji"
             source="github-archive"
             tag="latest"
+            archive="zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "san-francisco-pro")
+            id="san-francisco-pro"
+            name="San Francisco Pro"
+            exts="otf"
+            source="github-branch-archive"
+            repo="sahibjotsaggu/San-Francisco-Pro-Fonts"
+            branch="master"
             archive="zip"
             install_dir="$FONTS_BASE/$id"
             ;;
@@ -244,6 +267,17 @@ install_typeface() {
         # shellcheck disable=SC2154
         local arch="${archive:-zip}"
         download_url="https://github.com/${repo}/archive/refs/tags/${ref}.${arch}"
+    elif [ "${source}" = "github-branch-archive" ]; then
+        # shellcheck disable=SC2154
+        local branch_name="${branch:?branch required for source=github-branch-archive}"
+        ref="$(github_branch_head_sha "${repo}" "${branch_name}")"
+        if [ -z "${ref:-}" ]; then
+            error "unable to resolve branch head for ${name} (${repo}:${branch_name})"
+            return 1
+        fi
+        # shellcheck disable=SC2154
+        local arch="${archive:-zip}"
+        download_url="https://github.com/${repo}/archive/refs/heads/${branch_name}.${arch}"
     elif [ "${source}" = "url" ]; then
         # shellcheck disable=SC2154
         ref="${version:?version required for source=url}"
@@ -352,6 +386,7 @@ main() {
         "source-han-serif-cn"
         "apple-color-emoji"
         "noto-color-emoji"
+        "san-francisco-pro"
     )
 
     for font_id in "${FONT_IDS[@]}"; do
