@@ -210,6 +210,16 @@ load_spec() {
             archive="zip"
             install_dir="$FONTS_BASE/$id"
             ;;
+        "new-york")
+            id="new-york"
+            name="New York"
+            exts="otf"
+            source="github-branch-archive"
+            repo="yell0wsuit/New-York-fonts"
+            branch="master"
+            archive="zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
         *)
             error "unknown typeface id: $req_id"
             return 1
@@ -387,6 +397,7 @@ main() {
         "apple-color-emoji"
         "noto-color-emoji"
         "san-francisco-pro"
+        "new-york"
     )
 
     for font_id in "${FONT_IDS[@]}"; do
