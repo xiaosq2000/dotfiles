@@ -1,69 +1,69 @@
 {
-    "sound": true,
-    "notification": true,
-    "timeout": 5,
-    "showProjectName": true,
-    "showSessionTitle": true,
-    "showIcon": true,
-    "suppressWhenFocused": false,
-    "enableOnDesktop": false,
-    "linux": {
-        "grouping": true
+  "enableOnDesktop": false,
+  "events": {
+    "complete": {
+      "command": true,
+      "notification": true,
+      "sound": true
     },
-    "events": {
-        "permission": {
-            "sound": true,
-            "notification": true,
-            "command": true
-        },
-        "complete": {
-            "sound": true,
-            "notification": true,
-            "command": true
-        },
-        "subagent_complete": {
-            "sound": false,
-            "notification": false,
-            "command": true
-        },
-        "error": {
-            "sound": true,
-            "notification": true,
-            "command": true
-        },
-        "question": {
-            "sound": true,
-            "notification": true,
-            "command": true
-        },
-        "user_cancelled": {
-            "sound": false,
-            "notification": false,
-            "command": true
-        }
+    "error": {
+      "command": true,
+      "notification": true,
+      "sound": true
     },
-    "messages": {
-        "permission": "OpenCode needs permission: {sessionTitle}",
-        "complete": "OpenCode session finished: {sessionTitle}",
-        "subagent_complete": "OpenCode subagent finished: {sessionTitle}",
-        "error": "OpenCode hit an error: {sessionTitle}",
-        "question": "OpenCode has a question: {sessionTitle}",
-        "user_cancelled": "OpenCode session cancelled: {sessionTitle}"
+    "permission": {
+      "command": true,
+      "notification": true,
+      "sound": true
     },
-    "sounds": {
-        "permission": null,
-        "complete": null,
-        "subagent_complete": null,
-        "error": null,
-        "question": null,
-        "user_cancelled": null
+    "question": {
+      "command": true,
+      "notification": true,
+      "sound": true
     },
-    "volumes": {
-        "permission": 1,
-        "complete": 1,
-        "subagent_complete": 1,
-        "error": 1,
-        "question": 1,
-        "user_cancelled": 1
+    "subagent_complete": {
+      "command": true,
+      "notification": false,
+      "sound": false
+    },
+    "user_cancelled": {
+      "command": true,
+      "notification": false,
+      "sound": false
     }
+  },
+  "linux": {
+    "grouping": true
+  },
+  "messages": {
+    "complete": "OpenCode session finished: {sessionTitle}",
+    "error": "OpenCode hit an error: {sessionTitle}",
+    "permission": "OpenCode needs permission: {sessionTitle}",
+    "question": "OpenCode has a question: {sessionTitle}",
+    "subagent_complete": "OpenCode subagent finished: {sessionTitle}",
+    "user_cancelled": "OpenCode session cancelled: {sessionTitle}"
+  },
+  "notification": true,
+  "showIcon": true,
+  "showProjectName": true,
+  "showSessionTitle": true,
+  "sound": true,
+  "sounds": {
+    "complete": null,
+    "error": null,
+    "permission": null,
+    "question": null,
+    "subagent_complete": null,
+    "user_cancelled": null
+  },
+  "suppressWhenFocused": false,
+  "timeout": 5,
+  "volumes": {
+    "complete": 1,
+    "error": 1,
+    "permission": 1,
+    "question": 1,
+    "subagent_complete": 1,
+    "user_cancelled": 1
+  }
 }
