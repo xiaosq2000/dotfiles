@@ -50,14 +50,15 @@ return {
 						if not config then
 							goto continue
 						end
-						if not vim.list_contains(config.filetypes or {}, ft) then
-							goto continue
-						end
-						local cmd = config.cmd
-						if cmd and vim.fn.executable(cmd[1]) == 0 then
-							hinted[name] = true
-							vim.notify(("%s not found — :MasonInstall %s"):format(name, name), vim.log.levels.WARN)
-						end
+					if not vim.list_contains(config.filetypes or {}, ft) then
+						goto continue
+					end
+					local cmd = config.cmd
+					local executable = type(cmd) == "table" and cmd[1] or type(cmd) == "string" and cmd or nil
+					if executable and vim.fn.executable(executable) == 0 then
+						hinted[name] = true
+						vim.notify(("%s not found — :MasonInstall %s"):format(name, name), vim.log.levels.WARN)
+					end
 						::continue::
 					end
 				end,

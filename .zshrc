@@ -49,7 +49,7 @@ alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 CASE_SENSITIVE="false"
 HYPHEN_INSENSITIVE="true"
 
-zstyle ':omz:update' mode reminder  # just remind me to update when it's time
+zstyle ':omz:update' mode reminder # just remind me to update when it's time
 
 # Uncomment the following line if pasting URLs and other text is messed up.
 # DISABLE_MAGIC_FUNCTIONS="true"
@@ -83,8 +83,8 @@ prepend_env PATH "/usr/local/cuda/bin"
 ##################################### pixi #####################################
 ################################################################################
 # https://github.com/prefix-dev/pixi/
-prepend_env PATH "${HOME}/.pixi/bin"  # Add pixi to PATH first
-if has pixi; then eval "$(pixi completion --shell zsh)"; fi  # pixi shell-completion
+prepend_env PATH "${HOME}/.pixi/bin"                        # Add pixi to PATH first
+if has pixi; then eval "$(pixi completion --shell zsh)"; fi # pixi shell-completion
 
 ################################################################################
 ##################################### rust #####################################
@@ -129,9 +129,9 @@ if [ "$TERM" = "xterm-kitty" ] && has kitten; then
         zle -N edit-command-line
 
         function kitty_scrollback_edit_command_line() {
-          local VISUAL='${XDG_DATA_HOME}/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
-          zle edit-command-line
-          zle kill-whole-line
+            local VISUAL='${XDG_DATA_HOME}/nvim/lazy/kitty-scrollback.nvim/scripts/edit_command_line.sh'
+            zle edit-command-line
+            zle kill-whole-line
         }
         zle -N kitty_scrollback_edit_command_line
 
@@ -174,14 +174,14 @@ set_gnome_terminal_as_default() {
 ################################################################################
 setup_yazi() {
     if has yazi; then
-    	function y() {
-    		local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-    		yazi "$@" --cwd-file="$tmp"
-    		if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-    			builtin cd -- "$cwd"
-    		fi
-    		rm -f -- "$tmp"
-    	}
+        function y() {
+            local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+            yazi "$@" --cwd-file="$tmp"
+            if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+                builtin cd -- "$cwd"
+            fi
+            rm -f -- "$tmp"
+        }
     else
         warning "yazi not found."
     fi
@@ -264,7 +264,7 @@ plugins=(
     docker
     docker-compose
     dotenv
-    fzf-tab  # fzf-tab needs to be loaded after compinit, but before plugins which will wrap widgets, such as zsh-autosuggestions or fast-syntax-highlighting
+    fzf-tab # fzf-tab needs to be loaded after compinit, but before plugins which will wrap widgets, such as zsh-autosuggestions or fast-syntax-highlighting
     gh
     git
     git-auto-fetch
@@ -319,7 +319,7 @@ nvm() {
     nvm "$@"
     nvm_status=$?
 
-    if (( nvm_status == 0 )); then
+    if ((nvm_status == 0)); then
         refresh_nvm_default_symlink
     fi
 
@@ -386,7 +386,7 @@ if has uv; then
     _uv_completion_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_uv"
     if [[ ! -s "$_uv_completion_cache" || "$(command -v uv)" -nt "$_uv_completion_cache" ]]; then
         mkdir -p "${_uv_completion_cache:h}"
-        uv generate-shell-completion zsh >| "$_uv_completion_cache"
+        uv generate-shell-completion zsh >|"$_uv_completion_cache"
     fi
     source "$_uv_completion_cache"
     unset _uv_completion_cache
@@ -455,7 +455,7 @@ _guess_ros_distro() {
     if [ -d /opt/ros ]; then
         while IFS= read -r dir; do
             last=$(basename "$dir")
-            count=$((count+1))
+            count=$((count + 1))
         done < <(find /opt/ros -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
     fi
     if [ "$count" -eq 1 ] && [ -n "$last" ]; then
@@ -477,8 +477,8 @@ setup_ros() {
     fi
     if [[ -n ${ROS1_DISTRO} && -f "/opt/ros/${ROS1_DISTRO}/setup.zsh" ]]; then
         # shellcheck source=/dev/null
-        source "/opt/ros/${ROS1_DISTRO}/setup.zsh";
-        msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS $ROS1_DISTRO${RESET}";
+        source "/opt/ros/${ROS1_DISTRO}/setup.zsh"
+        msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS $ROS1_DISTRO${RESET}"
     else
         hint "make sure ROS is ready; please specify environment variable \"ROS1_DISTRO\""
     fi
@@ -495,9 +495,9 @@ setup_ros2() {
         fi
     fi
     if [[ -n ${ROS2_DISTRO} && -f "/opt/ros/${ROS2_DISTRO}/setup.zsh" ]]; then
-        msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS 2 $ROS2_DISTRO${RESET}";
+        msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS 2 $ROS2_DISTRO${RESET}"
         # shellcheck source=/dev/null
-        source "/opt/ros/${ROS2_DISTRO}/setup.zsh";
+        source "/opt/ros/${ROS2_DISTRO}/setup.zsh"
         info "ROS2 Environment Variables:"
         info "ROS_VERSION=${ROS_VERSION}"
         info "ROS_PYTHON_VERSION=${ROS_PYTHON_VERSION}"
@@ -529,5 +529,5 @@ setup_ros2() {
 if has proxy; then proxy shell on; fi
 
 zshrc_end_time=$(date +%s%N)
-zshrc_duration=$(( (zshrc_end_time - zshrc_start_time) / 1000000 ))
-DEBUG=1 debug "$zshrc_duration ms$RESET to start up zsh."
+zshrc_duration=$(((zshrc_end_time - zshrc_start_time) / 1000000))
+DEBUG=1 debug "$DIM$zshrc_duration ms$RESET"
