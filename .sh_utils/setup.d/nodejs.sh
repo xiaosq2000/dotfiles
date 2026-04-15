@@ -57,38 +57,38 @@ else
     exit 1
 fi
 
-step "Installing deno"
-npm install -g deno 1>/dev/null 2>&1
-if [ $? -eq 0 ]; then
-    success "$(deno --version | head -n 1)"
-else
-    error "Failed to install deno"
-    exit 1
-fi
-
-step "Installing claude code"
-npm install -g @anthropic-ai/claude-code 1>/dev/null 2>&1
-if [ $? -eq 0 ]; then
-    success "$(claude --version)"
-else
-    error "Failed to install deno"
-    exit 1
-fi
-
-step "Installing codex"
-npm install -g @openai/codex 1>/dev/null 2>&1
-if [ $? -eq 0 ]; then
-    success "$(codex --version)"
-else
-    error "Failed to install codex"
-    exit 1
-fi
-
-step "Installing opencode"
-npm install -g opencode-ai 1>/dev/null 2>&1
-if [ $? -eq 0 ]; then
-    success "$(opencode --version)"
-else
-    error "Failed to install opencode"
-    exit 1
-fi
+# step "Installing deno"
+# npm install -g deno 1>/dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     success "$(deno --version | head -n 1)"
+# else
+#     error "Failed to install deno"
+#     exit 1
+# fi
+#
+# step "Installing claude code"
+# npm install -g @anthropic-ai/claude-code 1>/dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     success "$(claude --version)"
+# else
+#     error "Failed to install claude code"
+#     exit 1
+# fi
+#
+# step "Installing codex"
+# npm install -g @openai/codex 1>/dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     success "$(codex --version)"
+# else
+#     error "Failed to install codex"
+#     exit 1
+# fi
+#
+# step "Installing opencode"
+# npm install -g opencode-ai 1>/dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     success "$(opencode --version)"
+# else
+#     error "Failed to install opencode"
+#     exit 1
+# fi
