@@ -246,6 +246,12 @@ setup_fzf_tab() {
 }
 setup_fzf_tab
 
+# Type 'wt' to see a list of worktrees and cd into the selected one
+wt() {
+    local dir=$(git worktree list | fzf --height=40% | awk '{print $1}')
+    [[ -n "$dir" ]] && cd "$dir"
+}
+
 ################################################################################
 ####### zsh-vi-mode - A better and friendly vi(vim) mode plugin for ZSH ########
 ################## https://github.com/jeffreytse/zsh-vi-mode ###################
