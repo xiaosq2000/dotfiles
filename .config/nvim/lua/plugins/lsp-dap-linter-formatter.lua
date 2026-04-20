@@ -6,6 +6,7 @@ local lsp_servers = {
 	"lua_ls",
 	"bashls",
 	"marksman",
+	"texlab",
 	"cmake",
 	"dockerls",
 	"docker_compose_language_service",
