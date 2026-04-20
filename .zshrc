@@ -403,6 +403,20 @@ fi
 ################################################################################
 # codex shell completion
 if has codex; then eval "$(codex completion zsh)"; fi
+
+claude() {
+    local country
+
+    country="$(curl --silent ipinfo.io 2>/dev/null | jq -r '.country' 2>/dev/null)"
+    if [[ "$country" == "CN" ]] || [[ "$country" == "MO" ]] || [[ "$country" == "HK" ]]; then
+        error "How dare you use Claude Code in China!"
+        hint "Run \`proxy on\` or \`proxy shell on\`."
+        return 1
+    fi
+
+    command claude "$@"
+}
+
 # opencode
 prepend_env PATH "${HOME}/.opencode/bin"
 
