@@ -210,6 +210,26 @@ load_spec() {
             archive="zip"
             install_dir="$FONTS_BASE/$id"
             ;;
+        "san-francisco-mono")
+            id="san-francisco-mono"
+            name="SF Mono"
+            exts="otf"
+            source="github-branch-archive"
+            repo="supercomputra/SF-Mono-Font"
+            branch="master"
+            archive="zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
+        "pingfang")
+            id="pingfang"
+            name="PingFang"
+            exts="otf"
+            source="github-branch-archive"
+            repo="jimmyctk/PingFang-OTF-Fonts"
+            branch="main"
+            archive="zip"
+            install_dir="$FONTS_BASE/$id"
+            ;;
         "new-york")
             id="new-york"
             name="New York"
@@ -397,7 +417,9 @@ main() {
         "apple-color-emoji"
         "noto-color-emoji"
         "san-francisco-pro"
+        "san-francisco-mono"
         "new-york"
+        "pingfang"
     )
 
     for font_id in "${FONT_IDS[@]}"; do
