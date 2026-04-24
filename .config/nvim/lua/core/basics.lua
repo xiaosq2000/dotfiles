@@ -1,4 +1,38 @@
-require("vim._core.ui2").enable()
+vim.o.cmdheight = 0
+vim.o.winborder = "rounded"
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = { "cmd", "msg", "pager", "dialog" },
+	callback = function()
+		vim.opt_local.number = false
+		vim.opt_local.relativenumber = false
+		vim.opt_local.signcolumn = "no"
+		vim.opt_local.foldcolumn = "0"
+		vim.opt_local.colorcolumn = ""
+	end,
+})
+require("vim._core.ui2").enable({
+	msg = {
+		targets = {
+			echo = "msg",
+			echomsg = "msg",
+			lua_print = "msg",
+			bufwrite = "msg",
+			quickfix = "msg",
+			undo = "msg",
+
+			list_cmd = "pager",
+			shell_out = "pager",
+			shell_err = "pager",
+			verbose = "pager",
+			lua_error = "pager",
+			rpc_error = "pager",
+		},
+		msg = { height = 0.25, timeout = 2500 },
+		cmd = { height = 0.35 },
+		dialog = { height = 0.45 },
+		pager = { height = 0.7 },
+	},
+})
 --------------------------------------------------------------------------------
 ------------------------------------ remap -------------------------------------
 --------------------------------------------------------------------------------

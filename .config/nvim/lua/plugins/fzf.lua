@@ -126,6 +126,7 @@ return {
 	config = function()
 		require("fzf-lua").setup({
 			"hide",
+			ui_select = true,
 			fzf_opts = { ["--cycle"] = true },
 			keymap = {
 				fzf = {
