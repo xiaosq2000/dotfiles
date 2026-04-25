@@ -27,13 +27,20 @@ return {
 		})
 	),
 	s(
-		{ trig = "rc", dscr = "resetcolorseries" },
+		{ trig = "okps", dscr = "oklch-palette defaults" },
 		fmta(
 			[[
-\resetcolorseries[<>]{marknode-color-series}
-\resetcolorseries[<>]{annotation-color-series}
+\okpSet{
+  theme=<>,
+  hues=<>,
+  hue-offset=<>
+}
         ]],
-			{ i(1, "4"), rep(1) }
+			{
+				c(1, { t("light"), t("dark") }),
+				i(2, "4"),
+				i(3, "0"),
+			}
 		)
 	),
 }
