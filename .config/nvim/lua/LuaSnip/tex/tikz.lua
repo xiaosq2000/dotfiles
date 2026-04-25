@@ -22,111 +22,97 @@ return {
 	----------------------------- equation annotation ------------------------------
 	--------------------------------------------------------------------------------
 	s(
-		{ trig = "preamble-equation-annotation", dscr = "ref: https://github.com/synercys/annotated_latex_equations" },
+		{ trig = "tqap", dscr = "tikz-equation-annotate package" },
 		fmta(
 			[[
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%% equation annotation by TikZ %%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \usepackage{tikz}
-% \usepackage[dvipsnames]{xcolor}
-\usetikzlibrary{calc,tikzmark}
-% \usepackage{tcolorbox}
-\usepackage{makecell}
-\usepackage{xstring}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Usage:
-% \annotatedEquation{1: color/colorseries}{2: node name}{3: node direction}{4: x shift}{5: y shift}{6: anchor direction}{7: color/colorseries name}{8: annotation}{9: baseline direction}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newenvironment{annotatedEquationEnv}{
-    \begin{tikzpicture}[
-        overlay, remember picture,
-        >>=stealth, <<-,
-        nodes={align=left,inner ysep=1pt},
-    ]
-}
-{
-    \end{tikzpicture}
-}
-\newcommand*{\annotatedEquation}[9]{%
-     \IfEqCase{#1}{%
-        {color}{%
-            \path (#2.#3) ++ (#4,#5) node [anchor=#6] (#2-annotate) { \color{#7} \scriptsize \makecell[l]{#8} };%
-            \draw [#7] (#2.#3) |- (#2-annotate.south #9);%
-        }%
-        {colorseries}{%
-            \path (#2.#3) ++ (#4,#5) node [anchor=#6] (#2-annotate) { \color{#7!!} \scriptsize \makecell[l]{#8} };%
-            \draw [#7!!] (#2.#3) |- (#2-annotate.south #9);%
-            \textcolor{#7!!+}{}%
-        }%
-    }[\PackageError{annotatedEquation}{Undefined option to annotatedEquation #1}{}]%
-}%
-    ]],
-			{}
-		)
-	),
-	s(
-		{ trig = "env-eqan", dscr = "environment of annotated equation" },
-		fmta(
-			[[
-\begin{annotatedEquationEnv}
-    <>
-\end{annotatedEquationEnv}
-    ]],
-			{ i(1, "Use \\annotatedEquation here.") }
-		)
-	),
-	s(
-		{ trig = "mn", dscr = "tikzmarknode" },
-		fmta(
-			[[
-\tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}
-    ]],
-			{ i(1, "0"), rep(1), d(2, get_visual) }
-		)
-	),
-	s(
-		{ trig = "mno", dscr = "tikzmarknode with beamer overlay" },
-		fmta(
-			[[
-\alt<<<>>>{\tikzmarknode{n<>}{\colorbox{marknode-color-series!![<>]}{\(<>\)}}}{<>}
-     ]],
-			{ i(1, "+(1)-"), i(2, "0"), rep(2), d(3, get_visual), rep(3) }
-		)
-	),
-	s(
-		{ trig = "eqan", dscr = "annotated equation" },
-		fmta(
-			[[
-\annotatedEquation{<>}{n<>}{<>}{0em}{<>em}{<>}{<>}{<>}{<>}
+\usepackage{amsmath}
+\usepackage<>{tikz-equation-annotate}
     ]],
 			{
-				c(1, { t("colorseries"), t("color") }),
-				i(2, "0"),
-				c(3, { t("south"), t("north") }),
-				i(4, "-0.5"),
-				c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
-				i(6, "annotation-color-series"),
-				i(7, "annotation"),
-				c(8, { t("east"), t("west") }),
+				c(1, {
+					t(""),
+					sn(nil, { t("["), i(1, "theme=light, hues=4"), t("]") }),
+				}),
 			}
 		)
 	),
 	s(
-		{ trig = "eqano", dscr = "equation annotation with beamer overlay" },
+		{ trig = "tqas", dscr = "tikz-equation-annotate defaults" },
 		fmta(
 			[[
-\only<<<>>>{\annotatedEquation{color}{n<>}{<>}{0em}{<>em}{<>}{annotation-color-series!![<>]}{<>}{<>}}
+\teqaSet{
+  <>
+}
     ]],
+			{ i(1, "theme=dark, hues=6, hue-offset=20") }
+		)
+	),
+	s(
+		{ trig = "tqal", dscr = "tikz-equation-annotate environment label" },
+		fmta(
+			[[\teqaEnvLabel{<>}]],
+			{ i(1, "stable-env") }
+		)
+	),
+	s(
+		{ trig = "tqam", dscr = "tikz-equation-annotate mark only" },
+		fmta(
+			[[\teqaAnnotate{<>}]],
+			{ d(1, get_visual) }
+		)
+	),
+	s(
+		{ trig = "tqa", dscr = "tikz-equation-annotate callout" },
+		fmta(
+			"\\teqaAnnotate{<>}[say=<>, place=<>]",
+			{
+				d(1, get_visual),
+				i(2, "annotation"),
+				c(3, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
+			}
+		)
+	),
+	s(
+		{ trig = "tqao", dscr = "tikz-equation-annotate beamer overlay" },
+		fmta(
+			[[\alt<<<>>>{\teqaAnnotate{<>}[say=<>, place=<>]}{<>}]],
 			{
 				i(1, "+(1)-"),
-				i(2, "0"),
-				c(3, { t("south"), t("north") }),
-				i(4, "-0.5"),
-				c(5, { t("north west"), t("north east"), t("south west"), t("south east") }),
+				d(2, get_visual),
+				i(3, "annotation"),
+				c(4, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
 				rep(2),
-				i(6, "annotation"),
-				c(7, { t("east"), t("west") }),
+			}
+		)
+	),
+	s(
+		{ trig = "tqab", dscr = "tikz-equation-annotate brace range" },
+		fmta(
+			"\\teqaBraceBegin{<>} <> \\teqaBraceEnd{<>}[say=<>, place=<>]",
+			{
+				i(1),
+				d(2, get_visual),
+				rep(1),
+				i(3, "annotation"),
+				c(4, { t("below"), t("above") }),
+			}
+		)
+	),
+	s(
+		{ trig = "tqabb", dscr = "tikz-equation-annotate brace begin" },
+		fmta(
+			[[\teqaBraceBegin{<>}]],
+			{ i(1) }
+		)
+	),
+	s(
+		{ trig = "tqabe", dscr = "tikz-equation-annotate brace end" },
+		fmta(
+			"\\teqaBraceEnd{<>}[say=<>, place=<>]",
+			{
+				i(1),
+				i(2, "annotation"),
+				c(3, { t("below"), t("above") }),
 			}
 		)
 	),
