@@ -156,10 +156,22 @@ return {
 				bash = { "shfmt" },
 				sh = { "shfmt" },
 				zsh = { "shfmt" },
+				markdown = { "prettier", lsp_format = "never" },
 				json = { "prettier" },
 				jsonc = { "prettier" },
 				toml = { "taplo" },
 				tex = { "tex-fmt" },
+			},
+			formatters = {
+				prettier = {
+					prepend_args = function(_, ctx)
+						if vim.bo[ctx.buf].filetype == "markdown" then
+							return { "--prose-wrap", "always", "--tab-width", "2" }
+						end
+
+						return {}
+					end,
+				},
 			},
 		},
 		keys = {
