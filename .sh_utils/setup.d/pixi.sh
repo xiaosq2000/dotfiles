@@ -33,7 +33,7 @@ fi
 
 # If tools are missing from PATH, install them globally via pixi.
 # Mapping: binary_name:package_name
-ensure_tools="cmake:cmake ninja:ninja git:git git-lfs:git-lfs gh:gh btop:btop rg:ripgrep fd:fd-find jq:jq 7z:p7zip fastfetch:fastfetch speedtest:speedtest-cli ffmpeg:ffmpeg sqlite3:sqlite secret-tool:libsecret clangd:clang-tools clang-format:clang-format ty:ty ruff:ruff pnpm:pnpm age:age sops:go-sops resvg:resvg"
+ensure_tools="cmake:cmake ninja:ninja git:git git-lfs:git-lfs gh:gh btop:btop dust:dust rg:ripgrep fd:fd-find jq:jq 7z:p7zip fastfetch:fastfetch speedtest:speedtest-cli ffmpeg:ffmpeg sqlite3:sqlite secret-tool:libsecret clangd:clang-tools clang-format:clang-format ty:ty ruff:ruff pnpm:pnpm age:age sops:go-sops resvg:resvg lazygit:lazygit difft:difftastic"
 
 missing_packages=""
 for item in $ensure_tools; do
@@ -42,8 +42,8 @@ for item in $ensure_tools; do
     if ! command -v "$bin_name" >/dev/null 2>&1; then
         info "'$bin_name' not found; package '$pkg_name' will be installed"
         case " $missing_packages " in
-            *" $pkg_name "*) ;;
-            *) missing_packages="$missing_packages $pkg_name" ;;
+        *" $pkg_name "*) ;;
+        *) missing_packages="$missing_packages $pkg_name" ;;
         esac
     else
         info "$bin_name is already installed at $(command -v "$bin_name")"
