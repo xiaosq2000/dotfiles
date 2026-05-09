@@ -137,6 +137,45 @@ return {
 		cmd = "Glance",
 	},
 	{
+		"mfussenegger/nvim-lint",
+		enabled = enabled,
+		config = function()
+			local lint = require("lint")
+
+			lint.linters_by_ft = {
+				gitcommit = { "codespell" },
+				markdown = { "codespell" },
+				tex = { "codespell" },
+				text = { "codespell" },
+			}
+
+			local warned_missing_codespell = false
+			local group = vim.api.nvim_create_augroup("UserLint", { clear = true })
+
+			vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave", "TextChanged" }, {
+				group = group,
+				callback = function(args)
+					if vim.bo[args.buf].buftype ~= "" then
+						return
+					end
+					if not lint.linters_by_ft[vim.bo[args.buf].filetype] then
+						return
+					end
+
+					if vim.fn.executable("codespell") == 0 then
+						if not warned_missing_codespell then
+							warned_missing_codespell = true
+							vim.notify("codespell not found - :MasonInstall codespell", vim.log.levels.WARN)
+						end
+						return
+					end
+
+					lint.try_lint()
+				end,
+			})
+		end,
+	},
+	{
 		"stevearc/conform.nvim",
 		enabled = enabled,
 		dependencies = { "mason-org/mason.nvim" },
