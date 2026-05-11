@@ -446,18 +446,32 @@ check_x11_wayland() {
 check_x11_wayland
 
 setup_texlive() {
-    TEXLIVE_VERSION=2025
-    if [[ -d "${XDG_DATA_HOME}/../texlive/${TEXLIVE_VERSION}/bin/x86_64-linux" ]]; then
-        append_env PATH "${XDG_DATA_HOME}/../texlive/${TEXLIVE_VERSION}/bin/x86_64-linux"
-        debug "using texlive $TEXLIVE_VERSION"
-    elif [[ -d "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}" ]]; then
-        append_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/info"
-        append_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/texmf-dist/doc/man"
-        append_env PATH "${XDG_PREFIX_DIR}/texlive/${TEXLIVE_VERSION}/bin/x86_64-linux"
-        debug "using texlive $TEXLIVE_VERSION"
-    else
-        debug "texlive $TEXLIVE_VERSION not found"
+    local texlive_root texlive_dir texlive_version
+    local latest_root=""
+    local latest_version=0
+
+    for texlive_root in "${XDG_DATA_HOME}/../texlive" "${XDG_PREFIX_DIR}/texlive"; do
+        for texlive_dir in "${texlive_root}"/<->(N/); do
+            texlive_version="${texlive_dir:t}"
+            if [[ -d "${texlive_dir}/bin/x86_64-linux" ]] && ((texlive_version > latest_version)); then
+                latest_root="${texlive_root}"
+                latest_version="${texlive_version}"
+            fi
+        done
+    done
+
+    if ((latest_version == 0)); then
+        debug "texlive not found"
+        return
     fi
+
+    if [[ "${latest_root}" == "${XDG_PREFIX_DIR}/texlive" ]]; then
+        append_env PATH "${latest_root}/${latest_version}/texmf-dist/doc/info"
+        append_env PATH "${latest_root}/${latest_version}/texmf-dist/doc/man"
+    fi
+
+    append_env PATH "${latest_root}/${latest_version}/bin/x86_64-linux"
+    debug "using texlive $latest_version"
 }
 setup_texlive
 
