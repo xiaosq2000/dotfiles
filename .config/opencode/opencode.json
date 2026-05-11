@@ -1,5 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "edit": {
+      "~/.local/texlive": "deny",
+      "~/.local/texlive/**": "deny"
+    },
+    "external_directory": {
+      "~/.local/texlive": "allow",
+      "~/.local/texlive/**": "allow"
+    }
+  },
   "plugin": [
     "@slkiser/opencode-quota",
     "@mohak34/opencode-notifier@latest"
