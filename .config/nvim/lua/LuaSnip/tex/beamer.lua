@@ -37,4 +37,38 @@ return {
 		fmta("\\mode<<<>>>{<>}", { c(1, { t({ "presentation" }), t({ "article" }) }), d(2, get_visual) })
 	),
 	s({ trig = "pv" }, fmta("\\mode<<presentation>>{\\vfill}", {})),
+	s(
+		{ trig = "cols", dscr = "two-column layout" },
+		fmta(
+			[[
+\begin{columns}[<>,<>]
+    \begin{column}{<>\textwidth}
+        <>
+    \end{column}
+    \begin{column}{<>\textwidth}
+        <>
+    \end{column}
+\end{columns}
+            ]],
+			{
+				c(1, { t("T"), t("c"), t("t"), t("b") }),
+				i(2, "onlytextwidth"),
+				i(3, "0.5"),
+				i(4),
+				i(5, "0.5"),
+				i(6),
+			}
+		)
+	),
+	s(
+		{ trig = "col", dscr = "single column" },
+		fmta(
+			[[
+\begin{column}{<>\textwidth}
+    <>
+\end{column}
+            ]],
+			{ i(1, "0.5"), d(2, get_visual) }
+		)
+	),
 }
