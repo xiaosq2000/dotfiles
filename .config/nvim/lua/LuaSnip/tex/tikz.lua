@@ -49,72 +49,45 @@ return {
 	),
 	s(
 		{ trig = "tqal", dscr = "tikz-equation-annotate environment label" },
-		fmta(
-			[[\teqaEnvLabel{<>}]],
-			{ i(1, "stable-env") }
-		)
+		fmta([[\teqaEnvLabel{<>}]], { i(1, "stable-env") })
 	),
-	s(
-		{ trig = "tqam", dscr = "tikz-equation-annotate mark only" },
-		fmta(
-			[[\teqaAnnotate{<>}]],
-			{ d(1, get_visual) }
-		)
-	),
+	s({ trig = "tqam", dscr = "tikz-equation-annotate mark only" }, fmta([[\teqaAnnotate{<>}]], { d(1, get_visual) })),
 	s(
 		{ trig = "tqa", dscr = "tikz-equation-annotate callout" },
-		fmta(
-			"\\teqaAnnotate{<>}[say=<>, place=<>]",
-			{
-				d(1, get_visual),
-				i(2, "annotation"),
-				c(3, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
-			}
-		)
+		fmta("\\teqaAnnotate{<>}[say={<>}, place=<>]", {
+			d(1, get_visual),
+			i(2, "annotation"),
+			c(3, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
+		})
 	),
 	s(
 		{ trig = "tqao", dscr = "tikz-equation-annotate beamer overlay" },
-		fmta(
-			[[\alt<<<>>>{\teqaAnnotate{<>}[say=<>, place=<>]}{<>}]],
-			{
-				i(1, "+(1)-"),
-				d(2, get_visual),
-				i(3, "annotation"),
-				c(4, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
-				rep(2),
-			}
-		)
+		fmta([[\alt<<<>>>{\teqaAnnotate{<>}[say={<>}, place=<>]}{<>}]], {
+			i(1, "+(1)-"),
+			d(2, get_visual),
+			i(3, "annotation"),
+			c(4, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
+			rep(2),
+		})
 	),
 	s(
 		{ trig = "tqab", dscr = "tikz-equation-annotate brace range" },
-		fmta(
-			"\\teqaBraceBegin{<>} <> \\teqaBraceEnd{<>}[say=<>, place=<>]",
-			{
-				i(1),
-				d(2, get_visual),
-				rep(1),
-				i(3, "annotation"),
-				c(4, { t("below"), t("above") }),
-			}
-		)
+		fmta("\\teqaBraceBegin{<>} <> \\teqaBraceEnd{<>}[say={<>}, place=<>]", {
+			i(1),
+			d(2, get_visual),
+			rep(1),
+			i(3, "annotation"),
+			c(4, { t("below"), t("above") }),
+		})
 	),
-	s(
-		{ trig = "tqabb", dscr = "tikz-equation-annotate brace begin" },
-		fmta(
-			[[\teqaBraceBegin{<>}]],
-			{ i(1) }
-		)
-	),
+	s({ trig = "tqabb", dscr = "tikz-equation-annotate brace begin" }, fmta([[\teqaBraceBegin{<>}]], { i(1) })),
 	s(
 		{ trig = "tqabe", dscr = "tikz-equation-annotate brace end" },
-		fmta(
-			"\\teqaBraceEnd{<>}[say=<>, place=<>]",
-			{
-				i(1),
-				i(2, "annotation"),
-				c(3, { t("below"), t("above") }),
-			}
-		)
+		fmta("\\teqaBraceEnd{<>}[say={<>}, place=<>]", {
+			i(1),
+			i(2, "annotation"),
+			c(3, { t("below"), t("above") }),
+		})
 	),
 	--------------------------------------------------------------------------------
 	------------------------------ figure annotation -------------------------------

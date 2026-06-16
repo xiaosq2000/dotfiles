@@ -90,7 +90,7 @@ return {
 	s({ trig = "hat", dscr = "hat" }, fmta("\\hat{<>}", { d(1, get_visual) })),
 	s({ trig = "tilde", dscr = "tilde" }, fmta("\\tilde{<>}", { d(1, get_visual) })),
 	s({ trig = "op", dscr = "operatorname" }, fmta("\\operatorname{<>}", { d(1, get_visual) })),
-	s({ trig = "tp", dscr = "transpose" }, fmta("^{\\mathrm{T}}", {})),
+	s({ trig = "tp", dscr = "transpose" }, fmta("^{\\intercal}", {})),
 	--------------------------------------------------------------------------------
 	-------------------------------- greek letters ---------------------------------
 	--------------------------------------------------------------------------------
