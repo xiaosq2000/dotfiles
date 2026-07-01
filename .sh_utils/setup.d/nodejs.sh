@@ -1,64 +1,101 @@
 #!/usr/bin/env bash
-source ~/.sh_utils/lib/ui.sh
+set -eu
 
-export NVM_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/nvm"
+# Determine the script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
 
-refresh_nvm_default_symlink() {
-    local default_node_bin default_node_dir
-
-    default_node_bin="$(nvm which default 2>/dev/null)" || return 1
-    if [[ ! -x "$default_node_bin" ]]; then
-        return 1
-    fi
-
-    default_node_dir="$(dirname "$(dirname "$default_node_bin")")"
-    ln -sfn "$default_node_dir" "$NVM_DIR/default"
-}
-
-step "Installing the latest nvm"
-mkdir -p "${NVM_DIR}"
-(unset ZSH_VERSION && PROFILE=/dev/null bash -c 'wget -qO- "https://github.com/nvm-sh/nvm/raw/master/install.sh" | bash' 1>/dev/null 2>&1)
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-if [ $? -eq 0 ]; then
-    success "nvm version: $(nvm --version)"
+# Source the UI library
+if [ -f "$UI_LIB" ]; then
+    # shellcheck disable=SC1090
+    source "$UI_LIB"
 else
-    error "Failed to install nvm"
-    rm -rf "$NVM_DIR"
+    echo "error: UI library not found at $UI_LIB"
     exit 1
 fi
 
+# pnpm doubles as the Node.js version manager (replaces nvm + system node).
+# Keep this layout in sync with the pnpm block in ~/.zshrc.
+export PNPM_HOME="${PNPM_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/pnpm}"
+PNPM_BIN_DIR="$PNPM_HOME/bin"
+case ":$PATH:" in
+    *":$PNPM_BIN_DIR:"*) ;;
+    *) export PATH="$PNPM_BIN_DIR:$PATH" ;;
+esac
+
+# Map `uname -m` to the pnpm release asset suffix.
+case "$(uname -m)" in
+    x86_64 | amd64) PNPM_ARCH="x64" ;;
+    aarch64 | arm64) PNPM_ARCH="arm64" ;;
+    *)
+        error "unsupported architecture: $(uname -m)"
+        exit 1
+        ;;
+esac
+# musl libc (e.g. Alpine) needs the statically-linked build.
+PNPM_LIBC=""
+if ldd --version 2>&1 | grep -qi musl; then
+    PNPM_LIBC="-musl"
+fi
+PNPM_ASSET="pnpm-linux-${PNPM_ARCH}${PNPM_LIBC}.tar.gz"
+
+# Ensure the standalone pnpm binary is installed. The linux release is a Node
+# SEA binary that needs its sibling `dist/` tree, so extract the whole tarball
+# into $PNPM_HOME/bin. Being self-contained, `pnpm env` can then manage node
+# without a pre-existing node install.
+if command -v pnpm >/dev/null 2>&1; then
+    PNPM="$(command -v pnpm)"
+    success "pnpm already installed: $("$PNPM" --version)"
+else
+    step "Installing the latest pnpm"
+    mkdir -p "$PNPM_BIN_DIR"
+    PNPM="$PNPM_BIN_DIR/pnpm"
+    tmpdir="$(mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
+    if curl -fsSL "https://github.com/pnpm/pnpm/releases/latest/download/${PNPM_ASSET}" -o "$tmpdir/pnpm.tar.gz" &&
+        tar xzf "$tmpdir/pnpm.tar.gz" -C "$PNPM_BIN_DIR"; then
+        chmod +x "$PNPM"
+        success "pnpm version: $("$PNPM" --version)"
+    else
+        error "Failed to install pnpm"
+        rm -f "$PNPM"
+        exit 1
+    fi
+    rm -rf "$tmpdir"
+    trap - EXIT
+fi
+
+# Pin the global bin dir so globally-installed tools (node, bw, ...) land in
+# $PNPM_HOME/bin, matching the PATH entry above and in ~/.zshrc.
+"$PNPM" config set global-bin-dir "$PNPM_BIN_DIR" 1>/dev/null 2>&1 || true
+
+# Use a flat, npm-like global node_modules. pnpm's default isolated store hides
+# transitive deps, which breaks CLIs that assume hoisting (e.g. @bitwarden/cli
+# needs `buffer/`). This must live in pnpm's global dir, keyed by store version.
+PNPM_GLOBAL_DIR="$("$PNPM" root --global 2>/dev/null || true)"
+if [ -n "$PNPM_GLOBAL_DIR" ]; then
+    mkdir -p "$PNPM_GLOBAL_DIR"
+    printf 'nodeLinker: hoisted\n' >"$PNPM_GLOBAL_DIR/pnpm-workspace.yaml"
+fi
+
 step "Installing the latest lts node.js"
-nvm install --lts 1>/dev/null 2>&1
-if [ $? -eq 0 ]; then
-    if ! nvm alias default 'lts/*' 1>/dev/null 2>&1; then
-        error "Failed to set nvm default alias"
-        exit 1
-    fi
-    if ! nvm use --silent default 1>/dev/null 2>&1; then
-        error "Failed to activate the default node version"
-        exit 1
-    fi
-    if ! refresh_nvm_default_symlink; then
-        error "Failed to refresh the nvm default symlink"
-        exit 1
-    fi
-    success "node version: $(node --version)"
+if "$PNPM" env use --global lts 1>/dev/null 2>&1; then
+    success "node version: $("$PNPM_BIN_DIR/node" --version)"
 else
     error "Failed to install node"
     exit 1
 fi
 
 step "Installing bw"
-npm install -g @bitwarden/cli 1>/dev/null 2>&1
-if [ $? -eq 0 ]; then
-    success "$(bw --version)"
+if "$PNPM" add --global @bitwarden/cli 1>/dev/null 2>&1; then
+    success "$("$PNPM_BIN_DIR/bw" --version)"
 else
     error "Failed to install bw"
     exit 1
 fi
 
 # step "Installing deno"
-# npm install -g deno 1>/dev/null 2>&1
+# "$PNPM" add --global deno 1>/dev/null 2>&1
 # if [ $? -eq 0 ]; then
 #     success "$(deno --version | head -n 1)"
 # else
@@ -67,7 +104,7 @@ fi
 # fi
 #
 # step "Installing claude code"
-# npm install -g @anthropic-ai/claude-code 1>/dev/null 2>&1
+# "$PNPM" add --global @anthropic-ai/claude-code 1>/dev/null 2>&1
 # if [ $? -eq 0 ]; then
 #     success "$(claude --version)"
 # else
@@ -76,7 +113,7 @@ fi
 # fi
 #
 # step "Installing codex"
-# npm install -g @openai/codex 1>/dev/null 2>&1
+# "$PNPM" add --global @openai/codex 1>/dev/null 2>&1
 # if [ $? -eq 0 ]; then
 #     success "$(codex --version)"
 # else
@@ -85,7 +122,7 @@ fi
 # fi
 #
 # step "Installing opencode"
-# npm install -g opencode-ai 1>/dev/null 2>&1
+# "$PNPM" add --global opencode-ai 1>/dev/null 2>&1
 # if [ $? -eq 0 ]; then
 #     success "$(opencode --version)"
 # else
