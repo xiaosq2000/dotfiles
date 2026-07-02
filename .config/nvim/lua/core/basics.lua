@@ -10,29 +10,33 @@ vim.api.nvim_create_autocmd("FileType", {
 		vim.opt_local.colorcolumn = ""
 	end,
 })
-require("vim._core.ui2").enable({
-	msg = {
-		targets = {
-			echo = "msg",
-			echomsg = "msg",
-			lua_print = "msg",
-			bufwrite = "msg",
-			quickfix = "msg",
-			undo = "msg",
+-- experimental message UI, not available before nvim 0.12
+local ok, ui2 = pcall(require, "vim._core.ui2")
+if ok then
+	ui2.enable({
+		msg = {
+			targets = {
+				echo = "msg",
+				echomsg = "msg",
+				lua_print = "msg",
+				bufwrite = "msg",
+				quickfix = "msg",
+				undo = "msg",
 
-			list_cmd = "pager",
-			shell_out = "pager",
-			shell_err = "pager",
-			verbose = "pager",
-			lua_error = "pager",
-			rpc_error = "pager",
+				list_cmd = "pager",
+				shell_out = "pager",
+				shell_err = "pager",
+				verbose = "pager",
+				lua_error = "pager",
+				rpc_error = "pager",
+			},
+			msg = { height = 0.25, timeout = 2500 },
+			cmd = { height = 0.35 },
+			dialog = { height = 0.45 },
+			pager = { height = 0.7 },
 		},
-		msg = { height = 0.25, timeout = 2500 },
-		cmd = { height = 0.35 },
-		dialog = { height = 0.45 },
-		pager = { height = 0.7 },
-	},
-})
+	})
+end
 --------------------------------------------------------------------------------
 ------------------------------------ remap -------------------------------------
 --------------------------------------------------------------------------------
