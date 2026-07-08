@@ -37,14 +37,38 @@ return {
 		)
 	),
 	s(
-		{ trig = "tqas", dscr = "tikz-equation-annotate defaults" },
+		{ trig = "tqas", dscr = "tikz-equation-annotate defaults (all keys)" },
 		fmta(
 			[[
 \teqaSet{
-  <>
+  % palette (oklch-palette)
+  theme=<>, hues=<>, hue-offset=<>,
+  light={fill={L=0.92, C=0.08}, stroke={L=0.45, C=0.15}},
+  dark={fill={L=0.30, C=0.08}, stroke={L=0.75, C=0.15}},
+  % callout placement & text
+  place=<>, text-padding={0.15em, 0.15em}, text-overhang=0.1em,
+  font={\rmfamily\scriptsize},
+  % fill highlight & stroke box
+  fill-draw=<>, box-draw=<>,
+  box-line-width=0.3pt, box-rounded-corners=0pt,
+  box-inner-xsep=0pt, box-inner-ysep=0.15ex,
+  % connector (callout leader)
+  connector-line-width=0.3pt, connector-rounded-corners=0pt,
+  % brace range (\teqaBraceEnd); brace-raise sets below+above together
+  brace-place=<>, brace-amplitude=4pt,
+  brace-raise-below=0.6em, brace-raise-above=1.1em,
+  brace-line-width=0.4pt, brace-text-gap=0.25em,
 }
     ]],
-			{ i(1, "theme=dark, hues=6, hue-offset=20") }
+			{
+				c(1, { t("light"), t("dark") }),
+				i(2, "8"),
+				i(3, "0"),
+				c(4, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
+				c(5, { t("true"), t("false") }),
+				c(6, { t("true"), t("false") }),
+				c(7, { t("below"), t("above") }),
+			}
 		)
 	),
 	s(
