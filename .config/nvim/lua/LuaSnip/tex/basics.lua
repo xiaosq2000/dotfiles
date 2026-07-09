@@ -42,9 +42,9 @@ return {
 	--------------------------------------------------------------------------------
 	----------------------------------- brackets -----------------------------------
 	--------------------------------------------------------------------------------
-	s({ trig = ";(", snippetType = "autosnippet" }, fmta("\\left(<>\\right)", { d(1, get_visual) })),
-	s({ trig = ";[", snippetType = "autosnippet" }, fmta("\\left[<>\\right]", { d(1, get_visual) })),
-	s({ trig = ";{", snippetType = "autosnippet" }, fmta("\\left\\{<>\\right\\}", { d(1, get_visual) })),
+	s({ trig = ";(", snippetType = "autosnippet" }, fmta("\\parens*{<>}", { d(1, get_visual) })),
+	s({ trig = ";[", snippetType = "autosnippet" }, fmta("\\bracks*{<>}", { d(1, get_visual) })),
+	s({ trig = ";{", snippetType = "autosnippet" }, fmta("\\braces*{<>}", { d(1, get_visual) })),
 	--------------------------------------------------------------------------------
 	---------------------------------- maths mode ----------------------------------
 	--------------------------------------------------------------------------------
