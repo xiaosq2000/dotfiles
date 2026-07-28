@@ -104,7 +104,7 @@ confirm_installation() {
 # Function to prompt for binaries
 confirm_binary_installation() {
     echo ""
-    info "Optional: Install additional developer binaries (Neovim, Git tools, Node.js, Rust, uv, pixi, Aider, fzf, yazi, zsh)."
+    info "Optional: Install additional developer binaries (Neovim, Git tools, Node.js, Rust, uv, pixi, fzf, yazi, zsh)."
     echo ""
     read -p "Do you want to install additional binaries? (yes/no): " response
     case "$response" in
@@ -369,21 +369,6 @@ if [ "$INSTALL_BINARIES" = true ]; then
         fi
     else
         warning "yazi setup script not found at $YAZI_SCRIPT"
-    fi
-
-    AIDER_SCRIPT="$HOME/.sh_utils/setup.d/aider.sh"
-    if [ -f "$AIDER_SCRIPT" ]; then
-        info "running Aider installation script..."
-
-        # Make script executable and run it
-        chmod +x "$AIDER_SCRIPT"
-        if bash "$AIDER_SCRIPT"; then
-            success "Aider installed successfully"
-        else
-            warning "Aider installation encountered an error"
-        fi
-    else
-        warning "Aider setup script not found at $AIDER_SCRIPT"
     fi
 
     LAZYDOCKER_SCRIPT="$HOME/.sh_utils/setup.d/lazydocker.sh"
