@@ -5,6 +5,18 @@ return {
 	-- or if using mini.icons/mini.nvim
 	-- dependencies = { "echasnovski/mini.icons" },
 	opts = {
+		-- hide the interface instead of aborting it
+		"hide",
+		ui_select = {},
+		fzf_opts = { ["--cycle"] = true },
+		keymap = {
+			fzf = {
+				-- `true` inherits fzf-lua's default binds; without it they are all replaced
+				true,
+				-- use ctrl-q to select all items and convert to quickfix list
+				["ctrl-q"] = "select-all+accept",
+			},
+		},
 		previewers = {
 			builtin = {
 				-- fzf-lua is very fast, but it really struggled to preview a couple files
@@ -121,19 +133,7 @@ return {
 					},
 				})
 			end,
+			desc = "Workspace symbols",
 		},
 	},
-	config = function()
-		require("fzf-lua").setup({
-			"hide",
-			ui_select = true,
-			fzf_opts = { ["--cycle"] = true },
-			keymap = {
-				fzf = {
-					-- use ctrl-q to select all items and convert to quickfix list
-					["ctrl-q"] = "select-all+accept",
-				},
-			},
-		})
-	end,
 }
