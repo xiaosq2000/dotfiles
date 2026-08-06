@@ -52,5 +52,10 @@ if [ -n "$missing_packages" ]; then
     pkgs="${missing_packages# }"
     # shellcheck disable=SC2086
     set -- $pkgs
-    "$CARGO_BIN" install "$@"
+    # --locked: use each crate's shipped Cargo.lock. Without it cargo re-resolves
+    # transitive deps to their newest semver-compatible versions, which breaks on
+    # crates whose upstream published a semver-incompatible patch release
+    # (e.g. eza pins palette =0.7.5, but palette_derive 0.7.7 resolves in and
+    # emits code for palette >=0.7.6 internals).
+    "$CARGO_BIN" install --locked "$@"
 fi
