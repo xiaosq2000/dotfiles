@@ -59,6 +59,10 @@
 
 !.config/lazygit/
 
+!.config/fcitx5/
+# machine-generated cache of every available xkb layout
+.config/fcitx5/conf/cached_layouts
+
 !.config/themes
 !.config/themes/rose-pine/starship
 
