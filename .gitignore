@@ -63,6 +63,15 @@
 # machine-generated cache of every available xkb layout
 .config/fcitx5/conf/cached_layouts
 
+# fcitx5 needs its env set before gnome-session starts
+!.config/environment.d/
+
+# ...and nothing autostarts it on Ubuntu; other apps drop entries here too, so
+# track only ours
+!.config/autostart/
+.config/autostart/*
+!.config/autostart/org.fcitx.Fcitx5.desktop
+
 !.config/themes
 !.config/themes/rose-pine/starship
 
