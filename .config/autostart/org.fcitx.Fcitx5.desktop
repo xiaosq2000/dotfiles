@@ -1,0 +1,12 @@
+# Ubuntu ships fcitx5's entry in /usr/share/applications only, so nothing
+# starts it at login. Trimmed copy of that file; im-launch does not help here
+# because /etc/profile.d/im-config_wayland.sh disables itself on Wayland.
+[Desktop Entry]
+Type=Application
+Name=Fcitx 5
+Comment=Start Input Method
+Exec=/usr/bin/fcitx5
+Icon=fcitx
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
