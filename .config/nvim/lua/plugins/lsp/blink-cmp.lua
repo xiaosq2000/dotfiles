@@ -1,0 +1,78 @@
+-- auto-complete
+return {
+	"saghen/blink.cmp",
+	-- optional: provides snippets for the snippet source
+	dependencies = {
+		{ "rafamadriz/friendly-snippets" },
+		"L3MON4D3/LuaSnip",
+		{
+			"micangl/cmp-vimtex",
+			dependencies = { "saghen/blink.compat", version = "*" },
+		},
+	},
+
+	-- use a release tag to download pre-built binaries
+	version = "1.*",
+	-- AND/OR build from source, requires nightly: https://rust-lang.github.io/rustup/concepts/channels.html#working-with-nightly-rust
+	-- build = 'cargo build --release',
+	-- If you use nix, you can build from source using latest nightly rust with:
+	-- build = 'nix run .#build-plugin',
+
+	---@module 'blink.cmp'
+	---@type blink.cmp.Config
+	opts = {
+		-- 'default' for mappings similar to built-in completion
+		-- 'super-tab' for mappings similar to vscode (tab to accept, arrow keys to navigate)
+		-- 'enter' for mappings similar to 'super-tab' but with 'enter' to accept
+		-- See the full "keymap" documentation for information on defining your own keymap.
+		keymap = {
+			preset = "default",
+		},
+		cmdline = {
+			keymap = {
+				preset = "cmdline",
+			},
+			completion = {
+				menu = {
+					auto_show = true,
+				},
+			},
+		},
+		term = {
+			keymap = {
+				preset = "enter",
+			},
+		},
+
+		completion = {
+			list = { selection = { preselect = false, auto_insert = true } },
+			trigger = { show_in_snippet = false },
+		},
+
+		appearance = {
+			-- Set to 'mono' for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
+			-- Adjusts spacing to ensure icons are aligned
+			nerd_font_variant = "mono",
+		},
+
+		snippets = {
+			preset = "luasnip",
+		},
+		sources = {
+			default = { "lsp", "path", "snippets", "buffer", "vimtex" },
+			providers = {
+				path = {
+					opts = {
+						show_hidden_files_by_default = true,
+					},
+				},
+				vimtex = {
+					name = "vimtex",
+					module = "blink.compat.source",
+					score_offset = 100,
+				},
+			},
+		},
+	},
+	opts_extend = { "sources.default" },
+}

@@ -1,7 +1,8 @@
 return {
-    filetypes = {
-        "yaml",
-        "yaml.gitlab",
-        "yaml.helm-values",
-    },
+	cmd = { "yaml-language-server", "--stdio" },
+	filetypes = {
+		"yaml",
+		"yaml.gitlab",
+		"yaml.helm-values",
+	},
 }

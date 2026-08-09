@@ -89,7 +89,10 @@ return {
     \item <>
 \end{itemize}
     ]],
-			{ c(1, { t(""), t("\\setlength{\\itemsep}{1.5ex}") }), i(2, "some content") }
+			{
+				c(1, { t(""), t("\\setlength{\\itemsep}{1.5ex}") }),
+				i(2, "some content"),
+			}
 		)
 	),
 	s(
@@ -100,7 +103,10 @@ return {
     \item <>
 \end{enumerate}
     ]],
-			{ c(1, { t(""), t("\\setlength{\\itemsep}{1.5ex}") }), i(2, "some content") }
+			{
+				c(1, { t(""), t("\\setlength{\\itemsep}{1.5ex}") }),
+				i(2, "some content"),
+			}
 		)
 	),
 	s(

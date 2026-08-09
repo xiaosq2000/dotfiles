@@ -73,7 +73,15 @@ RUN git clone --config http.proxy="${http_proxy}" --config https.proxy="${https_
     cmake --install build --prefix ${XDG_PREFIX_HOME} && \
     rm -r <>*
     ]],
-			{ i(1, "eigen"), i(2, "EIGEN"), i(3, "url"), rep(1), rep(1), rep(2), rep(1) }
+			{
+				i(1, "eigen"),
+				i(2, "EIGEN"),
+				i(3, "url"),
+				rep(1),
+				rep(1),
+				rep(2),
+				rep(1),
+			}
 		)
 	),
 }

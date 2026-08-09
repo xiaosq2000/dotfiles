@@ -64,7 +64,12 @@ return {
 				c(1, { t("light"), t("dark") }),
 				i(2, "8"),
 				i(3, "0"),
-				c(4, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
+				c(4, {
+					t("below-right"),
+					t("below-left"),
+					t("above-right"),
+					t("above-left"),
+				}),
 				c(5, { t("true"), t("false") }),
 				c(6, { t("true"), t("false") }),
 				c(7, { t("below"), t("above") }),
@@ -75,13 +80,19 @@ return {
 		{ trig = "tqal", dscr = "tikz-equation-annotate environment label" },
 		fmta([[\teqaEnvLabel{<>}]], { i(1, "stable-env") })
 	),
-	s({ trig = "tqam", dscr = "tikz-equation-annotate mark only" }, fmta([[\teqaAnnotate{<>}]], { d(1, get_visual) })),
+	s(
+		{ trig = "tqam", dscr = "tikz-equation-annotate mark only" },
+		fmta([[\teqaAnnotate{<>}]], { d(1, get_visual) })
+	),
 	s(
 		{ trig = "tqa", dscr = "tikz-equation-annotate callout" },
 		fmta("\\teqaAnnotate{<>}[say={<>}, place=<>]", {
 			d(1, get_visual),
 			i(2, "annotation"),
-			c(3, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
+			c(
+				3,
+				{ t("below-right"), t("below-left"), t("above-right"), t("above-left") }
+			),
 		})
 	),
 	s(
@@ -90,7 +101,10 @@ return {
 			i(1, "+(1)-"),
 			d(2, get_visual),
 			i(3, "annotation"),
-			c(4, { t("below-right"), t("below-left"), t("above-right"), t("above-left") }),
+			c(
+				4,
+				{ t("below-right"), t("below-left"), t("above-right"), t("above-left") }
+			),
 			rep(2),
 		})
 	),
@@ -104,7 +118,10 @@ return {
 			c(4, { t("below"), t("above") }),
 		})
 	),
-	s({ trig = "tqabb", dscr = "tikz-equation-annotate brace begin" }, fmta([[\teqaBraceBegin{<>}]], { i(1) })),
+	s(
+		{ trig = "tqabb", dscr = "tikz-equation-annotate brace begin" },
+		fmta([[\teqaBraceBegin{<>}]], { i(1) })
+	),
 	s(
 		{ trig = "tqabe", dscr = "tikz-equation-annotate brace end" },
 		fmta("\\teqaBraceEnd{<>}[say={<>}, place=<>]", {
@@ -175,7 +192,10 @@ return {
 		)
 	),
 	s(
-		{ trig = "figan", desr = "annotated figure: bottom-left, top-right, label, label-position" },
+		{
+			trig = "figan",
+			desr = "annotated figure: bottom-left, top-right, label, label-position",
+		},
 		fmta(
 			[[
 \annotatedFigure{<>}{<>}{<>}{<>}

@@ -94,7 +94,8 @@ int main(int argc, char** argv )
 			local is_main = vim.fn.expand("%"):match("main%.cp?p?") ~= nil
 			if (extension == "c" or extension == "cpp") and not is_main then
 				local matching_h_file = vim.fn.expand("%:t"):gsub("%.c", ".h")
-				local companion_header_file = string.format('#include "%s"', matching_h_file)
+				local companion_header_file =
+					string.format('#include "%s"', matching_h_file)
 				table.insert(headers_to_load_into_choice_node, t(companion_header_file))
 			end
 
@@ -108,12 +109,14 @@ int main(int argc, char** argv )
 			-- Clean up and insert the detected local header files
 			for _, local_header_name in ipairs(local_header_files) do
 				-- Trim down path to be a true relative path to the current file
-				local shortened_header_path = local_header_name:gsub(current_file_directory, "")
+				local shortened_header_path =
+					local_header_name:gsub(current_file_directory, "")
 				-- Replace '\' with '/'
 				shortened_header_path = shortened_header_path:gsub([[\+]], "/")
 				-- Remove leading forward slash
 				shortened_header_path = shortened_header_path:gsub("^/", "")
-				local new_header = t(string.format('#include "%s"', shortened_header_path))
+				local new_header =
+					t(string.format('#include "%s"', shortened_header_path))
 				table.insert(headers_to_load_into_choice_node, new_header)
 			end
 

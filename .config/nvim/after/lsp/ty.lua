@@ -1,8 +1,8 @@
 return {
-    settings = {
-        ty = {
-            diagnosticMode = "workspace",
-            showSyntaxErrors = false,
-        },
-    },
+	settings = {
+		ty = {
+			diagnosticMode = "workspace",
+			showSyntaxErrors = false,
+		},
+	},
 }

@@ -1,2 +1,5 @@
-require("core.basics")
-require("plugin_manager.lazy")
+require("core.options")
+require("core.keymaps")
+require("core.autocmds")
+require("core.folding")
+require("config.lazy")
