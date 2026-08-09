@@ -31,10 +31,16 @@ return {
 		)
 	),
 	s({ trig = "at", dscr = "alert" }, fmta("\\alert{<>}", { d(1, get_visual) })),
-	s({ trig = "uc", dscr = "uncover" }, fmta("\\uncover<<<>>>{<>}", { i(1, "+(1)-"), d(2, get_visual) })),
+	s(
+		{ trig = "uc", dscr = "uncover" },
+		fmta("\\uncover<<<>>>{<>}", { i(1, "+(1)-"), d(2, get_visual) })
+	),
 	s(
 		{ trig = "md", dscr = "mode" },
-		fmta("\\mode<<<>>>{<>}", { c(1, { t({ "presentation" }), t({ "article" }) }), d(2, get_visual) })
+		fmta(
+			"\\mode<<<>>>{<>}",
+			{ c(1, { t({ "presentation" }), t({ "article" }) }), d(2, get_visual) }
+		)
 	),
 	s({ trig = "pv" }, fmta("\\mode<<presentation>>{\\vfill}", {})),
 	s(
