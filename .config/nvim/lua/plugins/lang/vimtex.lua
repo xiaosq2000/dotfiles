@@ -24,6 +24,10 @@ return {
 		}
 		vim.g.vimtex_parser_bib_backend = "bibtex"
 		vim.g.vimtex_quickfix_mode = 0
+		-- Tree-sitter is disabled for latex (see plugins/lsp/treesitter.lua), so
+		-- the global treesitter 'foldexpr' yields nothing here. Use vimtex's own
+		-- folder instead.
+		vim.g.vimtex_fold_enabled = 1
 		-- vim.g.vimtex_format_enabled = 1
 		-- vim.g.vimtex_complete_close_braces = 1
 		-- TODO: use luasnip instead

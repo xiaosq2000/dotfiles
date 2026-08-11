@@ -13,13 +13,19 @@ local ensure_installed = {
 	"jinja",
 	"jinja_inline",
 	"json",
-	"latex",
 	"lua",
 	"markdown",
 	"markdown_inline",
 	"python",
 	"toml",
 	"yaml",
+}
+
+-- Languages that must never get a tree-sitter session, even if the parser is
+-- installed as a dependency of another one. `latex` is handled by vimtex, whose
+-- syntax, indent and folding clash with tree-sitter's.
+local disabled = {
+	latex = true,
 }
 
 return {
@@ -48,7 +54,7 @@ return {
 				end
 
 				local lang = vim.treesitter.language.get_lang(filetype)
-				if not lang then
+				if not lang or disabled[lang] then
 					return
 				end
 
