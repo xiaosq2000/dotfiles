@@ -92,6 +92,17 @@ return {
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% maths %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{mathtools} % loads amsmath
+
+% Paired delimiters used by the ";(", ";[" and ";{" snippets.
+% Unstarred keeps a fixed size, starred scales via \left...\right.
+\DeclarePairedDelimiter{\parens}{(}{)}
+\DeclarePairedDelimiter{\bracks}{[}{]}
+\DeclarePairedDelimiter{\braces}{\{}{\}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% table %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{booktabs}
@@ -253,6 +264,24 @@ return {
 \colorlet{2_annotate_color}{green!60}
 \colorlet{3_marknode_color}{um-red!15}
 \colorlet{3_annotate_color}{um-red!55}
+    ]],
+			{}
+		)
+	),
+	s(
+		{ trig = "paired-delimiters-preamble" },
+		fmta(
+			[[
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% paired delimiters %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{mathtools} % loads amsmath
+
+% Paired delimiters used by the ";(", ";[" and ";{" snippets.
+% Unstarred keeps a fixed size, starred scales via \left...\right.
+\DeclarePairedDelimiter{\parens}{(}{)}
+\DeclarePairedDelimiter{\bracks}{[}{]}
+\DeclarePairedDelimiter{\braces}{\{}{\}}
     ]],
 			{}
 		)
