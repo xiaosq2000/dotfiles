@@ -38,11 +38,21 @@ return {
 				paths = snippet_path,
 			})
 
-			vim.keymap.set("n", "<leader>LL", function()
-				require("luasnip.loaders.from_lua").load({ paths = snippet_path })
-			end, { desc = "Reload Lua snippets" })
+			-- Saving a snippet file is the reload signal; no keystroke needed.
+			vim.api.nvim_create_autocmd("BufWritePost", {
+				group = vim.api.nvim_create_augroup("user.luasnip", { clear = true }),
+				-- Snippets live one directory down (LuaSnip/tex/basics.lua), so the
+				-- ** is load-bearing; a plain /*.lua pattern would never fire.
+				pattern = snippet_path .. "/**/*.lua",
+				callback = function()
+					require("luasnip.loaders.from_lua").load({
+						paths = snippet_path,
+					})
+				end,
+				desc = "Reload Lua snippets on write",
+			})
 
-			vim.keymap.set("n", "<leader>tl", function()
+			vim.keymap.set("n", "<leader>es", function()
 				vim.cmd.vsplit(vim.fn.fnameescape(snippet_path .. "/tex"))
 			end, { desc = "Edit TeX snippets" })
 		end,
