@@ -14,6 +14,7 @@ return {
 			{ "<leader>l", group = "lsp" },
 			{ "<leader>q", group = "quickfix / lists" },
 			{ "<leader>s", group = "search (fzf-lua)" },
+			{ "<leader>t", group = "todos (dooing)" },
 			{ "<leader>u", group = "utilities" },
 			{ "<leader>w", group = "workspace folders" },
 			{ "<leader>y", group = "yank path" },
