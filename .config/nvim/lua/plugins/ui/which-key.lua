@@ -6,11 +6,15 @@ return {
 		"nvim-tree/nvim-web-devicons",
 	},
 	opts = {
+		-- One concept per prefix. Keep this in sync when adding mappings, or they
+		-- show up in which-key as bare keys with no group.
 		spec = {
-			{ "<leader>c", group = "code / comment / quickfix" },
+			{ "<leader>c", group = "code" },
 			{ "<leader>e", group = "edit config" },
 			{ "<leader>l", group = "lsp" },
+			{ "<leader>q", group = "quickfix / lists" },
 			{ "<leader>s", group = "search (fzf-lua)" },
+			{ "<leader>u", group = "utilities" },
 			{ "<leader>w", group = "workspace folders" },
 			{ "<leader>y", group = "yank path" },
 			{ "<localleader>l", group = "vimtex", mode = { "n", "v" } },

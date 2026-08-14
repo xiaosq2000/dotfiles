@@ -73,12 +73,12 @@ return {
 		dependencies = { "mason-org/mason.nvim" },
 		keys = {
 			{
-				"<leader>q",
+				"<leader>qd",
 				vim.diagnostic.setloclist,
 				desc = "Diagnostics to location list",
 			},
-			{ "<leader>co", "<cmd>copen<cr>", desc = "Open quickfix window" },
-			{ "<leader>cx", "<cmd>cclose<cr>", desc = "Close quickfix window" },
+			{ "<leader>qo", "<cmd>copen<cr>", desc = "Open quickfix window" },
+			{ "<leader>qc", "<cmd>cclose<cr>", desc = "Close quickfix window" },
 		},
 		config = function()
 			vim.api.nvim_create_user_command("LspEnabled", function()

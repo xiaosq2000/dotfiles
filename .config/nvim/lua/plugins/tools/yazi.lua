@@ -3,25 +3,26 @@ return {
 	{
 		"mikavilpas/yazi.nvim",
 		event = "VeryLazy",
+		-- All three live on the -/_/= key cluster so the file manager reads as one
+		-- plugin instead of being scattered across unrelated prefixes.
 		keys = {
-			-- 👇 in this section, choose your own keymappings!
 			{
-				"<leader>-",
+				"<localleader>-",
 				"<cmd>Yazi<cr>",
-				desc = "Open yazi at the current file",
+				desc = "Yazi at the current file",
 			},
 			{
 				-- Open in the current working directory
-				"<leader>cw",
+				"<localleader>_",
 				"<cmd>Yazi cwd<cr>",
-				desc = "Open the file manager in nvim's working directory",
+				desc = "Yazi in nvim's working directory",
 			},
 			{
 				-- NOTE: this requires a version of yazi that includes
 				-- https://github.com/sxyazi/yazi/pull/1305 from 2024-07-18
-				"<c-up>",
+				"<localleader>=",
 				"<cmd>Yazi toggle<cr>",
-				desc = "Resume the last yazi session",
+				desc = "Yazi resume the last session",
 			},
 		},
 		---@type YaziConfig

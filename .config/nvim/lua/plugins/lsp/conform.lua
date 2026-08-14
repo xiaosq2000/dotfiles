@@ -5,7 +5,7 @@ return {
 	cmd = "ConformInfo",
 	keys = {
 		{
-			"<leader>f",
+			"<leader>cf",
 			function()
 				require("conform").format({ async = true, timeout_ms = 1000 })
 			end,
