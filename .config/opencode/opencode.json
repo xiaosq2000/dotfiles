@@ -13,5 +13,8 @@
   "plugin": [
     "@slkiser/opencode-quota",
     "@mohak34/opencode-notifier@latest"
-  ]
+  ],
+  "provider": {
+    "openai": {}
+  }
 }
