@@ -5,7 +5,6 @@
 
 !README.md
 
-!.githooks
 !.pre-commit-config.yaml
 !.aider.conf.yml
 
@@ -48,7 +47,8 @@
 
 !.condarc
 
-!.secrets
+# .secrets stays out of this public repo entirely: it is a separate local-only
+# repo, never a submodule. Do not re-add a `!.secrets` negation here.
 !.sh_utils
 
 !.config/kmonad/
