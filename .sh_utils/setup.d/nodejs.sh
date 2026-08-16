@@ -65,13 +65,13 @@ else
     trap - EXIT
 fi
 
-# Pin the global bin dir so globally-installed tools (node, bw, ...) land in
+# Pin the global bin dir so globally-installed tools (node, ...) land in
 # $PNPM_HOME/bin, matching the PATH entry above and in ~/.zshrc.
 "$PNPM" config set global-bin-dir "$PNPM_BIN_DIR" 1>/dev/null 2>&1 || true
 
 # Use a flat, npm-like global node_modules. pnpm's default isolated store hides
-# transitive deps, which breaks CLIs that assume hoisting (e.g. @bitwarden/cli
-# needs `buffer/`). This must live in pnpm's global dir, keyed by store version.
+# transitive deps, which breaks CLIs that assume hoisting. This must live in
+# pnpm's global dir, keyed by store version.
 PNPM_GLOBAL_DIR="$("$PNPM" root --global 2>/dev/null || true)"
 if [ -n "$PNPM_GLOBAL_DIR" ]; then
     mkdir -p "$PNPM_GLOBAL_DIR"
@@ -83,14 +83,6 @@ if "$PNPM" env use --global lts 1>/dev/null 2>&1; then
     success "node version: $("$PNPM_BIN_DIR/node" --version)"
 else
     error "Failed to install node"
-    exit 1
-fi
-
-step "Installing bw"
-if "$PNPM" add --global @bitwarden/cli 1>/dev/null 2>&1; then
-    success "$("$PNPM_BIN_DIR/bw" --version)"
-else
-    error "Failed to install bw"
     exit 1
 fi
 
