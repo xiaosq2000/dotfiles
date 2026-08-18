@@ -1,3 +1,7 @@
+-- prettierd is a daemon and takes no prettier CLI flags, so our defaults
+-- live in a config file it falls back to when a project ships none of its own.
+local prettierd_config = vim.fn.stdpath("config") .. "/prettierd.json"
+
 return {
 	"stevearc/conform.nvim",
 	cond = not require("core.env").kitty_scrollback,
@@ -56,20 +60,31 @@ return {
 			bash = { "shfmt" },
 			sh = { "shfmt" },
 			zsh = { "shfmt" },
-			markdown = { "prettier", lsp_format = "never" },
-			json = { "prettier" },
-			jsonc = { "prettier" },
+			-- What `prettier --support-info` reports, minus the ids without a
+			-- neovim filetype. Unlisted filetypes stay on the LSP fallback.
+			markdown = { "prettierd", lsp_format = "never" },
+			css = { "prettierd" },
+			graphql = { "prettierd" },
+			handlebars = { "prettierd" },
+			html = { "prettierd" },
+			javascript = { "prettierd" },
+			javascriptreact = { "prettierd" },
+			json = { "prettierd" },
+			json5 = { "prettierd" },
+			jsonc = { "prettierd" },
+			less = { "prettierd" },
+			mdx = { "prettierd" },
+			scss = { "prettierd" },
+			typescript = { "prettierd" },
+			typescriptreact = { "prettierd" },
+			vue = { "prettierd" },
+			yaml = { "prettierd" },
 			toml = { "taplo" },
 			tex = { "tex-fmt" },
 		},
 		formatters = {
-			prettier = {
-				prepend_args = function(_, ctx)
-					if vim.bo[ctx.buf].filetype == "markdown" then
-						return { "--prose-wrap", "always", "--tab-width", "2" }
-					end
-					return {}
-				end,
+			prettierd = {
+				env = { PRETTIERD_DEFAULT_CONFIG = prettierd_config },
 			},
 		},
 	},
