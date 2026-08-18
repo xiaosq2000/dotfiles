@@ -109,7 +109,7 @@ local function banner()
 	vim.cmd.stopinsert()
 end
 
-map({ "n", "i" }, "<leader>b", banner, { desc = "Banner comment" })
+map("n", "<leader>b", banner, { desc = "Banner comment" })
 
 --------------------------------------------------------------------------------
 ----------------------------------- utilities ----------------------------------
