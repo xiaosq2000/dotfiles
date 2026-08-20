@@ -69,6 +69,22 @@ return {
 			end,
 		},
 
+		-- The global list lives in the Nutstore folder so that it follows
+		-- the machine. Concurrency is barely a worry: every open re-reads the
+		-- file and every action writes it straight back, so the only way to
+		-- lose an edit is to have the window up on two machines at once. The
+		-- fallback is not optional, though -- save_todos() drops the write
+		-- when io.open() fails and says nothing about it, so on a machine
+		-- with no Nutstore the list would read back empty and swallow
+		-- everything typed into it.
+		save_path = (function()
+			local dir = vim.fn.expand("~/Nutstore Files/Nutstore")
+			if vim.fn.isdirectory(dir) == 1 then
+				return dir .. "/dooing_todos.json"
+			end
+			return vim.fn.stdpath("data") .. "/dooing_todos.json"
+		end)(),
+
 		-- jq is on PATH, so the store stays line-diffable. Matters for the
 		-- per-project files, which are the ones that end up in a repo.
 		pretty_print_json = true,
