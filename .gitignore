@@ -84,6 +84,11 @@
 !.opencode
 .opencode/bin
 
-!.claude
-.claude/*
-!.claude/skills
+# Single source of truth for user-level agent skills, kept vendor neutral so
+# Claude Code, Codex and OpenCode can all share it. ~/.sh_utils/setup.d/agent_skills.sh
+# symlinks each skill into ~/.claude/skills and ~/.codex/skills; OpenCode reads
+# ~/.agents/skills natively. Only the canonical copies below are tracked, never
+# the generated symlinks.
+!.agents
+.agents/*
+!.agents/skills

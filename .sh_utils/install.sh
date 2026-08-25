@@ -412,4 +412,18 @@ if [ "$INSTALL_TYPEFACES" = true ]; then
     fi
 fi
 
+# Point every installed AI agent at the shared skills in ~/.agents/skills. Cheap
+# and safe to run even when no agent is installed, so it is not gated behind a
+# flag.
+AGENT_SKILLS_SCRIPT="$HOME/.sh_utils/setup.d/agent_skills.sh"
+if [ -f "$AGENT_SKILLS_SCRIPT" ]; then
+    step "Linking shared agent skills"
+    chmod +x "$AGENT_SKILLS_SCRIPT"
+    if bash "$AGENT_SKILLS_SCRIPT"; then
+        success "agent skills linked"
+    else
+        warning "agent skills linking encountered an error"
+    fi
+fi
+
 success "installation complete"
