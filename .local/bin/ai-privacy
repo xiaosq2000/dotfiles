@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "error: python3 is required" >&2
+    exit 1
+fi
+
+codex_config="${CODEX_HOME:-$HOME/.codex}/config.toml"
+claude_settings="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+
+python3 - "$codex_config" "$claude_settings" <<'PY'
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import sys
+import tempfile
+import tomllib
+
+
+CODEX_VALUES = {
+    "exporter": '"none"',
+    "metrics_exporter": '"none"',
+    "trace_exporter": '"none"',
+    "log_user_prompt": "false",
+}
+
+CLAUDE_ENV = {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
+    "DISABLE_ERROR_REPORTING": "1",
+    "DISABLE_FEEDBACK_COMMAND": "1",
+    "DISABLE_TELEMETRY": "1",
+}
+
+
+def atomic_write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        shutil.copy2(path, Path(f"{path}.privacy-backup"))
+        mode = path.stat().st_mode & 0o777
+    else:
+        mode = 0o600
+
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=path.parent, delete=False
+    ) as handle:
+        handle.write(content)
+        temporary = Path(handle.name)
+
+    os.chmod(temporary, mode)
+    os.replace(temporary, path)
+
+
+def update_codex(path: Path) -> bool:
+    original = path.read_text(encoding="utf-8") if path.exists() else ""
+    if original:
+        tomllib.loads(original)
+
+    lines = original.splitlines(keepends=True)
+    start = next(
+        (index for index, line in enumerate(lines) if line.strip() == "[otel]"),
+        None,
+    )
+
+    if start is None:
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] += "\n"
+        if lines and any(line.strip() for line in lines):
+            lines.append("\n")
+        lines.append("[otel]\n")
+        lines.extend(f"{key} = {value}\n" for key, value in CODEX_VALUES.items())
+    else:
+        end = next(
+            (
+                index
+                for index in range(start + 1, len(lines))
+                if re.match(r"^\s*\[", lines[index])
+            ),
+            len(lines),
+        )
+        found = set()
+        for index in range(start + 1, end):
+            match = re.match(
+                r"^(\s*)(exporter|metrics_exporter|trace_exporter|log_user_prompt)\s*=",
+                lines[index],
+            )
+            if match:
+                key = match.group(2)
+                newline = "\n" if lines[index].endswith("\n") else ""
+                lines[index] = f"{match.group(1)}{key} = {CODEX_VALUES[key]}{newline}"
+                found.add(key)
+        additions = [
+            f"{key} = {value}\n"
+            for key, value in CODEX_VALUES.items()
+            if key not in found
+        ]
+        lines[end:end] = additions
+
+    updated = "".join(lines)
+    tomllib.loads(updated)
+    if updated == original:
+        return False
+    atomic_write(path, updated)
+    return True
+
+
+def update_claude(path: Path) -> bool:
+    if path.exists():
+        original = path.read_text(encoding="utf-8")
+        settings = json.loads(original)
+    else:
+        original = ""
+        settings = {}
+
+    environment = settings.setdefault("env", {})
+    if not isinstance(environment, dict):
+        raise TypeError(f'{path}: "env" must be a JSON object')
+    environment.update(CLAUDE_ENV)
+    updated = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
+    if updated == original:
+        return False
+    atomic_write(path, updated)
+    return True
+
+
+codex_path = Path(sys.argv[1]).expanduser()
+claude_path = Path(sys.argv[2]).expanduser()
+
+for name, path, updater in (
+    ("Codex", codex_path, update_codex),
+    ("Claude Code", claude_path, update_claude),
+):
+    changed = updater(path)
+    print(f"{name}: {'updated' if changed else 'already private'} ({path})")
+PY
