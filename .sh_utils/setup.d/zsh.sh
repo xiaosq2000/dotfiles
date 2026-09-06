@@ -9,6 +9,19 @@ source "$UI_LIB"
 
 header "oh-my-zsh - https://ohmyz.sh/"
 
+# The oh-my-zsh installer aborts when zsh is not on PATH, and this script does
+# not install zsh itself. See CAVEATS.md
+case ":${PATH}:" in
+    *":${HOME}/.pixi/bin:"*) ;;
+    *) PATH="${HOME}/.pixi/bin:${PATH}" ;;
+esac
+export PATH
+
+if ! command -v zsh >/dev/null 2>&1; then
+    warning "zsh binary not found on PATH"
+    hint "without root, install it with 'pixi global install zsh'"
+fi
+
 # Install oh-my-zsh if not already installed
 ZSH="${ZSH:-${HOME}/.oh-my-zsh}"
 if [ -f "$ZSH/oh-my-zsh.sh" ]; then
