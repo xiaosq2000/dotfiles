@@ -80,8 +80,8 @@ prepend_env PATH "/usr/local/cuda/bin"
 ##################################### pixi #####################################
 ################################################################################
 # https://github.com/prefix-dev/pixi/
-prepend_env PATH "${HOME}/.pixi/bin"                        # Add pixi to PATH first
-if has pixi; then eval "$(pixi completion --shell zsh)"; fi # pixi shell-completion
+prepend_env PATH "${HOME}/.pixi/bin" # Add pixi to PATH first
+# Completion is loaded further down, after oh-my-zsh. See ~/.sh_utils/CAVEATS.md
 
 ################################################################################
 ##################################### rust #####################################
@@ -324,6 +324,10 @@ if has uv; then
     source "$_uv_completion_cache"
     unset _uv_completion_cache
 fi
+
+# pixi shell completion; needs compdef, so it must follow oh-my-zsh's compinit.
+# See ~/.sh_utils/CAVEATS.md
+if has pixi; then eval "$(pixi completion --shell zsh)"; fi
 
 ################################################################################
 ################################# coding agent #################################
