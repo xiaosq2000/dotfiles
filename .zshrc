@@ -137,7 +137,11 @@ if [ "$TERM" = "xterm-kitty" ] && has kitten; then
         # by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS
         # export KITTY_SCROLLBACK_NVIM_EDIT_ARGS=''
     else
-        warning "zsh < 5.9 detected; skipping kitty-scrollback.nvim command-line integration"
+        # NOTE: report the version of the shell that is running, not of the zsh
+        # on PATH. A pixi-installed zsh shadows the system one for `zsh
+        # --version` and `which zsh` while the login shell stays the old system
+        # binary, which makes a version-only message look wrong.
+        warning "running zsh ${ZSH_VERSION} (< 5.9); skipping kitty-scrollback.nvim command-line integration; zsh on PATH is $(command -v zsh)"
     fi
     # Set kitty's "Truly convenient SSH"
     alias ssh="kitten ssh"
