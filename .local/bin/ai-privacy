@@ -1,21 +1,158 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+show_help() {
+    cat <<'HELP'
+Usage: ai-privacy [--app all|codex|claude]
+                  [--claude-profile strict|remote-control] [-h|--help]
+
+Apply local privacy settings for Codex and Claude Code.
+With no arguments, apply strict settings to both apps.
+Create selected configuration files if missing.
+
+Options:
+  --app APP                 Select all, codex, or claude. Default: all.
+  --claude-profile PROFILE  Select strict or remote-control. Default: strict.
+                            Requires --app all or --app claude.
+  -h, --help                Show this help without changing files.
+  Options with values also accept --option=value.
+
+Claude profiles:
+  strict          Disable nonessential traffic, telemetry, error reporting,
+                  feedback commands, and feedback surveys.
+  remote-control  Remove CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC,
+                  DISABLE_TELEMETRY, DO_NOT_TRACK, and DISABLE_GROWTHBOOK
+                  from the selected user settings file.
+                  Keep error reporting, feedback commands, feedback surveys,
+                  and automatic updates disabled.
+
+  The remote-control profile permits telemetry and feature availability checks.
+  It also relaxes the umbrella restriction on other nonessential traffic.
+  Profile selection applies to this invocation only. Running ai-privacy with
+  no arguments again reapplies strict settings.
+
+Codex settings:
+  Set OpenTelemetry exporters to "none" and prompt logging to false.
+
+Examples:
+  ai-privacy
+  ai-privacy --app codex
+  ai-privacy --app claude --claude-profile remote-control
+  ai-privacy --claude-profile remote-control
+
+Remote Control:
+  This profile configures compatibility; it does not start Remote Control.
+  Conflicting variables in the inherited environment produce a warning.
+  Unset them in your shell and its startup files, then restart Claude Code.
+  Project or managed settings, account eligibility, login, provider, network
+  access, and workspace trust can still affect availability.
+  See https://code.claude.com/docs/en/remote-control#requirements
+
+Configuration files:
+  Codex:       ${CODEX_HOME:-$HOME/.codex}/config.toml
+  Claude Code: ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json
+  Set CODEX_HOME or CLAUDE_CONFIG_DIR to use a different directory.
+
+Backups:
+  Before changing an existing file, copy it to <file>.privacy-backup.
+  Each change overwrites that file's previous backup.
+
+Requirements:
+  Python 3.11 or later is required to apply settings.
+HELP
+}
+
+usage_error() {
+    printf 'error: %s. Use ai-privacy --help for usage.\n' "$1" >&2
+    exit 2
+}
+
+app=all
+claude_profile=strict
+app_seen=false
+profile_seen=false
+help_requested=false
+
+while (( $# > 0 )); do
+    case "$1" in
+        --app|--app=*)
+            if [[ "$app_seen" == true ]]; then
+                usage_error 'duplicate --app option'
+            fi
+            app_seen=true
+            if [[ "$1" == --app ]]; then
+                if (( $# < 2 )) || [[ -z "$2" || "$2" == -* ]]; then
+                    usage_error '--app requires a value'
+                fi
+                app="$2"
+                shift 2
+            else
+                app="${1#*=}"
+                shift
+            fi
+            ;;
+        --claude-profile|--claude-profile=*)
+            if [[ "$profile_seen" == true ]]; then
+                usage_error 'duplicate --claude-profile option'
+            fi
+            profile_seen=true
+            if [[ "$1" == --claude-profile ]]; then
+                if (( $# < 2 )) || [[ -z "$2" || "$2" == -* ]]; then
+                    usage_error '--claude-profile requires a value'
+                fi
+                claude_profile="$2"
+                shift 2
+            else
+                claude_profile="${1#*=}"
+                shift
+            fi
+            ;;
+        -h|--help)
+            if [[ "$help_requested" == true ]]; then
+                usage_error 'duplicate help option'
+            fi
+            help_requested=true
+            shift
+            ;;
+        *) usage_error "unexpected argument: $1" ;;
+    esac
+done
+
+case "$app" in
+    all|codex|claude) ;;
+    *) usage_error "invalid app: $app" ;;
+esac
+case "$claude_profile" in
+    strict|remote-control) ;;
+    *) usage_error "invalid Claude profile: $claude_profile" ;;
+esac
+if [[ "$app" == codex && "$profile_seen" == true ]]; then
+    usage_error '--claude-profile requires --app all or --app claude'
+fi
+if [[ "$help_requested" == true ]]; then
+    show_help
+    exit 0
+fi
+
 if ! command -v python3 >/dev/null 2>&1; then
-    echo "error: python3 is required" >&2
+    echo "error: Python 3.11 or later is required" >&2
     exit 1
 fi
 
 codex_config="${CODEX_HOME:-$HOME/.codex}/config.toml"
 claude_settings="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
 
-python3 - "$codex_config" "$claude_settings" <<'PY'
+python3 - "$codex_config" "$claude_settings" "$app" "$claude_profile" <<'PY'
+import sys
+
+if sys.version_info < (3, 11):
+    sys.exit("error: Python 3.11 or later is required")
+
 import json
 import os
 from pathlib import Path
 import re
 import shutil
-import sys
 import tempfile
 import tomllib
 
@@ -27,13 +164,30 @@ CODEX_VALUES = {
     "log_user_prompt": "false",
 }
 
-CLAUDE_ENV = {
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+CLAUDE_COMMON_ENV = {
     "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
     "DISABLE_ERROR_REPORTING": "1",
     "DISABLE_FEEDBACK_COMMAND": "1",
-    "DISABLE_TELEMETRY": "1",
 }
+
+CLAUDE_PROFILE_ENV = {
+    "strict": {
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        "DISABLE_TELEMETRY": "1",
+    },
+    "remote-control": {
+        "DISABLE_AUTOUPDATER": "1",
+    },
+}
+
+# These variables disable the feature availability checks Remote Control needs.
+# https://code.claude.com/docs/en/remote-control#requirements
+REMOTE_CONTROL_CONFLICTS = (
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+    "DISABLE_TELEMETRY",
+    "DO_NOT_TRACK",
+    "DISABLE_GROWTHBOOK",
+)
 
 
 def atomic_write(path: Path, content: str) -> None:
@@ -44,18 +198,22 @@ def atomic_write(path: Path, content: str) -> None:
     else:
         mode = 0o600
 
-    with tempfile.NamedTemporaryFile(
-        "w", encoding="utf-8", dir=path.parent, delete=False
-    ) as handle:
-        handle.write(content)
-        temporary = Path(handle.name)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=path.parent, delete=False
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(content)
 
-    os.chmod(temporary, mode)
-    os.replace(temporary, path)
+        os.chmod(temporary, mode)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
-def update_codex(path: Path) -> bool:
-    original = path.read_text(encoding="utf-8") if path.exists() else ""
+def prepare_codex(original: str) -> str:
     if original:
         tomllib.loads(original)
 
@@ -97,42 +255,80 @@ def update_codex(path: Path) -> bool:
             for key, value in CODEX_VALUES.items()
             if key not in found
         ]
+        if additions and end > 0 and not lines[end - 1].endswith("\n"):
+            lines[end - 1] += "\n"
         lines[end:end] = additions
 
     updated = "".join(lines)
     tomllib.loads(updated)
-    if updated == original:
-        return False
-    atomic_write(path, updated)
-    return True
+    return updated
 
 
-def update_claude(path: Path) -> bool:
-    if path.exists():
-        original = path.read_text(encoding="utf-8")
-        settings = json.loads(original)
-    else:
-        original = ""
-        settings = {}
-
+def prepare_claude(original: str | None, profile: str) -> str:
+    settings = json.loads(original) if original is not None else {}
+    if not isinstance(settings, dict):
+        raise TypeError("settings must be a JSON object")
     environment = settings.setdefault("env", {})
     if not isinstance(environment, dict):
-        raise TypeError(f'{path}: "env" must be a JSON object')
-    environment.update(CLAUDE_ENV)
-    updated = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
-    if updated == original:
-        return False
-    atomic_write(path, updated)
-    return True
+        raise TypeError('"env" must be a JSON object')
+    if profile == "remote-control":
+        for key in REMOTE_CONTROL_CONFLICTS:
+            environment.pop(key, None)
+    environment.update(CLAUDE_COMMON_ENV)
+    environment.update(CLAUDE_PROFILE_ENV[profile])
+    return json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
 
 
-codex_path = Path(sys.argv[1]).expanduser()
-claude_path = Path(sys.argv[2]).expanduser()
+def main() -> int:
+    app, profile = sys.argv[3:5]
+    targets = []
+    if app in ("all", "codex"):
+        targets.append(("Codex", sys.argv[1]))
+    if app in ("all", "claude"):
+        targets.append(("Claude Code", sys.argv[2]))
 
-for name, path, updater in (
-    ("Codex", codex_path, update_codex),
-    ("Claude Code", claude_path, update_claude),
-):
-    changed = updater(path)
-    print(f"{name}: {'updated' if changed else 'already private'} ({path})")
+    prepared = []
+    for name, raw_path in targets:
+        try:
+            path = Path(raw_path).expanduser()
+            original = path.read_text(encoding="utf-8") if path.exists() else None
+            updated = (
+                prepare_codex(original or "")
+                if name == "Codex"
+                else prepare_claude(original, profile)
+            )
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            print(f"error: {name} ({raw_path}): {error}", file=sys.stderr)
+            return 1
+        prepared.append((name, path, original, updated))
+
+    for name, path, original, updated in prepared:
+        changed = updated != original
+        if changed:
+            try:
+                atomic_write(path, updated)
+            except (OSError, ValueError) as error:
+                print(f"error: {name} ({path}): {error}", file=sys.stderr)
+                return 1
+        label = f"{name} [{profile}]" if name == "Claude Code" else name
+        print(f"{label}: {'updated' if changed else 'already configured'} ({path})")
+
+    if app in ("all", "claude") and profile == "remote-control":
+        conflicts = [key for key in REMOTE_CONTROL_CONFLICTS if os.environ.get(key)]
+        if conflicts:
+            print(
+                "warning: Remote Control variables remain set in the inherited "
+                "environment: " + ", ".join(conflicts),
+                file=sys.stderr,
+            )
+            print("Run in your shell: unset " + " ".join(conflicts), file=sys.stderr)
+            print(
+                "Remove these variables from shell startup files if set there, "
+                "then restart Claude Code.",
+                file=sys.stderr,
+            )
+    return 0
+
+
+sys.exit(main())
 PY
