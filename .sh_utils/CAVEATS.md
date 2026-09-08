@@ -152,3 +152,44 @@ The other way out is to drop the anchored entries from `matcher-list`, which is
 what the message asks for. That also fixes completion for `kitty` and `kitten`
 themselves, but it removes substring completion for every command, because zsh
 has no unanchored way to express it.
+
+## TERM does not tell you whether you are inside a kitty window
+
+The `ssh` function above sits inside a block that runs when `TERM` is
+`xterm-kitty`, and that test alone also passes on a machine you reached with
+`kitten ssh`. The result is that a second hop fails with the message below.
+
+```
+Error: The SSH kitten is meant to run inside a kitty window
+```
+
+Two things make the outer test misleading on a remote machine.
+
+- `kitten ssh` sets `TERM` to `xterm-kitty` on the remote machine and installs
+  kitty's terminfo there, which is the whole point of the kitten.
+- The `remote_kitty` option defaults to `if-needed`, so the kitten also copies a
+  `kitten` program to `~/.local/share/kitty-ssh-kitten/kitty/bin` on the remote
+  machine and puts that directory on `PATH`. See `install_kitty_bootstrap` in
+  `shell-integration/ssh/bootstrap-utils.sh` inside the kitty installation.
+
+What the kitten actually needs is the local kitty process, which it finds
+through `KITTY_WINDOW_ID` and `KITTY_PID`. Both name objects that only exist in
+the kitty instance on your own machine, so neither is sent over ssh, and the
+kitten stops as soon as either one is missing. The commands below show that
+either variable is enough to trigger the message.
+
+```sh
+env -u KITTY_WINDOW_ID kitten ssh somehost
+env -u KITTY_PID kitten ssh somehost
+```
+
+So `.zshrc` defines the `ssh` function only when both variables are set. The
+rest of the block still runs on the remote machine, which is what you want,
+because the terminal there really does behave like kitty.
+
+To reach a machine that sits behind another one, put the hop in the local
+`~/.ssh/config` with `ProxyJump` and run `kitten ssh` from the local kitty
+window. The kitten then bootstraps the final host itself, and that host gets
+kitty's terminfo. Running plain `ssh` on the middle machine works too, but the
+final host inherits `TERM=xterm-kitty` without the matching terminfo, and full
+screen programs there will complain.

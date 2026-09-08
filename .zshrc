@@ -147,8 +147,13 @@ if [ "$TERM" = "xterm-kitty" ] && has kitten; then
     # NOTE: a function, not an alias. zsh expands an alias before it chooses a
     # completion function, so an alias hands `ssh <TAB>` to kitty's completion,
     # which refuses to run under the anchored matchers oh-my-zsh sets.
-    # See ~/.sh_utils/CAVEATS.md
-    ssh() { kitten ssh "$@" }
+    # NOTE: the inner guard is on the local window variables, not on TERM. A
+    # remote shell started by `kitten ssh` also has TERM=xterm-kitty and a copied
+    # `kitten` on PATH, so a second hop from there would run a kitten that has no
+    # kitty window to talk to. See ~/.sh_utils/CAVEATS.md
+    if [[ -n $KITTY_WINDOW_ID && -n $KITTY_PID ]]; then
+        ssh() { kitten ssh "$@" }
+    fi
 fi
 set_gnome_terminal_as_default() {
     local GNOME_TERMINAL_BIN
