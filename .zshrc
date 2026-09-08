@@ -144,7 +144,11 @@ if [ "$TERM" = "xterm-kitty" ] && has kitten; then
         warning "running zsh ${ZSH_VERSION} (< 5.9); skipping kitty-scrollback.nvim command-line integration; zsh on PATH is $(command -v zsh)"
     fi
     # Set kitty's "Truly convenient SSH"
-    alias ssh="kitten ssh"
+    # NOTE: a function, not an alias. zsh expands an alias before it chooses a
+    # completion function, so an alias hands `ssh <TAB>` to kitty's completion,
+    # which refuses to run under the anchored matchers oh-my-zsh sets.
+    # See ~/.sh_utils/CAVEATS.md
+    ssh() { kitten ssh "$@" }
 fi
 set_gnome_terminal_as_default() {
     local GNOME_TERMINAL_BIN
