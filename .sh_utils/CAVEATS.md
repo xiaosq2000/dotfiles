@@ -113,3 +113,42 @@ with the command below.
 ```sh
 ssh -t <host> "bash --noprofile --norc"
 ```
+
+## ssh is a function so that kitty does not take over its completion
+
+In `.zshrc`, the kitty section defines `ssh` as a shell function that calls
+`kitten ssh`. The kitty documentation suggests an alias instead, and the alias
+breaks host completion.
+
+zsh expands an alias before it decides which completion function to run, so with
+the alias in place the word under the cursor belongs to `kitten` rather than to
+`ssh`, and zsh runs kitty's `_kitty` function. That function passes the current
+matcher to the kitty binary, which stops with the message below.
+
+```
+Error: ZSH anchor based matching active, cannot complete. Turn it off by setting
+zstyle :completion: to something that does not use anchors in your ~/.zshrc
+```
+
+The matcher comes from oh-my-zsh. Because `.zshrc` sets `CASE_SENSITIVE` to
+false and `HYPHEN_INSENSITIVE` to true, `oh-my-zsh/lib/completion.zsh` sets the
+list below, and the second and third entries are anchored.
+
+```zsh
+zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]-_}={[:upper:][:lower:]_-}' 'r:|=*' 'l:|=* r:|=*'
+```
+
+zsh tries the entries in order and stops at the first one that finds a match, so
+the failure only shows up once the plain prefix match finds nothing. That is
+exactly the moment you wanted completion, which is why the problem looks like it
+belongs to host names.
+
+A function keeps the first word as `ssh`, so zsh runs its own `_ssh` function
+and never calls the kitty binary. Nothing is lost, because kitty's completion
+for `kitten ssh` hands the work back to `_ssh` anyway. The only completions that
+go away are the ones for kitty's own flags, such as `--kitten` and `--copy`.
+
+The other way out is to drop the anchored entries from `matcher-list`, which is
+what the message asks for. That also fixes completion for `kitty` and `kitten`
+themselves, but it removes substring completion for every command, because zsh
+has no unanchored way to express it.
