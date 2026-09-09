@@ -4,6 +4,9 @@ set sandbox none
 set recolor true
 set recolor-keephue true
 
-map y feedkeys ":exec zsh -c \"echo \"$FILE\" | xclip -selection clipboard && notify-send 'Copied file path into clipboard'\"<Return>"
+# Copy the current file path into the clipboard: wl-copy under Wayland, xclip otherwise.
+# Zathura's parser cannot nest double quotes, so [ -n "$WAYLAND_DISPLAY" ] is not
+# expressible here; ${WAYLAND_DISPLAY:+1} gives [ 1 ] when set and [ ] when unset.
+map y feedkeys ":exec zsh -c \"printf %s '$FILE' | if [ ${WAYLAND_DISPLAY:+1} ]; then wl-copy; else xclip -selection clipboard; fi && notify-send 'Copied file path into clipboard'\"<Return>"
 
 include rose-pine-dawn
