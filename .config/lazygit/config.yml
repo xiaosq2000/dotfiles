@@ -1,4 +1,8 @@
 git:
-  # https://github.com/jesseduffield/lazygit/blob/master/docs/Custom_Pagers.md
+  # https://github.com/jesseduffield/lazygit/blob/master/docs/Custom_DiffRenderers.md
+  # cycle between renderers with `|`
   diffRenderers:
     - type: extDiff
+      command: difft --color=always --context={{diffContext}}
+    - type: rawGit
+      name: default
