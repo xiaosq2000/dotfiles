@@ -1,0 +1,151 @@
+version = 1
+
+[envs.cmake]
+channels = ["conda-forge"]
+dependencies = { cmake = "*" }
+exposed = { ccmake = "ccmake", cmake = "cmake", cpack = "cpack", ctest = "ctest" }
+
+[envs.ninja]
+channels = ["conda-forge"]
+dependencies = { ninja = "*" }
+exposed = { ninja = "ninja" }
+
+[envs.git-lfs]
+channels = ["conda-forge"]
+dependencies = { git-lfs = "*" }
+exposed = { git-lfs = "git-lfs" }
+
+[envs.btop]
+channels = ["conda-forge"]
+dependencies = { btop = "*" }
+exposed = { btop = "btop" }
+
+[envs.dust]
+channels = ["conda-forge"]
+dependencies = { dust = "*" }
+exposed = { dust = "dust" }
+
+[envs.ripgrep]
+channels = ["conda-forge"]
+dependencies = { ripgrep = "*" }
+exposed = { rg = "rg" }
+
+[envs.fd-find]
+channels = ["conda-forge"]
+dependencies = { fd-find = "*" }
+exposed = { fd = "fd" }
+
+[envs.p7zip]
+channels = ["conda-forge"]
+dependencies = { p7zip = "*" }
+exposed = { 7z = "7z", 7za = "7za", 7zr = "7zr" }
+
+[envs.fastfetch]
+channels = ["conda-forge"]
+dependencies = { fastfetch = "*" }
+exposed = { fastfetch = "fastfetch", flashfetch = "flashfetch" }
+
+[envs.speedtest-cli]
+channels = ["conda-forge"]
+dependencies = { speedtest-cli = "*" }
+exposed = { speedtest = "speedtest", speedtest-cli = "speedtest-cli" }
+
+[envs.ffmpeg]
+channels = ["conda-forge"]
+dependencies = { ffmpeg = "*" }
+exposed = { ffmpeg = "ffmpeg", ffplay = "ffplay", ffprobe = "ffprobe" }
+
+[envs.sqlite]
+channels = ["conda-forge"]
+dependencies = { sqlite = "*" }
+exposed = { sqlite3 = "sqlite3" }
+
+[envs.libsecret]
+channels = ["conda-forge"]
+dependencies = { libsecret = "*" }
+exposed = { secret-tool = "secret-tool" }
+
+[envs.clang-tools]
+channels = ["conda-forge"]
+dependencies = { clang-tools = "*" }
+exposed = { amdgpu-arch = "amdgpu-arch", analyze-build = "analyze-build", clang-apply-replacements = "clang-apply-replacements", clang-change-namespace = "clang-change-namespace", clang-check = "clang-check", clang-doc = "clang-doc", clang-extdef-mapping = "clang-extdef-mapping", clang-include-cleaner = "clang-include-cleaner", clang-include-fixer = "clang-include-fixer", clang-installapi = "clang-installapi", clang-linker-wrapper = "clang-linker-wrapper", clang-move = "clang-move", clang-nvlink-wrapper = "clang-nvlink-wrapper", clang-offload-bundler = "clang-offload-bundler", clang-query = "clang-query", clang-refactor = "clang-refactor", clang-reorder-fields = "clang-reorder-fields", clang-repl = "clang-repl", clang-sycl-linker = "clang-sycl-linker", clang-tidy = "clang-tidy", clangd = "clangd", diagtool = "diagtool", find-all-symbols = "find-all-symbols", git-clang-format = "git-clang-format", hmaptool = "hmaptool", intercept-build = "intercept-build", modularize = "modularize", nvptx-arch = "nvptx-arch", offload-arch = "offload-arch", pp-trace = "pp-trace", run-clang-tidy = "run-clang-tidy", scan-build = "scan-build", scan-build-py = "scan-build-py", scan-view = "scan-view", clang-apply-replacements-23 = "clang-apply-replacements-23", clang-change-namespace-23 = "clang-change-namespace-23", clang-check-23 = "clang-check-23", clang-doc-23 = "clang-doc-23", clang-extdef-mapping-23 = "clang-extdef-mapping-23", clang-include-cleaner-23 = "clang-include-cleaner-23", clang-include-fixer-23 = "clang-include-fixer-23", clang-installapi-23 = "clang-installapi-23", clang-linker-wrapper-23 = "clang-linker-wrapper-23", clang-move-23 = "clang-move-23", clang-nvlink-wrapper-23 = "clang-nvlink-wrapper-23", clang-offload-bundler-23 = "clang-offload-bundler-23", clang-query-23 = "clang-query-23", clang-refactor-23 = "clang-refactor-23", clang-reorder-fields-23 = "clang-reorder-fields-23", clang-repl-23 = "clang-repl-23", clang-ssaf-analyzer = "clang-ssaf-analyzer", clang-ssaf-analyzer-23 = "clang-ssaf-analyzer-23", clang-ssaf-format = "clang-ssaf-format", clang-ssaf-format-23 = "clang-ssaf-format-23", clang-ssaf-linker = "clang-ssaf-linker", clang-ssaf-linker-23 = "clang-ssaf-linker-23", clang-sycl-linker-23 = "clang-sycl-linker-23", clang-tidy-23 = "clang-tidy-23" }
+
+[envs.clang-format]
+channels = ["conda-forge"]
+dependencies = { clang-format = "*" }
+exposed = { clang-format = "clang-format" }
+
+[envs.ty]
+channels = ["conda-forge"]
+dependencies = { ty = "*" }
+exposed = { ty = "ty" }
+
+[envs.ruff]
+channels = ["conda-forge"]
+dependencies = { ruff = "*" }
+exposed = { ruff = "ruff" }
+
+[envs.pnpm]
+channels = ["conda-forge"]
+dependencies = { pnpm = "*" }
+exposed = { pn = "pn", pnpm = "pnpm", pnpx = "pnpx", pnx = "pnx" }
+
+[envs.age]
+channels = ["conda-forge"]
+dependencies = { age = "*" }
+exposed = { age = "age", age-keygen = "age-keygen" }
+
+[envs.go-sops]
+channels = ["conda-forge"]
+dependencies = { go-sops = "*" }
+exposed = { sops = "sops" }
+
+[envs.resvg]
+channels = ["conda-forge"]
+dependencies = { resvg = "*" }
+exposed = { resvg = "resvg" }
+
+[envs.lazygit]
+channels = ["conda-forge"]
+dependencies = { lazygit = "*" }
+exposed = { lazygit = "lazygit" }
+
+[envs.difftastic]
+channels = ["conda-forge"]
+dependencies = { difftastic = "*" }
+exposed = { difft = "difft" }
+
+[envs.deno]
+channels = ["conda-forge"]
+dependencies = { deno = "*" }
+exposed = { deno = "deno" }
+
+[envs.tex-fmt]
+channels = ["conda-forge"]
+dependencies = { tex-fmt = "*" }
+exposed = { tex-fmt = "tex-fmt" }
+
+[envs.pre-commit]
+channels = ["conda-forge"]
+dependencies = { pre-commit = "*" }
+exposed = { pre-commit = "pre-commit" }
+
+[envs.prettier]
+channels = ["conda-forge"]
+dependencies = { prettier = "*" }
+exposed = { prettier = "prettier" }
+
+[envs.git-filter-repo]
+channels = ["conda-forge"]
+dependencies = { git-filter-repo = "*" }
+exposed = { git-filter-repo = "git-filter-repo" }
+
+[envs.tmux]
+channels = ["conda-forge"]
+dependencies = { tmux = "*" }
+exposed = { tmux = "tmux" }
+
+[envs.huggingface_hub]
+channels = ["conda-forge"]
+dependencies = { huggingface_hub = "*" }
+exposed = { hf = "hf", huggingface-cli = "huggingface-cli", tiny-agents = "tiny-agents" }

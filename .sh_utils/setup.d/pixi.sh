@@ -31,28 +31,30 @@ else
     fi
 fi
 
-# If tools are missing from PATH, install them globally via pixi.
-# Mapping: binary_name:package_name
-ensure_tools="cmake:cmake ninja:ninja git:git git-lfs:git-lfs gh:gh btop:btop dust:dust rg:ripgrep fd:fd-find jq:jq 7z:p7zip fastfetch:fastfetch speedtest:speedtest-cli ffmpeg:ffmpeg sqlite3:sqlite secret-tool:libsecret clangd:clang-tools clang-format:clang-format ty:ty ruff:ruff pnpm:pnpm age:age sops:go-sops resvg:resvg lazygit:lazygit difft:difftastic hf:huggingface_hub"
+# The global manifest is the source of truth for which tools are installed. It
+# is tracked in this repo at .pixi/manifests/pixi-global.toml and records the
+# package, channel and exposed binaries of every tool, so `pixi global sync` is
+# all it takes to make a machine match it.
+#
+# To add or remove a tool, run `pixi global install <package>` (or `uninstall`)
+# and commit the manifest diff: the install is the edit. Do not reintroduce a
+# hand-written list here, which was only ever a lossy copy of the manifest.
+#
+# Two consequences of sync worth knowing, both deliberate:
+#   - it removes global environments that are absent from the manifest, which
+#     is what keeps a machine from drifting;
+#   - it has no "skip if already on PATH" escape hatch, so pixi installs its
+#     own git even where /usr/bin/git exists. That is the point: the tool
+#     versions then come from the manifest rather than from whatever the
+#     host distribution happens to ship.
+PIXI_HOME="${PIXI_HOME:-$HOME/.pixi}"
+MANIFEST="$PIXI_HOME/manifests/pixi-global.toml"
 
-missing_packages=""
-for item in $ensure_tools; do
-    bin_name="${item%%:*}"
-    pkg_name="${item#*:}"
-    if ! command -v "$bin_name" >/dev/null 2>&1; then
-        info "'$bin_name' not found; package '$pkg_name' will be installed"
-        case " $missing_packages " in
-        *" $pkg_name "*) ;;
-        *) missing_packages="$missing_packages $pkg_name" ;;
-        esac
-    else
-        info "$bin_name is already installed at $(command -v "$bin_name")"
-    fi
-done
-
-if [ -n "$missing_packages" ]; then
-    pkgs="${missing_packages# }"
-    # shellcheck disable=SC2086
-    set -- $pkgs
-    "$PIXI_BIN" global install "$@"
+if [ ! -f "$MANIFEST" ]; then
+    error "pixi global manifest not found at $MANIFEST"
+    error "it is tracked in the dotfiles repo, so check the repo out before running this"
+    exit 1
 fi
+
+info "syncing global tools from $MANIFEST"
+"$PIXI_BIN" global sync

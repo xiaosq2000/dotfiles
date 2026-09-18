@@ -49,6 +49,15 @@
 
 !.condarc
 
+# The pixi global manifest is the source of truth for the installed tool set
+# (see .sh_utils/setup.d/pixi.sh). Track only the manifest, never the
+# environments or the solved lock state under .pixi/envs.
+!.pixi
+.pixi/*
+!.pixi/manifests
+.pixi/manifests/*
+!.pixi/manifests/pixi-global.toml
+
 # .secrets stays out of this public repo entirely: it is a separate local-only
 # repo, never a submodule. Do not re-add a `!.secrets` negation here.
 !.sh_utils
