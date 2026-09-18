@@ -119,6 +119,26 @@ jobs:
           grep -q nvim /tmp/core-packages
           grep -q chezmoi /tmp/core-packages
 
+      # The container machine selects no bundles, so sheldon is not installed
+      # and its plugins are not cloned. What can be checked is that the config
+      # landed and that nothing still reaches for oh-my-zsh, which would make
+      # every shell on a fresh machine print an error.
+      - name: The shell no longer depends on oh-my-zsh
+        run: |
+          set -eux
+          test -f "$HOME/.config/sheldon/plugins.toml"
+          grep -q 'zsh-vi-mode' "$HOME/.config/sheldon/plugins.toml"
+          ! grep -q 'oh-my-zsh.sh' "$HOME/.zshrc"
+          ! grep -q 'ZSH_CUSTOM' "$HOME/.zshrc"
+          test ! -e "$HOME/.sh_utils/setup.d/zsh.sh"
+          # The replacements for what the framework used to provide.
+          grep -q 'autoload -Uz compinit' "$HOME/.zshrc"
+          grep -q "alias -- ..='cd ..'" "$HOME/.zshrc"
+          grep -q 'web_search()' "$HOME/.zshrc"
+          # A real zsh parses it. zsh is not a prerequisite of this repository,
+          # so only check when the runner has one.
+          if command -v zsh >/dev/null 2>&1; then zsh -n "$HOME/.zshrc"; fi
+
       - name: Theme renders and switches
         run: |
           set -eux

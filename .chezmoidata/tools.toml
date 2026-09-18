@@ -33,6 +33,7 @@ description = "Shell, editor and navigation. Every machine, including a login no
 packages = [
     "chezmoi",
     "zsh",
+    "sheldon",
     "nvim",
     "fzf",
     "starship",

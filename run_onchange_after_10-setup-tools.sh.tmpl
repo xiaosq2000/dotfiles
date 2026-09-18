@@ -5,8 +5,10 @@
 # each 30 to 220 lines of "resolve the latest GitHub release, guess the asset
 # name for this OS and architecture, download, untar, verify", and conda-forge
 # packages all five, so they are bundle entries in .chezmoidata/tools.toml now.
-# tpm became a chezmoi external. What remains is the work that is genuinely not
-# a package download.
+# tpm became a chezmoi external, and zsh.sh went with oh-my-zsh: sheldon and
+# ~/.config/sheldon/plugins.toml replaced both the framework and the script that
+# cloned its plugins. What remains is the work that is genuinely not a package
+# download.
 #
 # Why this is a wrapper rather than the installers being chezmoi scripts
 # themselves. Every script in setup.d locates its UI library relative to its
@@ -25,7 +27,6 @@
 # changes this rendered script, so chezmoi re-runs it.
 {{- $m := index .machines .machine -}}
 {{- /*
-   zsh: installs oh-my-zsh and its plugins.
    nodejs: points pnpm's global install at a directory on PATH.
    rust: only where the machine asks for a toolchain, because the handful of
    tools that still need cargo are not on conda-forge.
@@ -35,7 +36,7 @@
    machine here has typefaces = false, so a rewrite would be both large and
    untested. See docs/todo.md.
 */ -}}
-{{- $setup := list "zsh" "nodejs" -}}
+{{- $setup := list "nodejs" -}}
 {{- if $m.rust }}{{ $setup = append $setup "rust" }}{{ end -}}
 {{- if $m.typefaces }}{{ $setup = append $setup "typefaces" }}{{ end -}}
 {{ range $setup }}

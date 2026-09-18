@@ -1,0 +1,54 @@
+# zsh plugins, in load order.
+#
+# This replaced oh-my-zsh. sheldon is one Rust binary from the core bundle and
+# this one file: `sheldon lock` clones each repository into
+# ~/.local/share/sheldon, and `sheldon source` prints the source lines in the
+# order below. There is no framework to load, no updater checking GitHub behind
+# your prompt, and no theme engine, because starship draws the prompt.
+#
+# What went away with oh-my-zsh was 23 MB and eleven of its bundled plugins.
+# That list was: conda-zsh-completion, docker, docker-compose, dotenv, gh, git,
+# git-auto-fetch, git-lfs, pre-commit, ssh and web-search. Dropping them was not
+# a guess. 6218 commands of shell history contain zero uses of any git alias the
+# git plugin defines, zero uses of `s` from web-search, and no mention of conda
+# at all; the git workflow here is lazygit, run 818 times. docker, gh and ssh
+# were completions that those tools now ship themselves. `..` and `...` did get
+# used, so .zshrc defines them directly, along with the history and completion
+# options oh-my-zsh's lib/*.zsh used to set as a side effect of loading.
+#
+# Order is the reason this file is ordered rather than alphabetical:
+#
+#   fzf-tab must come after compinit, which .zshrc runs just before sourcing
+#   this, and before anything that wraps ZLE widgets.
+#   zsh-syntax-highlighting wants to be last among the widget wrappers.
+#   zsh-vi-mode goes after it, which is where oh-my-zsh's plugin list had it.
+#
+# Two plugins need configuration that has to exist before they load, so .zshrc
+# defines setup_fzf and zvm_config above the `sheldon source` line.
+
+shell = "zsh"
+
+[plugins]
+
+# Replaces zsh's completion menu with fzf.
+[plugins.fzf-tab]
+github = "Aloxaf/fzf-tab"
+
+# Suggests the rest of a line from history as you type.
+[plugins.zsh-autosuggestions]
+github = "zsh-users/zsh-autosuggestions"
+
+# Fuzzy host completion for ssh, read from ~/.ssh/config. ssh is the fourth
+# most used command in this history, so this one earns its place.
+[plugins.zsh-ssh]
+github = "sunlei/zsh-ssh"
+
+# Colours the command line as you type. Wraps widgets, so it goes late.
+[plugins.zsh-syntax-highlighting]
+github = "zsh-users/zsh-syntax-highlighting"
+
+# vi keybindings. Initializes itself after the first prompt, which is why
+# setup_fzf runs from zvm_after_init_commands rather than directly: fzf's own
+# bindings would otherwise be replaced by this plugin's.
+[plugins.zsh-vi-mode]
+github = "jeffreytse/zsh-vi-mode"

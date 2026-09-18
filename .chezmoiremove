@@ -108,3 +108,21 @@
 .config/alacritty/rose-pine-moon.toml
 .config/alacritty/rose-pine-dawn.toml
 {{ end }}
+
+################################################################################
+# 2026-09-18: oh-my-zsh
+#
+# Replaced by sheldon and ~/.config/sheldon/plugins.toml. 23 MB of framework for
+# five plugins, of which .zshrc loaded eleven more that this shell history shows
+# no use of at all.
+#
+# Guarded on sheldon having cloned its plugins, so a machine that could not
+# reach GitHub keeps a working shell. ~/.zsh_history is deliberately absent from
+# this list: it lives in $HOME, not under ~/.oh-my-zsh, and nothing here touches
+# it.
+#
+# Safe to delete this block once every machine has applied it twice.
+################################################################################
+
+{{ if stat (joinPath .chezmoi.homeDir ".local/share/sheldon/plugins.lock") }}.oh-my-zsh
+{{ end }}

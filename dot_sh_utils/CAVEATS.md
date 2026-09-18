@@ -14,10 +14,15 @@ directory with pixi, because conda-forge publishes a zsh package.
 pixi global install zsh
 ```
 
-The command records zsh in `~/.pixi/manifests/pixi-global.toml`, so you can
-reinstall the same set of tools later. Note that `.sh_utils/setup.d/zsh.sh`
-installs oh-my-zsh and the plugins but not the zsh program itself, so run the
-pixi command first on a machine that has no zsh.
+zsh is in the `core` bundle in `.chezmoidata/tools.toml`, so on a machine this
+repository knows about you do not need that command at all: `chezmoi apply`
+renders the pixi manifest and `pixi global sync` installs zsh along with
+everything else. The bootstrap order works out because chezmoi itself is
+installed standalone by `get.chezmoi.io`, and `setup.d/pixi.sh` installs pixi
+before the sync runs.
+
+Run the command by hand only to get a zsh before the first apply, on a machine
+with no root and no zsh at all.
 
 ## pixi completion has to load after compinit
 
@@ -26,9 +31,11 @@ adds pixi to `PATH`. The two lines belong together by topic, and they cannot run
 at the same point in the file.
 
 `pixi completion --shell zsh` prints code that calls `compdef`. The `compdef`
-function only exists after `compinit` has run, and oh-my-zsh runs `compinit`
-when `.zshrc` sources `oh-my-zsh.sh`, so the completion has to load after that
-line.
+function only exists after `compinit` has run, and `.zshrc` runs `compinit`
+itself in its completion section, just above the `sheldon source` line, so the
+pixi completion has to load after that. This used to be oh-my-zsh's `compinit`,
+called as a side effect of sourcing `oh-my-zsh.sh`; making the call explicit is
+part of why the framework went away.
 
 Ubuntu hides the problem, because its `/etc/zsh/zshrc` runs `compinit` before
 your `.zshrc` starts, so an early call works by accident. A zsh installed by
@@ -47,14 +54,6 @@ The command below prints `_pixi` when the completion loaded correctly, and
 ```sh
 zsh -o noglobalrcs -i -c 'echo "${_comps[pixi]:-missing}"'
 ```
-
-## The oh-my-zsh installer needs zsh on PATH
-
-`.sh_utils/setup.d/zsh.sh` adds `~/.pixi/bin` to `PATH` before it runs the
-oh-my-zsh installer. The installer stops with an error when it cannot find a zsh
-program, and a non-interactive bash shell does not always have `~/.pixi/bin` on
-`PATH` already, so without the extra lines the script fails on exactly the
-machines that need pixi.
 
 ## Changing the login shell is not always possible
 
@@ -122,36 +121,36 @@ breaks host completion.
 
 zsh expands an alias before it decides which completion function to run, so with
 the alias in place the word under the cursor belongs to `kitten` rather than to
-`ssh`, and zsh runs kitty's `_kitty` function. That function passes the current
-matcher to the kitty binary, which stops with the message below.
+`ssh`, and zsh runs kitty's `_kitty` function instead of `_ssh`. A function
+keeps the first word as `ssh`. Nothing is lost, because kitty's completion for
+`kitten ssh` hands the work back to `_ssh` anyway; the only completions that go
+away are kitty's own flags, such as `--kitten` and `--copy`.
+
+There used to be a sharper reason. `_kitty` passes the current matcher to the
+kitty binary, which stops with the message below.
 
 ```
 Error: ZSH anchor based matching active, cannot complete. Turn it off by setting
 zstyle :completion: to something that does not use anchors in your ~/.zshrc
 ```
 
-The matcher comes from oh-my-zsh. Because `.zshrc` sets `CASE_SENSITIVE` to
-false and `HYPHEN_INSENSITIVE` to true, `oh-my-zsh/lib/completion.zsh` sets the
+That matcher came from oh-my-zsh. Because `.zshrc` set `CASE_SENSITIVE` to
+false and `HYPHEN_INSENSITIVE` to true, `oh-my-zsh/lib/completion.zsh` set the
 list below, and the second and third entries are anchored.
 
 ```zsh
 zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]-_}={[:upper:][:lower:]_-}' 'r:|=*' 'l:|=* r:|=*'
 ```
 
-zsh tries the entries in order and stops at the first one that finds a match, so
-the failure only shows up once the plain prefix match finds nothing. That is
-exactly the moment you wanted completion, which is why the problem looks like it
-belongs to host names.
+zsh tries the entries in order and stops at the first that matches, so the
+failure only appeared once plain prefix matching found nothing, which is exactly
+the moment you wanted completion. That is why the problem looked like it
+belonged to host names.
 
-A function keeps the first word as `ssh`, so zsh runs its own `_ssh` function
-and never calls the kitty binary. Nothing is lost, because kitty's completion
-for `kitten ssh` hands the work back to `_ssh` anyway. The only completions that
-go away are the ones for kitty's own flags, such as `--kitten` and `--copy`.
-
-The other way out is to drop the anchored entries from `matcher-list`, which is
-what the message asks for. That also fixes completion for `kitty` and `kitten`
-themselves, but it removes substring completion for every command, because zsh
-has no unanchored way to express it.
+Since oh-my-zsh went away, `.zshrc` sets one unanchored matcher of its own, so
+that error is gone and `kitty` and `kitten` complete normally. The cost is
+substring completion, which zsh has no unanchored way to express. The `ssh`
+function stays regardless, for the reason in the next section.
 
 ## TERM does not tell you whether you are inside a kitty window
 

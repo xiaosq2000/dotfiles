@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Clone the zsh plugins listed in ~/.config/sheldon/plugins.toml.
+#
+# `sheldon source`, which .zshrc evaluates, will clone a missing plugin itself
+# on the first prompt. That is the wrong moment for it: a new shell would hang
+# on the network, and on a machine that has none it would fail once per shell.
+# Doing it here means starting a shell only ever reads the lock file.
+#
+# Runs after 05-pixi, which is what installs the sheldon binary.
+#
+# `lock`, not `lock --update`. This installs what is missing and leaves the
+# existing clones at the commit they are on, so applying does not silently move
+# every plugin forward. Updating is a decision:
+#
+#   sheldon lock --update
+#
+# plugins.toml sha256: {{ include "private_dot_config/sheldon/plugins.toml" | sha256sum }}
+
+set -eu
+
+{{ if not (index .machines .machine).bundles -}}
+echo "machine {{ .machine }} selects no bundles; skipping sheldon lock"
+exit 0
+{{ end -}}
+
+# Resolve the binary rather than trusting PATH: chezmoi runs this from a
+# temporary file with whatever environment `chezmoi apply` inherited, and a
+# non-interactive shell here does not necessarily have ~/.pixi/bin on PATH.
+if command -v sheldon >/dev/null 2>&1; then
+    SHELDON="$(command -v sheldon)"
+elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/sheldon" ]; then
+    SHELDON="${PIXI_HOME:-$HOME/.pixi}/bin/sheldon"
+else
+    echo "sheldon not found; it comes from the core bundle, so check that" >&2
+    echo "'pixi global sync' succeeded earlier in this apply" >&2
+    exit 1
+fi
+
+echo "locking zsh plugins from ${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml"
+"$SHELDON" --non-interactive lock
