@@ -422,8 +422,10 @@ _unset_proxy_env_vars() {
 
 # Configure Docker daemon proxy settings
 set_docker_proxy() {
-    local proxy_host="$1"
-    local proxy_port="$2"
+    local proxy_host proxy_port
+    if ! _get_proxy_config proxy_host proxy_port; then
+        return 1
+    fi
 
     if ! command -v docker >/dev/null 2>&1; then
         _warning "$(_translate 'Docker is not installed or not available.')"
