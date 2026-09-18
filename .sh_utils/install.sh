@@ -281,7 +281,7 @@ if [ "$INSTALL_BINARIES" = true ]; then
         warning "rust setup script not found at $RUST_SCRIPT"
     fi
 
-    NODEJS_SCRIPT="$HOME/.sh_utils/setup.d/node.sh"
+    NODEJS_SCRIPT="$HOME/.sh_utils/setup.d/nodejs.sh"
     if [ -f "$NODEJS_SCRIPT" ]; then
         info "running Node.js installation script..."
 
