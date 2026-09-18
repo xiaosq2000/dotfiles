@@ -43,6 +43,22 @@ fi
 
 mkdir -p "$PNPM_BIN_DIR"
 
+# pnpm refuses to report or use a global bin directory that is not on PATH:
+#
+#   Error: ERR_PNPM_GLOBAL_BIN_DIR_NOT_IN_PATH
+#
+# ~/.zshrc puts it there, but chezmoi runs this script from a non-interactive
+# shell that has never read ~/.zshrc, so it has to be added here too. Without
+# this the script only appeared to work, on a machine whose PATH happened to
+# already carry it.
+case ":$PATH:" in
+*":$PNPM_BIN_DIR:"*) ;;
+*)
+    PATH="$PNPM_BIN_DIR:$PATH"
+    export PATH
+    ;;
+esac
+
 # Pin the global bin dir so globally-installed tools land in $PNPM_HOME/bin,
 # matching the PATH entry in ~/.zshrc. pnpm otherwise picks a directory of its
 # own choosing and warns that it is not on PATH.
