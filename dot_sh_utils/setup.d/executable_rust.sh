@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 set -eu
 
-# A rustup toolchain, and the one CLI tool conda-forge does not package.
+# Two jobs, and they are gated differently on purpose.
 #
-# This used to install starship, eza and tree-sitter-cli as well. All three are
-# conda-forge packages and are in bundles now, which created a conflict rather
-# than a duplicate: ~/.zshrc sources ~/.cargo/env after it prepends
-# ~/.pixi/bin, so ~/.cargo/bin lands in front and the cargo copy wins. The
-# manifest would have said one thing and `command -v` another. So the tools that
-# moved are uninstalled here, and only once their replacement is in place.
+# Clearing out cargo copies of tools that moved into a pixi bundle happens
+# wherever a cargo exists, because it is a correctness problem rather than a
+# preference: ~/.zshrc sources ~/.cargo/env after it prepends ~/.pixi/bin, and
+# prepend_env leaves a directory where it already is, so ~/.cargo/bin can end up
+# in front and the cargo copy wins. The manifest then says one thing and
+# `command -v` another. imrl and sicc were in exactly that state after the
+# bundles landed, with cargo's eza and tree-sitter shadowing pixi's.
 #
-# Runs only where the machine entry sets rust = true.
+# Installing a toolchain happens only where the machine asks for it, which
+# $RUST_TOOLCHAIN carries in from the machine entry's rust flag. A machine that
+# does not want rust and has no cargo does nothing here at all.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
@@ -23,19 +26,31 @@ else
     exit 1
 fi
 
-# Ensure cargo is installed (without modifying PATH)
+# Whether this machine wants a toolchain. Set by the run script from the machine
+# entry; default false so that running this by hand on a machine with no cargo
+# does not quietly install one.
+RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-false}"
+
+CARGO_BIN=""
 if [ -f "$HOME/.cargo/env" ]; then
+    # shellcheck disable=SC1091
     \. "$HOME/.cargo/env"
-    CARGO_BIN="$(command -v cargo)"
-else
+    CARGO_BIN="$(command -v cargo || true)"
+elif [ "$RUST_TOOLCHAIN" = true ]; then
+    step "installing a rustup toolchain"
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile default --no-modify-path
     if [ -f "$HOME/.cargo/env" ]; then
+        # shellcheck disable=SC1091
         \. "$HOME/.cargo/env"
-        CARGO_BIN="$(command -v cargo)"
-    else
+        CARGO_BIN="$(command -v cargo || true)"
+    fi
+    if [ -z "$CARGO_BIN" ]; then
         error "cargo installation failed"
         exit 1
     fi
+else
+    info "no cargo here and this machine does not ask for one; nothing to do"
+    exit 0
 fi
 
 PIXI_BIN_DIR="${PIXI_HOME:-$HOME/.pixi}/bin"
@@ -67,6 +82,11 @@ for item in $obsolete_tools; do
         warning "could not 'cargo uninstall $pkg_name'; remove $HOME/.cargo/bin/$bin_name by hand"
     fi
 done
+
+if [ "$RUST_TOOLCHAIN" != true ]; then
+    info "cargo is present but this machine does not ask for a toolchain; leaving it alone"
+    exit 0
+fi
 
 # What conda-forge does not have. tre-command is the only reason a toolchain is
 # still installed on a machine that writes no Rust.

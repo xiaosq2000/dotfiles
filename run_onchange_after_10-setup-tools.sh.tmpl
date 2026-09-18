@@ -30,8 +30,10 @@
    nodejs: points pnpm's global install at a directory on PATH. Only where the
    machine takes the dev-web bundle, which is what provides pnpm; running it
    elsewhere only printed "pnpm not found on PATH", as it did on sicc.
-   rust: only where the machine asks for a toolchain, because the handful of
-   tools that still need cargo are not on conda-forge.
+   rust: everywhere, because its first job is removing cargo copies of tools
+   that moved into a pixi bundle and would otherwise shadow them on PATH. It
+   installs a toolchain only when RUST_TOOLCHAIN says the machine wants one, and
+   exits immediately on a machine with neither cargo nor a request for it.
    typefaces: only where the machine asks for fonts. This one stayed a script
    rather than becoming externals: it installs sixteen families, each with its
    own release-asset naming and its own set of wanted extensions, and every
@@ -40,7 +42,7 @@
 */ -}}
 {{- $setup := list -}}
 {{- if has "dev-web" $m.bundles }}{{ $setup = append $setup "nodejs" }}{{ end -}}
-{{- if $m.rust }}{{ $setup = append $setup "rust" }}{{ end -}}
+{{- $setup = append $setup "rust" -}}
 {{- if $m.typefaces }}{{ $setup = append $setup "typefaces" }}{{ end -}}
 {{ range $setup }}
 # {{ . }}.sh sha256: {{ include (printf "dot_sh_utils/setup.d/executable_%s.sh" .) | sha256sum }}
@@ -72,7 +74,8 @@ run_setup() {
     fi
 
     info "running $name"
-    if bash "$script"; then
+    # RUST_TOOLCHAIN is read by rust.sh; see the note above.
+    if RUST_TOOLCHAIN={{ $m.rust }} bash "$script"; then
         success "$name done"
         return 0
     fi
