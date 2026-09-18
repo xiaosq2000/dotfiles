@@ -1,13 +1,26 @@
-# One-shot removal of the dedukun/bookmarks.yazi plugin and the two yazi config
-# files that existed only to configure it.
+# One-shot cleanup of things this repo used to install and no longer does.
 #
 # Deleting a source entry makes chezmoi stop managing the target, but it does
-# not delete the copy already in ~. This does.
+# not delete the copy already in ~. This does. Likewise, dropping a setup.d
+# installer stops it running but leaves whatever it already installed behind.
 #
-# Delete this file once it has been applied everywhere. It takes effect on
-# every apply, so leaving it in place would silently delete these paths again
-# if they were ever recreated on purpose.
+# Delete this file once it has been applied on every machine. It takes effect
+# on every apply, so leaving it in place would silently delete these paths
+# again if they were ever recreated on purpose.
+
+# The dedukun/bookmarks.yazi plugin and the two yazi config files that existed
+# only to configure it.
 .config/yazi/plugins/bookmarks.yazi
 .config/yazi/plugins
 .config/yazi/init.lua
 .config/yazi/keymap.toml
+
+# yazi now comes from the pixi manifest, so these are the binaries the old
+# setup.d/yazi.sh unpacked from a GitHub release (~33 MB). pixi's copies live
+# in ~/.pixi/bin and are unaffected.
+.local/bin/yazi
+.local/bin/ya
+
+# The retired installer itself. Dropping it from the source tree stops chezmoi
+# managing it, but the copy already in ~ stays until told otherwise.
+.sh_utils/setup.d/yazi.sh

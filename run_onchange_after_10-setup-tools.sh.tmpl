@@ -16,7 +16,7 @@
 #
 # The hashes below are what make `run_onchange_` fire: editing any installer
 # changes this rendered script, so chezmoi re-runs it.
-{{ $setup := list "pixi" "uv" "rust" "nodejs" "zsh" "neovim" "fzf" "yazi" "lazydocker" -}}
+{{ $setup := list "pixi" "uv" "rust" "nodejs" "zsh" "neovim" "fzf" "lazydocker" -}}
 {{ range $setup }}
 # {{ . }}.sh sha256: {{ include (printf "dot_sh_utils/setup.d/executable_%s.sh" .) | sha256sum }}
 {{- end }}

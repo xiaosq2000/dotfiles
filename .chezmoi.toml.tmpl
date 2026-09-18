@@ -17,7 +17,7 @@ they are kept short and free of commas, which the flag parser splits on:
 
   theme            main | moon | dawn -- see .chezmoidata/themes.toml
   installBinaries  run the ~/.sh_utils/setup.d tool chain (pixi, uv, rust,
-                   node, zsh, neovim, fzf, yazi, lazydocker)
+                   node, zsh, neovim, fzf, lazydocker)
   installTypefaces install Maple Mono and friends
 */}}
 {{- $theme := promptChoiceOnce . "theme" "theme" (list "main" "moon" "dawn") "main" -}}
@@ -29,7 +29,7 @@ they are kept short and free of commas, which the flag parser splits on:
 #
 # This matters for ~/.local/bin. chezmoi derives directory modes from the
 # umask, so by default it wants that directory to be 0775, while the uv and
-# yazi installers that also write binaries into it reset it to 0755 on every
+# neovim installers that also write binaries into it reset it to 0755 on every
 # run. The two then alternate forever and `chezmoi diff` is never empty.
 # Pinning the umask settles it in the installers' favour.
 #

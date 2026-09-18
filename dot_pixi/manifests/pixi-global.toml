@@ -159,3 +159,8 @@ exposed = { shellcheck = "shellcheck" }
 channels = ["conda-forge"]
 dependencies = { chezmoi = "*" }
 exposed = { chezmoi = "chezmoi" }
+
+[envs.yazi]
+channels = ["conda-forge"]
+dependencies = { yazi = "*" }
+exposed = { ya = "ya", yazi = "yazi" }
