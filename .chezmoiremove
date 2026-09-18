@@ -1,0 +1,13 @@
+# One-shot removal of the dedukun/bookmarks.yazi plugin and the two yazi config
+# files that existed only to configure it.
+#
+# Deleting a source entry makes chezmoi stop managing the target, but it does
+# not delete the copy already in ~. This does.
+#
+# Delete this file once it has been applied everywhere. It takes effect on
+# every apply, so leaving it in place would silently delete these paths again
+# if they were ever recreated on purpose.
+.config/yazi/plugins/bookmarks.yazi
+.config/yazi/plugins
+.config/yazi/init.lua
+.config/yazi/keymap.toml
