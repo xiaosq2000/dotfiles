@@ -1,0 +1,43 @@
+{{- $m := index .machines .machine -}}
+{{- /*
+   Collect the packages of every bundle this machine selects.
+
+   A machine naming a bundle that does not exist fails here rather than
+   silently getting a smaller tool set: `pixi global sync` would then remove
+   whatever that bundle was supposed to provide, and the only symptom would be
+   missing commands.
+*/ -}}
+{{- $pkgs := list -}}
+{{- range $bundle := $m.bundles -}}
+{{-   if not (hasKey $.bundles $bundle) -}}
+{{-     fail (printf "machine %q selects bundle %q, which is not in .chezmoidata/tools.toml" $.machine $bundle) -}}
+{{-   end -}}
+{{-   $pkgs = concat $pkgs (index $.bundles $bundle).packages -}}
+{{- end -}}
+{{- $pkgs = $pkgs | uniq | sortAlpha -}}
+# GENERATED FILE. Every edit here is lost on the next `chezmoi apply`, and so is
+# every `pixi global install`.
+#
+# To add or remove a tool, put the package in a bundle in
+# .chezmoidata/tools.toml, give the machine that bundle in
+# .chezmoidata/machines.toml, and run `chezmoi apply`.
+#
+# machine:  {{ .machine }} — {{ $m.description }}
+# bundles:  {{ if $m.bundles }}{{ join " " $m.bundles }}{{ else }}(none){{ end }}
+# packages: {{ len $pkgs }}
+#
+# `pixi global sync` makes this machine match the file exactly, which means it
+# also uninstalls environments that are absent from it. That is what keeps a
+# machine from drifting, and it is why removing a bundle here is enough to
+# reclaim the space.
+version = 1
+{{ range $pkg := $pkgs }}
+{{- $exposed := list $pkg -}}
+{{- if hasKey $.packages $pkg -}}
+{{-   $exposed = (index $.packages $pkg).exposed -}}
+{{- end }}
+[envs.{{ $pkg }}]
+channels = ["conda-forge"]
+dependencies = { {{ $pkg }} = "*" }
+exposed = { {{ range $i, $bin := $exposed }}{{ if $i }}, {{ end }}{{ $bin }} = {{ $bin | quote }}{{ end }} }
+{{ end -}}

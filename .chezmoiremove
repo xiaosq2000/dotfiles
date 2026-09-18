@@ -1,12 +1,25 @@
-# One-shot cleanup of things this repo used to install and no longer does.
+# Cleanup of things this repository used to install and no longer does.
 #
 # Deleting a source entry makes chezmoi stop managing the target, but it does
 # not delete the copy already in ~. This does. Likewise, dropping a setup.d
 # installer stops it running but leaves whatever it already installed behind.
 #
-# Delete this file once it has been applied on every machine. It takes effect
-# on every apply, so leaving it in place would silently delete these paths
-# again if they were ever recreated on purpose.
+# This file is a template, and the binary entries below are guarded on the
+# replacement already being present in ~/.pixi/bin. Removals happen before the
+# run_ scripts during an apply, so an unguarded entry would delete the editor
+# from a machine and only then try to download its replacement; if that download
+# failed, on a login node behind a proxy for instance, the machine would be left
+# with no editor at all. Guarded, the first apply installs the pixi copy and the
+# second removes the old one.
+#
+# Entries here take effect on every apply, so each block says when it can go.
+
+################################################################################
+# 2026-09: the yazi plugin that was dropped
+#
+# Safe to delete this block once it has been applied on laptop and vps, the two
+# machines that were not reachable when it was written.
+################################################################################
 
 # The dedukun/bookmarks.yazi plugin and the two yazi config files that existed
 # only to configure it.
@@ -21,6 +34,54 @@
 .local/bin/yazi
 .local/bin/ya
 
-# The retired installer itself. Dropping it from the source tree stops chezmoi
-# managing it, but the copy already in ~ stays until told otherwise.
+# The retired installer itself.
 .sh_utils/setup.d/yazi.sh
+
+################################################################################
+# 2026-09-18: the installers replaced by conda-forge packages
+#
+# Each of these was a script that resolved a GitHub release, guessed an asset
+# name and unpacked it into ~/.local. All five packages are on conda-forge and
+# are bundle entries in .chezmoidata/tools.toml now.
+#
+# Safe to delete this block once every machine has applied it twice.
+################################################################################
+
+# neovim.sh did `cp -a` of the whole release tarball into ~/.local, so it left a
+# binary, a lib directory and a copy of the runtime. ~/.local/share/nvim is
+# deliberately NOT listed: the tarball's runtime/ landed in there beside lazy/,
+# mason/, site/ and the session files, which are plugin state and are not
+# replaceable. The stale runtime/ is inert, because nvim resolves its runtime
+# relative to its own binary. See docs/todo.md.
+{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/nvim") }}.local/bin/nvim
+.local/lib/nvim
+{{ end }}
+# uv.sh. The tool shims in ~/.local/bin that uv itself created, for nvitop and
+# the rest, point into ~/.local/share/uv/tools and keep working without this
+# binary.
+{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/uv") }}.local/bin/uv
+.local/bin/uvx
+{{ end }}
+# lazydocker.sh
+{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/lazydocker") }}.local/bin/lazydocker
+{{ end }}
+# luarocks.sh
+{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/luarocks") }}.local/bin/luarocks
+.local/bin/luarocks-admin
+{{ end }}
+# fzf.sh cloned the upstream repository into ~/.fzf and ran its installer with
+# --xdg, which wrote the two shell integration files. .zshrc uses `fzf --zsh`
+# now, so nothing reads either path.
+{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/fzf") }}.fzf
+.config/fzf/fzf.zsh
+.config/fzf/fzf.bash
+.config/fzf
+{{ end }}
+# The retired installers themselves. Unguarded: they are inert scripts, and
+# leaving them invites running one by hand and undoing the migration.
+.sh_utils/setup.d/uv.sh
+.sh_utils/setup.d/neovim.sh
+.sh_utils/setup.d/fzf.sh
+.sh_utils/setup.d/lazydocker.sh
+.sh_utils/setup.d/luarocks.sh
+.sh_utils/setup.d/tpm.sh

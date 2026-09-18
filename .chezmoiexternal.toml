@@ -32,3 +32,17 @@ refreshPeriod = "672h"
 type = "file"
 url = "https://raw.githubusercontent.com/rose-pine/kitty/main/dist/{{ (index .themes .theme).kitty }}.conf"
 refreshPeriod = "672h"
+
+# tpm, the tmux plugin manager. tmux.conf's last line runs
+# ${XDG_DATA_HOME}/tmux/plugins/tpm/tpm, and every `set -g @plugin` above it is
+# inert without that clone, so a machine missing tpm has a tmux with no plugins
+# and no error to explain it. This workstation was in exactly that state on
+# 2026-09-18.
+#
+# It was a 31-line setup.d installer that deleted the directory and re-cloned it
+# on every run, which is also why tpm's own record of installed plugins never
+# survived. An external clones once and pulls on refresh.
+[".local/share/tmux/plugins/tpm"]
+type = "git-repo"
+url = "https://github.com/tmux-plugins/tpm"
+refreshPeriod = "672h"

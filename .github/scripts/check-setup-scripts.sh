@@ -23,15 +23,21 @@ shopt -u nullglob
     exit 1
 }
 
-# Names appear in three shapes across the run scripts:
-#   the ordered list   {{ $setup := list "uv" "rust" ... -}}
+# Names appear in four shapes across the run scripts:
+#   the base list      {{ $setup := list "zsh" "nodejs" -}}
+#   a conditional add  {{ if $m.rust }}{{ $setup = append $setup "rust" }}{{ end }}
 #   a direct call      run_setup "typefaces"
 #   an exec'd path     exec "$HOME/.sh_utils/setup.d/pixi.sh"
+# The conditional shape matters: a name only reachable on some machines is
+# exactly the one a typo hides, because the machines that would notice are the
+# ones nobody applies to first.
 # Drop anything holding a shell expansion, which is the loop's own
-# run_setup "${entry%%:*}" line.
+# run_setup "$name" line.
 names=$(
     {
         grep -h 'setup := list' "${RUN_SCRIPTS[@]}" | grep -o '"[^"]*"' | tr -d '"'
+        grep -ho 'append \$setup "[^"$]*"' "${RUN_SCRIPTS[@]}" |
+            sed 's/append \$setup "//; s/"$//'
         grep -ho 'run_setup "[^"$]*"' "${RUN_SCRIPTS[@]}" | sed 's/run_setup "//; s/"$//'
         grep -ho '\.sh_utils/setup\.d/[A-Za-z0-9_-]*\.sh' "${RUN_SCRIPTS[@]}" |
             sed 's|.*/||; s|\.sh$||'

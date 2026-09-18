@@ -203,24 +203,30 @@ setup_yazi
 ####################### https://junegunn.github.io/fzf/  #######################
 ################################################################################
 setup_fzf() {
-    if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh ]; then
-        source "${XDG_CONFIG_HOME:-$HOME/.config}"/fzf/fzf.zsh
-        if has kitten; then
-            export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | kitten clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-        elif has wl-copy; then
-            export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | wl-copy)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-        elif has xclipboard; then
-            export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-        fi
-        # Print tree structure in the preview window
-        export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-        # Theme: {{ (index .themes .theme).description }}
-        # All three variants live in .chezmoidata/themes.toml; they used to sit
-        # here with two of the three commented out.
-        export FZF_DEFAULT_OPTS="{{ (index .themes .theme).fzf }}"
-    else
+    if ! has fzf; then
         warning "fzf not found."
+        return
     fi
+    # fzf has shipped its own shell integration since 0.48, so `fzf --zsh`
+    # prints the key bindings and completion that ~/.config/fzf/fzf.zsh used to
+    # hold. That file was written by fzf's own install script, cloned into
+    # ~/.fzf by a 96-line setup.d installer. fzf is a conda-forge package and
+    # comes from the core bundle now, so neither the clone nor the file exists
+    # on a fresh machine.
+    source <(fzf --zsh)
+    if has kitten; then
+        export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | kitten clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+    elif has wl-copy; then
+        export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | wl-copy)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+    elif has xclipboard; then
+        export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+    fi
+    # Print tree structure in the preview window
+    export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
+    # Theme: {{ (index .themes .theme).description }}
+    # All three variants live in .chezmoidata/themes.toml; they used to sit
+    # here with two of the three commented out.
+    export FZF_DEFAULT_OPTS="{{ (index .themes .theme).fzf }}"
 }
 
 ################################################################################

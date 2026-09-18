@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# Runs the installers in ~/.sh_utils/setup.d after chezmoi has written them.
+# Runs what is left of the installers in ~/.sh_utils/setup.d.
+#
+# Most of that directory has gone. uv, neovim, fzf, lazydocker and luarocks were
+# each 30 to 220 lines of "resolve the latest GitHub release, guess the asset
+# name for this OS and architecture, download, untar, verify", and conda-forge
+# packages all five, so they are bundle entries in .chezmoidata/tools.toml now.
+# tpm became a chezmoi external. What remains is the work that is genuinely not
+# a package download.
 #
 # Why this is a wrapper rather than the installers being chezmoi scripts
 # themselves. Every script in setup.d locates its UI library relative to its
@@ -16,15 +23,29 @@
 #
 # The hashes below are what make `run_onchange_` fire: editing any installer
 # changes this rendered script, so chezmoi re-runs it.
-{{ $setup := list "uv" "rust" "nodejs" "zsh" "neovim" "fzf" "lazydocker" -}}
+{{- $m := index .machines .machine -}}
+{{- /*
+   zsh: installs oh-my-zsh and its plugins.
+   nodejs: points pnpm's global install at a directory on PATH.
+   rust: only where the machine asks for a toolchain, because the handful of
+   tools that still need cargo are not on conda-forge.
+   typefaces: only where the machine asks for fonts. This one stayed a script
+   rather than becoming externals: it installs sixteen families, each with its
+   own release-asset naming and its own set of wanted extensions, and every
+   machine here has typefaces = false, so a rewrite would be both large and
+   untested. See docs/todo.md.
+*/ -}}
+{{- $setup := list "zsh" "nodejs" -}}
+{{- if $m.rust }}{{ $setup = append $setup "rust" }}{{ end -}}
+{{- if $m.typefaces }}{{ $setup = append $setup "typefaces" }}{{ end -}}
 {{ range $setup }}
 # {{ . }}.sh sha256: {{ include (printf "dot_sh_utils/setup.d/executable_%s.sh" .) | sha256sum }}
 {{- end }}
 
 set -eu
 
-{{ if not .installBinaries -}}
-echo "installBinaries is false; skipping the setup.d tool chain"
+{{ if not $m.bundles -}}
+echo "machine {{ .machine }} selects no bundles; skipping the setup.d tool chain"
 exit 0
 {{ end -}}
 
@@ -57,15 +78,11 @@ run_setup() {
     return 1
 }
 
-# Order matters: uv puts tools on PATH that the later scripts expect. pixi runs
-# earlier still, from 05-pixi.sh.
+# pixi ran earlier, from 05-pixi.sh, so everything these scripts call is already
+# on PATH.
 for name in {{ $setup | join " " }}; do
     run_setup "$name" || true
 done
-
-{{ if .installTypefaces -}}
-run_setup "typefaces" || true
-{{ end -}}
 
 if [ -n "$SETUP_FAILED" ]; then
     error "these setup scripts did not complete:$SETUP_FAILED"

@@ -65,10 +65,11 @@ so itself when the template no longer matches the generated config.
 # umask, which is 002 here.
 #
 # This matters for ~/.local/bin. chezmoi derives directory modes from the
-# umask, so by default it wants that directory to be 0775, while the uv and
-# neovim installers that also write binaries into it reset it to 0755 on every
-# run. The two then alternate forever and `chezmoi diff` is never empty.
-# Pinning the umask settles it in the installers' favour.
+# umask, so by default it wants that directory to be 0775, while the tools that
+# also write binaries into it reset it to 0755 on every run. The two then
+# alternate forever and `chezmoi diff` is never empty. Pinning the umask settles
+# it in their favour. The uv and neovim installers were the original culprits;
+# uv's own tool shims still land there.
 #
 # The one-time cost is that roughly 190 entries created under umask 002 get
 # their group-write bit cleared on the first apply. That is a tightening, so
@@ -88,12 +89,3 @@ umask = 0o022
     # Selects a column from .chezmoidata/themes.toml. Switch with `theme dawn`,
     # which rewrites this line and runs `chezmoi apply`.
     theme = {{ $theme | quote }}
-
-    # Derived from the machine entry above, not asked. They stay in the config
-    # because the run_onchange_ scripts and .chezmoiignore read them; edit
-    # .chezmoidata/machines.toml and re-run `chezmoi init` to change them.
-    #
-    # A machine with no bundles gets the config files and no tool chain, which
-    # is what the container entry is for and what CI uses.
-    installBinaries = {{ gt (len $m.bundles) 0 }}
-    installTypefaces = {{ $m.typefaces }}

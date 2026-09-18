@@ -31,18 +31,20 @@ else
     fi
 fi
 
-# The global manifest is the source of truth for which tools are installed. It
-# is tracked in this repo at .pixi/manifests/pixi-global.toml and records the
-# package, channel and exposed binaries of every tool, so `pixi global sync` is
-# all it takes to make a machine match it.
+# The global manifest lists the tools this machine should have. It is generated
+# by chezmoi from the bundles the machine selects, so it is not hand-edited and
+# not re-added:
 #
-# To add or remove a tool, run `pixi global install <package>` (or `uninstall`)
-# and commit the manifest diff: the install is the edit. Do not reintroduce a
-# hand-written list here, which was only ever a lossy copy of the manifest.
+#   .chezmoidata/tools.toml     which packages each bundle contains
+#   .chezmoidata/machines.toml  which bundles each machine selects
+#
+# `pixi global install X` still works, and the next `chezmoi apply` still undoes
+# it. To keep a tool, put its package in a bundle.
 #
 # Two consequences of sync worth knowing, both deliberate:
 #   - it removes global environments that are absent from the manifest, which
-#     is what keeps a machine from drifting;
+#     is what keeps a machine from drifting and what makes deleting a bundle
+#     actually reclaim the space;
 #   - it has no "skip if already on PATH" escape hatch, so pixi installs its
 #     own git even where /usr/bin/git exists. That is the point: the tool
 #     versions then come from the manifest rather than from whatever the
@@ -52,21 +54,21 @@ MANIFEST="$PIXI_HOME/manifests/pixi-global.toml"
 
 if [ ! -f "$MANIFEST" ]; then
     error "pixi global manifest not found at $MANIFEST"
-    error "it is tracked in the dotfiles repo, so check the repo out before running this"
+    error "chezmoi renders it from .chezmoidata/tools.toml; run 'chezmoi apply' first"
     exit 1
 fi
 
 # Refuse to prune the tool that invoked this script.
 #
-# chezmoi runs this from run_onchange_after_10-setup-tools.sh, and sync removes
-# any environment missing from the manifest. Installing chezmoi with pixi and
-# forgetting to `chezmoi re-add` the manifest therefore makes `chezmoi apply`
-# uninstall chezmoi, leaving no chezmoi to apply with. That happened once
-# during the migration; this turns it into a message instead.
+# chezmoi runs this from run_onchange_after_05-pixi.sh, and sync removes any
+# environment missing from the manifest. Dropping chezmoi from the core bundle
+# therefore makes `chezmoi apply` uninstall chezmoi, leaving no chezmoi to apply
+# with. That happened once during the migration, back when the manifest was
+# hand-held; this turns it into a message instead.
 if [ -x "$PIXI_HOME/bin/chezmoi" ] && ! grep -q '^\[envs\.chezmoi\]' "$MANIFEST"; then
     error "chezmoi is installed via pixi but absent from $MANIFEST"
-    error "syncing would uninstall it; fix with:"
-    error "  pixi global install chezmoi && chezmoi re-add $MANIFEST"
+    error "syncing would uninstall it, leaving no chezmoi to apply with"
+    error "fix by putting chezmoi back in the core bundle in .chezmoidata/tools.toml"
     exit 1
 fi
 

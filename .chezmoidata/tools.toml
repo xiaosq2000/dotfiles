@@ -1,0 +1,198 @@
+# Named sets of pixi packages, and the binaries each package should expose.
+#
+# ~/.pixi/manifests/pixi-global.toml used to be a hand-held file: you ran
+# `pixi global install X`, then `chezmoi re-add`, and the install was the edit.
+# That was pleasant to use and gave every machine the same 34 environments,
+# which is how a shared HPC login node ended up with ffmpeg, resvg, deno and a
+# clang-tools environment exposing 60 binaries. The manifest is now rendered
+# from the bundles a machine selects in .chezmoidata/machines.toml.
+#
+# The cost of that change is real and worth stating: `pixi global install X` is
+# no longer how you add a tool, because the next `chezmoi apply` would render
+# the manifest again and remove it. Add the package to a bundle here instead,
+# then `chezmoi apply`.
+#
+# One environment per package, not one per bundle. Grouping a bundle into a
+# single environment would make its packages share one solve, so a single
+# conflicting dependency would break every tool in the bundle at once.
+#
+# `exposed` is mandatory, not a nicety. Omit it and `pixi global sync` installs
+# the environment and links nothing at all, leaving the tool present but
+# invisible. It also has to be accurate: naming a binary the package does not
+# ship fails the sync. Several conda-forge packages carry an entire runtime
+# alongside the tool you wanted, so exposing everything would be actively
+# harmful. bash-language-server ships node, npm and openssl; cmake-language-
+# server ships python3.14, tclsh and wish; taplo ships openssl.
+
+################################################################################
+# Bundles
+################################################################################
+
+[bundles.core]
+description = "Shell, editor and navigation. Every machine, including a login node."
+packages = [
+    "chezmoi",
+    "zsh",
+    "nvim",
+    "fzf",
+    "starship",
+    "eza",
+    "ripgrep",
+    "fd-find",
+    "jq",
+    "yazi",
+    "tmux",
+    "btop",
+    "dust",
+    "p7zip",
+    "sqlite",
+    "git-lfs",
+    "lazygit",
+    "difftastic",
+    "pre-commit",
+    "shellcheck",
+]
+
+[bundles.dev-c]
+description = "C and C++ build and format tooling"
+packages = ["cmake", "ninja", "clang-format", "clang-tools"]
+
+[bundles.dev-py]
+description = "Python tooling"
+packages = ["uv", "ruff", "ty"]
+
+[bundles.dev-web]
+description = "Node, Deno and the JavaScript formatters"
+packages = ["nodejs", "pnpm", "deno", "prettier"]
+
+[bundles.dev-tex]
+description = "LaTeX tooling"
+packages = ["tex-fmt"]
+
+[bundles.lsp]
+description = "Language servers and the external binaries Neovim's plugins call"
+# Everything here has a matching entry in nvim's lua/plugins/lsp/lspconfig.lua.
+# That file falls back to :MasonInstall when a binary is missing, so a machine
+# without this bundle still gets working LSP, just installed per machine and
+# unmanaged. tree-sitter-cli and luarocks are not servers; they are what
+# nvim-treesitter and the Lua plugins shell out to.
+packages = [
+    "lua-language-server",
+    "bash-language-server",
+    "yaml-language-server",
+    "vscode-langservers-extracted",
+    "texlab",
+    "marksman",
+    "cmake-language-server",
+    "taplo",
+    "tree-sitter-cli",
+    "luarocks",
+]
+
+[bundles.media]
+description = "Audio, video and image conversion, for ~/.sh_utils/tools"
+packages = ["ffmpeg", "resvg"]
+
+[bundles.ml]
+description = "Model and dataset transfer"
+packages = ["huggingface_hub"]
+
+[bundles.secrets]
+description = "age, sops and the Bitwarden client; see docs/secrets.md"
+packages = ["age", "go-sops", "rbw", "libsecret"]
+
+[bundles.extras]
+description = "Convenience and diagnostics; nothing here is load-bearing"
+packages = ["fastfetch", "speedtest-cli", "git-filter-repo", "lazydocker"]
+
+################################################################################
+# Exposed binaries
+#
+# A package with no entry here exposes exactly one binary, named after the
+# package. Only the exceptions are listed, which is most of the interesting
+# ones. Every list below was read off an installed environment rather than
+# guessed, because an inaccurate name fails the sync.
+################################################################################
+
+[packages.ripgrep]
+exposed = ["rg"]
+
+[packages.fd-find]
+exposed = ["fd"]
+
+[packages.p7zip]
+exposed = ["7z", "7za", "7zr"]
+
+[packages.sqlite]
+exposed = ["sqlite3"]
+
+[packages.yazi]
+exposed = ["ya", "yazi"]
+
+[packages.difftastic]
+exposed = ["difft"]
+
+[packages.cmake]
+exposed = ["ccmake", "cmake", "cpack", "ctest"]
+
+[packages.clang-tools]
+# Deliberately four of the sixty binaries this package ships. The rest are
+# either versioned duplicates (clang-tidy-23 beside clang-tidy) or tools no
+# editor here calls.
+exposed = [
+    "clangd",
+    "clang-tidy",
+    "clang-apply-replacements",
+    "run-clang-tidy",
+]
+
+[packages.uv]
+exposed = ["uv", "uvx"]
+
+[packages.nodejs]
+exposed = ["node", "npm", "npx"]
+
+[packages.pnpm]
+exposed = ["pn", "pnpm", "pnpx", "pnx"]
+
+[packages.vscode-langservers-extracted]
+# The package also ships css, html, eslint and markdown servers. Only the JSON
+# one is wired up in nvim, and exposing the others would put five more binaries
+# on PATH for nothing.
+exposed = ["vscode-json-language-server"]
+
+[packages.tree-sitter-cli]
+exposed = ["tree-sitter"]
+
+[packages.luarocks]
+exposed = ["luarocks", "luarocks-admin"]
+
+[packages.ffmpeg]
+exposed = ["ffmpeg", "ffplay", "ffprobe"]
+
+[packages.age]
+exposed = ["age", "age-keygen"]
+
+[packages.go-sops]
+exposed = ["sops"]
+
+[packages.rbw]
+exposed = ["rbw", "rbw-agent"]
+
+[packages.libsecret]
+exposed = ["secret-tool"]
+
+[packages.fastfetch]
+exposed = ["fastfetch", "flashfetch"]
+
+[packages.speedtest-cli]
+exposed = ["speedtest", "speedtest-cli"]
+
+[packages.huggingface_hub]
+exposed = ["hf", "huggingface-cli", "tiny-agents"]
+
+[packages.zsh]
+# The package also ships a zsh-5.9 binary, and the old hand-held manifest
+# exposed it. Exposing a version-numbered name means the manifest stops
+# matching the package the day conda-forge ships 5.10.
+exposed = ["zsh"]

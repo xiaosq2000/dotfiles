@@ -62,6 +62,7 @@ bundles = [
     "dev-tex",
     "lsp",
     "media",
+    "ml",
     "secrets",
     "extras",
 ]
@@ -90,6 +91,7 @@ bundles = [
     "dev-tex",
     "lsp",
     "media",
+    "ml",
     "secrets",
     "extras",
 ]
@@ -116,6 +118,7 @@ bundles = [
     "dev-tex",
     "lsp",
     "media",
+    "ml",
     "secrets",
     "extras",
 ]
@@ -141,7 +144,7 @@ hostnamePattern = "^login[0-9]+$"
 # Deliberately short. This is a shared login node that runs editing, git and
 # job submission; anything heavier belongs in a Slurm allocation, and anything
 # project-specific belongs in the workspace's own pixi environment.
-bundles = ["core", "dev-py", "secrets"]
+bundles = ["core", "dev-py", "ml", "secrets"]
 sudo = false
 desktop = false
 typefaces = false

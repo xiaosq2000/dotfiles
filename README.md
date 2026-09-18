@@ -23,24 +23,26 @@ install it, `pixi global install zsh` puts it in your home directory. See
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply xiaosq2000
 ```
 
-`init` asks three questions, and `chezmoi init` records the answers in
+`init` asks two questions, and `chezmoi init` records the answers in
 `~/.config/chezmoi/chezmoi.toml` so they are never asked again:
 
-| prompt             | meaning                                                           |
-| ------------------ | ----------------------------------------------------------------- |
-| `theme`            | `main`, `moon` or `dawn` — see [.chezmoidata/themes.toml](.chezmoidata/themes.toml) |
-| `installBinaries`  | run the `~/.sh_utils/setup.d` tool chain                          |
-| `installTypefaces` | install Maple Mono and friends                                    |
+| prompt    | meaning                                                                             |
+| --------- | ----------------------------------------------------------------------------------- |
+| `machine` | which entry of [.chezmoidata/machines.toml](.chezmoidata/machines.toml) describes this host |
+| `theme`   | `main`, `moon` or `dawn` — see [.chezmoidata/themes.toml](.chezmoidata/themes.toml)  |
 
-To answer them up front, for a container or a script:
+`machine` defaults to whichever entry's `hostnamePattern` matches, so on a known
+host you can press enter. To answer up front, for a container or a script:
 
 ```sh
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply \
+    --promptString machine=workstation \
     --promptChoice theme=main \
-    --promptBool installBinaries=true \
-    --promptBool installTypefaces=false \
     xiaosq2000
 ```
+
+A machine that is not in the table yet can start as `generic`, which installs a
+working shell and assumes nothing else.
 
 ## Day to day
 
@@ -71,18 +73,50 @@ another tool, add a key to [.chezmoidata/themes.toml](.chezmoidata/themes.toml)
 and reference it from that tool's template. Do not hard-code a variant name in
 a config file.
 
-## Installed tools
+## Machines
 
-`~/.pixi/manifests/pixi-global.toml` is the source of truth, and it is tracked
-here. Adding a tool is:
+Everything that differs per host lives in one table,
+[.chezmoidata/machines.toml](.chezmoidata/machines.toml): which tool bundles to
+install, whether there is a graphical session, whether to install a Rust
+toolchain, and where pixi should keep its package cache and environments.
 
 ```sh
-pixi global install <package>
-chezmoi re-add ~/.pixi/manifests/pixi-global.toml
+machine          # describe this machine and what follows from it
+machine --list   # every machine the repository knows about
 ```
 
-The install *is* the edit. `.sh_utils/setup.d/pixi.sh` then only has to run
-`pixi global sync`, which makes any machine match the manifest.
+There is no command to change it. A machine is what the hardware is, so either
+edit its entry or point this host at a different one with
+`chezmoi init --promptString machine=<name>`.
+
+## Installed tools
+
+Tools come from pixi, in named bundles.
+[.chezmoidata/tools.toml](.chezmoidata/tools.toml) says which packages each
+bundle contains, and each machine selects the bundles it wants. A shared login
+node takes `core`, `dev-py`, `ml` and `secrets`; a workstation takes everything.
+
+`~/.pixi/manifests/pixi-global.toml` is **generated** from those two files, so:
+
+```sh
+# add a package to the right bundle in .chezmoidata/tools.toml, then
+chezmoi apply
+```
+
+`pixi global install <package>` still works, and the next `chezmoi apply` still
+undoes it. This is a deliberate trade: the install used to *be* the edit, which
+was pleasant and gave every machine the same 34 environments, ffmpeg and a
+60-binary clang-tools among them, on an HPC login node included.
+
+`pixi global sync` makes a machine match the manifest exactly, so removing a
+bundle from a machine uninstalls its tools and reclaims the space.
+
+Each package gets its own environment, and `exposed` is listed explicitly in
+`tools.toml`. Both matter: one environment per bundle would make a single
+dependency conflict break every tool in it, and omitting `exposed` installs an
+environment while linking none of its binaries. Several conda-forge packages
+also ship a whole runtime beside the tool you wanted, so exposing everything
+would put `node`, `openssl`, `python3.14`, `tclsh` and `wish` on `PATH`.
 
 ## TODO
 
