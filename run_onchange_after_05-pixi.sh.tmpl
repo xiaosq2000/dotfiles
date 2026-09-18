@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Syncs the pixi global tool set from the tracked manifest.
+#
+# Split out of 10-setup-tools so that a manifest change actually redeploys.
+# That script's hashes cover only the installer scripts in setup.d, so adding
+# a tool with `pixi global install X` and `chezmoi re-add` changed nothing
+# chezmoi could see: the entry reached the manifest file on every machine, but
+# the rendered run script was byte-identical, run_onchange_ did not fire, and
+# `pixi global sync` never ran. The tool was declared everywhere and installed
+# nowhere. Hashing the manifest below is what closes that gap.
+#
+# Runs before 10-setup-tools because the installers there expect the tools
+# pixi provides to already be on PATH.
+#
+# pixi.sh sha256:   {{ include "dot_sh_utils/setup.d/executable_pixi.sh" | sha256sum }}
+# manifest sha256:  {{ include "dot_pixi/manifests/pixi-global.toml" | sha256sum }}
+
+set -eu
+
+{{ if not .installBinaries -}}
+echo "installBinaries is false; skipping pixi global sync"
+exit 0
+{{ end -}}
+
+exec "$HOME/.sh_utils/setup.d/pixi.sh"

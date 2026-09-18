@@ -16,7 +16,7 @@
 #
 # The hashes below are what make `run_onchange_` fire: editing any installer
 # changes this rendered script, so chezmoi re-runs it.
-{{ $setup := list "pixi" "uv" "rust" "nodejs" "zsh" "neovim" "fzf" "lazydocker" -}}
+{{ $setup := list "uv" "rust" "nodejs" "zsh" "neovim" "fzf" "lazydocker" -}}
 {{ range $setup }}
 # {{ . }}.sh sha256: {{ include (printf "dot_sh_utils/setup.d/executable_%s.sh" .) | sha256sum }}
 {{- end }}
@@ -57,7 +57,8 @@ run_setup() {
     return 1
 }
 
-# Order matters: pixi and uv put tools on PATH that the later scripts expect.
+# Order matters: uv puts tools on PATH that the later scripts expect. pixi runs
+# earlier still, from 05-pixi.sh.
 for name in {{ $setup | join " " }}; do
     run_setup "$name" || true
 done
