@@ -50,24 +50,34 @@ jobs:
       - name: Install chezmoi
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
 
-      # --source points at the checked-out commit, so this exercises the code
-      # under test. The old install.sh could not be tested this way: it always
-      # cloned origin/main, so CI would have checked the published branch
-      # rather than the change being proposed.
+      # Put the checkout where chezmoi looks by default, so the rest of this
+      # job runs exactly the code path a real machine runs. Passing --source
+      # instead would diverge: `theme` shells out to a bare `chezmoi apply`,
+      # which resolves the default source directory, and chezmoi has no
+      # environment variable for overriding it.
       #
+      # Either way the commit under test is what gets applied. The old
+      # install.sh could not be tested at all, because it always cloned
+      # origin/main and so exercised the published branch rather than the
+      # change being proposed.
+      - name: Stage the checkout as the chezmoi source
+        run: |
+          mkdir -p "$HOME/.local/share"
+          cp -a "$PWD" "$HOME/.local/share/chezmoi"
+
       # installBinaries is false because the tool chain pulls rust, node and a
       # conda environment over the network, which belongs in a slower job than
       # one that should gate every push. The names in that list are verified by
       # the setup-scripts job instead.
       - name: chezmoi init --apply
         run: |
-          chezmoi init --apply --verbose --source="$PWD" \
+          chezmoi init --apply --verbose \
             --promptChoice theme=main \
             --promptBool installBinaries=false \
             --promptBool installTypefaces=false
 
       - name: Destination matches the source state
-        run: chezmoi verify --source="$PWD"
+        run: chezmoi verify
 
       - name: Files landed where they should
         run: |
@@ -84,12 +94,7 @@ jobs:
           test ! -e "$HOME/README.md"
           test ! -e "$HOME/.github"
 
-      # `theme` calls plain `chezmoi apply`, which is right on a real machine,
-      # where the source is the default ~/.local/share/chezmoi. Here the source
-      # is the checkout, so point chezmoi at it the documented way.
       - name: Theme renders and switches
-        env:
-          CHEZMOI_SOURCE_DIR: ${{ github.workspace }}
         run: |
           set -eux
           grep -q 'rose-pine-main' "$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
@@ -103,4 +108,4 @@ jobs:
           grep -q 'rose-pine-dawn' "$HOME/.config/btop/btop.conf"
           test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine-dawn.toml"
 
-          chezmoi verify --source="$PWD"
+          chezmoi verify
