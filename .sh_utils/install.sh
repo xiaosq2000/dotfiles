@@ -311,21 +311,6 @@ if [ "$INSTALL_BINARIES" = true ]; then
         warning "zsh setup script not found at $ZSH_SCRIPT"
     fi
 
-    GIT_SCRIPT="$HOME/.sh_utils/setup.d/git.sh"
-    if [ -f "$GIT_SCRIPT" ]; then
-        info "running Git tools installation script..."
-
-        # Make script executable and run it
-        chmod +x "$GIT_SCRIPT"
-        if bash "$GIT_SCRIPT"; then
-            success "Git tools (lazygit, difftastic) installed successfully"
-        else
-            warning "Git tools installation encountered an error"
-        fi
-    else
-        warning "Git tools setup script not found at $GIT_SCRIPT"
-    fi
-
     NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
     if [ -f "$NEOVIM_SCRIPT" ]; then
         info "running Neovim installation script..."
