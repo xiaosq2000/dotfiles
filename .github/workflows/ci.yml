@@ -84,7 +84,12 @@ jobs:
           test ! -e "$HOME/README.md"
           test ! -e "$HOME/.github"
 
+      # `theme` calls plain `chezmoi apply`, which is right on a real machine,
+      # where the source is the default ~/.local/share/chezmoi. Here the source
+      # is the checkout, so point chezmoi at it the documented way.
       - name: Theme renders and switches
+        env:
+          CHEZMOI_SOURCE_DIR: ${{ github.workspace }}
         run: |
           set -eux
           grep -q 'rose-pine-main' "$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
