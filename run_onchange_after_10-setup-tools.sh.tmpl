@@ -27,7 +27,9 @@
 # changes this rendered script, so chezmoi re-runs it.
 {{- $m := index .machines .machine -}}
 {{- /*
-   nodejs: points pnpm's global install at a directory on PATH.
+   nodejs: points pnpm's global install at a directory on PATH. Only where the
+   machine takes the dev-web bundle, which is what provides pnpm; running it
+   elsewhere only printed "pnpm not found on PATH", as it did on sicc.
    rust: only where the machine asks for a toolchain, because the handful of
    tools that still need cargo are not on conda-forge.
    typefaces: only where the machine asks for fonts. This one stayed a script
@@ -36,7 +38,8 @@
    machine here has typefaces = false, so a rewrite would be both large and
    untested. See docs/todo.md.
 */ -}}
-{{- $setup := list "nodejs" -}}
+{{- $setup := list -}}
+{{- if has "dev-web" $m.bundles }}{{ $setup = append $setup "nodejs" }}{{ end -}}
 {{- if $m.rust }}{{ $setup = append $setup "rust" }}{{ end -}}
 {{- if $m.typefaces }}{{ $setup = append $setup "typefaces" }}{{ end -}}
 {{ range $setup }}
@@ -81,9 +84,13 @@ run_setup() {
 
 # pixi ran earlier, from 05-pixi.sh, so everything these scripts call is already
 # on PATH.
+{{ if $setup -}}
 for name in {{ $setup | join " " }}; do
     run_setup "$name" || true
 done
+{{- else -}}
+echo "machine {{ .machine }} needs none of the setup.d installers"
+{{- end }}
 
 if [ -n "$SETUP_FAILED" ]; then
     error "these setup scripts did not complete:$SETUP_FAILED"
