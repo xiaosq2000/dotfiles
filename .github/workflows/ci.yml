@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The shellcheck hook uses language: system so that it runs the binary
+      # from the pixi manifest locally instead of pulling a Docker image, so
+      # CI has to provide shellcheck itself.
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      # Running the hooks rather than a separate lint command keeps CI and a
+      # local `pre-commit run --all-files` checking exactly the same files.
+      - uses: pre-commit/action@v3.0.1
+
+  setup-scripts:
+    name: install.sh references real setup scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-setup-scripts.sh

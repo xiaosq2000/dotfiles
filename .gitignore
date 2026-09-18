@@ -8,6 +8,8 @@
 !.pre-commit-config.yaml
 !.aider.conf.yml
 
+!.github/
+
 !.bashrc
 
 # .gitconfig

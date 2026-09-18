@@ -149,3 +149,8 @@ exposed = { tmux = "tmux" }
 channels = ["conda-forge"]
 dependencies = { huggingface_hub = "*" }
 exposed = { hf = "hf", huggingface-cli = "huggingface-cli", tiny-agents = "tiny-agents" }
+
+[envs.shellcheck]
+channels = ["conda-forge"]
+dependencies = { shellcheck = "*" }
+exposed = { shellcheck = "shellcheck" }
