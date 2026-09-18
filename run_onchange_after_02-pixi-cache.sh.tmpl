@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Relocate the rattler package cache off a constrained home directory.
+#
+# Why a script and not a setting. `cache-dir` is not a key pixi accepts in
+# ~/.config/pixi/config.toml: pixi prints "Ignoring 'cache-dir'" and keeps using
+# the default. PIXI_CACHE_DIR does work, but an environment variable set in a
+# shell rc file reaches neither a Slurm batch script nor anything else that does
+# not start from an interactive shell, which on a cluster is precisely the
+# workload that fills the quota. Replacing the directory with a symbolic link
+# holds for every process however it was started.
+#
+# Why not a chezmoi-managed symlink_ entry. chezmoi would happily replace an
+# existing 18 GB cache directory with a link, deleting it. This script never
+# deletes anything: a real directory is renamed out of the way and left for you
+# to copy in or remove.
+#
+# machine:  {{ .machine }}
+# cacheDir: {{ (index .machines .machine).pixi.cacheDir }}
+
+set -eu
+
+CACHE_DIR={{ (index .machines .machine).pixi.cacheDir | quote }}
+LINK="${XDG_CACHE_HOME:-$HOME/.cache}/rattler"
+
+# Most machines have a roomy local disk and want pixi's default.
+if [ -z "$CACHE_DIR" ]; then
+    exit 0
+fi
+
+# Already pointing at the right place: say nothing, so `chezmoi apply` stays
+# quiet on every run after the first.
+if [ -L "$LINK" ] && [ "$(readlink "$LINK")" = "$CACHE_DIR" ]; then
+    exit 0
+fi
+
+if ! mkdir -p "$CACHE_DIR"; then
+    printf 'pixi-cache: cannot create %s\n' "$CACHE_DIR" >&2
+    printf 'pixi-cache: check the path in .chezmoidata/machines.toml for machine %s\n' {{ .machine | quote }} >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "$LINK")"
+
+if [ -L "$LINK" ]; then
+    # A link somewhere else, from an earlier value of cacheDir. Removing a
+    # symbolic link does not touch what it points at.
+    printf 'pixi-cache: repointing %s from %s to %s\n' "$LINK" "$(readlink "$LINK")" "$CACHE_DIR"
+    rm -f "$LINK"
+elif [ -d "$LINK" ]; then
+    # A real cache. Rename rather than delete, and rather than copy: a rename
+    # within one filesystem is instant, where copying tens of gigabytes over NFS
+    # during `chezmoi apply` is not. The cache is regenerable, so the worst case
+    # for leaving it behind is re-downloading packages.
+    aside="$LINK.relocated-$(date +%Y%m%d%H%M%S)"
+    mv "$LINK" "$aside"
+    printf 'pixi-cache: moved the existing cache aside\n'
+    printf 'pixi-cache:   %s\n' "$aside"
+    printf 'pixi-cache: keep its contents to avoid re-downloading packages:\n'
+    printf 'pixi-cache:   rsync -a --remove-source-files %s/ %s/ && find %s -type d -empty -delete\n' \
+        "$aside" "$CACHE_DIR" "$aside"
+    printf 'pixi-cache: or reclaim the space now and let pixi re-fetch as needed:\n'
+    printf 'pixi-cache:   rm -rf %s\n' "$aside"
+elif [ -e "$LINK" ]; then
+    printf 'pixi-cache: %s exists and is neither a directory nor a link; leaving it alone\n' "$LINK" >&2
+    exit 1
+fi
+
+ln -s "$CACHE_DIR" "$LINK"
+printf 'pixi-cache: %s -> %s\n' "$LINK" "$CACHE_DIR"

@@ -1,0 +1,39 @@
+{{- $pixi := (index .machines .machine).pixi -}}
+# pixi's global configuration, rendered from the `{{ .machine }}` entry of
+# .chezmoidata/machines.toml. Edit the machine entry, not this file.
+#
+# Only settings that differ per machine belong here. pixi reads this file itself,
+# so unlike an environment variable it also applies inside a Slurm batch job, a
+# cron entry and a non-interactive SSH command.
+#
+# The package cache is NOT set here, even though it is the setting that matters
+# most on a machine with a small home directory. `cache-dir` is not a key pixi
+# accepts: put it in this file and pixi prints "Ignoring 'cache-dir'" and carries
+# on using the default. The two mechanisms that do work are the PIXI_CACHE_DIR
+# environment variable, which a Slurm batch script does not inherit unless the
+# submission happens to export it, and relocating the directory itself. This
+# repository relocates the directory, in
+# run_onchange_after_02-pixi-cache.sh, so that it holds for every process
+# regardless of how it was started.
+
+{{ if $pixi.detachedEnvironments -}}
+# Keep workspace environments off this machine's home directory. Without this a
+# `.pixi/envs` directory is created beside every workspace, which on this
+# machine means inside the constrained filesystem.
+#
+# This path and the relocated package cache are deliberately on the same
+# filesystem. rattler hardlinks package files out of the cache into an
+# environment, which cannot cross a filesystem boundary; split them and every
+# install becomes a full copy, which can cost more space than leaving both where
+# they were.
+#
+# Changing this value orphans the environments already installed at the old
+# location. pixi will not migrate or remove them, so the next `pixi install` in
+# a workspace rebuilds its environment here and the old directory has to be
+# deleted by hand.
+detached-environments = {{ $pixi.detachedEnvironments | quote }}
+{{- else -}}
+# No overrides for this machine: environments stay in each workspace's own
+# .pixi/envs, next to the code they belong to, which is pixi's default and the
+# right answer when home is on a roomy local disk.
+{{- end }}

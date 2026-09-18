@@ -1,28 +1,65 @@
 {{/*
 Generates ~/.config/chezmoi/chezmoi.toml on `chezmoi init`.
 
-Only the three answers below are per-machine. Everything derived from the
-theme lives in .chezmoidata/themes.toml and is looked up at apply time, so
-changing a colour there takes effect on the next `chezmoi apply` without
-re-running init.
+Only the two answers below are asked. Everything else that used to be a prompt
+is now a property of the machine, looked up in .chezmoidata/machines.toml at
+apply time, so a machine is described once in a committed file rather than
+re-answered on every new checkout.
+
+`machine` is a name from that table, not a hostname. The hostname only supplies
+the default answer, because SICC's login nodes answer as login01, login02 and so
+on and so cannot identify a machine. `theme` selects a column from
+.chezmoidata/themes.toml.
 
 The prompt strings double as the keys for chezmoi's non-interactive flags, so
 they are kept short and free of commas, which the flag parser splits on:
 
   chezmoi init --apply \
+    --promptString machine=workstation \
     --promptChoice theme=main \
-    --promptBool installBinaries=true \
-    --promptBool installTypefaces=false \
     git@github.com:xiaosq2000/dotfiles.git
 
-  theme            main | moon | dawn -- see .chezmoidata/themes.toml
-  installBinaries  run the ~/.sh_utils/setup.d tool chain (pixi, uv, rust,
-                   node, zsh, neovim, fzf, lazydocker)
-  installTypefaces install Maple Mono and friends
+Run `chezmoi init` again after pulling a change to this file; chezmoi will say
+so itself when the template no longer matches the generated config.
 */}}
+{{- /*
+   Read the machine table out of the source tree by hand.
+
+   Every other template in this repository gets it as `.machines`, because
+   chezmoi loads .chezmoidata automatically. The config file template is the one
+   exception: it runs before that data is read, since it is what decides where
+   the source tree is in the first place, and referring to `.machines` here
+   fails with `map has no entry for key "machines"`. Parsing the file is what
+   keeps it the single source of truth rather than copying the hostname patterns
+   into this file.
+*/ -}}
+{{- $machines := (include ".chezmoidata/machines.toml" | fromToml).machines -}}
+{{- /*
+   Guess the machine from the hostname. Ranging over a map in a Go template
+   visits keys in sorted order, so the result does not depend on file order, and
+   an entry with an empty hostnamePattern is never matched by accident: the
+   `and` short-circuits before regexMatch sees an empty pattern, which would
+   otherwise match every hostname.
+*/ -}}
+{{- $guess := "generic" -}}
+{{- range $name, $m := $machines -}}
+{{-   if and $m.hostnamePattern (regexMatch $m.hostnamePattern $.chezmoi.hostname) -}}
+{{-     $guess = $name -}}
+{{-   end -}}
+{{- end -}}
+{{- $machine := promptStringOnce . "machine" "machine" $guess -}}
+{{- /*
+   Fail loudly rather than rendering every later template against a missing
+   entry, which would otherwise surface as a confusing "nil pointer evaluating
+   interface {}.bundles" from whichever template happened to run first.
+*/ -}}
+{{- if not (hasKey $machines $machine) -}}
+{{-   $known := "" -}}
+{{-   range $name, $m := $machines }}{{ $known = printf "%s %s" $known $name }}{{ end -}}
+{{-   fail (printf "unknown machine %q; known machines are:%s. Add an entry to .chezmoidata/machines.toml first." $machine $known) -}}
+{{- end -}}
+{{- $m := index $machines $machine -}}
 {{- $theme := promptChoiceOnce . "theme" "theme" (list "main" "moon" "dawn") "main" -}}
-{{- $binaries := promptBoolOnce . "installBinaries" "installBinaries" true -}}
-{{- $typefaces := promptBoolOnce . "installTypefaces" "installTypefaces" false -}}
 
 # Write directories 0755 and files 0644 instead of following the login shell's
 # umask, which is 002 here.
@@ -41,10 +78,22 @@ they are kept short and free of commas, which the flag parser splits on:
 umask = 0o022
 
 [data]
+    # Which entry of .chezmoidata/machines.toml describes this machine. Every
+    # per-host decision is a lookup in that entry, so this is the only line
+    # here that carries any information about the machine.
+    #
+    # Currently: {{ $m.description }}
+    machine = {{ $machine | quote }}
+
     # Selects a column from .chezmoidata/themes.toml. Switch with `theme dawn`,
     # which rewrites this line and runs `chezmoi apply`.
     theme = {{ $theme | quote }}
-    # Gates run_onchange_after_10-setup-tools.sh. Set false on a machine where
-    # you only want the config files and not the tool chain.
-    installBinaries = {{ $binaries }}
-    installTypefaces = {{ $typefaces }}
+
+    # Derived from the machine entry above, not asked. They stay in the config
+    # because the run_onchange_ scripts and .chezmoiignore read them; edit
+    # .chezmoidata/machines.toml and re-run `chezmoi init` to change them.
+    #
+    # A machine with no bundles gets the config files and no tool chain, which
+    # is what the container entry is for and what CI uses.
+    installBinaries = {{ gt (len $m.bundles) 0 }}
+    installTypefaces = {{ $m.typefaces }}

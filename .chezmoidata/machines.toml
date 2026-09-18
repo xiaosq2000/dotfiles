@@ -1,0 +1,203 @@
+# The machine layer: one entry per machine, and every per-host decision this
+# repository makes is a lookup in it.
+#
+# Before this file existed there were exactly two per-host knobs, both booleans
+# answered once at `chezmoi init`: installBinaries and installTypefaces. That
+# made every machine either "everything" or "config files only", which is why a
+# shared HPC login node ended up carrying ffmpeg, resvg, deno and a 60-binary
+# clang-tools environment. A machine is now described rather than toggled, and
+# the templates read the description.
+#
+# The key is a stable name chosen once at `chezmoi init` and stored in
+# ~/.config/chezmoi/chezmoi.toml, NOT the hostname. SICC's login nodes answer as
+# login01, login02 and so on, so a hostname is not an identity there.
+# `hostnamePattern` exists only to supply init's default answer; a machine with
+# no pattern is always chosen by hand.
+#
+# Nothing secret belongs here, because this repository is public. Addresses,
+# account names and tokens live in the age-encrypted files described in
+# docs/secrets.md. The paths below are the one grey area: they name university
+# filesystems. They are here because a relocated cache is a property of the
+# machine and has to be readable before any key is available. See
+# docs/secrets.md if you would rather move them behind encryption.
+#
+# Hardware inventory deliberately stays out. It is maintained per machine in the
+# private embodied-ai repository, and `docs` points at the page.
+
+################################################################################
+# Fields
+#
+#   description            one line, shown by `machine` and in `chezmoi data`
+#   hostnamePattern        regex; supplies the default answer at init only
+#   bundles                names from .chezmoidata/tools.toml; renders the pixi
+#                          global manifest
+#   sudo                   whether root is available, for hints rather than for
+#                          anything this repository runs
+#   desktop                a graphical session exists, so terminal emulators,
+#                          input methods and font caches are worth configuring
+#   typefaces              fetch the Nerd Fonts; implies a desktop
+#   rust                   install a rustup toolchain, for the handful of tools
+#                          conda-forge does not package
+#   docs                   page in the private embodied-ai repository
+#   pixi.cacheDir          relocate ~/.cache/rattler here; empty means leave it
+#   pixi.detachedEnvironments
+#                          put workspace .pixi/envs here; empty means leave them
+#                          beside each workspace
+#
+# On the two pixi keys: set them together or not at all. rattler hardlinks
+# package files out of the cache into an environment, which only works within
+# one filesystem. Moving the cache away from the environments turns every
+# install into a full copy, so relocating only one of the two can cost more
+# space than relocating neither.
+################################################################################
+
+[machines.workstation]
+description = "IMRL desktop, Lenovo ThinkStation P3 Tower, one RTX 4080"
+hostnamePattern = "^shuqixiao-ThinkStation-P3-Tower$"
+bundles = [
+    "core",
+    "dev-c",
+    "dev-py",
+    "dev-web",
+    "dev-tex",
+    "lsp",
+    "media",
+    "secrets",
+    "extras",
+]
+sudo = true
+desktop = true
+# false although this is a desktop: the Nerd Font in use here was installed
+# outside this repository, and all three machines checked on 2026-09-18 had the
+# old installTypefaces answer set to false. Flip it to have run_onchange fetch
+# Maple Mono and friends into ~/.local/share/fonts.
+typefaces = false
+rust = true
+docs = "docs/shared/reference/compute-resources/workstation.md"
+# Home is on a local NVMe with room to spare, so pixi's defaults are right.
+[machines.workstation.pixi]
+cacheDir = ""
+detachedEnvironments = ""
+
+[machines.laptop]
+description = "Lenovo Legion Y9000P IAH7H, one RTX 3070 Ti, works off campus"
+hostnamePattern = "^shuqixiao-Legion-Y9000P-IAH7H$"
+bundles = [
+    "core",
+    "dev-c",
+    "dev-py",
+    "dev-web",
+    "dev-tex",
+    "lsp",
+    "media",
+    "secrets",
+    "extras",
+]
+sudo = true
+desktop = true
+# See the note on the workstation entry.
+typefaces = false
+rust = true
+docs = "docs/shared/reference/compute-resources/laptop.md"
+# One 468 GB volume holds home, the checkout and the environments. Worth
+# watching, but still local and still one filesystem.
+[machines.laptop.pixi]
+cacheDir = ""
+detachedEnvironments = ""
+
+[machines.imrl]
+description = "Shared IMRL lab server, six RTX 4090s, hosts the lab Gitea"
+hostnamePattern = "^capios-SYS-420GP-TNR$"
+bundles = [
+    "core",
+    "dev-c",
+    "dev-py",
+    "dev-web",
+    "dev-tex",
+    "lsp",
+    "media",
+    "secrets",
+    "extras",
+]
+sudo = true
+# Shared and headless: reached over SSH, so no terminal emulator or font cache.
+desktop = false
+typefaces = false
+rust = false
+docs = "docs/shared/reference/compute-resources/imrl.md"
+# Measured 2026-09-18: 31 GB of package cache in home, on a root filesystem 89%
+# full with 208 GB left, while the volume carrying DATA_ROOT had 1.5 TB free.
+# Global environments were 718 MB and no workspace had an environment here, so
+# relocating both costs almost nothing to redo. Both keys point at the same
+# volume so cache and environments stay on one filesystem.
+[machines.imrl.pixi]
+cacheDir = "/mnt/ec4204bf-b34a-4323-9b84-ea17f540a636/xsq.d/pixi/rattler"
+detachedEnvironments = "/mnt/ec4204bf-b34a-4323-9b84-ea17f540a636/xsq.d/pixi/envs"
+
+[machines.sicc]
+description = "University of Macau SICC cluster login node, Slurm, no sudo"
+# login01, login02, ... Which one you land on is not stable.
+hostnamePattern = "^login[0-9]+$"
+# Deliberately short. This is a shared login node that runs editing, git and
+# job submission; anything heavier belongs in a Slurm allocation, and anything
+# project-specific belongs in the workspace's own pixi environment.
+bundles = ["core", "dev-py", "secrets"]
+sudo = false
+desktop = false
+typefaces = false
+rust = false
+docs = "docs/shared/reference/compute-resources/sicc.md"
+# Measured 2026-09-18: home is NFS with a 200 GB quota and held 36 GB, of which
+# 18 GB was package cache. Global environments were 718 MB and the embodied-ai
+# workspace 1.2 GB, so the cache alone was half of everything in home and
+# relocating the environments with it costs 2 GB to redo. /data is the group's
+# allocation on a different NFS server, and the directory below already carries
+# the setgid bit that keeps new files in group_huikong.
+[machines.sicc.pixi]
+cacheDir = "/data/huikong/shuqixiao/pixi/rattler"
+detachedEnvironments = "/data/huikong/shuqixiao/pixi/envs"
+
+[machines.vps]
+description = "Public VPS, reverse proxy and network plumbing"
+hostnamePattern = ""
+bundles = ["core"]
+sudo = true
+desktop = false
+typefaces = false
+rust = false
+docs = ""
+[machines.vps.pixi]
+cacheDir = ""
+detachedEnvironments = ""
+
+# Used by the bootstrap job in CI, and by any throwaway container. No bundles,
+# so `chezmoi init --apply` installs nothing over the network and the job stays
+# fast enough to gate every push.
+[machines.container]
+description = "Throwaway container; config files only, no tool chain"
+hostnamePattern = ""
+bundles = []
+sudo = true
+desktop = false
+typefaces = false
+rust = false
+docs = ""
+[machines.container.pixi]
+cacheDir = ""
+detachedEnvironments = ""
+
+# The fallback when no hostname matches. Deliberately minimal: a new machine
+# gets a working shell, and you add a real entry above once you know what the
+# machine is for.
+[machines.generic]
+description = "Unrecognised machine; a working shell and nothing assumed"
+hostnamePattern = ""
+bundles = ["core"]
+sudo = false
+desktop = false
+typefaces = false
+rust = false
+docs = ""
+[machines.generic.pixi]
+cacheDir = ""
+detachedEnvironments = ""

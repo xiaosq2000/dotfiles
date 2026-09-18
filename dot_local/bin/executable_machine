@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Show which entry of .chezmoidata/machines.toml describes this host.
+#
+# The machine name is the one piece of per-host state in
+# ~/.config/chezmoi/chezmoi.toml, and every other per-host decision is derived
+# from it. This prints the derivation so you do not have to read the templates
+# to find out why a tool is or is not installed here.
+#
+#   machine           describe this machine
+#   machine --list    list every machine the repository knows about
+#
+# Changing machine means editing the entry in .chezmoidata/machines.toml, or
+# re-running `chezmoi init --promptString machine=<name>` to point this host at
+# a different entry. There is deliberately no `machine <name>` that rewrites the
+# config the way `theme <variant>` does: a machine is what the hardware is, not
+# a preference to flip.
+set -euo pipefail
+
+die() {
+    printf 'machine: %s\n' "$*" >&2
+    exit 1
+}
+
+usage() {
+    printf '%s\n' "usage: machine [--list]"
+    printf '%s\n' ""
+    printf '%s\n' "  (no arguments)  describe this machine"
+    printf '%s\n' "  -l, --list      list every known machine"
+}
+
+# Formatting happens in a chezmoi template rather than by parsing `chezmoi data`
+# with jq, so this works on a machine whose bundle set does not include jq.
+describe='{{- $m := index .machines .machine }}
+{{ .machine }} — {{ $m.description }}
+
+  theme      {{ .theme }}
+  bundles    {{ if $m.bundles }}{{ join " " $m.bundles }}{{ else }}(none; config files only){{ end }}
+  sudo       {{ $m.sudo }}
+  desktop    {{ $m.desktop }}
+  typefaces  {{ $m.typefaces }}
+  rust       {{ $m.rust }}
+{{ if or $m.pixi.cacheDir $m.pixi.detachedEnvironments }}
+  pixi cache        {{ if $m.pixi.cacheDir }}{{ $m.pixi.cacheDir }}{{ else }}(default){{ end }}
+  pixi environments {{ if $m.pixi.detachedEnvironments }}{{ $m.pixi.detachedEnvironments }}{{ else }}(beside each workspace){{ end }}
+{{ else }}
+  pixi       defaults; home has room
+{{ end }}
+{{- if $m.docs }}
+  docs       {{ $m.docs }} (private embodied-ai repository)
+{{ end }}'
+
+list='{{ range $name, $m := .machines }}{{ if eq $name $.machine }}* {{ else }}  {{ end }}{{ printf "%-12s" $name }} {{ $m.description }}
+{{ end }}'
+
+case "${1:-}" in
+-h | --help)
+    usage
+    exit 0
+    ;;
+-l | --list)
+    template="$list"
+    ;;
+"")
+    template="$describe"
+    ;;
+*)
+    die "unknown argument: $1 (this command does not set the machine; see the comment at the top)"
+    ;;
+esac
+
+command -v chezmoi >/dev/null 2>&1 || die "chezmoi is not on PATH"
+
+# A config file predating the machine layer has no `machine` key, and the
+# template would fail with a bare "map has no entry" from deep inside chezmoi.
+if ! chezmoi execute-template '{{ hasKey . "machine" }}' 2>/dev/null | grep -qx true; then
+    die "no machine recorded in the chezmoi config; run 'chezmoi init --promptString machine=<name>'"
+fi
+
+chezmoi execute-template "$template"
