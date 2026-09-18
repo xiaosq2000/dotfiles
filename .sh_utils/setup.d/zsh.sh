@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
 
 # Source the UI library
+# shellcheck disable=SC1090
 source "$UI_LIB"
 
 header "oh-my-zsh - https://ohmyz.sh/"

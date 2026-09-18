@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # ~/.bashrc: executed by bash(1) for non-login shells.
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
@@ -101,6 +102,7 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 # See /usr/share/doc/bash-doc/examples in the bash-doc package.
 
 if [ -f ~/.bash_aliases ]; then
+    # shellcheck source=/dev/null
     . ~/.bash_aliases
 fi
 
@@ -166,8 +168,10 @@ alias t='tmux'
 alias ta='tmux a'
 alias cdusb='cd /media/$USER/"$(ls -t /media/$USER/ | head -n1)"'
 
-export ARCHFLAGS="-arch $(uname -m)"
-export NUMCPUS=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || getconf _NPROCESSORS_ONLN)
+ARCHFLAGS="-arch $(uname -m)"
+export ARCHFLAGS
+NUMCPUS=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || getconf _NPROCESSORS_ONLN)
+export NUMCPUS
 alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 
 # Bash options approximating zsh behavior
@@ -208,10 +212,11 @@ type prepend_env >/dev/null 2>&1 && prepend_env PATH "${HOME}/.google-drive-uplo
 setup_yazi() {
     if has yazi; then
         y() {
-            local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+            local tmp cwd
+            tmp="$(mktemp -t "yazi-cwd.XXXXXX")" || return 1
             yazi "$@" --cwd-file="$tmp"
             if cwd="$(command cat -- "$tmp" 2>/dev/null)" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-                builtin cd -- "$cwd"
+                builtin cd -- "$cwd" || return
             fi
             rm -f -- "$tmp"
         }
@@ -270,6 +275,7 @@ setup_ros() {
         fi
     fi
     if [ -n "${ROS1_DISTRO}" ] && [ -f "/opt/ros/${ROS1_DISTRO}/setup.bash" ]; then
+        # shellcheck source=/dev/null
         . "/opt/ros/${ROS1_DISTRO}/setup.bash"
         [ "$(type -t msg 2>/dev/null)" ] && msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS $ROS1_DISTRO${RESET}"
     else
@@ -287,6 +293,7 @@ setup_ros2() {
     fi
     if [ -n "${ROS2_DISTRO}" ] && [ -f "/opt/ros/${ROS2_DISTRO}/setup.bash" ]; then
         [ "$(type -t msg 2>/dev/null)" ] && msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS 2 $ROS2_DISTRO${RESET}"
+        # shellcheck source=/dev/null
         . "/opt/ros/${ROS2_DISTRO}/setup.bash"
         [ "$(type -t info 2>/dev/null)" ] && info "ROS2 Environment Variables:"
         [ "$(type -t info 2>/dev/null)" ] && info "ROS_VERSION=${ROS_VERSION}"
@@ -318,7 +325,8 @@ setup_ros2() {
 check_x11_wayland() {
     if [ "${XDG_SESSION_TYPE}" = "wayland" ]; then
         [ "$(type -t debug 2>/dev/null)" ] && debug "using wayland"
-        local __xhost_command="xhost +SI:localuser:$(id -un) >/dev/null 2>&1"
+        local __xhost_command
+        __xhost_command="xhost +SI:localuser:$(id -un) >/dev/null 2>&1"
         [ "$(type -t debug 2>/dev/null)" ] && debug "executing '$__xhost_command'"
         eval "$__xhost_command"
     fi

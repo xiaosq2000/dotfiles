@@ -3,6 +3,10 @@
 # Simple UI library for consistent CLI output across scripts
 # Automatically detects interactive vs headless environments
 
+# The colour and icon names below are the library's interface: scripts that
+# source this file use them directly, so shellcheck cannot see the uses.
+# shellcheck disable=SC2034
+
 # Detect if we're in an interactive environment
 if [ -t 1 ] && [ -z "${DOCKER_CONTAINER:-}" ]; then
     INTERACTIVE=true

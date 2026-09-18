@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1090
 source ~/.sh_utils/basics.sh
 # https://labbots.github.io/google-drive-upload/
 info "Installing the latest google-drive-upload"
