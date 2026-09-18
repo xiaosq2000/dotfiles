@@ -56,5 +56,19 @@ if [ ! -f "$MANIFEST" ]; then
     exit 1
 fi
 
+# Refuse to prune the tool that invoked this script.
+#
+# chezmoi runs this from run_onchange_after_10-setup-tools.sh, and sync removes
+# any environment missing from the manifest. Installing chezmoi with pixi and
+# forgetting to `chezmoi re-add` the manifest therefore makes `chezmoi apply`
+# uninstall chezmoi, leaving no chezmoi to apply with. That happened once
+# during the migration; this turns it into a message instead.
+if [ -x "$PIXI_HOME/bin/chezmoi" ] && ! grep -q '^\[envs\.chezmoi\]' "$MANIFEST"; then
+    error "chezmoi is installed via pixi but absent from $MANIFEST"
+    error "syncing would uninstall it; fix with:"
+    error "  pixi global install chezmoi && chezmoi re-add $MANIFEST"
+    exit 1
+fi
+
 info "syncing global tools from $MANIFEST"
 "$PIXI_BIN" global sync

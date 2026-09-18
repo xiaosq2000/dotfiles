@@ -24,12 +24,21 @@ they are kept short and free of commas, which the flag parser splits on:
 {{- $binaries := promptBoolOnce . "installBinaries" "installBinaries" true -}}
 {{- $typefaces := promptBoolOnce . "installTypefaces" "installTypefaces" false -}}
 
-# No umask override here on purpose. The tree in $HOME was created under
-# umask 002, so almost everything is already 0664/0775 and chezmoi's default
-# (follow the umask) matches it. Forcing 0o022 would instead rewrite the mode
-# of roughly 190 entries. The handful of paths that genuinely need to be
-# tighter carry a private_ prefix in the source tree: ~/.config itself, and
-# the fcitx5 profile and conf files, which hold input history.
+# Write directories 0755 and files 0644 instead of following the login shell's
+# umask, which is 002 here.
+#
+# This matters for ~/.local/bin. chezmoi derives directory modes from the
+# umask, so by default it wants that directory to be 0775, while the uv and
+# yazi installers that also write binaries into it reset it to 0755 on every
+# run. The two then alternate forever and `chezmoi diff` is never empty.
+# Pinning the umask settles it in the installers' favour.
+#
+# The one-time cost is that roughly 190 entries created under umask 002 get
+# their group-write bit cleared on the first apply. That is a tightening, so
+# nothing breaks. Paths needing to be tighter still carry a private_ prefix:
+# ~/.config itself, and the fcitx5 profile and conf files, which hold input
+# history.
+umask = 0o022
 
 [data]
     # Selects a column from .chezmoidata/themes.toml. Switch with `theme dawn`,

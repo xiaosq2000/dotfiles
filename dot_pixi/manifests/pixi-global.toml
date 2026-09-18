@@ -154,3 +154,8 @@ exposed = { hf = "hf", huggingface-cli = "huggingface-cli", tiny-agents = "tiny-
 channels = ["conda-forge"]
 dependencies = { shellcheck = "*" }
 exposed = { shellcheck = "shellcheck" }
+
+[envs.chezmoi]
+channels = ["conda-forge"]
+dependencies = { chezmoi = "*" }
+exposed = { chezmoi = "chezmoi" }
