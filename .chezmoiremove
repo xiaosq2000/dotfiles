@@ -1,18 +1,49 @@
+{{- $m := index .machines .machine -}}
+{{- /*
+   The packages this machine actually wants, so that a removal can tell "the
+   replacement has not arrived yet" from "this machine does not want the tool".
+*/ -}}
+{{- $selected := list -}}
+{{- range $b := $m.bundles -}}
+{{-   $selected = concat $selected (index $.bundles $b).packages -}}
+{{- end -}}
+{{- /*
+   Binaries that used to be installed by a setup.d script or by cargo, and now
+   come from a pixi bundle. Each is removed when either the pixi copy is already
+   in place, or the package is not in this machine's bundles at all.
+
+   Both halves matter. Removals run before the run_ scripts during an apply, so
+   an unguarded entry would delete the editor from a machine and only then try
+   to download its replacement; if that download failed, on a login node behind
+   a proxy for instance, the machine would be left with no editor. But gating
+   only on the pixi copy left a stale ~/.local/bin/lazydocker on sicc, because
+   sicc does not take the bundle that provides lazydocker, so the replacement
+   was never going to appear and the old binary would have stayed for good.
+*/ -}}
+{{- $replaced := list
+      (dict "pkg" "nvim"            "bin" "nvim"        "paths" (list ".local/bin/nvim" ".local/lib/nvim"))
+      (dict "pkg" "uv"              "bin" "uv"          "paths" (list ".local/bin/uv" ".local/bin/uvx"))
+      (dict "pkg" "lazydocker"      "bin" "lazydocker"  "paths" (list ".local/bin/lazydocker"))
+      (dict "pkg" "luarocks"        "bin" "luarocks"    "paths" (list ".local/bin/luarocks" ".local/bin/luarocks-admin"))
+      (dict "pkg" "fzf"             "bin" "fzf"         "paths" (list ".fzf" ".config/fzf/fzf.zsh" ".config/fzf/fzf.bash" ".config/fzf"))
+      (dict "pkg" "starship"        "bin" "starship"    "paths" (list ".local/bin/starship"))
+      (dict "pkg" "difftastic"      "bin" "difft"       "paths" (list ".local/bin/difft"))
+      (dict "pkg" "lazygit"         "bin" "lazygit"     "paths" (list ".local/bin/lazygit"))
+      (dict "pkg" "tree-sitter-cli" "bin" "tree-sitter" "paths" (list ".local/bin/tree-sitter"))
+      (dict "pkg" "huggingface_hub" "bin" "hf"          "paths" (list ".local/bin/hf" ".local/bin/huggingface-cli" ".local/bin/tiny-agents"))
+-}}
 # Cleanup of things this repository used to install and no longer does.
 #
 # Deleting a source entry makes chezmoi stop managing the target, but it does
 # not delete the copy already in ~. This does. Likewise, dropping a setup.d
 # installer stops it running but leaves whatever it already installed behind.
 #
-# This file is a template, and the binary entries below are guarded on the
-# replacement already being present in ~/.pixi/bin. Removals happen before the
-# run_ scripts during an apply, so an unguarded entry would delete the editor
-# from a machine and only then try to download its replacement; if that download
-# failed, on a login node behind a proxy for instance, the machine would be left
-# with no editor at all. Guarded, the first apply installs the pixi copy and the
-# second removes the old one.
+# This file is a template; the comment at the top of the source explains how the
+# binary entries are guarded.
 #
 # Entries here take effect on every apply, so each block says when it can go.
+#
+# Rendered for machine: {{ .machine }}
 
 ################################################################################
 # 2026-09: the yazi plugin that was dropped
@@ -38,45 +69,28 @@
 .sh_utils/setup.d/yazi.sh
 
 ################################################################################
-# 2026-09-18: the installers replaced by conda-forge packages
+# 2026-09-18: binaries that moved into a pixi bundle
 #
-# Each of these was a script that resolved a GitHub release, guessed an asset
-# name and unpacked it into ~/.local. All five packages are on conda-forge and
-# are bundle entries in .chezmoidata/tools.toml now.
+# Each was a setup.d script resolving a GitHub release and unpacking it into
+# ~/.local, or a `cargo install` that put a copy there. All of them are
+# conda-forge packages now, and a leftover copy in ~/.local/bin is not harmless:
+# depending on where ~/.pixi/bin lands in PATH it can win, and then the manifest
+# says one thing and `command -v` another.
+#
+# ~/.local/share/nvim is deliberately absent. neovim.sh did `cp -a` of the whole
+# release tarball into ~/.local, so the tarball's runtime/ landed in there
+# beside lazy/, mason/, site/ and the session files, which are plugin state and
+# are not replaceable. The stale runtime/ is inert, because nvim resolves its
+# runtime relative to its own binary. See docs/todo.md.
 #
 # Safe to delete this block once every machine has applied it twice.
 ################################################################################
-
-# neovim.sh did `cp -a` of the whole release tarball into ~/.local, so it left a
-# binary, a lib directory and a copy of the runtime. ~/.local/share/nvim is
-# deliberately NOT listed: the tarball's runtime/ landed in there beside lazy/,
-# mason/, site/ and the session files, which are plugin state and are not
-# replaceable. The stale runtime/ is inert, because nvim resolves its runtime
-# relative to its own binary. See docs/todo.md.
-{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/nvim") }}.local/bin/nvim
-.local/lib/nvim
+{{ range $e := $replaced }}
+{{- if or (stat (joinPath $.chezmoi.homeDir ".pixi/bin" $e.bin)) (not (has $e.pkg $selected)) -}}
+{{ range $p := $e.paths }}{{ $p }}
 {{ end }}
-# uv.sh. The tool shims in ~/.local/bin that uv itself created, for nvitop and
-# the rest, point into ~/.local/share/uv/tools and keep working without this
-# binary.
-{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/uv") }}.local/bin/uv
-.local/bin/uvx
-{{ end }}
-# lazydocker.sh
-{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/lazydocker") }}.local/bin/lazydocker
-{{ end }}
-# luarocks.sh
-{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/luarocks") }}.local/bin/luarocks
-.local/bin/luarocks-admin
-{{ end }}
-# fzf.sh cloned the upstream repository into ~/.fzf and ran its installer with
-# --xdg, which wrote the two shell integration files. .zshrc uses `fzf --zsh`
-# now, so nothing reads either path.
-{{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/fzf") }}.fzf
-.config/fzf/fzf.zsh
-.config/fzf/fzf.bash
-.config/fzf
-{{ end }}
+{{- end }}
+{{- end }}
 # The retired installers themselves. Unguarded: they are inert scripts, and
 # leaving them invites running one by hand and undoing the migration.
 .sh_utils/setup.d/uv.sh
@@ -85,6 +99,7 @@
 .sh_utils/setup.d/lazydocker.sh
 .sh_utils/setup.d/luarocks.sh
 .sh_utils/setup.d/tpm.sh
+.sh_utils/setup.d/zsh.sh
 
 ################################################################################
 # 2026-09-18: vendored theme files, now fetched to a fixed name
@@ -95,8 +110,8 @@
 # repository, one per variant per tool, which is what made supporting a second
 # colour scheme a matter of hand-copying twelve more files.
 #
-# Guarded on the fetched file existing, so a machine that could not reach
-# GitHub keeps the colours it already had.
+# Guarded on the fetched file existing, so a machine that could not reach GitHub
+# keeps the colours it already had.
 ################################################################################
 
 {{ if stat (joinPath .chezmoi.homeDir ".config/btop/themes/current.theme") }}.config/btop/themes/rose-pine.theme
@@ -108,7 +123,6 @@
 .config/alacritty/rose-pine-moon.toml
 .config/alacritty/rose-pine-dawn.toml
 {{ end }}
-
 ################################################################################
 # 2026-09-18: oh-my-zsh
 #

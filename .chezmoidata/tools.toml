@@ -35,6 +35,10 @@ packages = [
     "zsh",
     "sheldon",
     "nvim",
+    # nvim's treesitter config calls treesitter.install(), which shells out to
+    # the tree-sitter CLI to build parsers, so it belongs wherever nvim does
+    # rather than in the lsp bundle a login node does not take.
+    "tree-sitter-cli",
     "fzf",
     "starship",
     "eza",
@@ -75,8 +79,9 @@ description = "Language servers and the external binaries Neovim's plugins call"
 # Everything here has a matching entry in nvim's lua/plugins/lsp/lspconfig.lua.
 # That file falls back to :MasonInstall when a binary is missing, so a machine
 # without this bundle still gets working LSP, just installed per machine and
-# unmanaged. tree-sitter-cli and luarocks are not servers; they are what
-# nvim-treesitter and the Lua plugins shell out to.
+# unmanaged. luarocks is not a server; it is what the Lua plugins shell out to.
+# tree-sitter-cli was here and moved to core, because nvim is in core and its
+# treesitter config cannot build a parser without it.
 packages = [
     "lua-language-server",
     "bash-language-server",
@@ -86,7 +91,6 @@ packages = [
     "marksman",
     "cmake-language-server",
     "taplo",
-    "tree-sitter-cli",
     "luarocks",
 ]
 
