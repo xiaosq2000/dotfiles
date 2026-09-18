@@ -232,3 +232,31 @@ jobs:
           test "$enc" -lt "$data"
 
           git -C "$src" checkout .chezmoidata/secrets.toml
+
+      # Same TOML hazard as the encryption block, in a second file. sicc is the
+      # only machine that sets both a relocated channel index and detached
+      # environments, so it is the only render where the order can go wrong: a
+      # bare key below [cache] becomes cache.detached-environments and pixi
+      # keeps putting environments beside every workspace while looking
+      # configured.
+      - name: The pixi config keeps bare keys above its tables
+        run: |
+          set -eux
+          src="$HOME/.local/share/chezmoi"
+          sed 's/machine = "container"/machine = "sicc"/' \
+            "$HOME/.config/chezmoi/chezmoi.toml" > /tmp/cfg-sicc.toml
+          chezmoi --config /tmp/cfg-sicc.toml --config-format toml \
+            execute-template < "$src/private_dot_config/pixi/config.toml.tmpl" \
+            > /tmp/pixi-sicc.toml
+
+          grep -q '^detached-environments = ' /tmp/pixi-sicc.toml
+          grep -q '^\[cache\]$' /tmp/pixi-sicc.toml
+          det=$(grep -n '^detached-environments = ' /tmp/pixi-sicc.toml | cut -d: -f1)
+          cache=$(grep -n '^\[cache\]$' /tmp/pixi-sicc.toml | cut -d: -f1)
+          test "$det" -lt "$cache"
+
+          # And a machine with no overrides gets a file with no settings at all,
+          # rather than an empty or malformed one.
+          chezmoi execute-template \
+            < "$src/private_dot_config/pixi/config.toml.tmpl" > /tmp/pixi-container.toml
+          ! grep -qE '^[a-z[]' /tmp/pixi-container.toml

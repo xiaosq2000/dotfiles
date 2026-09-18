@@ -31,9 +31,30 @@
 # location. pixi will not migrate or remove them, so the next `pixi install` in
 # a workspace rebuilds its environment here and the old directory has to be
 # deleted by hand.
+#
+# Above [cache] on purpose. A bare key after a table header belongs to that
+# table in TOML, so this line below it would silently become
+# cache.detached-environments and pixi would put environments back beside every
+# workspace while appearing to be configured.
 detached-environments = {{ $pixi.detachedEnvironments | quote }}
-{{- else -}}
-# No overrides for this machine: environments stay in each workspace's own
-# .pixi/envs, next to the code they belong to, which is pixi's default and the
-# right answer when home is on a roomy local disk.
+
+{{ end -}}
+{{ if $pixi.repodataDir -}}
+# Where to keep the channel index.
+#
+# pixi refuses to keep the index on a network filesystem. It detects one, moves
+# the index to node-local /tmp for that single run, and prints a paragraph of
+# warning each time. Naming the path makes the location deterministic and the
+# warning go away. The directory is per node and meant to be discarded; only the
+# package cache is worth keeping.
+#
+# `dir` is not a key this section accepts, any more than the top-level
+# `cache-dir` is. `repodata` and `netfs-redirect` are the only two.
+[cache]
+repodata = {{ printf "%s-%s" $pixi.repodataDir .chezmoi.username | quote }}
+{{ end -}}
+{{ if and (not $pixi.detachedEnvironments) (not $pixi.repodataDir) -}}
+# No overrides for this machine: the cache, the channel index and each
+# workspace's environments all stay where pixi puts them, which is the right
+# answer when home is on a roomy local disk.
 {{- end }}

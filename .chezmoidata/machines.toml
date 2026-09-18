@@ -43,6 +43,8 @@
 #   pixi.detachedEnvironments
 #                          put workspace .pixi/envs here; empty means leave them
 #                          beside each workspace
+#   pixi.repodataDir       where to keep the channel index; empty means leave it
+#                          inside the package cache
 #
 # On the two pixi keys: set them together or not at all. rattler hardlinks
 # package files out of the cache into an environment, which only works within
@@ -79,6 +81,7 @@ docs = "docs/shared/reference/compute-resources/workstation.md"
 [machines.workstation.pixi]
 cacheDir = ""
 detachedEnvironments = ""
+repodataDir = ""
 
 [machines.laptop]
 description = "Lenovo Legion Y9000P IAH7H, one RTX 3070 Ti, works off campus"
@@ -106,6 +109,7 @@ docs = "docs/shared/reference/compute-resources/laptop.md"
 [machines.laptop.pixi]
 cacheDir = ""
 detachedEnvironments = ""
+repodataDir = ""
 
 [machines.imrl]
 description = "Shared IMRL lab server, six RTX 4090s, hosts the lab Gitea"
@@ -136,6 +140,8 @@ docs = "docs/shared/reference/compute-resources/imrl.md"
 [machines.imrl.pixi]
 cacheDir = "/mnt/ec4204bf-b34a-4323-9b84-ea17f540a636/xsq.d/pixi/rattler"
 detachedEnvironments = "/mnt/ec4204bf-b34a-4323-9b84-ea17f540a636/xsq.d/pixi/envs"
+# The volume above is a local NVMe, so pixi leaves the channel index where it is.
+repodataDir = ""
 
 [machines.sicc]
 description = "University of Macau SICC cluster login node, Slurm, no sudo"
@@ -159,6 +165,12 @@ docs = "docs/shared/reference/compute-resources/sicc.md"
 [machines.sicc.pixi]
 cacheDir = "/data/huikong/shuqixiao/pixi/rattler"
 detachedEnvironments = "/data/huikong/shuqixiao/pixi/envs"
+# Both paths above are NFS, and pixi will not keep the channel index on a
+# network filesystem: it detects one and redirects the index to node-local /tmp
+# for that run, printing a paragraph of warning every time. Saying so explicitly
+# silences it and makes the location deterministic instead of a side effect of
+# pixi's filesystem detection. /tmp is per node and is meant to be discarded.
+repodataDir = "/tmp/pixi-repodata"
 
 [machines.vps]
 description = "Public VPS, reverse proxy and network plumbing"
@@ -172,6 +184,7 @@ docs = ""
 [machines.vps.pixi]
 cacheDir = ""
 detachedEnvironments = ""
+repodataDir = ""
 
 # Used by the bootstrap job in CI, and by any throwaway container. No bundles,
 # so `chezmoi init --apply` installs nothing over the network and the job stays
@@ -188,6 +201,7 @@ docs = ""
 [machines.container.pixi]
 cacheDir = ""
 detachedEnvironments = ""
+repodataDir = ""
 
 # The fallback when no hostname matches. Deliberately minimal: a new machine
 # gets a working shell, and you add a real entry above once you know what the
@@ -204,3 +218,4 @@ docs = ""
 [machines.generic.pixi]
 cacheDir = ""
 detachedEnvironments = ""
+repodataDir = ""
