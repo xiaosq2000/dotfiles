@@ -93,11 +93,14 @@ jobs:
           test -f "$HOME/.sh_utils/setup.d/pixi.sh"
           test -x "$HOME/.sh_utils/setup.d/pixi.sh"
           test -x "$HOME/.local/bin/theme"
-          # the two former submodules, now externals
+          test -x "$HOME/.local/bin/machine"
+          # the two former submodules, now externals, plus tpm
           test -f "$HOME/.config/themes/rose-pine/starship/rose-pine.toml"
           test -d "$HOME/.config/themes/rose-pine/gnome-terminal"
+          test -f "$HOME/.local/share/tmux/plugins/tpm/tpm"
           # repo infrastructure must not be deployed as dotfiles
           test ! -e "$HOME/README.md"
+          test ! -e "$HOME/docs"
           test ! -e "$HOME/.github"
 
       # The manifest is rendered from the bundles a machine selects, so the
@@ -188,18 +191,32 @@ jobs:
           test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine.toml"
           chezmoi verify
 
-      - name: An unknown theme fails at init rather than later
+      # Both of these have to be driven by a stored config rather than by
+      # --promptString, because promptStringOnce returns the value already in
+      # the config and ignores the flag entirely once one is recorded. Asserting
+      # it with a flag passes for the wrong reason.
+      - name: An unknown theme fails at init, and a legacy name migrates
         run: |
           set -eux
-          if chezmoi execute-template --init \
-              --promptString machine=container \
-              --promptString theme=not-a-theme \
-              < "$HOME/.local/share/chezmoi/.chezmoi.toml.tmpl" 2>/tmp/err; then
+          src="$HOME/.local/share/chezmoi"
+          cfg="$HOME/.config/chezmoi/chezmoi.toml"
+
+          sed 's/theme = "[^"]*"/theme = "not-a-theme"/' "$cfg" > /tmp/cfg-bad.toml
+          if chezmoi --config /tmp/cfg-bad.toml --config-format toml \
+              execute-template --init < "$src/.chezmoi.toml.tmpl" 2>/tmp/err; then
             echo "expected an unknown theme to fail" >&2
             exit 1
           fi
           grep -q 'unknown theme' /tmp/err
           grep -q 'catppuccin-mocha' /tmp/err
+
+          # main, moon and dawn were the names before the variants took their
+          # upstream slugs. A machine that has not run init since carries one of
+          # them, and it has to be translated rather than rejected.
+          sed 's/theme = "[^"]*"/theme = "dawn"/' "$cfg" > /tmp/cfg-legacy.toml
+          chezmoi --config /tmp/cfg-legacy.toml --config-format toml \
+            execute-template --init < "$src/.chezmoi.toml.tmpl" > /tmp/cfg-migrated.toml
+          grep -q 'theme = "rose-pine-dawn"' /tmp/cfg-migrated.toml
 
       # Encryption is off in the repository, so the thing to test is both
       # states of the switch. The ordering assertion is the important one: a
