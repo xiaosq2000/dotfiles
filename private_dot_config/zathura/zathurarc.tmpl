@@ -9,4 +9,9 @@ set recolor-keephue true
 # expressible here; ${WAYLAND_DISPLAY:+1} gives [ 1 ] when set and [ ] when unset.
 map y feedkeys ":exec zsh -c \"printf %s '$FILE' | if [ ${WAYLAND_DISPLAY:+1} ]; then wl-copy; else xclip -selection clipboard; fi && notify-send 'Copied file path into clipboard'\"<Return>"
 
-include rose-pine-dawn
+# Was `include rose-pine-dawn`, hard-coded. It had been left on the light Rosé
+# Pine theme while the rest of the machine was on Moon, because switching theme
+# rewrote every other tool's config and never this one. zathura is the reason
+# the repository already carried four Catppuccin files that nothing could
+# select.
+include {{ (index .themes .theme).zathura }}

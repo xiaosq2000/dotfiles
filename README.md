@@ -37,7 +37,7 @@ host you can press enter. To answer up front, for a container or a script:
 ```sh
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply \
     --promptString machine=workstation \
-    --promptChoice theme=main \
+    --promptString theme=rose-pine \
     xiaosq2000
 ```
 
@@ -59,35 +59,50 @@ Editing a file in `~` directly does not update the repository. Either use
 ## Themes
 
 Light and dark used to be two long-lived branches, `main` and `theme/light`,
-which had to be kept in step by hand and drifted anyway. They are now one
-value:
+which had to be kept in step by hand and drifted anyway. They are now one value:
 
 ```sh
-theme            # show the current variant
-theme dawn       # switch to Rosé Pine Dawn everywhere and apply
-theme --dry-run main
+theme                          # current variant, and the alternatives
+theme rose-pine-dawn           # switch everywhere and apply
+theme --dry-run catppuccin-mocha
 ```
 
-One switch covers btop, kitty, Neovim, starship, alacritty and fzf. To restyle
-another tool, add a key to [.chezmoidata/themes.toml](.chezmoidata/themes.toml)
-and reference it from that tool's template. Do not hard-code a variant name in
-a config file.
+One switch covers btop, kitty, alacritty, Neovim, zathura, fzf and starship.
 
-## Machines
+Variants are named after the slug upstream uses, so `rose-pine-moon` rather than
+`moon`. Each colour scheme is one file,
+[.chezmoidata/themes-rose-pine.toml](.chezmoidata/themes-rose-pine.toml) and
+[.chezmoidata/themes-catppuccin.toml](.chezmoidata/themes-catppuccin.toml), and
+chezmoi merges them, so adding a scheme means adding a file and editing nothing.
+Each file holds two things:
 
-Everything that differs per host lives in one table,
-[.chezmoidata/machines.toml](.chezmoidata/machines.toml): which tool bundles to
-install, whether there is a graphical session, whether to install a Rust
-toolchain, and where pixi should keep its package cache and environments.
+- `[schemes.<name>]` — where the theme files come from and which Neovim plugin
+  provides them. Selecting a Catppuccin variant installs `catppuccin/nvim`, not
+  just a different colorscheme name.
+- `[themes.<slug>]` — the token each tool uses for that variant, its
+  `appearance` (`light` or `dark`), and its fzf palette.
 
-```sh
-machine          # describe this machine and what follows from it
-machine --list   # every machine the repository knows about
-```
+The tokens are per tool because they have to be. Catppuccin's btop theme is
+`catppuccin_mocha`, its kitty theme is `mocha`, and its alacritty theme is
+`catppuccin-mocha`.
 
-There is no command to change it. A machine is what the hardware is, so either
-edit its entry or point this host at a different one with
-`chezmoi init --promptString machine=<name>`.
+Theme files are fetched, not vendored, and always to a fixed name:
+`~/.config/btop/themes/current.theme`,
+`~/.config/alacritty/current-theme.toml`,
+`~/.config/kitty/current-theme.conf`. Vendoring meant one committed copy per
+variant per tool, which is how the dark kitty copy came to have white and
+bright-white set to Dawn's foreground.
+
+Coverage is uneven and `theme` says so. The starship configs come from a
+personal fork that only carries Rosé Pine, so a Catppuccin variant leaves
+`~/.config/starship.toml` unmanaged. `appearance` is what a tool with no port
+for a scheme can fall back on, and the only field every variant is guaranteed
+to have.
+
+To restyle another tool, add a key to each scheme file and reference it from
+that tool's template. Do not hard-code a variant name in a config file: zathura
+had `include rose-pine-dawn` written into `zathurarc`, and so sat on the light
+theme no matter what the rest of the machine was set to.
 
 ## Installed tools
 

@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Clear out git-submodule remnants standing where a chezmoi external belongs.
+#
+# Before chezmoi, this repository's working tree was $HOME itself and the two
+# theme checkouts under ~/.config/themes were git submodules. .chezmoiexternal.toml
+# replaced them, but the directories already on disk stayed exactly as the
+# submodules left them: a `.git` file rather than a directory, holding
+#
+#     gitdir: ../../../../.git/modules/home/shuqixiao/.config/themes/...
+#
+# which resolves to ~/.git/modules/..., a path that no longer exists. chezmoi
+# treats the directory as a clone it owns and runs `git pull` in it, and git
+# stops with
+#
+#     fatal: not a git repository: .../.git/modules/...
+#
+# That failure aborts the whole apply, so every file chezmoi had not yet written
+# is silently left at its old contents. It is how this workstation ended up with
+# a zathurarc still reading `include rose-pine-dawn` after a theme change, and
+# the symptom looks nothing like the cause.
+#
+# Removing the directory is safe because these are upstream checkouts with no
+# local work: both were byte-identical to upstream when checked on 2026-09-18.
+# chezmoi clones them again in the same apply. The guard is narrow on purpose:
+# only a `.git` that is a file, and only when its gitdir has gone.
+#
+# This can be deleted once every machine has applied it. Checked off:
+# workstation, imrl and sicc on 2026-09-18; laptop and vps outstanding.
+
+set -eu
+
+check_external() {
+    dir="$HOME/$1"
+
+    [ -d "$dir" ] || return 0
+    # A clone chezmoi made has a .git directory. Only a submodule leaves a file.
+    [ -f "$dir/.git" ] || return 0
+
+    gitdir="$(sed -n 's/^gitdir:[[:space:]]*//p' "$dir/.git" | head -n1)"
+    [ -n "$gitdir" ] || return 0
+
+    case "$gitdir" in
+    /*) resolved="$gitdir" ;;
+    *) resolved="$dir/$gitdir" ;;
+    esac
+
+    if [ -e "$resolved" ]; then
+        # A real linked worktree or submodule someone set up on purpose.
+        return 0
+    fi
+
+    printf 'stale-externals: %s is a submodule remnant with no gitdir\n' "$dir"
+    printf 'stale-externals: removing it so chezmoi can clone the external\n'
+    rm -rf "$dir"
+}
+
+# Every git-repo external, read out of .chezmoiexternal.toml as rendered for
+# this machine, so a new one is covered without editing this script.
+{{ range $path, $external := (includeTemplate ".chezmoiexternal.toml" . | fromToml) -}}
+{{- if eq $external.type "git-repo" }}
+check_external {{ $path | quote }}
+{{- end }}
+{{- end }}

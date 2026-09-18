@@ -80,7 +80,7 @@ jobs:
         run: |
           chezmoi init --apply --verbose \
             --promptString machine=container \
-            --promptChoice theme=main
+            --promptString theme=rose-pine
 
       - name: Destination matches the source state
         run: chezmoi verify
@@ -122,15 +122,61 @@ jobs:
       - name: Theme renders and switches
         run: |
           set -eux
-          grep -q 'rose-pine-main' "$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
-          grep -q 'rose-pine.toml' "$HOME/.config/alacritty/alacritty.toml"
+          nvim_theme="$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
+
+          # Rosé Pine, the scheme with a full set of ports.
+          grep -q 'rose-pine-main' "$nvim_theme"
+          grep -q 'rose-pine/neovim' "$nvim_theme"
+          grep -q 'include rose-pine$' "$HOME/.config/zathura/zathurarc"
           test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine.toml"
 
-          "$HOME/.local/bin/theme" dawn
+          # The fetched theme files go to a fixed name, so the configs that
+          # read them never mention a variant.
+          grep -q '^color_theme = "current"$' "$HOME/.config/btop/btop.conf"
+          grep -q 'current-theme.toml' "$HOME/.config/alacritty/alacritty.toml"
+          test -s "$HOME/.config/btop/themes/current.theme"
+          test -s "$HOME/.config/alacritty/current-theme.toml"
+          test -s "$HOME/.config/kitty/current-theme.conf"
 
-          grep -q 'rose-pine-dawn' "$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
-          grep -q 'rose-pine-dawn.toml' "$HOME/.config/alacritty/alacritty.toml"
-          grep -q 'rose-pine-dawn' "$HOME/.config/btop/btop.conf"
+          # A variant switch within the scheme.
+          "$HOME/.local/bin/theme" rose-pine-dawn
+          grep -q 'rose-pine-dawn' "$nvim_theme"
+          grep -q 'include rose-pine-dawn$' "$HOME/.config/zathura/zathurarc"
           test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine-dawn.toml"
-
           chezmoi verify
+
+      # Catppuccin is the second scheme, and the one that proves a scheme is
+      # data rather than a special case. It also has no starship port, so the
+      # switch has to leave that file unmanaged instead of pointing it at a
+      # directory nothing checked out.
+      - name: A second colour scheme needs no new template
+        run: |
+          set -eux
+          nvim_theme="$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
+
+          "$HOME/.local/bin/theme" catppuccin-mocha
+          grep -q 'catppuccin-mocha' "$nvim_theme"
+          grep -q 'catppuccin/nvim' "$nvim_theme"
+          grep -q 'include catppuccin-mocha$' "$HOME/.config/zathura/zathurarc"
+          grep -q '1e1e2e' "$HOME/.config/btop/themes/current.theme"
+          test "$(chezmoi managed | grep -c '^\.config/starship\.toml$')" -eq 0
+          chezmoi verify
+
+          # And back, which has to restore starship to managed.
+          "$HOME/.local/bin/theme" rose-pine
+          test "$(chezmoi managed | grep -c '^\.config/starship\.toml$')" -eq 1
+          test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine.toml"
+          chezmoi verify
+
+      - name: An unknown theme fails at init rather than later
+        run: |
+          set -eux
+          if chezmoi execute-template --init \
+              --promptString machine=container \
+              --promptString theme=not-a-theme \
+              < "$HOME/.local/share/chezmoi/.chezmoi.toml.tmpl" 2>/tmp/err; then
+            echo "expected an unknown theme to fail" >&2
+            exit 1
+          fi
+          grep -q 'unknown theme' /tmp/err
+          grep -q 'catppuccin-mocha' /tmp/err

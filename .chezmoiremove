@@ -85,3 +85,26 @@
 .sh_utils/setup.d/lazydocker.sh
 .sh_utils/setup.d/luarocks.sh
 .sh_utils/setup.d/tpm.sh
+
+################################################################################
+# 2026-09-18: vendored theme files, now fetched to a fixed name
+#
+# btop.conf reads themes/current.theme and alacritty.toml imports
+# current-theme.toml; both are fetched from the scheme's upstream repository by
+# .chezmoiexternal.toml. The per-variant copies below were committed to this
+# repository, one per variant per tool, which is what made supporting a second
+# colour scheme a matter of hand-copying twelve more files.
+#
+# Guarded on the fetched file existing, so a machine that could not reach
+# GitHub keeps the colours it already had.
+################################################################################
+
+{{ if stat (joinPath .chezmoi.homeDir ".config/btop/themes/current.theme") }}.config/btop/themes/rose-pine.theme
+.config/btop/themes/rose-pine-moon.theme
+.config/btop/themes/rose-pine-dawn.theme
+.config/btop/themes/rose-pine-main.theme
+{{ end }}
+{{ if stat (joinPath .chezmoi.homeDir ".config/alacritty/current-theme.toml") }}.config/alacritty/rose-pine.toml
+.config/alacritty/rose-pine-moon.toml
+.config/alacritty/rose-pine-dawn.toml
+{{ end }}

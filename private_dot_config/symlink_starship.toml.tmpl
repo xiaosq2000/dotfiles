@@ -1,1 +1,3 @@
-themes/rose-pine/starship/{{ (index .themes .theme).starship }}.toml
+{{- $t := index .themes .theme -}}
+{{- $s := index .schemes $t.scheme -}}
+{{ $s.starshipDir }}/{{ $t.starship }}.toml

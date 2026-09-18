@@ -1,10 +1,18 @@
+{{- $t := index .themes .theme -}}
+{{- $s := index .schemes $t.scheme -}}
+-- Rendered from .chezmoidata/themes-*.toml for {{ .theme }}.
+--
+-- The plugin itself is chosen by the theme, not just the colorscheme name, so
+-- selecting a Catppuccin variant installs catppuccin/nvim rather than leaving
+-- rose-pine/neovim in place with a colorscheme it does not provide. lazy.nvim
+-- installs the new plugin on the next start after a switch, which also makes
+-- lazy-lock.json differ from the copy in this repository until it is re-added.
 return {
-	"rose-pine/neovim",
-	name = "rose-pine",
+	"{{ $s.nvimRepo }}",
+	name = "{{ $s.nvimName }}",
 	lazy = false,
 	priority = 1000,
 	config = function()
-		-- variants: rose-pine (main), rose-pine-moon, rose-pine-dawn
-		vim.cmd.colorscheme("{{ (index .themes .theme).nvim }}")
+		vim.cmd.colorscheme("{{ $t.nvim }}")
 	end,
 }

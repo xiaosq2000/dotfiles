@@ -1,24 +1,36 @@
 #!/usr/bin/env bash
-# Switch the Rosé Pine variant across every tool at once.
+# Switch the colour scheme across every tool at once.
 #
-# This replaces the `theme/light` branch. Switching used to mean checking out
+# This replaced the `theme/light` branch. Switching used to mean checking out
 # another branch, which meant every non-theme commit had to be landed on both
 # and they drifted anyway. Now one value in ~/.config/chezmoi/chezmoi.toml
-# selects a column from .chezmoidata/themes.toml and `chezmoi apply` rewrites
-# btop, kitty, nvim, starship, alacritty and fzf from it.
+# selects a variant from .chezmoidata/themes-*.toml and `chezmoi apply` rewrites
+# every tool's config from it.
 #
-#   theme            show the current variant and the available ones
-#   theme dawn       switch to Rosé Pine Dawn and apply
-#   theme --dry-run main   show what would change without writing
+#   theme                        show the current variant and the alternatives
+#   theme rose-pine-dawn         switch and apply
+#   theme --dry-run catppuccin-mocha
+#                                show what would change without writing
+#
+# The variant list is not hard-coded here. It used to be, as
+# VARIANTS=(main moon dawn), which meant adding a colour scheme required editing
+# this script as well as the data, and forgetting to do so made the new variant
+# unreachable through the only command anyone uses to reach it.
 set -euo pipefail
 
 CONFIG="${CHEZMOI_CONFIG_FILE:-$HOME/.config/chezmoi/chezmoi.toml}"
-VARIANTS=(main moon dawn)
 DRY_RUN=false
 
 die() {
     printf 'theme: %s\n' "$*" >&2
     exit 1
+}
+
+# Every lookup goes through chezmoi so that the data stays in one place. Each
+# call costs a few milliseconds, which is nothing against the `chezmoi apply`
+# that follows.
+data() {
+    chezmoi execute-template "$1"
 }
 
 current_theme() {
@@ -27,22 +39,25 @@ current_theme() {
     sed -n 's/^[[:space:]]*theme[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$CONFIG" | head -n1
 }
 
+variants() {
+    data '{{ keys .themes | sortAlpha | join " " }}'
+}
+
 usage() {
     local current
     current="$(current_theme)"
-    printf 'usage: theme [--dry-run] [%s]\n\n' "$(
-        IFS='|'
-        echo "${VARIANTS[*]}"
-    )"
+    printf 'usage: theme [--dry-run] <variant>\n\n'
     printf 'current: %s\n\n' "${current:-unknown}"
     printf 'available:\n'
-    for v in "${VARIANTS[@]}"; do
-        if [ "$v" = "$current" ]; then
-            printf '  * %s\n' "$v"
-        else
-            printf '    %s\n' "$v"
-        fi
-    done
+    # Grouped by scheme, with the tools each variant actually covers, because
+    # coverage is uneven: a scheme with no starship configs leaves the prompt on
+    # starship's own defaults rather than failing, and that is worth seeing
+    # before you switch rather than after.
+    data '{{ range $scheme, $s := .schemes }}
+  {{ $scheme }} — {{ $s.description }}
+{{ range $name, $t := $.themes }}{{ if eq $t.scheme $scheme }}    {{ if eq $name $.theme }}*{{ else }} {{ end }} {{ printf "%-22s" $name }} {{ printf "%-5s" $t.appearance }}  {{ $t.description }}
+      covers: btop kitty alacritty nvim zathura fzf{{ if $s.starshipDir }} starship{{ else }} (no starship port){{ end }}
+{{ end }}{{ end }}{{ end }}'
 }
 
 while [ $# -gt 0 ]; do
@@ -74,21 +89,35 @@ fi
 
 want="$1"
 valid=false
-for v in "${VARIANTS[@]}"; do
+for v in $(variants); do
     [ "$v" = "$want" ] && valid=true
 done
-[ "$valid" = true ] || die "unknown variant '$want' (choose one of: ${VARIANTS[*]})"
+if [ "$valid" != true ]; then
+    printf 'theme: unknown variant %s\n\n' "$want" >&2
+    usage >&2
+    exit 1
+fi
 
 have="$(current_theme)"
 [ -n "$have" ] || die "no theme setting found in $CONFIG"
 
 if [ "$DRY_RUN" = true ]; then
     printf 'theme: %s -> %s (dry run)\n\n' "$have" "$want"
-    # Render against the wanted value without touching the config on disk.
     tmp="$(mktemp)"
     trap 'rm -f "$tmp"' EXIT
     sed "s/^\([[:space:]]*theme[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$want\"/" "$CONFIG" >"$tmp"
-    CHEZMOI_CONFIG_FILE="$tmp" chezmoi diff
+    # Two things this line gets right that the old one did not.
+    #
+    # --config, not CHEZMOI_CONFIG_FILE. chezmoi ignores that variable
+    # entirely: only -c/--config selects a config file. So this dry run had
+    # been rendering the diff for the theme already in effect, which is to say
+    # nothing at all, for as long as the flag has existed.
+    #
+    # --config-format, because chezmoi infers the format from the file
+    # extension and mktemp produces a name with none, which fails with
+    # "unknown format". Passing it explicitly beats relying on mktemp
+    # --suffix, which is a GNU extension.
+    chezmoi --config "$tmp" --config-format toml diff
     exit 0
 fi
 
@@ -110,5 +139,7 @@ if [ -n "${KITTY_WINDOW_ID:-}" ] && command -v kitten >/dev/null 2>&1; then
         printf 'theme: reloaded kitty\n' || true
 fi
 
-# btop and starship read their config at startup; fzf reads the environment.
+# btop and starship read their config at startup; fzf reads the environment;
+# nvim needs a restart when the scheme change also changes which plugin
+# provides it, because lazy.nvim installs it on the next start.
 printf 'theme: open a new shell for fzf and starship to pick up %s\n' "$want"

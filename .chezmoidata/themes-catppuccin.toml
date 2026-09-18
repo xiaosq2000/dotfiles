@@ -1,0 +1,145 @@
+# Catppuccin, the second scheme, and the one that proves the structure.
+#
+# It is here because the repository already carried four Catppuccin zathura
+# files that nothing could select: zathurarc had `include rose-pine-dawn`
+# hard-coded, so zathura sat on the light Rosé Pine theme no matter what the
+# rest of the machine was set to.
+#
+# It also demonstrates why the per-tool tokens below cannot be derived from the
+# variant slug the way Rosé Pine's can:
+#
+#   btop       catppuccin_mocha    scheme prefix, underscore
+#   kitty      mocha               no prefix
+#   alacritty  catppuccin-mocha    scheme prefix, hyphen
+#   nvim       catppuccin-mocha
+#   zathura    catppuccin-mocha    the files already in this repository
+#
+# Coverage is honest rather than complete. Starship has no entry, because the
+# starship configs come from a personal fork that only carries Rosé Pine, so
+# selecting a Catppuccin variant leaves ~/.config/starship.toml unmanaged and
+# starship uses its own defaults. `theme` prints which tools a variant covers.
+#
+# The fzf palettes are Catppuccin's own fzf port rather than a reading of the
+# base palette, so they match what the scheme's authors intended.
+
+[schemes.catppuccin]
+description = "Catppuccin — soothing pastel theme"
+btopURL = "https://raw.githubusercontent.com/catppuccin/btop/main/themes/%s.theme"
+kittyURL = "https://raw.githubusercontent.com/catppuccin/kitty/main/themes/%s.conf"
+alacrittyURL = "https://raw.githubusercontent.com/catppuccin/alacritty/main/%s.toml"
+nvimRepo = "catppuccin/nvim"
+nvimName = "catppuccin"
+# No starship port in the fork this repository checks out.
+starshipDir = ""
+
+[themes.catppuccin-mocha]
+scheme = "catppuccin"
+description = "Catppuccin Mocha — the darkest variant"
+appearance = "dark"
+btop = "catppuccin_mocha"
+kitty = "mocha"
+kittyName = "Catppuccin Mocha"
+alacritty = "catppuccin-mocha"
+nvim = "catppuccin-mocha"
+starship = ""
+zathura = "catppuccin-mocha"
+
+[themes.catppuccin-mocha.fzf]
+fg = "#cdd6f4"
+bg = "#1e1e2e"
+hl = "#f38ba8"
+fgPlus = "#cdd6f4"
+bgPlus = "#313244"
+hlPlus = "#f38ba8"
+border = "#6c7086"
+header = "#f38ba8"
+gutter = "#1e1e2e"
+spinner = "#f5e0dc"
+info = "#cba6f7"
+pointer = "#f5e0dc"
+marker = "#b4befe"
+prompt = "#cba6f7"
+
+[themes.catppuccin-macchiato]
+scheme = "catppuccin"
+description = "Catppuccin Macchiato — dark, warmer than Mocha"
+appearance = "dark"
+btop = "catppuccin_macchiato"
+kitty = "macchiato"
+kittyName = "Catppuccin Macchiato"
+alacritty = "catppuccin-macchiato"
+nvim = "catppuccin-macchiato"
+starship = ""
+zathura = "catppuccin-macchiato"
+
+[themes.catppuccin-macchiato.fzf]
+fg = "#cad3f5"
+bg = "#24273a"
+hl = "#ed8796"
+fgPlus = "#cad3f5"
+bgPlus = "#363a4f"
+hlPlus = "#ed8796"
+border = "#6e738d"
+header = "#ed8796"
+gutter = "#24273a"
+spinner = "#f4dbd6"
+info = "#c6a0f6"
+pointer = "#f4dbd6"
+marker = "#b7bdf8"
+prompt = "#c6a0f6"
+
+[themes.catppuccin-frappe]
+scheme = "catppuccin"
+description = "Catppuccin Frappé — dark, lowest contrast"
+appearance = "dark"
+btop = "catppuccin_frappe"
+kitty = "frappe"
+kittyName = "Catppuccin Frappé"
+alacritty = "catppuccin-frappe"
+nvim = "catppuccin-frappe"
+starship = ""
+zathura = "catppuccin-frappe"
+
+[themes.catppuccin-frappe.fzf]
+fg = "#c6d0f5"
+bg = "#303446"
+hl = "#e78284"
+fgPlus = "#c6d0f5"
+bgPlus = "#414559"
+hlPlus = "#e78284"
+border = "#737994"
+header = "#e78284"
+gutter = "#303446"
+spinner = "#f2d5cf"
+info = "#ca9ee6"
+pointer = "#f2d5cf"
+marker = "#babbf1"
+prompt = "#ca9ee6"
+
+[themes.catppuccin-latte]
+scheme = "catppuccin"
+description = "Catppuccin Latte — the light variant"
+appearance = "light"
+btop = "catppuccin_latte"
+kitty = "latte"
+kittyName = "Catppuccin Latte"
+alacritty = "catppuccin-latte"
+nvim = "catppuccin-latte"
+starship = ""
+zathura = "catppuccin-latte"
+
+[themes.catppuccin-latte.fzf]
+fg = "#4c4f69"
+bg = "#eff1f5"
+hl = "#d20f39"
+fgPlus = "#4c4f69"
+bgPlus = "#ccd0da"
+hlPlus = "#d20f39"
+border = "#9ca0b0"
+header = "#d20f39"
+gutter = "#eff1f5"
+spinner = "#dc8a78"
+info = "#8839ef"
+pointer = "#dc8a78"
+marker = "#7287fd"
+prompt = "#8839ef"

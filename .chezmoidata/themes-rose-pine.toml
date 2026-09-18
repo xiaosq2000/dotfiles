@@ -1,0 +1,125 @@
+# Rosé Pine, and everything the templates need to render it.
+#
+# One file per colour scheme. chezmoi deep-merges the [schemes] and [themes]
+# tables across every file in .chezmoidata, so adding a scheme is adding a file
+# and never touching this one.
+#
+# The variant name is the slug upstream uses, so `rose-pine-moon` rather than
+# `moon`. The three old names were main, moon and dawn, which read as though
+# Rosé Pine were the only scheme there could ever be and left no room to say
+# which scheme `main` belonged to.
+#
+# Two levels, because the facts divide cleanly:
+#
+#   [schemes.<name>]   where the files come from and which Neovim plugin
+#                      provides them. One entry per scheme.
+#   [themes.<slug>]    the token each tool uses for this variant, and its
+#                      palette. One entry per variant.
+#
+# The per-tool tokens look redundant here, because Rosé Pine names every file
+# after the variant. Catppuccin does not: its btop themes are catppuccin_mocha
+# while its kitty themes are plain mocha, so the tokens have to be per tool
+# rather than derived from the slug.
+#
+# `appearance` is what a tool with no port for this scheme falls back on, and
+# the only field a template can rely on for every variant that will ever exist.
+
+[schemes.rose-pine]
+description = "Rosé Pine — all natural pine, faux fur and a bit of soho vibes"
+# %s is the variant's per-tool token below.
+btopURL = "https://raw.githubusercontent.com/rose-pine/btop/main/%s.theme"
+kittyURL = "https://raw.githubusercontent.com/rose-pine/kitty/main/dist/%s.conf"
+alacrittyURL = "https://raw.githubusercontent.com/rose-pine/alacritty/main/dist/%s.toml"
+# lazy.nvim plugin spec. `name` is what the plugin registers itself as, which is
+# not always the repository's basename.
+nvimRepo = "rose-pine/neovim"
+nvimName = "rose-pine"
+# Starship configs come from a fork checked out by .chezmoiexternal.toml. Only
+# this scheme has them; see the note on the catppuccin file.
+starshipDir = "themes/rose-pine/starship"
+
+[themes.rose-pine]
+scheme = "rose-pine"
+description = "Rosé Pine — the dark original"
+appearance = "dark"
+btop = "rose-pine"
+kitty = "rose-pine"
+kittyName = "Rosé Pine"
+alacritty = "rose-pine"
+# The rose-pine.nvim plugin registers both rose-pine and rose-pine-main for the
+# dark original. Spelling it out keeps every variant's value the same shape.
+nvim = "rose-pine-main"
+starship = "rose-pine"
+zathura = "rose-pine"
+
+[themes.rose-pine.fzf]
+fg = "#908caa"
+bg = "#191724"
+hl = "#ebbcba"
+fgPlus = "#e0def4"
+bgPlus = "#26233a"
+hlPlus = "#ebbcba"
+border = "#403d52"
+header = "#31748f"
+gutter = "#191724"
+spinner = "#f6c177"
+info = "#9ccfd8"
+pointer = "#c4a7e7"
+marker = "#eb6f92"
+prompt = "#908caa"
+
+[themes.rose-pine-moon]
+scheme = "rose-pine"
+description = "Rosé Pine Moon — dark, lower contrast"
+appearance = "dark"
+btop = "rose-pine-moon"
+kitty = "rose-pine-moon"
+kittyName = "Rosé Pine Moon"
+alacritty = "rose-pine-moon"
+nvim = "rose-pine-moon"
+starship = "rose-pine-moon"
+zathura = "rose-pine-moon"
+
+[themes.rose-pine-moon.fzf]
+fg = "#908caa"
+bg = "#232136"
+hl = "#ea9a97"
+fgPlus = "#e0def4"
+bgPlus = "#393552"
+hlPlus = "#ea9a97"
+border = "#44415a"
+header = "#3e8fb0"
+gutter = "#232136"
+spinner = "#f6c177"
+info = "#9ccfd8"
+pointer = "#c4a7e7"
+marker = "#eb6f92"
+prompt = "#908caa"
+
+[themes.rose-pine-dawn]
+scheme = "rose-pine"
+description = "Rosé Pine Dawn — the light variant, once the theme/light branch"
+appearance = "light"
+btop = "rose-pine-dawn"
+kitty = "rose-pine-dawn"
+kittyName = "Rosé Pine Dawn"
+alacritty = "rose-pine-dawn"
+nvim = "rose-pine-dawn"
+starship = "rose-pine-dawn"
+zathura = "rose-pine-dawn"
+
+[themes.rose-pine-dawn.fzf]
+fg = "#797593"
+bg = "#faf4ed"
+hl = "#d7827e"
+fgPlus = "#575279"
+bgPlus = "#f2e9e1"
+hlPlus = "#d7827e"
+border = "#dfdad9"
+header = "#286983"
+gutter = "#faf4ed"
+spinner = "#ea9d34"
+info = "#56949f"
+pointer = "#907aa9"
+marker = "#b4637a"
+prompt = "#797593"

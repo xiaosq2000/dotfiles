@@ -8,15 +8,15 @@ re-answered on every new checkout.
 
 `machine` is a name from that table, not a hostname. The hostname only supplies
 the default answer, because SICC's login nodes answer as login01, login02 and so
-on and so cannot identify a machine. `theme` selects a column from
-.chezmoidata/themes.toml.
+on and so cannot identify a machine. `theme` is a variant slug from one of the
+.chezmoidata/themes-*.toml files, such as rose-pine-moon or catppuccin-latte.
 
 The prompt strings double as the keys for chezmoi's non-interactive flags, so
 they are kept short and free of commas, which the flag parser splits on:
 
   chezmoi init --apply \
     --promptString machine=workstation \
-    --promptChoice theme=main \
+    --promptString theme=rose-pine-moon \
     git@github.com:xiaosq2000/dotfiles.git
 
 Run `chezmoi init` again after pulling a change to this file; chezmoi will say
@@ -59,7 +59,37 @@ so itself when the template no longer matches the generated config.
 {{-   fail (printf "unknown machine %q; known machines are:%s. Add an entry to .chezmoidata/machines.toml first." $machine $known) -}}
 {{- end -}}
 {{- $m := index $machines $machine -}}
-{{- $theme := promptChoiceOnce . "theme" "theme" (list "main" "moon" "dawn") "main" -}}
+{{- /*
+   Collect every variant the same way, by globbing the scheme files rather than
+   naming them, so adding a scheme stays a matter of adding one file.
+*/ -}}
+{{- $themes := dict -}}
+{{- range $f := (glob (joinPath .chezmoi.sourceDir ".chezmoidata/themes-*.toml")) -}}
+{{-   range $k, $v := (include $f | fromToml).themes -}}
+{{-     $_ := set $themes $k $v -}}
+{{-   end -}}
+{{- end -}}
+{{- /*
+   Variants are named after their upstream slug now, so the three old answers
+   have to be translated or every machine's stored value would fail validation
+   below on the first init after pulling this.
+
+   Delete this map once every machine has run `chezmoi init`. Checked off:
+   workstation, imrl and sicc on 2026-09-18; laptop and vps outstanding.
+*/ -}}
+{{- $renamed := dict "main" "rose-pine" "moon" "rose-pine-moon" "dawn" "rose-pine-dawn" -}}
+{{- /*
+   promptStringOnce, not promptChoiceOnce: the choice form validates against a
+   list before this template can translate an old name, and its error does not
+   say what the valid names are.
+*/ -}}
+{{- $theme := promptStringOnce . "theme" "theme" "rose-pine" -}}
+{{- if hasKey $renamed $theme -}}
+{{-   $theme = index $renamed $theme -}}
+{{- end -}}
+{{- if not (hasKey $themes $theme) -}}
+{{-   fail (printf "unknown theme %q; known variants are: %s" $theme (keys $themes | sortAlpha | join ", ")) -}}
+{{- end -}}
 
 # Write directories 0755 and files 0644 instead of following the login shell's
 # umask, which is 002 here.
@@ -86,6 +116,9 @@ umask = 0o022
     # Currently: {{ $m.description }}
     machine = {{ $machine | quote }}
 
-    # Selects a column from .chezmoidata/themes.toml. Switch with `theme dawn`,
-    # which rewrites this line and runs `chezmoi apply`.
+    # A variant slug from one of the .chezmoidata/themes-*.toml files. Switch
+    # with `theme rose-pine-dawn`, which rewrites this line and runs
+    # `chezmoi apply`.
+    #
+    # Currently: {{ (index $themes $theme).description }}
     theme = {{ $theme | quote }}

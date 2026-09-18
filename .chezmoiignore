@@ -22,3 +22,19 @@ README.md
 # .pixi/manifests/pixi-global.toml.
 .pixi/envs
 .pixi/bin
+
+{{ if not (index .schemes (index .themes .theme).scheme).starshipDir -}}
+# This colour scheme has no starship configs, so ~/.config/starship.toml is left
+# unmanaged. Managing it would point the symlink at a directory
+# .chezmoiexternal.toml never checked out, and starship would read a broken link
+# on every prompt.
+#
+# Unmanaged means left exactly as it is, not removed. On a fresh machine the
+# file is simply absent and starship uses its own defaults. On a machine
+# switching away from Rosé Pine the old symlink stays, so the prompt keeps Rosé
+# Pine's colours while everything else changes. That mismatch is the price of
+# the missing port, and `theme` says which variants have one.
+#
+# Currently: {{ .theme }} has no starship port.
+.config/starship.toml
+{{ end -}}

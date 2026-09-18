@@ -2,7 +2,12 @@
 
 #* Name of a btop++/bpytop/bashtop formatted ".theme" file, "Default" and "TTY" for builtin themes.
 #* Themes should be placed in "../share/btop/themes" relative to binary or "$HOME/.config/btop/themes"
-color_theme = "{{ (index .themes .theme).btop }}"
+#
+# A fixed name, not the variant's. themes/current.theme is fetched from the
+# scheme's upstream repository by .chezmoiexternal.toml, so switching variant
+# changes what that one file contains rather than adding another vendored copy.
+# The same trick kitty has used here for a while.
+color_theme = "current"
 
 #* If the theme set background should be shown, set to False if you want terminal background transparency.
 theme_background = true

@@ -1,4 +1,7 @@
-import = [ "~/.config/alacritty/{{ (index .themes .theme).alacritty }}.toml" ]
+# current-theme.toml is fetched from the scheme's upstream repository by
+# .chezmoiexternal.toml. A fixed name means switching variant rewrites one file
+# instead of leaving the previous variant's copy behind.
+import = [ "~/.config/alacritty/current-theme.toml" ]
 
 [window]
 padding = { x = 5, y = 5 }
