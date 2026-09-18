@@ -232,146 +232,59 @@ else
     warning "Skipping submodule initialization due to an error (continuing)"
 fi
 
+# Names of setup scripts that did not complete, reported together at the end.
+SETUP_FAILED=""
+
+# Run one installer from .sh_utils/setup.d.
+#
+# A script that is missing is an error rather than a warning. Every name passed
+# here is meant to resolve, so one that does not is a bug in this file, not a
+# condition to tolerate: a warning let install.sh point at a nonexistent
+# node.sh through many releases while still reporting overall success.
+run_setup() {
+    local name="$1" label="$2"
+    local script="$HOME/.sh_utils/setup.d/${name}.sh"
+
+    if [ ! -f "$script" ]; then
+        error "setup script not found at $script"
+        SETUP_FAILED="$SETUP_FAILED $name"
+        return 1
+    fi
+
+    info "running $label installation script..."
+    chmod +x "$script"
+    if bash "$script"; then
+        success "$label installed successfully"
+        return 0
+    fi
+
+    warning "$label installation encountered an error"
+    SETUP_FAILED="$SETUP_FAILED $name"
+    return 1
+}
+
+# Order matters: pixi and uv put tools on PATH that the later scripts expect.
+SETUP_SCRIPTS=(
+    "pixi:pixi"
+    "uv:uv"
+    "rust:rust"
+    "nodejs:Node.js (pnpm and the latest LTS node)"
+    "zsh:zsh (oh-my-zsh and plugins)"
+    "neovim:Neovim"
+    "fzf:fzf"
+    "yazi:yazi"
+    "lazydocker:lazydocker"
+)
+
 # Install binaries if requested
 if [ "$INSTALL_BINARIES" = true ]; then
     step "Installing additional binaries"
 
-    PIXI_SCRIPT="$HOME/.sh_utils/setup.d/pixi.sh"
-    if [ -f "$PIXI_SCRIPT" ]; then
-        info "running pixi installation script..."
-
-        # Make script executable and run it
-        chmod +x "$PIXI_SCRIPT"
-        if bash "$PIXI_SCRIPT"; then
-            success "pixi installed successfully"
-        else
-            warning "pixi installation encountered an error"
-        fi
-    else
-        warning "pixi setup script not found at $PIXI_SCRIPT"
-    fi
-
-    UV_SCRIPT="$HOME/.sh_utils/setup.d/uv.sh"
-    if [ -f "$UV_SCRIPT" ]; then
-        info "running uv installation script..."
-
-        # Make script executable and run it
-        chmod +x "$UV_SCRIPT"
-        if bash "$UV_SCRIPT"; then
-            success "uv installed successfully"
-        else
-            warning "uv installation encountered an error"
-        fi
-    else
-        warning "uv setup script not found at $UV_SCRIPT"
-    fi
-
-    RUST_SCRIPT="$HOME/.sh_utils/setup.d/rust.sh"
-    if [ -f "$RUST_SCRIPT" ]; then
-        info "running rust installation script..."
-
-        # Make script executable and run it
-        chmod +x "$RUST_SCRIPT"
-        if bash "$RUST_SCRIPT"; then
-            success "rust installed successfully"
-        else
-            warning "rust installation encountered an error"
-        fi
-    else
-        warning "rust setup script not found at $RUST_SCRIPT"
-    fi
-
-    NODEJS_SCRIPT="$HOME/.sh_utils/setup.d/nodejs.sh"
-    if [ -f "$NODEJS_SCRIPT" ]; then
-        info "running Node.js installation script..."
-
-        # Make script executable and run it
-        chmod +x "$NODEJS_SCRIPT"
-        if bash "$NODEJS_SCRIPT"; then
-            success "Node.js (nvm, node, tree-sitter) installed successfully"
-        else
-            warning "Node.js installation encountered an error"
-        fi
-    else
-        warning "Node.js setup script not found at $NODEJS_SCRIPT"
-    fi
-
-    ZSH_SCRIPT="$HOME/.sh_utils/setup.d/zsh.sh"
-    if [ -f "$ZSH_SCRIPT" ]; then
-        info "running zsh installation script..."
-
-        # Make script executable and run it
-        chmod +x "$ZSH_SCRIPT"
-        if bash "$ZSH_SCRIPT"; then
-            success "zsh (oh-my-zsh and plugins) installed successfully"
-        else
-            warning "zsh installation encountered an error"
-        fi
-    else
-        warning "zsh setup script not found at $ZSH_SCRIPT"
-    fi
-
-    NEOVIM_SCRIPT="$HOME/.sh_utils/setup.d/neovim.sh"
-    if [ -f "$NEOVIM_SCRIPT" ]; then
-        info "running Neovim installation script..."
-
-        # Make script executable and run it
-        chmod +x "$NEOVIM_SCRIPT"
-        if bash "$NEOVIM_SCRIPT"; then
-            success "Neovim installed successfully"
-        else
-            warning "Neovim installation encountered an error"
-        fi
-    else
-        warning "Neovim setup script not found at $NEOVIM_SCRIPT"
-    fi
-
-    FZF_SCRIPT="$HOME/.sh_utils/setup.d/fzf.sh"
-    if [ -f "$FZF_SCRIPT" ]; then
-        info "running fzf installation script..."
-
-        # Make script executable and run it
-        chmod +x "$FZF_SCRIPT"
-        if bash "$FZF_SCRIPT"; then
-            success "fzf installed successfully"
-        else
-            warning "fzf installation encountered an error"
-        fi
-    else
-        warning "fzf setup script not found at $FZF_SCRIPT"
-    fi
-
-    YAZI_SCRIPT="$HOME/.sh_utils/setup.d/yazi.sh"
-    if [ -f "$YAZI_SCRIPT" ]; then
-        info "running yazi installation script..."
-
-        # Make script executable and run it
-        chmod +x "$YAZI_SCRIPT"
-        if bash "$YAZI_SCRIPT"; then
-            success "yazi installed successfully"
-        else
-            warning "yazi installation encountered an error"
-        fi
-    else
-        warning "yazi setup script not found at $YAZI_SCRIPT"
-    fi
-
-    LAZYDOCKER_SCRIPT="$HOME/.sh_utils/setup.d/lazydocker.sh"
-    if [ -f "$LAZYDOCKER_SCRIPT" ]; then
-        info "running lazydocker installation script..."
-
-        # Make script executable and run it
-        chmod +x "$LAZYDOCKER_SCRIPT"
-        if bash "$LAZYDOCKER_SCRIPT"; then
-            success "lazydocker installed successfully"
-        else
-            warning "lazydocker installation encountered an error"
-        fi
-    else
-        warning "lazydocker setup script not found at $LAZYDOCKER_SCRIPT"
-    fi
-
-    # (typefaces installation handled separately)
+    for entry in "${SETUP_SCRIPTS[@]}"; do
+        # Keep going after a failure so one broken installer does not hide the
+        # state of the rest; SETUP_FAILED carries the verdict to the end.
+        run_setup "${entry%%:*}" "${entry#*:}" || true
+    done
 else
     if [ "$INTERACTIVE" != true ] && [ "$INSTALL_TYPEFACES" = false ]; then
         info "skipping binary installation (use --with-binaries to install)"
@@ -381,34 +294,18 @@ fi
 # Install typefaces if requested
 if [ "$INSTALL_TYPEFACES" = true ]; then
     step "Installing typefaces"
-    TYPEFACES_SCRIPT="$HOME/.sh_utils/setup.d/typefaces.sh"
-    if [ -f "$TYPEFACES_SCRIPT" ]; then
-        info "running typefaces installation script..."
-
-        # Make script executable and run it
-        chmod +x "$TYPEFACES_SCRIPT"
-        if bash "$TYPEFACES_SCRIPT"; then
-            success "typefaces (maple mono...) installed successfully"
-        else
-            warning "typefaces (maple mono...) installation encountered an error"
-        fi
-    else
-        warning "typefaces setup script not found at $TYPEFACES_SCRIPT"
-    fi
+    run_setup "typefaces" "typefaces (maple mono...)" || true
 fi
 
 # Point every installed AI agent at the shared skills in ~/.agents/skills. Cheap
 # and safe to run even when no agent is installed, so it is not gated behind a
 # flag.
-AGENT_SKILLS_SCRIPT="$HOME/.sh_utils/setup.d/agent_skills.sh"
-if [ -f "$AGENT_SKILLS_SCRIPT" ]; then
-    step "Linking shared agent skills"
-    chmod +x "$AGENT_SKILLS_SCRIPT"
-    if bash "$AGENT_SKILLS_SCRIPT"; then
-        success "agent skills linked"
-    else
-        warning "agent skills linking encountered an error"
-    fi
+step "Linking shared agent skills"
+run_setup "agent_skills" "shared agent skills" || true
+
+if [ -n "$SETUP_FAILED" ]; then
+    error "these setup scripts did not complete:$SETUP_FAILED"
+    exit 1
 fi
 
 success "installation complete"
