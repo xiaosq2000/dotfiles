@@ -34,6 +34,7 @@ so itself when the template no longer matches the generated config.
    into this file.
 */ -}}
 {{- $machines := (include ".chezmoidata/machines.toml" | fromToml).machines -}}
+{{- $secrets := (include ".chezmoidata/secrets.toml" | fromToml).secrets -}}
 {{- /*
    Guess the machine from the hostname. Ranging over a map in a Go template
    visits keys in sorted order, so the result does not depend on file order, and
@@ -107,6 +108,33 @@ so itself when the template no longer matches the generated config.
 # ~/.config itself, and the fcitx5 profile and conf files, which hold input
 # history.
 umask = 0o022
+
+{{ if $secrets.ageRecipient -}}
+# Decrypt the encrypted_ files in this repository with age.
+#
+# These two have to sit above [data]. A bare key after a table header belongs to
+# that table in TOML, so `encryption` written at the bottom of this file becomes
+# data.encryption, and chezmoi says so and carries on unencrypted:
+#
+#   warning: 'encryption' not set, using age configuration.
+#
+# The recipient is a public key and lives in .chezmoidata/secrets.toml; the
+# identity is the private half and is never committed. A machine without the
+# identity cannot apply an encrypted file at all: chezmoi fails rather than
+# writing anything, which is the behaviour you want. docs/secrets.md covers how
+# a new machine gets the key out of Bitwarden.
+encryption = "age"
+
+[age]
+    identity = {{ (joinPath .chezmoi.homeDir $secrets.ageIdentity) | quote }}
+    recipient = {{ $secrets.ageRecipient | quote }}
+{{- else -}}
+# No encryption configured, because .chezmoidata/secrets.toml has no recipient
+# yet. That is the off state and it is deliberate: until the key exists there
+# are no encrypted_ files to read, and a half-configured [age] section would
+# make every apply fail looking for an identity nobody created. See
+# docs/secrets.md.
+{{- end }}
 
 [data]
     # Which entry of .chezmoidata/machines.toml describes this machine. Every

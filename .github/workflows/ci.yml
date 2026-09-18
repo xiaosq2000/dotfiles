@@ -200,3 +200,35 @@ jobs:
           fi
           grep -q 'unknown theme' /tmp/err
           grep -q 'catppuccin-mocha' /tmp/err
+
+      # Encryption is off in the repository, so the thing to test is both
+      # states of the switch. The ordering assertion is the important one: a
+      # bare key after a table header belongs to that table in TOML, so
+      # `encryption` below [data] silently becomes data.encryption and chezmoi
+      # carries on unencrypted with only a warning.
+      - name: Encryption is off by default, and top-level when on
+        run: |
+          set -eux
+          src="$HOME/.local/share/chezmoi"
+          cfg="$HOME/.config/chezmoi/chezmoi.toml"
+
+          grep -q 'no encryption configured' "$cfg" || grep -qi 'no encryption' "$cfg"
+          ! grep -q '^encryption' "$cfg"
+          ! grep -q '^\[age\]' "$cfg"
+
+          sed -i 's/^ageRecipient = ""/ageRecipient = "age1ci0000000000000000000000000000000000000000000000000000"/' \
+            "$src/.chezmoidata/secrets.toml"
+          chezmoi execute-template --init \
+            --promptString machine=container \
+            --promptString theme=rose-pine \
+            < "$src/.chezmoi.toml.tmpl" > /tmp/cfg-on.toml
+
+          grep -q '^encryption = "age"$' /tmp/cfg-on.toml
+          grep -q '^\[age\]$' /tmp/cfg-on.toml
+          grep -q 'age1ci0000' /tmp/cfg-on.toml
+
+          enc=$(grep -n '^encryption = "age"$' /tmp/cfg-on.toml | cut -d: -f1)
+          data=$(grep -n '^\[data\]$' /tmp/cfg-on.toml | cut -d: -f1)
+          test "$enc" -lt "$data"
+
+          git -C "$src" checkout .chezmoidata/secrets.toml

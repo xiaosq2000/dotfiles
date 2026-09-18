@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Fetch the age identity from Bitwarden, once per machine.
+#
+# Without it, every encrypted_ file in this repository fails to apply. With it,
+# a new machine needs no manual copying of a key between hosts, which is the
+# whole reason Bitwarden is in this picture: the secrets travel in the public
+# repository as ciphertext, and the one thing that must not be lost is a single
+# key that Bitwarden already backs up.
+#
+# It runs `before`, so the identity exists by the time chezmoi writes any file,
+# and `once`, so it does not ask for a vault on every apply. If you would rather
+# not have `chezmoi apply` reach for your vault at all, do it by hand instead:
+#
+#   rbw get {{ .secrets.bitwardenItem | quote }} > ~/.config/chezmoi/key.txt
+#   chmod 600 ~/.config/chezmoi/key.txt
+#
+# This script is a no-op when the identity is already present, and when no
+# recipient is configured, so it costs nothing on a machine that is set up or on
+# one where encryption is off.
+#
+# recipient: {{ .secrets.ageRecipient }}
+
+set -eu
+
+RECIPIENT={{ .secrets.ageRecipient | quote }}
+IDENTITY={{ (joinPath .chezmoi.homeDir .secrets.ageIdentity) | quote }}
+ITEM={{ .secrets.bitwardenItem | quote }}
+FIELD={{ .secrets.bitwardenField | quote }}
+
+# Encryption is off; nothing in this repository is encrypted yet.
+if [ -z "$RECIPIENT" ]; then
+    exit 0
+fi
+
+if [ -f "$IDENTITY" ]; then
+    exit 0
+fi
+
+note() { printf 'age-identity: %s\n' "$*"; }
+fail() {
+    printf 'age-identity: %s\n' "$*" >&2
+    exit 1
+}
+
+resolve() {
+    if command -v "$1" >/dev/null 2>&1; then
+        command -v "$1"
+    elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/$1" ]; then
+        printf '%s\n' "${PIXI_HOME:-$HOME/.pixi}/bin/$1"
+    fi
+}
+
+RBW="$(resolve rbw)"
+AGE_KEYGEN="$(resolve age-keygen)"
+
+[ -n "$RBW" ] || fail "rbw not found; it comes from the secrets bundle in .chezmoidata/tools.toml"
+
+# A locked vault cannot be unlocked here. chezmoi runs this from a temporary
+# file with no terminal of its own, so rbw's passphrase prompt would have
+# nowhere to appear and the apply would hang or fail obscurely. Say what to run
+# instead.
+if ! "$RBW" unlocked >/dev/null 2>&1; then
+    printf 'age-identity: the Bitwarden vault is locked, and this cannot unlock it.\n' >&2
+    printf 'age-identity: run these, then apply again:\n' >&2
+    printf 'age-identity:   rbw unlock\n' >&2
+    printf 'age-identity:   chezmoi apply\n' >&2
+    printf 'age-identity: first time on this machine, register and log in first:\n' >&2
+    printf 'age-identity:   rbw config set email <your-address>\n' >&2
+    printf 'age-identity:   rbw login\n' >&2
+    exit 1
+fi
+
+note "fetching the identity from Bitwarden entry '$ITEM'"
+
+umask 077
+tmp="$(mktemp "${IDENTITY}.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+
+if [ -n "$FIELD" ]; then
+    "$RBW" get --field "$FIELD" "$ITEM" >"$tmp" || fail "could not read field '$FIELD' of '$ITEM'"
+else
+    "$RBW" get "$ITEM" >"$tmp" || fail "could not read '$ITEM'"
+fi
+
+[ -s "$tmp" ] || fail "'$ITEM' gave an empty value"
+
+grep -q '^AGE-SECRET-KEY-' "$tmp" ||
+    fail "'$ITEM' does not contain a line starting with AGE-SECRET-KEY-; see docs/secrets.md"
+
+# Check the key is the right one before installing it. Fetching the wrong entry
+# would otherwise surface later as an unhelpful age failure on some unrelated
+# file.
+if [ -n "$AGE_KEYGEN" ]; then
+    got="$("$AGE_KEYGEN" -y "$tmp" 2>/dev/null || true)"
+    if [ -n "$got" ] && [ "$got" != "$RECIPIENT" ]; then
+        fail "the key in '$ITEM' is for $got, but this repository encrypts to $RECIPIENT"
+    fi
+fi
+
+chmod 600 "$tmp"
+mv "$tmp" "$IDENTITY"
+trap - EXIT
+note "installed $IDENTITY"

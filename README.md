@@ -133,7 +133,23 @@ environment while linking none of its binaries. Several conda-forge packages
 also ship a whole runtime beside the tool you wanted, so exposing everything
 would put `node`, `openssl`, `python3.14`, `tclsh` and `wish` on `PATH`.
 
-## TODO
+## Secrets
 
-- [ ] gnome-terminal: the rose-pine theme is fetched as an external, but
-      nothing loads `template.dconf` into dconf yet.
+This repository is public, so anything secret in it is age ciphertext: a file
+named `encrypted_*` is decrypted on apply, and the key is never committed.
+Bitwarden holds one copy of the key so a new machine can fetch it once.
+
+It is currently **off**. `.chezmoidata/secrets.toml` has an empty
+`ageRecipient`, so the generated config has no `[age]` section and every machine
+applies without a key. [docs/secrets.md](docs/secrets.md) has the design and the
+commands to turn it on.
+
+The plaintext half is already done:
+[.chezmoidata/machines.toml](.chezmoidata/machines.toml) is the machine
+inventory, in the clear, because bundles, roles and filesystem layout are not
+secrets. Addresses, account names and tokens are.
+
+## Outstanding
+
+[docs/todo.md](docs/todo.md), which separates what needs a credential or a
+decision from what is merely worth doing.

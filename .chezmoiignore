@@ -7,9 +7,17 @@
 # keeps its source tree separate, so the default is already "manage nothing",
 # and only genuine exceptions belong here.
 
-# Repository documentation, not a dotfile. It sits at the source root so it
-# renders on GitHub; without this line chezmoi would deploy it to ~/README.md.
+# Repository documentation, not dotfiles. They sit at the source root so they
+# render on GitHub; without these lines chezmoi would deploy them to ~/README.md
+# and ~/docs.
 README.md
+docs
+
+# The age identity: the one file that must never be committed, since it decrypts
+# every encrypted_ file in this repository. chezmoi would not add it on its own,
+# but ~/.config/chezmoi is a directory this repository does write to, so say so
+# explicitly.
+.config/chezmoi/key.txt
 
 # .secrets is a separate, local-only repository that happens to live in $HOME.
 # It must never be managed here and must never reach this public repo. chezmoi
