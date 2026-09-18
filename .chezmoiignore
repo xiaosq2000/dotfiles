@@ -1,0 +1,24 @@
+# Patterns here match paths in the destination directory (~), not the source.
+#
+# This file replaces the ~100 line inverted .gitignore the old layout needed.
+# That file had to start with `/*` and then re-admit every tracked path with a
+# matching `!path` / `path/*` pair, because the repository's working tree was
+# $HOME itself and so every unrelated file in $HOME was a candidate. chezmoi
+# keeps its source tree separate, so the default is already "manage nothing",
+# and only genuine exceptions belong here.
+
+# Repository documentation, not a dotfile. It sits at the source root so it
+# renders on GitHub; without this line chezmoi would deploy it to ~/README.md.
+README.md
+
+# .secrets is a separate, local-only repository that happens to live in $HOME.
+# It must never be managed here and must never reach this public repo. chezmoi
+# would not pick it up on its own, but a stray `chezmoi add ~/.secrets` would,
+# and that mistake is unrecoverable once pushed.
+.secrets
+
+# Everything under .pixi except the global manifest: the environments are
+# gigabytes of solved packages that `pixi global sync` rebuilds from
+# .pixi/manifests/pixi-global.toml.
+.pixi/envs
+.pixi/bin

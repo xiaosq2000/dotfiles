@@ -1,7 +1,11 @@
+# Paths here are chezmoi source paths, not destination paths: .zshrc is
+# dot_zshrc.tmpl in this tree, ~/.config/fcitx5 is
+# private_dot_config/private_fcitx5, and so on.
+
 # Machine-written files: vendored plugin source, dependency lockfiles, and the
 # fcitx5 configs, which the fcitx5 GUI rewrites without a trailing newline
 # every time a setting changes.
-exclude: (.config/yazi/plugins|.config/nvim/lazy-lock.json|.opencode/package-lock.json|.config/fcitx5/)
+exclude: (dot_config/yazi/plugins|dot_config/nvim/lazy-lock.json|dot_opencode/package-lock.json|private_dot_config/private_fcitx5/)
 default_install_hook_types:
   - pre-commit
   - commit-msg
@@ -12,6 +16,9 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        # .chezmoi.toml.tmpl and the run scripts are Go templates, and a
+        # template is not valid YAML until it is rendered.
+        exclude: \.tmpl$
       - id: check-added-large-files
       - id: check-json
       - id: pretty-format-json
@@ -24,12 +31,16 @@ repos:
         args: []
   # shellcheck comes from the pixi global manifest, so use the installed
   # binary rather than the upstream hook, which runs inside Docker.
-  # zsh files are excluded because shellcheck does not parse zsh (SC1071).
+  #
+  # Selected explicitly rather than by `types: [shell]`, because the source
+  # tree holds three kinds of file shellcheck must not see: zsh scripts, which
+  # it cannot parse at all (SC1071), and Go templates, whose {{ ... }} actions
+  # are not shell syntax.
   - repo: local
     hooks:
       - id: shellcheck
         name: shellcheck
         entry: shellcheck --severity=warning
         language: system
-        types: [shell]
-        exclude: ^(\.zshrc|\.sh_utils/tools(\.sh|/))
+        files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_theme$)
+        exclude: (^dot_sh_utils/tools(\.sh|/)|\.tmpl$)

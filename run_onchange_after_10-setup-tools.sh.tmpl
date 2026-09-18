@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Runs the installers in ~/.sh_utils/setup.d after chezmoi has written them.
+#
+# Why this is a wrapper rather than the installers being chezmoi scripts
+# themselves. Every script in setup.d locates its UI library relative to its
+# own path:
+#
+#     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#     UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
+#
+# chezmoi executes run_ scripts from a temporary file, so BASH_SOURCE would
+# point outside ~/.sh_utils and every one of them would exit with "UI library
+# not found". They also have to exist in the target state regardless, because
+# .zshrc and .bashrc source ~/.sh_utils/*.sh at every shell start. So chezmoi
+# writes them as ordinary files and this script calls them where they land.
+#
+# The hashes below are what make `run_onchange_` fire: editing any installer
+# changes this rendered script, so chezmoi re-runs it.
+{{ $setup := list "pixi" "uv" "rust" "nodejs" "zsh" "neovim" "fzf" "yazi" "lazydocker" -}}
+{{ range $setup }}
+# {{ . }}.sh sha256: {{ include (printf "dot_sh_utils/setup.d/executable_%s.sh" .) | sha256sum }}
+{{- end }}
+
+set -eu
+
+{{ if not .installBinaries -}}
+echo "installBinaries is false; skipping the setup.d tool chain"
+exit 0
+{{ end -}}
+
+# shellcheck source=/dev/null
+. "$HOME/.sh_utils/lib/ui.sh"
+
+SETUP_FAILED=""
+
+# A missing script is an error, not a warning. install.sh used to warn and
+# carry on, which is how it pointed at a nonexistent node.sh for months while
+# still reporting success.
+run_setup() {
+    local name="$1"
+    local script="$HOME/.sh_utils/setup.d/${name}.sh"
+
+    if [ ! -f "$script" ]; then
+        error "setup script not found at $script"
+        SETUP_FAILED="$SETUP_FAILED $name"
+        return 1
+    fi
+
+    info "running $name"
+    if bash "$script"; then
+        success "$name done"
+        return 0
+    fi
+
+    warning "$name encountered an error"
+    SETUP_FAILED="$SETUP_FAILED $name"
+    return 1
+}
+
+# Order matters: pixi and uv put tools on PATH that the later scripts expect.
+for name in {{ $setup | join " " }}; do
+    run_setup "$name" || true
+done
+
+{{ if .installTypefaces -}}
+run_setup "typefaces" || true
+{{ end -}}
+
+if [ -n "$SETUP_FAILED" ]; then
+    error "these setup scripts did not complete:$SETUP_FAILED"
+    exit 1
+fi

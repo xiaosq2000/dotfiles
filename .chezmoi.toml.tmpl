@@ -1,0 +1,41 @@
+{{/*
+Generates ~/.config/chezmoi/chezmoi.toml on `chezmoi init`.
+
+Only the three answers below are per-machine. Everything derived from the
+theme lives in .chezmoidata/themes.toml and is looked up at apply time, so
+changing a colour there takes effect on the next `chezmoi apply` without
+re-running init.
+
+The prompt strings double as the keys for chezmoi's non-interactive flags, so
+they are kept short and free of commas, which the flag parser splits on:
+
+  chezmoi init --apply \
+    --promptChoice theme=main \
+    --promptBool installBinaries=true \
+    --promptBool installTypefaces=false \
+    git@github.com:xiaosq2000/dotfiles.git
+
+  theme            main | moon | dawn -- see .chezmoidata/themes.toml
+  installBinaries  run the ~/.sh_utils/setup.d tool chain (pixi, uv, rust,
+                   node, zsh, neovim, fzf, yazi, lazydocker)
+  installTypefaces install Maple Mono and friends
+*/}}
+{{- $theme := promptChoiceOnce . "theme" "theme" (list "main" "moon" "dawn") "main" -}}
+{{- $binaries := promptBoolOnce . "installBinaries" "installBinaries" true -}}
+{{- $typefaces := promptBoolOnce . "installTypefaces" "installTypefaces" false -}}
+
+# No umask override here on purpose. The tree in $HOME was created under
+# umask 002, so almost everything is already 0664/0775 and chezmoi's default
+# (follow the umask) matches it. Forcing 0o022 would instead rewrite the mode
+# of roughly 190 entries. The handful of paths that genuinely need to be
+# tighter carry a private_ prefix in the source tree: ~/.config itself, and
+# the fcitx5 profile and conf files, which hold input history.
+
+[data]
+    # Selects a column from .chezmoidata/themes.toml. Switch with `theme dawn`,
+    # which rewrites this line and runs `chezmoi apply`.
+    theme = {{ $theme | quote }}
+    # Gates run_onchange_after_10-setup-tools.sh. Set false on a machine where
+    # you only want the config files and not the tool chain.
+    installBinaries = {{ $binaries }}
+    installTypefaces = {{ $typefaces }}

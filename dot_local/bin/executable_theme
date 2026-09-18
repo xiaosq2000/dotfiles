@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# Switch the Rosé Pine variant across every tool at once.
+#
+# This replaces the `theme/light` branch. Switching used to mean checking out
+# another branch, which meant every non-theme commit had to be landed on both
+# and they drifted anyway. Now one value in ~/.config/chezmoi/chezmoi.toml
+# selects a column from .chezmoidata/themes.toml and `chezmoi apply` rewrites
+# btop, kitty, nvim, starship, alacritty and fzf from it.
+#
+#   theme            show the current variant and the available ones
+#   theme dawn       switch to Rosé Pine Dawn and apply
+#   theme --dry-run main   show what would change without writing
+set -euo pipefail
+
+CONFIG="${CHEZMOI_CONFIG_FILE:-$HOME/.config/chezmoi/chezmoi.toml}"
+VARIANTS=(main moon dawn)
+DRY_RUN=false
+
+die() {
+    printf 'theme: %s\n' "$*" >&2
+    exit 1
+}
+
+current_theme() {
+    # The generated config is small and machine-written, so a targeted match on
+    # the assignment is enough and avoids depending on a TOML parser.
+    sed -n 's/^[[:space:]]*theme[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$CONFIG" | head -n1
+}
+
+usage() {
+    local current
+    current="$(current_theme)"
+    printf 'usage: theme [--dry-run] [%s]\n\n' "$(
+        IFS='|'
+        echo "${VARIANTS[*]}"
+    )"
+    printf 'current: %s\n\n' "${current:-unknown}"
+    printf 'available:\n'
+    for v in "${VARIANTS[@]}"; do
+        if [ "$v" = "$current" ]; then
+            printf '  * %s\n' "$v"
+        else
+            printf '    %s\n' "$v"
+        fi
+    done
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+    -n | --dry-run)
+        DRY_RUN=true
+        shift
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    -*)
+        die "unknown option: $1"
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
+
+command -v chezmoi >/dev/null 2>&1 || die "chezmoi is not on PATH"
+[ -f "$CONFIG" ] || die "chezmoi config not found at $CONFIG; run 'chezmoi init' first"
+
+if [ $# -eq 0 ]; then
+    usage
+    exit 0
+fi
+
+want="$1"
+valid=false
+for v in "${VARIANTS[@]}"; do
+    [ "$v" = "$want" ] && valid=true
+done
+[ "$valid" = true ] || die "unknown variant '$want' (choose one of: ${VARIANTS[*]})"
+
+have="$(current_theme)"
+[ -n "$have" ] || die "no theme setting found in $CONFIG"
+
+if [ "$DRY_RUN" = true ]; then
+    printf 'theme: %s -> %s (dry run)\n\n' "$have" "$want"
+    # Render against the wanted value without touching the config on disk.
+    tmp="$(mktemp)"
+    trap 'rm -f "$tmp"' EXIT
+    sed "s/^\([[:space:]]*theme[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$want\"/" "$CONFIG" >"$tmp"
+    CHEZMOI_CONFIG_FILE="$tmp" chezmoi diff
+    exit 0
+fi
+
+if [ "$have" = "$want" ]; then
+    printf 'theme: already %s\n' "$want"
+else
+    # Rewrite only the assignment, so the explanatory comments around it stay.
+    sed -i "s/^\([[:space:]]*theme[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$want\"/" "$CONFIG"
+    printf 'theme: %s -> %s\n' "$have" "$want"
+fi
+
+chezmoi apply
+
+# Nudge the running programs that can reload without a restart. Each is
+# optional: a missing binary or a terminal without remote control enabled is
+# not an error, the new colours just arrive with the next start.
+if [ -n "${KITTY_WINDOW_ID:-}" ] && command -v kitten >/dev/null 2>&1; then
+    kitten @ set-colors --all --configured "$HOME/.config/kitty/current-theme.conf" 2>/dev/null &&
+        printf 'theme: reloaded kitty\n' || true
+fi
+
+# btop and starship read their config at startup; fzf reads the environment.
+printf 'theme: open a new shell for fzf and starship to pick up %s\n' "$want"

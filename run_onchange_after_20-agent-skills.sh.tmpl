@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Point every installed AI agent at the shared skills in ~/.agents/skills.
+#
+# Separate from the tool chain script because it is not gated on
+# installBinaries: agent_skills.sh checks for each agent itself and does
+# nothing when none is installed, so it is cheap and safe everywhere.
+#
+# Re-runs when the script or any skill changes.
+# agent_skills.sh sha256: {{ include "dot_sh_utils/setup.d/executable_agent_skills.sh" | sha256sum }}
+# skills sha256: {{ range (glob (joinPath .chezmoi.sourceDir "dot_agents/skills/*/SKILL.md")) }}{{ include . | sha256sum }}{{ end }}
+
+set -eu
+
+exec "$HOME/.sh_utils/setup.d/agent_skills.sh"

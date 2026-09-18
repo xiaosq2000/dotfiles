@@ -1,0 +1,34 @@
+# Replaces .gitmodules.
+#
+# Both entries below were git submodules. Submodules were a poor fit here for
+# two reasons: install.sh only ever ran `git submodule update --init` on the
+# starship one, so a fresh machine silently never checked out the
+# gnome-terminal theme at all; and a submodule pins a commit that only moves
+# when you remember to bump it. An external clones on first apply and pulls on
+# refresh, so both themes arrive on every machine without a separate step.
+#
+# This file is always treated as a template, with or without a .tmpl suffix.
+
+[".config/themes/rose-pine/starship"]
+type = "git-repo"
+url = "https://github.com/xiaosq2000/starship"
+refreshPeriod = "672h"
+
+[".config/themes/rose-pine/gnome-terminal"]
+type = "git-repo"
+url = "https://github.com/xiaosq2000/gnome-terminal"
+refreshPeriod = "672h"
+
+# kitty's colours came from a 51-line copy of an upstream file, committed once
+# per theme branch. Fetching it instead means the variant is chosen by the
+# `theme` value rather than by which branch is checked out, and it drops the
+# vendored copy from the repo.
+#
+# Note this corrects two things the vendored copy had drifted on: upstream now
+# also sets active_border_color and inactive_border_color, and the dark copy
+# had color7/color15 set to #575279, which is Dawn's foreground and made the
+# terminal's white and bright-white render as dark purple in dark mode.
+[".config/kitty/current-theme.conf"]
+type = "file"
+url = "https://raw.githubusercontent.com/rose-pine/kitty/main/dist/{{ (index .themes .theme).kitty }}.conf"
+refreshPeriod = "672h"

@@ -29,8 +29,73 @@ jobs:
       - uses: pre-commit/action@v3.0.1
 
   setup-scripts:
-    name: install.sh references real setup scripts
+    name: run script references real setup scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: bash .github/scripts/check-setup-scripts.sh
+
+  bootstrap:
+    name: bootstrap in a clean container
+    runs-on: ubuntu-latest
+    container: ubuntu:24.04
+    steps:
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y curl git unzip ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - name: Install chezmoi
+        run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
+
+      # --source points at the checked-out commit, so this exercises the code
+      # under test. The old install.sh could not be tested this way: it always
+      # cloned origin/main, so CI would have checked the published branch
+      # rather than the change being proposed.
+      #
+      # installBinaries is false because the tool chain pulls rust, node and a
+      # conda environment over the network, which belongs in a slower job than
+      # one that should gate every push. The names in that list are verified by
+      # the setup-scripts job instead.
+      - name: chezmoi init --apply
+        run: |
+          chezmoi init --apply --verbose --source="$PWD" \
+            --promptChoice theme=main \
+            --promptBool installBinaries=false \
+            --promptBool installTypefaces=false
+
+      - name: Destination matches the source state
+        run: chezmoi verify --source="$PWD"
+
+      - name: Files landed where they should
+        run: |
+          set -eux
+          test -f "$HOME/.zshrc"
+          test -f "$HOME/.bashrc"
+          test -f "$HOME/.sh_utils/setup.d/pixi.sh"
+          test -x "$HOME/.sh_utils/setup.d/pixi.sh"
+          test -x "$HOME/.local/bin/theme"
+          # the two former submodules, now externals
+          test -f "$HOME/.config/themes/rose-pine/starship/rose-pine.toml"
+          test -d "$HOME/.config/themes/rose-pine/gnome-terminal"
+          # repo infrastructure must not be deployed as dotfiles
+          test ! -e "$HOME/README.md"
+          test ! -e "$HOME/.github"
+
+      - name: Theme renders and switches
+        run: |
+          set -eux
+          grep -q 'rose-pine-main' "$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
+          grep -q 'rose-pine.toml' "$HOME/.config/alacritty/alacritty.toml"
+          test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine.toml"
+
+          "$HOME/.local/bin/theme" dawn
+
+          grep -q 'rose-pine-dawn' "$HOME/.config/nvim/lua/plugins/ui/colorscheme.lua"
+          grep -q 'rose-pine-dawn.toml' "$HOME/.config/alacritty/alacritty.toml"
+          grep -q 'rose-pine-dawn' "$HOME/.config/btop/btop.conf"
+          test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine-dawn.toml"
+
+          chezmoi verify --source="$PWD"
