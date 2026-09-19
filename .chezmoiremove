@@ -159,6 +159,20 @@
 # chezmoi replaces the old symlink with the rendered file on its own; it is not
 # listed here, because removing a path it also manages would delete and
 # recreate the prompt config on every apply.
+#
+# Over ssh this can stop the apply dead:
+#
+#   .config/themes/rose-pine/starship has changed since chezmoi last wrote it?
+#   chezmoi: could not open a new TTY: open /dev/tty: no such device
+#
+# chezmoi asks before removing a path that drifted, and a git checkout has
+# always drifted, because pulling is what the external does. imrl hit this and
+# sicc did not, so it depends on whether the clone moved since the last apply.
+# The checkout is a clean clone of a public fork, so the answer is always yes:
+#
+#   rm -rf ~/.config/themes/rose-pine/starship && chezmoi apply
+#
+# The sibling gnome-terminal checkout is a separate external and survives.
 ################################################################################
 
 .config/themes/rose-pine/starship
