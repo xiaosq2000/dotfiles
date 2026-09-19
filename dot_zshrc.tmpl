@@ -456,7 +456,9 @@ if has starship; then eval "$(starship init zsh)"; fi
 prepend_env PATH "${HOME}/.google-drive-upload/bin"
 
 # tre
-tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
+if has tre; then
+    tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
+fi
 
 # uv shell completion
 if has uv; then

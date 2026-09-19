@@ -9,15 +9,6 @@ chezmoi run on them.
 
 ## Needs a decision
 
-### Rust toolchain on imrl and sicc
-
-Both carry a full rustup — **1.3 GB on imrl, 1.5 GB on sicc**. Their machine
-entries say `rust = false`, so this repository neither installs nor maintains
-it, and the only cargo-installed tool left on either is `tre-command`, which
-conda-forge does not package.
-
-Keep it, or `rustup self uninstall` and reclaim ~2 GB per machine, losing `tre`.
-
 ### What bundles the vps should get
 
 Ubuntu 24.04, root, **21 GB disk with 5.0 GB free**. Its job is network
@@ -48,12 +39,21 @@ consequences:
 
 Deploying the vps is optional; it unblocks nothing below.
 
-### Unidentified SSH keys
+### One unidentified SSH key on the vps
 
-- imrl trusts `SHA256:Ug0uDt6u…`, the retired ThinkStation RSA key. Its private
-  half no longer exists anywhere. Dead weight, should be pruned.
-- imrl trusts `SHA256:cLp9TNU…` and the vps trusts `SHA256:HxIi+ZEG…`. Neither
-  is identified.
+`SHA256:HxIi+ZEG…`, ED25519, no comment. It is none of the four known machines —
+workstation `zPCFuuvT…`, laptop `INNXSS…`, imrl `gwe82I…`, sicc `k66dPAM…` — and
+it has not authenticated in the 18 days the vps journal covers, which is not
+long enough to call it dead.
+
+Left in place. Identify it or remove it deliberately; the vps is how everything
+else is reached, so it is not worth guessing at.
+
+imrl's `authorized_keys` is done: the retired ThinkStation RSA key
+`SHA256:Ug0uDt6u…` was removed on 2026-09-19, its private half having been
+destroyed with the `~/.secrets` history purge. A backup sits at
+`~/.ssh/authorized_keys.bak-2026-09-19` on imrl. The remaining RSA key there is
+commented `mona` — a colleague's machine, and theirs to keep.
 
 `authorized_keys` is unmanaged and per-machine by design.
 
@@ -82,11 +82,12 @@ Deleting all three is one commit once the laptop is done.
 loads its `template.dconf` into dconf. It is the last thing in the repository
 hard-wired to one colour scheme. kitty and alacritty are what actually get used.
 
-### Shell startup is ~510 ms
+### Shell startup is ~510 ms locally, ~1.1 s on imrl and sicc
 
 `~/.sh_utils/*.sh` is roughly 1300 lines sourced at every shell start, including
 a 614-line network script, and `setup_texlive` globs the texlive tree every
-time. Autoloaded functions would fix most of it.
+time. Autoloaded functions would fix most of it. The remote figure is the one
+that stings, and sicc's home is on NFS.
 
 ### The typefaces installer
 
@@ -98,6 +99,19 @@ a gigabyte of fonts. `gitHubLatestReleaseAssetURL` would do most of the work.
 
 Fonts are installed on the workstation despite the flag being false; they came
 from elsewhere and nothing removes them.
+
+### lazy-lock.json is managed but cannot match every machine
+
+`~/.config/nvim/lazy-lock.json` is deployed by chezmoi, so it drifts on any
+machine whose plugins have been updated — imrl is drifting now. Worse, it is
+theme-dependent: a machine on a Rosé Pine variant has no `catppuccin` entry,
+because that plugin is only installed for a Catppuccin scheme, so the lockfile
+cannot be the same file everywhere.
+
+`chezmoi apply` downgrades that machine's plugins; `chezmoi re-add` pushes one
+machine's theme-specific lock onto all of them. Either add it to
+`.chezmoiignore` and let lazy manage it per machine, or stop pinning and drop
+the file.
 
 ### Mason installs language servers per machine
 
