@@ -5,44 +5,37 @@ refactors were deployed to the workstation, imrl and sicc. Pruned as things
 land. Everything here needs a decision, a credential, or a moment when no job is
 running.
 
-Nothing here is required for any of the three machines to work; all three apply
-and verify clean as they are. Encryption is finished end to end, key backed up
-and read back, so nothing on this page carries urgency any more. Work down it in
-whatever order appeals.
+Nothing here is required for any of the three machines to work. Encryption is
+finished end to end, key backed up and read back; the caches and pre-migration
+environments are reclaimed; the twenty commits are pushed. Nothing on this page
+carries urgency any more, so work down it in whatever order appeals.
+
+The disk reclamation of 2026-09-19, for the record, because the numbers were
+not what the plan predicted:
+
+| | imrl | sicc |
+| --- | --- | --- |
+| Stale rattler cache deleted | 31 GB | 18 GB |
+| Pre-migration environments rebuilt and deleted | 18 GB | 1.2 GB |
+| Actually returned to the constrained filesystem | 18 GB | 19.2 GB |
+
+imrl's two figures do not add up, and the reason is worth keeping. rattler
+hardlinks package files out of the cache into every environment, so deleting a
+31 GB cache returned only 5 GB: the blocks stayed alive through the
+environments still pointing at them, and came back only once those were rebuilt
+on the other filesystem. About 5 GB is still held that way by `~/.pixi/envs`,
+the global bundle environments, which live on the root filesystem and were
+never part of this move.
+
+Two things went wrong in the doing, both caught before anything was deleted. A
+bare `pixi install` builds only the default environment, so the first pass
+would have dropped `hf` on vlm_toolkit and `research` and `style` on sicc had
+the old copies been removed on trust; `--all`, or naming each environment, is
+the correct invocation. And `.pixi/envs` becomes a *symlink* to the detached
+path, so a non-empty check on it looks like a failed migration when it is
+exactly the intended result.
 
 ## Needs you
-
-### Rebuild the workspace environments at the new path
-
-This is now the largest reclaimable thing left, and the numbers are bigger than
-this page previously said.
-
-`detached-environments` points at a roomy filesystem on both remotes, but pixi
-neither migrates nor removes environments installed at the old path, so every
-workspace that was installed before the migration still has a `.pixi/envs`
-beside it on the constrained filesystem:
-
-| Machine | Old-path environments | Where |
-| --- | --- | --- |
-| imrl | 12 GB | `~/Projects/vlm_toolkit/.pixi/envs` |
-| imrl | 6 GB | `~/Projects/vlm-nav/.pixi/envs` |
-| sicc | 1.2 GB | `~/Projects/embodied-ai/.pixi` |
-
-```sh
-cd <workspace> && pixi install     # rebuilds at the new location
-rm -rf <workspace>/.pixi/envs      # then reclaim the old one
-```
-
-On sicc, do it when no job is running.
-
-An earlier version of this page said imrl had no workspace environments. It has
-18 GB of them, and that error hid a second one: deleting imrl's 31 GB cache on
-2026-09-19 freed only 5 GB of the root filesystem. rattler hardlinks package
-files out of the cache into each environment, so unlinking the cache copy drops
-one link and the blocks stay alive through the environments that still point at
-them. The space comes back when those environments are rebuilt on the other
-filesystem, not before. Nothing is wrong meanwhile; the environments work, they
-have simply stopped sharing blocks with any cache.
 
 ### Finish the secrets migration
 
@@ -115,9 +108,10 @@ came from somewhere else. Nothing removes them.
 ### gnome-terminal is not theme-aware
 
 `.chezmoiexternal.toml` checks out a Rosé Pine gnome-terminal theme, and nothing
-loads its `template.dconf` into dconf. It is also the one external still pinned
-to a single colour scheme. Either wire it up or drop it; kitty and alacritty are
-what actually get used.
+loads its `template.dconf` into dconf. Since starship stopped depending on a
+per-scheme checkout on 2026-09-19, this is the last thing in the repository
+still hard-wired to one colour scheme. Either wire it up or drop it; kitty and
+alacritty are what actually get used.
 
 ### Neovim leftovers from the retired installer
 
