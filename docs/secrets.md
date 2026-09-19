@@ -140,10 +140,23 @@ matters is: recipient and key distribution before the first `encrypted_` file
 is committed, not before this step.
 
 ```sh
-chezmoi edit .chezmoidata/secrets.toml   # set ageRecipient = "age1..."
+# set ageRecipient = "age1..."
+$EDITOR "$(chezmoi source-path)/.chezmoidata/secrets.toml"
 chezmoi init --promptString machine=workstation
 chezmoi dump-config | grep -A3 age       # identity and recipient should be set
 ```
+
+Not `chezmoi edit`, which takes the path of a file in `~` and looks up its
+source. This file has no target: it is data chezmoi reads and never deploys, so
+`chezmoi edit` answers
+
+```
+chezmoi: .chezmoidata/secrets.toml: not managed
+```
+
+The same goes for `machines.toml`, `tools.toml`, the theme files,
+`.chezmoiignore`, `.chezmoiexternal.toml` and `.chezmoiremove`. `chezmoi cd`
+opens a shell where all of them are in front of you.
 
 **4. Move a secret in.** For the SSH config:
 

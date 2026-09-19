@@ -56,6 +56,19 @@ chezmoi cd            # open a shell in the source tree
 Editing a file in `~` directly does not update the repository. Either use
 `chezmoi edit`, or edit in place and run `chezmoi re-add`.
 
+`chezmoi edit` only works on files that have a copy in `~`, because it takes a
+target path and looks up its source. The files that drive everything else here
+have no target at all: `.chezmoidata/*.toml`, `.chezmoiignore`,
+`.chezmoiexternal.toml` and `.chezmoiremove` are read by chezmoi and never
+deployed, so `chezmoi edit` reports them as not managed. Reach them through the
+source tree:
+
+```sh
+chezmoi cd                                              # then edit normally
+$EDITOR "$(chezmoi source-path)/.chezmoidata/machines.toml"
+chezmoi edit-config-template                            # the one exception
+```
+
 ## Themes
 
 Light and dark used to be two long-lived branches, `main` and `theme/light`,
