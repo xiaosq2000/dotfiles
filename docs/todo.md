@@ -37,32 +37,26 @@ exactly the intended result.
 
 ## Needs you
 
-### Finish the secrets migration
+### Clean up after the deleted API tokens
 
-Encryption works; two pieces of it are unbuilt.
+The chezmoi half of the secrets migration is finished. The age key reached imrl
+and sicc on 2026-09-19 by scp, rather than by repeating the `rbw register` dance
+on each, and `~/.ssh/config` is managed on all three machines now; `chezmoi
+status` is empty on both remotes. One thing to know if this is ever repeated:
+`chezmoi` is not on `PATH` over a non-interactive ssh, so the apply has to name
+it, `ssh imrl '~/.pixi/bin/chezmoi apply'`.
 
-- **rbw on imrl and sicc.** The key is fetchable here but neither remote has rbw
-  set up, so both still run without a key and leave `~/.ssh/config` unmanaged.
-  Either repeat the `rbw register` dance there, or just copy the key across,
-  which takes one command per machine:
+The 15-host `~/.secrets/ssh/config` was read against the managed one and
+deliberately not merged back. Only `id_ed25519` exists on this machine, so every
+`IdentityFile ~/.ssh/id_rsa` in it was already dead, and `vps-dmit-root` names a
+key directory that is gone. One entry was worth keeping and was added by hand:
+`workstation-imrl`, which reaches this machine through the reverse tunnel
+`nat-traversal@1.service` holds open on imrl's `127.0.0.1:28080`.
 
-  ```sh
-  ssh imrl 'mkdir -p ~/.config/chezmoi && cat > ~/.config/chezmoi/key.txt && chmod 600 ~/.config/chezmoi/key.txt' < ~/.config/chezmoi/key.txt
-  ssh imrl 'chezmoi apply'
-  ```
-
-  The second line is what makes `.ssh/config` managed there; nothing else
-  changes.
-
-- **`~/.secrets/ssh/config` has 15 hosts; the encrypted `~/.ssh/config` has 4.**
-  They differ, and reconciling them is its own small job. Worth doing before
-  anything else in `~/.secrets` moves.
-
-The API tokens are no longer part of this. `~/.secrets/env` held ten of them,
-seven LLM keys plus two GitHub tokens and a prefix.dev token, all outdated; it
-was deleted on 2026-09-19 and nothing sourced it, so no shell behaviour changed.
-`~/.secrets` never existed on imrl or sicc, so there was nothing to remove
-there.
+`~/.secrets/env` held ten API tokens, seven LLM keys plus two GitHub tokens and
+a prefix.dev token, all outdated; it was deleted on 2026-09-19 and nothing
+sourced it, so no shell behaviour changed. `~/.secrets` never existed on imrl or
+sicc, so there was nothing to remove there.
 
 Two things that deletion did **not** do, both still open:
 
