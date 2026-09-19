@@ -203,7 +203,10 @@ jobs:
           grep -q 'rose-pine-main' "$nvim_theme"
           grep -q 'rose-pine/neovim' "$nvim_theme"
           grep -q 'include rose-pine$' "$HOME/.config/zathura/zathurarc"
-          test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine.toml"
+          # starship.toml was a symlink into the fork until 2026-09-19. It is a
+          # rendered file now, so the variant shows in the palette it selects.
+          test ! -L "$HOME/.config/starship.toml"
+          grep -q '^palette = "rose-pine"$' "$HOME/.config/starship.toml"
 
           # The fetched theme files go to a fixed name, so the configs that
           # read them never mention a variant.
@@ -217,13 +220,14 @@ jobs:
           "$HOME/.local/bin/theme" rose-pine-dawn
           grep -q 'rose-pine-dawn' "$nvim_theme"
           grep -q 'include rose-pine-dawn$' "$HOME/.config/zathura/zathurarc"
-          test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine-dawn.toml"
+          grep -q '^palette = "rose-pine-dawn"$' "$HOME/.config/starship.toml"
           chezmoi verify
 
       # Catppuccin is the second scheme, and the one that proves a scheme is
-      # data rather than a special case. It also has no starship port, so the
-      # switch has to leave that file unmanaged instead of pointing it at a
-      # directory nothing checked out.
+      # data rather than a special case. It had no starship port while the
+      # prompt came from a checkout; now that the prompt renders from theme
+      # data it has one like any other, so starship.toml stays managed across
+      # the switch and only the palette it selects changes.
       - name: A second colour scheme needs no new template
         run: |
           set -eux
@@ -234,13 +238,14 @@ jobs:
           grep -q 'catppuccin/nvim' "$nvim_theme"
           grep -q 'include catppuccin-mocha$' "$HOME/.config/zathura/zathurarc"
           grep -q '1e1e2e' "$HOME/.config/btop/themes/current.theme"
-          test "$(chezmoi managed | grep -c '^\.config/starship\.toml$')" -eq 0
+          test "$(chezmoi managed | grep -c '^\.config/starship\.toml$')" -eq 1
+          grep -q '^palette = "catppuccin-mocha"$' "$HOME/.config/starship.toml"
           chezmoi verify
 
-          # And back, which has to restore starship to managed.
+          # And back.
           "$HOME/.local/bin/theme" rose-pine
           test "$(chezmoi managed | grep -c '^\.config/starship\.toml$')" -eq 1
-          test "$(readlink "$HOME/.config/starship.toml")" = "themes/rose-pine/starship/rose-pine.toml"
+          grep -q '^palette = "rose-pine"$' "$HOME/.config/starship.toml"
           chezmoi verify
 
       # Both of these have to be driven by a stored config rather than by
