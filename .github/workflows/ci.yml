@@ -288,6 +288,7 @@ jobs:
           set -eux
           src="$HOME/.local/share/chezmoi"
           data="$src/.chezmoidata/secrets.toml"
+          cp "$data" /tmp/secrets.toml.orig
 
           render() {
             chezmoi execute-template --init \
@@ -314,7 +315,11 @@ jobs:
           dat=$(grep -n '^\[data\]$' /tmp/cfg-on.toml | cut -d: -f1)
           test "$enc" -lt "$dat"
 
-          git -C "$src" checkout .chezmoidata/secrets.toml
+          # Restored with a copy rather than `git checkout`: the source is a
+          # `cp -a` of the checkout, so its ownership does not match the
+          # container user and git refuses to work in it at all. Later steps
+          # need the real recipient back, so this cannot just be skipped.
+          cp /tmp/secrets.toml.orig "$data"
 
       # Same TOML hazard as the encryption block, in a second file. sicc is the
       # only machine that sets both a relocated channel index and detached
