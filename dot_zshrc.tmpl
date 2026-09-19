@@ -163,7 +163,7 @@ prepend_env PATH "${HOME}/.pixi/bin" # Add pixi to PATH first
 # of shell rc files, which leaves a dangling `&&` that swallows the next
 # statement. All the file does is put ~/.cargo/bin on PATH. Appending rather
 # than prepending also keeps pixi's copies in front of any cargo-installed one.
-type append_env >/dev/null 2>&1 && append_env PATH "$HOME/.cargo/bin"
+[ -d "$HOME/.cargo/bin" ] && type append_env >/dev/null 2>&1 && append_env PATH "$HOME/.cargo/bin"
 
 ################################################################################
 ################################### terminal ###################################
