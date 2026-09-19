@@ -2,10 +2,15 @@
 # dot_zshrc.tmpl in this tree, ~/.config/fcitx5 is
 # private_dot_config/private_fcitx5, and so on.
 
-# Machine-written files: dependency lockfiles, and the fcitx5 configs, which
-# the fcitx5 GUI rewrites without a trailing newline every time a setting
-# changes.
-exclude: (dot_config/nvim/lazy-lock.json|dot_opencode/package-lock.json|private_dot_config/private_fcitx5/)
+# Machine-written files: dependency lockfiles, the fcitx5 configs, which the
+# fcitx5 GUI rewrites without a trailing newline every time a setting changes,
+# and age ciphertext.
+#
+# The .age exclusion is defensive. The whitespace hooks left the first encrypted
+# file alone, but only because its armor happened to end in a newline with no
+# trailing spaces; a hook that "fixed" ciphertext would corrupt it, and the
+# damage would look like a lost key rather than an edit.
+exclude: (dot_config/nvim/lazy-lock.json|dot_opencode/package-lock.json|private_dot_config/private_fcitx5/|\.age$)
 default_install_hook_types:
   - pre-commit
   - commit-msg
