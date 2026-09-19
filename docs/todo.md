@@ -5,29 +5,35 @@ refactors were deployed to the workstation, imrl and sicc. Everything here needs
 a decision, a credential, or a moment when no job is running.
 
 Nothing here is required for any of the three machines to work; all three apply
-and verify clean as they are.
+and verify clean as they are. The one item with a real deadline is backing up
+the age key, because that risk grows the longer it waits.
 
 ## Needs you
 
-### Turn on encryption
+### Back up the age key
 
-The whole mechanism is in place and tested, but off: `.chezmoidata/secrets.toml`
-has an empty `ageRecipient`, so no `[age]` section is generated and there are no
-`encrypted_*` files yet. It stays off until someone creates a key, and creating
-the Bitwarden entry is the one step nothing can automate.
+One action, and it is the only genuinely urgent thing on this page.
 
-[docs/secrets.md](secrets.md) has the commands. About ten minutes, of which the
-fiddly part is that bitwarden.com needs `rbw register` with a personal API key
-before `rbw login` will work at all. The reason to
-bother: `~/.secrets` has no git remote, so the SSH config and the API tokens in
-it exist on exactly one disk.
+Make a Bitwarden item called `chezmoi age identity` whose password is the
+`AGE-SECRET-KEY-…` line from `~/.config/chezmoi/key.txt`. Web vault or app is
+fine; rbw is not needed for this.
 
-Afterwards, two things move into the repository as ciphertext:
+Everything else about encryption is done: the key exists, the recipient is
+recorded, `~/.ssh/config` is encrypted, and all three machines are deployed. But
+the key is on the workstation and nowhere else, so a dead disk loses every
+`encrypted_` file in this repository permanently.
 
-- `~/.ssh/config`, whose 15 hosts currently live in `~/.secrets/ssh/config`
-  while a 4-host copy sits at `~/.ssh/config`. They differ. Worth reconciling
-  before encrypting either.
-- `~/.secrets/env`, the API tokens.
+Two follow-ups, neither blocking:
+
+- Get `rbw` working so imrl and sicc fetch the key themselves rather than
+  waiting for you to copy it. bitwarden.com needs `rbw register` with a
+  personal API key before `rbw login` does anything, and the GNOME pinentry
+  will not let you switch windows to copy it; both are covered in
+  [docs/secrets.md](secrets.md).
+- Move `~/.secrets/env`, the API tokens, in the same way. The SSH config went
+  first because it was smaller. Note that `~/.secrets/ssh/config` has 15 hosts
+  and the encrypted `~/.ssh/config` has 4; they differ, and reconciling them is
+  its own small job.
 
 ### Reclaim the old package caches
 

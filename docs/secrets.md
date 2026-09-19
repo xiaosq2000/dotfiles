@@ -5,11 +5,25 @@ scheme is chezmoi's own: a file named `encrypted_*` is age ciphertext, chezmoi
 decrypts it on apply, and the private key is never committed. Bitwarden holds
 one copy of that key so a new machine can fetch it once.
 
-Nothing is encrypted yet. `.chezmoidata/secrets.toml` has an empty
-`ageRecipient`, which is the off state: the generated chezmoi config omits its
-`[age]` section entirely, so every machine applies normally without a key.
-[Turning it on](#turning-it-on) is a few commands, and the only one that needs
-you specifically is the Bitwarden entry.
+## Where this stands
+
+Encryption is on, since 2026-09-19.
+
+| | |
+| --- | --- |
+| Key created | done, `~/.config/chezmoi/key.txt` |
+| Recipient recorded | done, `age1ke4rf2j…` in `.chezmoidata/secrets.toml` |
+| `~/.ssh/config` encrypted | done, `private_dot_ssh/encrypted_private_config.age` |
+| Deployed to all three machines | done |
+| **Key backed up in Bitwarden** | **not yet** |
+
+**The one thing left is a second copy of the key.** It exists on the workstation
+and nowhere else, so a dead disk means every `encrypted_` file here is lost for
+good. Ciphertext without its key is just noise.
+
+imrl and sicc are fine meanwhile. They have no key, so `.chezmoiignore` leaves
+the encrypted entries unmanaged and both apply everything else in full. They
+pick up `~/.ssh/config` the moment the key arrives, with no other change.
 
 ## Why bother
 
@@ -39,12 +53,13 @@ A recipient can only encrypt, so publishing it costs nothing. `.chezmoiignore`
 lists `.config/chezmoi/key.txt` so a stray `chezmoi add` cannot pull the
 identity in.
 
-## Turning it on
+## The full procedure
 
-Do this on the machine you trust most. Every command was run against this
-repository in a sandbox before being written down.
+Kept for a new machine, for rotation, and because steps 2 and 3 are worth
+reading once. Steps 1, 3, 4 and 5 are already done; step 2 is the one still
+open.
 
-**1. Create the key.**
+**1. Create the key.** Done.
 
 ```sh
 mkdir -p ~/.config/chezmoi
@@ -55,7 +70,17 @@ age-keygen -y ~/.config/chezmoi/key.txt    # prints the recipient: age1...
 
 `age-keygen -o` also prints the public key, to stderr, when it creates the file.
 
-**2. Put the identity in Bitwarden.** This is the step nothing can do for you.
+**2. Put the identity in Bitwarden.** Still to do. This is the step nothing can
+do for you.
+
+You do not need rbw for this part. Open Bitwarden however you normally do, web
+vault or app, and make an item called `chezmoi age identity` whose password is
+the `AGE-SECRET-KEY-…` line from `~/.config/chezmoi/key.txt`. That alone is the
+backup, and it is the thing that matters.
+
+rbw is only for the second half: letting imrl and sicc fetch that item by
+themselves. Worth doing, not urgent, and it can wait for a day when fighting
+with an API key sounds appealing.
 
 First get rbw talking to the server. Against the official bitwarden.com this
 needs `rbw register` before `rbw login`, and skipping it fails in a way that
@@ -131,7 +156,7 @@ Over SSH this does not arise. sicc's default is already `pinentry-curses`, and
 imrl's `pinentry-gnome3` falls back to a terminal prompt with no display.
 
 **3. Record the recipient** in `.chezmoidata/secrets.toml`, then regenerate the
-chezmoi config so it grows an `[age]` section.
+chezmoi config so it grows an `[age]` section. Done.
 
 Doing this before the other machines have the key is safe. They warn on apply
 and carry on, because the identity fetcher never fails the run; only an
@@ -158,7 +183,7 @@ The same goes for `machines.toml`, `tools.toml`, the theme files,
 `.chezmoiignore`, `.chezmoiexternal.toml` and `.chezmoiremove`. `chezmoi cd`
 opens a shell where all of them are in front of you.
 
-**4. Move a secret in.** For the SSH config:
+**4. Move a secret in.** Done for the SSH config:
 
 ```sh
 chezmoi add --encrypt ~/.ssh/config
@@ -174,8 +199,8 @@ git mv dot_ssh/encrypted_private_config.age private_dot_ssh/
 rmdir dot_ssh
 ```
 
-**5. Commit and push.** The ciphertext is meant to be published. Before pushing,
-confirm that is all you are publishing:
+**5. Commit and push.** Committed; not pushed. The ciphertext is meant to be
+published. Before pushing, confirm that is all you are publishing:
 
 ```sh
 git status --short
