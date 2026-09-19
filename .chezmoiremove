@@ -151,6 +151,19 @@
 #
 # Unconditional: this is a clean break on every machine. The checkout was made
 # by an external rather than by hand, and the upstream is a public repository.
+#
+# Like the starship checkout below, this stops a non-interactive apply dead:
+#
+#   .config/themes/rose-pine/gnome-terminal has changed since chezmoi last
+#   wrote it?
+#   chezmoi: could not open a new TTY: open /dev/tty: no such device
+#
+# chezmoi asks before removing a path that drifted, and a git checkout has
+# always drifted, because pulling is what the external did. Over ssh there is
+# no TTY to answer with, and chezmoi aborts rather than skips, so every target
+# sorting after it is left untouched. Remove it by hand first:
+#
+#   rm -rf ~/.config/themes/rose-pine/gnome-terminal && chezmoi apply
 ################################################################################
 
 .config/themes/rose-pine/gnome-terminal
