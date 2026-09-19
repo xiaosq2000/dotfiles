@@ -79,6 +79,24 @@ alias -- ....='cd ../../..'
 
 unsetopt beep
 
+# The rest of what oh-my-zsh set globally, from lib/misc.zsh and
+# lib/theme-and-appearance.zsh.
+#
+# interactive_comments is the one that bites. Without it zsh has no comments on
+# the command line, so pasting a documented command that ends in `# explanation`
+# passes every word of the explanation as an argument, and the failure names the
+# program rather than the paste:
+#
+#     $ age-keygen -y ~/.config/chezmoi/key.txt    # prints the recipient
+#     age-keygen: error: too many arguments
+#
+# It is also what makes pasting a multi-line snippet with comments work at all.
+setopt interactive_comments   # `#` starts a comment on the command line
+setopt multios                # allow `echo >file1 >file2`
+setopt long_list_jobs         # the long format for job notifications
+setopt pushdminus             # `cd -2` counts from the top of the stack
+setopt prompt_subst           # expand variables inside PROMPT; starship wants it
+
 # web-search was an oh-my-zsh plugin, and `alias s=` above is the only caller.
 # Its implementation needed two more oh-my-zsh library functions; this needs
 # none. The opener's output is discarded rather than backgrounded with a bare &,
@@ -371,6 +389,16 @@ unset _zcompdump
 zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]-_}={[:upper:][:lower:]_-}'
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
+
+# How completion feels, from oh-my-zsh's lib/completion.zsh. These are habits
+# rather than settings: dropping them changes what half-typed words and the tab
+# key do, in ways that read as the shell misbehaving.
+WORDCHARS=''                  # word motions stop at punctuation
+setopt auto_menu              # a second tab opens the completion menu
+setopt complete_in_word       # complete from where the cursor is, not the end
+setopt always_to_end          # and move the cursor to the end afterwards
+unsetopt menu_complete        # do not insert the first match automatically
+unsetopt flowcontrol          # ^S and ^Q are not freeze and unfreeze
 
 # fzf-tab's list-colors zstyle above reads LS_COLORS, which oh-my-zsh's
 # lib/theme-and-appearance.zsh used to populate. Without it, completion lists

@@ -50,7 +50,7 @@ jobs:
       - name: Install prerequisites
         run: |
           apt-get update
-          apt-get install -y curl git unzip ca-certificates
+          apt-get install -y curl git unzip ca-certificates zsh
 
       - uses: actions/checkout@v4
 
@@ -138,9 +138,51 @@ jobs:
           grep -q 'autoload -Uz compinit' "$HOME/.zshrc"
           grep -q "alias -- ..='cd ..'" "$HOME/.zshrc"
           grep -q 'web_search()' "$HOME/.zshrc"
-          # A real zsh parses it. zsh is not a prerequisite of this repository,
-          # so only check when the runner has one.
-          if command -v zsh >/dev/null 2>&1; then zsh -n "$HOME/.zshrc"; fi
+          # A real zsh parses it.
+          zsh -n "$HOME/.zshrc"
+
+      # Everything oh-my-zsh used to set as a side effect of being sourced.
+      # Dropping the framework dropped these with it, and the failures do not
+      # look like a shell misconfiguration: without interactive_comments,
+      # pasting a documented command that ends in `# explanation` passes every
+      # word of the explanation as an argument, and the error names the program.
+      #
+      # Checked twice over. The greps catch a line being deleted from the
+      # source; the live check catches it being set somewhere that does not take
+      # effect, which greps cannot see.
+      - name: The shell options oh-my-zsh used to provide
+        run: |
+          set -eu
+          for opt in interactive_comments multios long_list_jobs pushdminus \
+                     prompt_subst auto_menu complete_in_word always_to_end \
+                     auto_cd auto_pushd pushd_ignore_dups extended_history \
+                     share_history hist_verify hist_ignore_space; do
+            grep -qE "^setopt ${opt}( |$)" "$HOME/.zshrc" || {
+              echo "setopt $opt is missing from .zshrc" >&2; exit 1; }
+          done
+          for opt in menu_complete flowcontrol beep; do
+            grep -qE "^unsetopt ${opt}( |$)" "$HOME/.zshrc" || {
+              echo "unsetopt $opt is missing from .zshrc" >&2; exit 1; }
+          done
+          grep -q "^WORDCHARS=''" "$HOME/.zshrc"
+
+          # And assert them in a shell that has actually read the file. The
+          # timeout is because a hung interactive shell would otherwise run to
+          # the job limit.
+          timeout 120 zsh -ic '
+            for o in interactive_comments multios long_list_jobs pushdminus \
+                     prompt_subst auto_menu complete_in_word always_to_end; do
+              [[ -o $o ]] || { print -u2 "option $o is off"; exit 1 }
+            done
+            for o in menu_complete flowcontrol; do
+              [[ -o $o ]] && { print -u2 "option $o is on"; exit 1 }
+            done
+            [[ -z $WORDCHARS ]] || { print -u2 "WORDCHARS is not empty"; exit 1 }
+            print "shell options ok"
+          '
+
+          # The paste that found this: a trailing comment must be a comment.
+          test "$(timeout 60 zsh -ic 'echo ok # trailing comment' 2>/dev/null | tail -1)" = ok
 
       - name: Theme renders and switches
         run: |
