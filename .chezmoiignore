@@ -25,6 +25,20 @@ docs
 # and that mistake is unrecoverable once pushed.
 .secrets
 
+# lazy.nvim's lockfile. It cannot be one shared file: lazy rewrites it whenever
+# a machine updates its plugins, and the plugin set is theme-dependent, so a
+# machine on a Rosé Pine variant has no catppuccin entry at all. Managing it
+# meant `chezmoi apply` downgraded a machine's plugins and `re-add` pushed one
+# machine's theme-specific lock onto the rest.
+#
+# It also broke non-interactive applies outright. chezmoi prompts before
+# overwriting a target that drifted, and over ssh there is no TTY, so
+# `chezmoi update` on imrl aborted with "could not open a new TTY" and left
+# every target sorting after it untouched.
+#
+# lazy regenerates it per machine, which is where the pinning belongs.
+.config/nvim/lazy-lock.json
+
 # Everything under .pixi except the global manifest: the environments are
 # gigabytes of solved packages that `pixi global sync` rebuilds from
 # .pixi/manifests/pixi-global.toml.

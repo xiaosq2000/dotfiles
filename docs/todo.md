@@ -39,24 +39,6 @@ consequences:
 
 Deploying the vps is optional; it unblocks nothing below.
 
-### One unidentified SSH key on the vps
-
-`SHA256:HxIi+ZEG…`, ED25519, no comment. It is none of the four known machines —
-workstation `zPCFuuvT…`, laptop `INNXSS…`, imrl `gwe82I…`, sicc `k66dPAM…` — and
-it has not authenticated in the 18 days the vps journal covers, which is not
-long enough to call it dead.
-
-Left in place. Identify it or remove it deliberately; the vps is how everything
-else is reached, so it is not worth guessing at.
-
-imrl's `authorized_keys` is done: the retired ThinkStation RSA key
-`SHA256:Ug0uDt6u…` was removed on 2026-09-19, its private half having been
-destroyed with the `~/.secrets` history purge. A backup sits at
-`~/.ssh/authorized_keys.bak-2026-09-19` on imrl. The remaining RSA key there is
-commented `mona` — a colleague's machine, and theirs to keep.
-
-`authorized_keys` is unmanaged and per-machine by design.
-
 ## Blocked on the laptop
 
 The laptop is being handled by hand, off this machine. Until it has run
@@ -99,19 +81,6 @@ a gigabyte of fonts. `gitHubLatestReleaseAssetURL` would do most of the work.
 
 Fonts are installed on the workstation despite the flag being false; they came
 from elsewhere and nothing removes them.
-
-### lazy-lock.json is managed but cannot match every machine
-
-`~/.config/nvim/lazy-lock.json` is deployed by chezmoi, so it drifts on any
-machine whose plugins have been updated — imrl is drifting now. Worse, it is
-theme-dependent: a machine on a Rosé Pine variant has no `catppuccin` entry,
-because that plugin is only installed for a Catppuccin scheme, so the lockfile
-cannot be the same file everywhere.
-
-`chezmoi apply` downgrades that machine's plugins; `chezmoi re-add` pushes one
-machine's theme-specific lock onto all of them. Either add it to
-`.chezmoiignore` and let lazy manage it per machine, or stop pinning and drop
-the file.
 
 ### Mason installs language servers per machine
 
