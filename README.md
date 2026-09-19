@@ -1,18 +1,9 @@
 # dotfiles
 
 Managed with [chezmoi](https://www.chezmoi.io/). This repository is the chezmoi
-*source* tree, so the files here carry chezmoi's naming: `dot_zshrc.tmpl`
-becomes `~/.zshrc`, `private_dot_config/` becomes `~/.config` with mode 0700,
-and `executable_` marks a file that is installed with the executable bit set.
-
-## Prerequisites
-
-- `curl`, `git`, `unzip`
-- A [Nerd Font](https://www.nerdfonts.com/) installed and enabled in your terminal.
-
-`zsh` is *not* a prerequisite. On a machine without it, and without root to
-install it, `pixi global install zsh` puts it in your home directory. See
-[CAVEATS.md](dot_sh_utils/CAVEATS.md).
+*source* tree, so files here carry chezmoi's naming: `dot_zshrc.tmpl` becomes
+`~/.zshrc`, `private_dot_config/` becomes `~/.config` with mode 0700,
+`executable_` sets the executable bit, and `encrypted_` is age ciphertext.
 
 ## Install
 
@@ -23,56 +14,59 @@ install it, `pixi global install zsh` puts it in your home directory. See
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply xiaosq2000
 ```
 
-`init` asks two questions, and `chezmoi init` records the answers in
-`~/.config/chezmoi/chezmoi.toml` so they are never asked again:
+Needs `curl`, `git`, `unzip` and a [Nerd Font](https://www.nerdfonts.com/)
+enabled in your terminal. `zsh` is not a prerequisite; without root,
+`pixi global install zsh` puts one in your home directory — see
+[CAVEATS.md](dot_sh_utils/CAVEATS.md) for that and the other shell-setup
+constraints.
 
-| prompt    | meaning                                                                             |
-| --------- | ----------------------------------------------------------------------------------- |
-| `machine` | which entry of [.chezmoidata/machines.toml](.chezmoidata/machines.toml) describes this host |
-| `theme`   | `main`, `moon` or `dawn` — see [.chezmoidata/themes.toml](.chezmoidata/themes.toml)  |
+`init` asks two questions and records the answers in
+`~/.config/chezmoi/chezmoi.toml`, so they are never asked again:
+
+| prompt    | value |
+| --------- | ----- |
+| `machine` | an entry of [.chezmoidata/machines.toml](.chezmoidata/machines.toml) |
+| `theme`   | `rose-pine`, `rose-pine-moon`, `rose-pine-dawn`, `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha` |
 
 `machine` defaults to whichever entry's `hostnamePattern` matches, so on a known
-host you can press enter. To answer up front, for a container or a script:
+host press enter. To answer up front, for a container, a script, or a host with
+no pattern:
 
 ```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply \
+chezmoi init --apply \
     --promptString machine=workstation \
     --promptString theme=rose-pine \
     xiaosq2000
 ```
 
-A machine that is not in the table yet can start as `generic`, which installs a
-working shell and assumes nothing else.
+A machine not in the table yet can start as `generic`: a working shell, nothing
+else assumed.
 
 ## Day to day
 
 ```sh
 chezmoi diff          # what would change
 chezmoi apply         # make ~ match this repo
+chezmoi update        # pull, then apply
 chezmoi edit ~/.zshrc # edit the source of a file, not the copy in ~
 chezmoi cd            # open a shell in the source tree
 ```
 
-Editing a file in `~` directly does not update the repository. Either use
-`chezmoi edit`, or edit in place and run `chezmoi re-add`.
+Editing a file in `~` does not update the repository. Use `chezmoi edit`, or
+edit in place and run `chezmoi re-add`.
 
-`chezmoi edit` only works on files that have a copy in `~`, because it takes a
-target path and looks up its source. The files that drive everything else here
-have no target at all: `.chezmoidata/*.toml`, `.chezmoiignore`,
-`.chezmoiexternal.toml` and `.chezmoiremove` are read by chezmoi and never
-deployed, so `chezmoi edit` reports them as not managed. Reach them through the
+`chezmoi edit` takes a target path, so it cannot reach the files that have no
+target: `.chezmoidata/*.toml`, `.chezmoiignore`, `.chezmoiexternal.toml` and
+`.chezmoiremove` are read by chezmoi and never deployed. Reach them through the
 source tree:
 
 ```sh
 chezmoi cd                                              # then edit normally
 $EDITOR "$(chezmoi source-path)/.chezmoidata/machines.toml"
-chezmoi edit-config-template                            # the one exception
+chezmoi edit-config-template                            # the config template
 ```
 
 ## Themes
-
-Light and dark used to be two long-lived branches, `main` and `theme/light`,
-which had to be kept in step by hand and drifted anyway. They are now one value:
 
 ```sh
 theme                          # current variant, and the alternatives
@@ -81,95 +75,79 @@ theme --dry-run catppuccin-mocha
 ```
 
 One switch covers btop, kitty, alacritty, Neovim, zathura, fzf and starship.
+Variants use the slug upstream uses.
 
-Variants are named after the slug upstream uses, so `rose-pine-moon` rather than
-`moon`. Each colour scheme is one file,
-[.chezmoidata/themes-rose-pine.toml](.chezmoidata/themes-rose-pine.toml) and
-[.chezmoidata/themes-catppuccin.toml](.chezmoidata/themes-catppuccin.toml), and
-chezmoi merges them, so adding a scheme means adding a file and editing nothing.
-Each file holds two things:
+Each colour scheme is one file —
+[themes-rose-pine.toml](.chezmoidata/themes-rose-pine.toml),
+[themes-catppuccin.toml](.chezmoidata/themes-catppuccin.toml) — and chezmoi
+merges them, so adding a scheme means adding a file and editing nothing. Each
+holds:
 
-- `[schemes.<name>]` — where the theme files come from and which Neovim plugin
-  provides them. Selecting a Catppuccin variant installs `catppuccin/nvim`, not
-  just a different colorscheme name.
+- `[schemes.<name>]` — where theme files come from, and which Neovim plugin
+  provides them.
 - `[themes.<slug>]` — the token each tool uses for that variant, its
   `appearance` (`light` or `dark`), and its fzf and starship palettes.
 
-The tokens are per tool because they have to be. Catppuccin's btop theme is
-`catppuccin_mocha`, its kitty theme is `mocha`, and its alacritty theme is
-`catppuccin-mocha`.
+Tokens are per tool because upstreams disagree: Catppuccin Mocha is
+`catppuccin_mocha` to btop, `mocha` to kitty and `catppuccin-mocha` to
+alacritty.
 
-Theme files are fetched, not vendored, and always to a fixed name:
+Theme files are fetched to a fixed name —
 `~/.config/btop/themes/current.theme`,
 `~/.config/alacritty/current-theme.toml`,
-`~/.config/kitty/current-theme.conf`. Vendoring meant one committed copy per
-variant per tool, which is how the dark kitty copy came to have white and
-bright-white set to Dawn's foreground.
-
-Not every tool can be fetched, though. Starship has no include mechanism — a
-config is a single file and a palette cannot be imported from another — so
+`~/.config/kitty/current-theme.conf` — so nothing is vendored per variant.
+Starship is the exception: it has no include mechanism, so
 `~/.config/starship.toml` is rendered from
 [a template](private_dot_config/starship.toml.tmpl) with the palette inlined
-from `[themes.<slug>.starship]`. That replaced a personal fork holding one
-committed config per Rosé Pine variant, three files of the same 177 lines
-differing in seven hex values, which is why Catppuccin had no prompt until now.
-The seven colours are named for their role rather than their scheme, so the one
-template serves both.
+from `[themes.<slug>.starship]`.
 
-`appearance` is what a tool with no port for a scheme falls back on, and the
-only field every variant is guaranteed to have.
+`appearance` is the fallback for a tool with no port for a scheme, and the one
+field every variant has.
 
 To restyle another tool, add a key to each scheme file and reference it from
-that tool's template. Do not hard-code a variant name in a config file: zathura
-had `include rose-pine-dawn` written into `zathurarc`, and so sat on the light
-theme no matter what the rest of the machine was set to.
+that tool's template. Never hard-code a variant name in a config file.
 
 ## Installed tools
 
-Tools come from pixi, in named bundles.
-[.chezmoidata/tools.toml](.chezmoidata/tools.toml) says which packages each
-bundle contains, and each machine selects the bundles it wants. A shared login
-node takes `core`, `dev-py`, `ml` and `secrets`; a workstation takes everything.
+Tools come from pixi in named bundles.
+[.chezmoidata/tools.toml](.chezmoidata/tools.toml) defines the bundles; each
+machine selects the ones it wants:
 
-`~/.pixi/manifests/pixi-global.toml` is **generated** from those two files, so:
+| bundle | contents |
+| --- | --- |
+| `core` | shell, editor, navigation — every machine, including a login node |
+| `dev-c` `dev-py` `dev-web` `dev-tex` | per-language build and format tooling |
+| `lsp` | language servers and the binaries Neovim's plugins call |
+| `media` | audio, video and image conversion |
+| `ml` | model and dataset transfer |
+| `secrets` | age, sops, Bitwarden client |
+| `extras` | convenience and diagnostics; nothing load-bearing |
 
-```sh
-# add a package to the right bundle in .chezmoidata/tools.toml, then
-chezmoi apply
-```
+`~/.pixi/manifests/pixi-global.toml` is **generated** from `tools.toml` and
+`machines.toml`, so add a package to a bundle and run `chezmoi apply`. A
+`pixi global install` by hand is undone by the next apply.
 
-`pixi global install <package>` still works, and the next `chezmoi apply` still
-undoes it. This is a deliberate trade: the install used to *be* the edit, which
-was pleasant and gave every machine the same 34 environments, ffmpeg and a
-60-binary clang-tools among them, on an HPC login node included.
+`pixi global sync` makes a machine match the manifest exactly, so dropping a
+bundle from a machine uninstalls its tools.
 
-`pixi global sync` makes a machine match the manifest exactly, so removing a
-bundle from a machine uninstalls its tools and reclaims the space.
-
-Each package gets its own environment, and `exposed` is listed explicitly in
-`tools.toml`. Both matter: one environment per bundle would make a single
-dependency conflict break every tool in it, and omitting `exposed` installs an
-environment while linking none of its binaries. Several conda-forge packages
-also ship a whole runtime beside the tool you wanted, so exposing everything
-would put `node`, `openssl`, `python3.14`, `tclsh` and `wish` on `PATH`.
+Each package gets its own environment, and `exposed` is listed explicitly, so
+one dependency conflict cannot break a whole bundle and conda-forge runtimes
+(`node`, `openssl`, `python3.14`, `tclsh`, `wish`) stay off `PATH`.
 
 ## Secrets
 
-This repository is public, so anything secret in it is age ciphertext: a file
-named `encrypted_*` is decrypted on apply, and the key is never committed.
-Bitwarden holds one copy of the key so a new machine can fetch it once.
+This repository is public, so anything secret in it is age ciphertext:
+`encrypted_*` is decrypted on apply and the key is never committed.
 
-It is currently **off**. `.chezmoidata/secrets.toml` has an empty
-`ageRecipient`, so the generated config has no `[age]` section and every machine
-applies without a key. [docs/secrets.md](docs/secrets.md) has the design and the
-commands to turn it on.
+Encryption is **on**. `.chezmoidata/secrets.toml` holds the recipient; the
+identity lives at `~/.config/chezmoi/key.txt`, with a copy in Bitwarden so a new
+machine can fetch it once. [docs/secrets.md](docs/secrets.md) has the design and
+the commands.
 
-The plaintext half is already done:
-[.chezmoidata/machines.toml](.chezmoidata/machines.toml) is the machine
-inventory, in the clear, because bundles, roles and filesystem layout are not
-secrets. Addresses, account names and tokens are.
+[.chezmoidata/machines.toml](.chezmoidata/machines.toml) is deliberately in the
+clear: bundles, roles and filesystem layout are not secrets. Addresses, account
+names and tokens are.
 
 ## Outstanding
 
-[docs/todo.md](docs/todo.md), which separates what needs a credential or a
-decision from what is merely worth doing.
+[docs/todo.md](docs/todo.md).
