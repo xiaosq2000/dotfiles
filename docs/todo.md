@@ -12,69 +12,37 @@ whatever order appeals.
 
 ## Needs you
 
-### Reclaim the old package caches
+### Rebuild the workspace environments at the new path
 
-The one item that needs no thought: two commands, 49 GB.
+This is now the largest reclaimable thing left, and the numbers are bigger than
+this page previously said.
 
-Both remotes now keep their rattler cache off the constrained filesystem, via a
-symbolic link. The previous cache was renamed aside rather than deleted, so the
-space is not back yet.
+`detached-environments` points at a roomy filesystem on both remotes, but pixi
+neither migrates nor removes environments installed at the old path, so every
+workspace that was installed before the migration still has a `.pixi/envs`
+beside it on the constrained filesystem:
 
-| Machine | Old cache, safe to delete | Size |
+| Machine | Old-path environments | Where |
 | --- | --- | --- |
-| imrl | `~/.cache/rattler.premigration-20260918233443` | 31 GB |
-| sicc | `~/.cache/rattler.premigration-20260918153555` | 18 GB |
+| imrl | 12 GB | `~/Projects/vlm_toolkit/.pixi/envs` |
+| imrl | 6 GB | `~/Projects/vlm-nav/.pixi/envs` |
+| sicc | 1.2 GB | `~/Projects/embodied-ai/.pixi` |
 
 ```sh
-ssh imrl 'rm -rf ~/.cache/rattler.premigration-*'
-ssh sicc 'rm -rf ~/.cache/rattler.premigration-*'
+cd <workspace> && pixi install     # rebuilds at the new location
+rm -rf <workspace>/.pixi/envs      # then reclaim the old one
 ```
 
-Both directories were still there on 2026-09-19.
+On sicc, do it when no job is running.
 
-imrl's contents were copied to the new location first, so deleting costs
-nothing. sicc's were not: the copy was running at about 1.5 MB/s over NFS, which
-put 18 GB at several hours, and only 1.5 GB had moved when it was stopped. The
-cache is regenerable, so deleting the rest costs re-downloading packages the
-next time an environment wants them, from a login node that reaches conda-forge
-directly. That was the cheaper trade than an hours-long copy; the eight packages
-sicc actually needed installed fine.
-
-### Rebuild sicc's workspace environments
-
-`detached-environments` now points at `/data/huikong/shuqixiao/pixi/envs`, and
-pixi neither migrates nor removes environments installed at the old path. On
-sicc that is 1.2 GB under `~/Projects/embodied-ai/.pixi`:
-
-```sh
-cd ~/Projects/embodied-ai && pixi install     # rebuilds at the new location
-rm -rf ~/Projects/embodied-ai/.pixi/envs      # then reclaim the old one
-```
-
-Do it when no job is running. imrl had no workspace environments at all, so
-there is nothing to redo there.
-
-### Push to GitHub
-
-Twenty commits sit on this workstation's `main` and nowhere else, which is the
-same single-disk problem the age key had. `main` has no upstream set, so the
-first push wants `-u`:
-
-```sh
-git -C ~/.local/share/chezmoi push -u origin main
-```
-
-One thing to settle before you do, because a push is hard to take back:
-`.chezmoidata/machines.toml` names `/data/huikong/shuqixiao` and imrl's mount
-UUID, and the repository is public. They are there because a relocated cache is
-a property of the machine and has to be readable before any key exists.
-Plaintext inventory was the explicit decision; this is the one part of it that
-names infrastructure rather than roles. Neither is a credential, and neither is
-reachable from outside the university network.
-
-If you would rather not publish them: move the two `[machines.*.pixi]` tables
-into an encrypted file and read it with `include`, which costs the ability to
-relocate a cache on a machine that has no key yet.
+An earlier version of this page said imrl had no workspace environments. It has
+18 GB of them, and that error hid a second one: deleting imrl's 31 GB cache on
+2026-09-19 freed only 5 GB of the root filesystem. rattler hardlinks package
+files out of the cache into each environment, so unlinking the cache copy drops
+one link and the blocks stay alive through the environments that still point at
+them. The space comes back when those environments are rebuilt on the other
+filesystem, not before. Nothing is wrong meanwhile; the environments work, they
+have simply stopped sharing blocks with any cache.
 
 ### Finish the secrets migration
 
