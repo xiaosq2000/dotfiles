@@ -15,15 +15,15 @@ Encryption is on, since 2026-09-19.
 | Recipient recorded | done, `age1ke4rf2j…` in `.chezmoidata/secrets.toml` |
 | `~/.ssh/config` encrypted | done, `private_dot_ssh/encrypted_private_config.age` |
 | Deployed to all three machines | done |
-| **Key backed up in Bitwarden** | **not yet** |
+| Key backed up in Bitwarden | done, item `chezmoi age identity`, verified 2026-09-19 |
 
-**The one thing left is a second copy of the key.** It exists on the workstation
-and nowhere else, so a dead disk means every `encrypted_` file here is lost for
-good. Ciphertext without its key is just noise.
+Verified rather than assumed: `rbw get "chezmoi age identity" | age-keygen -y`
+prints `age1ke4rf2j…`, the same recipient this repository encrypts to. A backup
+that has not been read back is a hope, not a backup.
 
-imrl and sicc are fine meanwhile. They have no key, so `.chezmoiignore` leaves
-the encrypted entries unmanaged and both apply everything else in full. They
-pick up `~/.ssh/config` the moment the key arrives, with no other change.
+imrl and sicc still carry no key, and that is fine. `.chezmoiignore` leaves the
+encrypted entries unmanaged there and both apply everything else in full. They
+pick up `~/.ssh/config` the moment a key arrives, with no other change.
 
 ## Why bother
 
@@ -55,9 +55,9 @@ identity in.
 
 ## The full procedure
 
-Kept for a new machine, for rotation, and because steps 2 and 3 are worth
-reading once. Steps 1, 3, 4 and 5 are already done; step 2 is the one still
-open.
+All five steps are done on the workstation. This is kept for a new machine, for
+rotation, and because the rbw notes in step 2 are worth having written down
+somewhere.
 
 **1. Create the key.** Done.
 
@@ -70,17 +70,14 @@ age-keygen -y ~/.config/chezmoi/key.txt    # prints the recipient: age1...
 
 `age-keygen -o` also prints the public key, to stderr, when it creates the file.
 
-**2. Put the identity in Bitwarden.** Still to do. This is the step nothing can
-do for you.
+**2. Put the identity in Bitwarden.** Done, via rbw.
 
-You do not need rbw for this part. Open Bitwarden however you normally do, web
-vault or app, and make an item called `chezmoi age identity` whose password is
-the `AGE-SECRET-KEY-…` line from `~/.config/chezmoi/key.txt`. That alone is the
-backup, and it is the thing that matters.
+The backup itself needs no tooling: an item called `chezmoi age identity` whose
+password is the `AGE-SECRET-KEY-…` line from `~/.config/chezmoi/key.txt`, made
+in the web vault or the app, is the whole thing.
 
-rbw is only for the second half: letting imrl and sicc fetch that item by
-themselves. Worth doing, not urgent, and it can wait for a day when fighting
-with an API key sounds appealing.
+rbw buys the second half, which is a machine fetching that item by itself, and
+it is now working here. imrl and sicc do not have it set up yet.
 
 First get rbw talking to the server. Against the official bitwarden.com this
 needs `rbw register` before `rbw login`, and skipping it fails in a way that

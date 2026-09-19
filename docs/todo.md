@@ -1,41 +1,20 @@
 # Outstanding work
 
 Written 2026-09-18, after the machine-layer, bundles, theme, shell and secrets
-refactors were deployed to the workstation, imrl and sicc. Everything here needs
-a decision, a credential, or a moment when no job is running.
+refactors were deployed to the workstation, imrl and sicc. Pruned as things
+land. Everything here needs a decision, a credential, or a moment when no job is
+running.
 
 Nothing here is required for any of the three machines to work; all three apply
-and verify clean as they are. The one item with a real deadline is backing up
-the age key, because that risk grows the longer it waits.
+and verify clean as they are. Encryption is finished end to end, key backed up
+and read back, so nothing on this page carries urgency any more. Work down it in
+whatever order appeals.
 
 ## Needs you
 
-### Back up the age key
-
-One action, and it is the only genuinely urgent thing on this page.
-
-Make a Bitwarden item called `chezmoi age identity` whose password is the
-`AGE-SECRET-KEY-…` line from `~/.config/chezmoi/key.txt`. Web vault or app is
-fine; rbw is not needed for this.
-
-Everything else about encryption is done: the key exists, the recipient is
-recorded, `~/.ssh/config` is encrypted, and all three machines are deployed. But
-the key is on the workstation and nowhere else, so a dead disk loses every
-`encrypted_` file in this repository permanently.
-
-Two follow-ups, neither blocking:
-
-- Get `rbw` working so imrl and sicc fetch the key themselves rather than
-  waiting for you to copy it. bitwarden.com needs `rbw register` with a
-  personal API key before `rbw login` does anything, and the GNOME pinentry
-  will not let you switch windows to copy it; both are covered in
-  [docs/secrets.md](secrets.md).
-- Move `~/.secrets/env`, the API tokens, in the same way. The SSH config went
-  first because it was smaller. Note that `~/.secrets/ssh/config` has 15 hosts
-  and the encrypted `~/.ssh/config` has 4; they differ, and reconciling them is
-  its own small job.
-
 ### Reclaim the old package caches
+
+The one item that needs no thought: two commands, 49 GB.
 
 Both remotes now keep their rattler cache off the constrained filesystem, via a
 symbolic link. The previous cache was renamed aside rather than deleted, so the
@@ -47,8 +26,11 @@ space is not back yet.
 | sicc | `~/.cache/rattler.premigration-20260918153555` | 18 GB |
 
 ```sh
-rm -rf ~/.cache/rattler.premigration-*
+ssh imrl 'rm -rf ~/.cache/rattler.premigration-*'
+ssh sicc 'rm -rf ~/.cache/rattler.premigration-*'
 ```
+
+Both directories were still there on 2026-09-19.
 
 imrl's contents were copied to the new location first, so deleting costs
 nothing. sicc's were not: the copy was running at about 1.5 MB/s over NFS, which
@@ -72,6 +54,49 @@ rm -rf ~/Projects/embodied-ai/.pixi/envs      # then reclaim the old one
 Do it when no job is running. imrl had no workspace environments at all, so
 there is nothing to redo there.
 
+### Push to GitHub
+
+Twenty commits sit on this workstation's `main` and nowhere else, which is the
+same single-disk problem the age key had. `main` has no upstream set, so the
+first push wants `-u`:
+
+```sh
+git -C ~/.local/share/chezmoi push -u origin main
+```
+
+One thing to settle before you do, because a push is hard to take back:
+`.chezmoidata/machines.toml` names `/data/huikong/shuqixiao` and imrl's mount
+UUID, and the repository is public. They are there because a relocated cache is
+a property of the machine and has to be readable before any key exists.
+Plaintext inventory was the explicit decision; this is the one part of it that
+names infrastructure rather than roles. Neither is a credential, and neither is
+reachable from outside the university network.
+
+If you would rather not publish them: move the two `[machines.*.pixi]` tables
+into an encrypted file and read it with `include`, which costs the ability to
+relocate a cache on a machine that has no key yet.
+
+### Finish the secrets migration
+
+Encryption works; two pieces of it are unbuilt.
+
+- **rbw on imrl and sicc.** The key is fetchable here but neither remote has rbw
+  set up, so both still run without a key and leave `~/.ssh/config` unmanaged.
+  Either repeat the `rbw register` dance there, or just copy the key across,
+  which takes one command per machine:
+
+  ```sh
+  ssh imrl 'mkdir -p ~/.config/chezmoi && cat > ~/.config/chezmoi/key.txt && chmod 600 ~/.config/chezmoi/key.txt' < ~/.config/chezmoi/key.txt
+  ssh imrl 'chezmoi apply'
+  ```
+
+  The second line is what makes `.ssh/config` managed there; nothing else
+  changes.
+
+- **`~/.secrets/env`, the API tokens.** The SSH config went first because it was
+  smaller. Note that `~/.secrets/ssh/config` has 15 hosts and the encrypted
+  `~/.ssh/config` has 4; they differ, and reconciling them is its own small job.
+
 ### Decide whether imrl and sicc still need a Rust toolchain
 
 Both carry a full rustup: 1.8 GB on imrl, 2.0 GB on sicc. Their machine entries
@@ -82,18 +107,6 @@ and after the cleanup the only cargo-installed tool left on either is
 So the toolchain is being kept for one small CLI tool and whatever Rust you
 might write there. If neither, `rustup self uninstall` reclaims about 2 GB per
 machine, and `tre` goes with it.
-
-### Decide whether the university paths should stay in the clear
-
-`.chezmoidata/machines.toml` names `/data/huikong/shuqixiao` and imrl's mount
-UUID, in a public repository. They are there because a relocated cache is a
-property of the machine and has to be readable before any key exists. Plaintext
-inventory was the explicit decision, and this is the one part of it that names
-infrastructure rather than roles.
-
-If you would rather not publish them: move the two `[machines.*.pixi]` tables
-into an encrypted file and read it with `include`, which costs the ability to
-relocate a cache on a machine that has no key yet.
 
 ## Worth doing, nobody is blocked
 
