@@ -153,20 +153,18 @@ machine name has to be given by hand at init:
 chezmoi init --apply --promptString machine=vps --promptString theme=rose-pine-dawn xiaosq2000
 ```
 
-### One duplicate left
+### Every duplicate is gone
 
-`pre-commit` is installed twice: once from the `core` bundle and once as a uv
-tool at `~/.local/share/uv/tools/pre-commit`. This is the one case
-`.chezmoiremove` deliberately leaves alone, because the copy in `~/.local/bin`
-is a shim into the tool's own virtual environment and deleting it would leave uv
-still believing the tool is installed.
+`pre-commit` was the last one, installed twice: once from the `core` bundle and
+once as a uv tool. The uv copy was 4.6.1 against the bundle's 4.6.2, and already
+shadowed, since `~/.pixi/bin` precedes `~/.local/bin` on `PATH` — fifteen
+megabytes that did nothing except wait to become the wrong version if that
+order ever changed. `uv tool uninstall pre-commit` on 2026-09-19 removed both
+the tool and its `~/.local/bin` shim; nothing pinned that path. `nvitop` and
+`doc-sync` remain uv tools and should, conda-forge packages neither.
 
-```sh
-uv tool uninstall pre-commit
-```
-
-All the other duplicates deployment turned up are gone: cargo's `starship`,
-`eza`, `tree-sitter` and `taplo`, and stale `~/.local/bin` copies of `starship`,
-`difft`, `lazygit`, `lazydocker`, `hf`, `nvim` and `uv`. Every tool on all three
-machines now resolves to `~/.pixi/bin`, which is what makes the manifest an
-accurate description of the machine rather than an aspiration.
+Before it went: cargo's `starship`, `eza`, `tree-sitter` and `taplo`, and stale
+`~/.local/bin` copies of `starship`, `difft`, `lazygit`, `lazydocker`, `hf`,
+`nvim` and `uv`. Every tool on all three machines now resolves to `~/.pixi/bin`,
+which is what makes the manifest an accurate description of the machine rather
+than an aspiration.
