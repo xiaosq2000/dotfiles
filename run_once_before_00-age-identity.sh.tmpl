@@ -14,9 +14,17 @@
 #   rbw get {{ .secrets.bitwardenItem | quote }} > ~/.config/chezmoi/key.txt
 #   chmod 600 ~/.config/chezmoi/key.txt
 #
-# This script is a no-op when the identity is already present, and when no
-# recipient is configured, so it costs nothing on a machine that is set up or on
-# one where encryption is off.
+# It never fails the apply. It runs `before`, so a non-zero exit would abort
+# everything before chezmoi had written a single file, and a machine with no key
+# would be unable to apply the ninety-odd files that are not encrypted. Every
+# failure here is a warning and exit 0; the encrypted files then fail
+# individually, with chezmoi naming the file it could not decrypt, which is the
+# right granularity. This was not the original behaviour: recording a recipient
+# bricked `chezmoi apply` on every machine that did not yet have the key.
+#
+# It is also a no-op when the identity is already present, and when no recipient
+# is configured, so it costs nothing on a machine that is set up or on one where
+# encryption is off.
 #
 # recipient: {{ .secrets.ageRecipient }}
 
@@ -37,9 +45,11 @@ if [ -f "$IDENTITY" ]; then
 fi
 
 note() { printf 'age-identity: %s\n' "$*"; }
-fail() {
+# Warn and let the apply continue; see the note at the top.
+give_up() {
     printf 'age-identity: %s\n' "$*" >&2
-    exit 1
+    printf 'age-identity: continuing; encrypted files will not apply until the key is here\n' >&2
+    exit 0
 }
 
 resolve() {
@@ -53,7 +63,7 @@ resolve() {
 RBW="$(resolve rbw)"
 AGE_KEYGEN="$(resolve age-keygen)"
 
-[ -n "$RBW" ] || fail "rbw not found; it comes from the secrets bundle in .chezmoidata/tools.toml"
+[ -n "$RBW" ] || give_up "rbw not found; it comes from the secrets bundle in .chezmoidata/tools.toml"
 
 # A locked vault cannot be unlocked here. chezmoi runs this from a temporary
 # file with no terminal of its own, so rbw's passphrase prompt would have
@@ -67,7 +77,8 @@ if ! "$RBW" unlocked >/dev/null 2>&1; then
     printf 'age-identity: first time on this machine, register and log in first:\n' >&2
     printf 'age-identity:   rbw config set email <your-address>\n' >&2
     printf 'age-identity:   rbw login\n' >&2
-    exit 1
+    printf 'age-identity: continuing; encrypted files will not apply until the key is here\n' >&2
+    exit 0
 fi
 
 note "fetching the identity from Bitwarden entry '$ITEM'"
@@ -77,15 +88,15 @@ tmp="$(mktemp "${IDENTITY}.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 
 if [ -n "$FIELD" ]; then
-    "$RBW" get --field "$FIELD" "$ITEM" >"$tmp" || fail "could not read field '$FIELD' of '$ITEM'"
+    "$RBW" get --field "$FIELD" "$ITEM" >"$tmp" || give_up "could not read field '$FIELD' of '$ITEM'"
 else
-    "$RBW" get "$ITEM" >"$tmp" || fail "could not read '$ITEM'"
+    "$RBW" get "$ITEM" >"$tmp" || give_up "could not read '$ITEM'"
 fi
 
-[ -s "$tmp" ] || fail "'$ITEM' gave an empty value"
+[ -s "$tmp" ] || give_up "'$ITEM' gave an empty value"
 
 grep -q '^AGE-SECRET-KEY-' "$tmp" ||
-    fail "'$ITEM' does not contain a line starting with AGE-SECRET-KEY-; see docs/secrets.md"
+    give_up "'$ITEM' does not contain a line starting with AGE-SECRET-KEY-; see docs/secrets.md"
 
 # Check the key is the right one before installing it. Fetching the wrong entry
 # would otherwise surface later as an unhelpful age failure on some unrelated
@@ -93,7 +104,7 @@ grep -q '^AGE-SECRET-KEY-' "$tmp" ||
 if [ -n "$AGE_KEYGEN" ]; then
     got="$("$AGE_KEYGEN" -y "$tmp" 2>/dev/null || true)"
     if [ -n "$got" ] && [ "$got" != "$RECIPIENT" ]; then
-        fail "the key in '$ITEM' is for $got, but this repository encrypts to $RECIPIENT"
+        give_up "the key in '$ITEM' is for $got, but this repository encrypts to $RECIPIENT"
     fi
 fi
 

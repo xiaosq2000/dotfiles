@@ -319,3 +319,26 @@ jobs:
           chezmoi execute-template \
             < "$src/private_dot_config/pixi/config.toml.tmpl" > /tmp/pixi-container.toml
           ! grep -qE '^[a-z[]' /tmp/pixi-container.toml
+
+      # Recording a recipient must not brick a machine that has no key yet.
+      # The identity fetcher runs `before`, so a non-zero exit there aborts the
+      # apply before chezmoi writes anything, and the ninety-odd unencrypted
+      # files never land. It warns and continues instead; only the encrypted
+      # files fail, individually, with chezmoi naming the one it could not read.
+      - name: A machine with no key still applies everything else
+        run: |
+          set -eux
+          src="$HOME/.local/share/chezmoi"
+          sed -i 's/^ageRecipient = ""/ageRecipient = "age1ci0000000000000000000000000000000000000000000000000000"/' \
+            "$src/.chezmoidata/secrets.toml"
+          rm -f "$HOME/.config/chezmoi/key.txt"
+
+          chezmoi init --apply --promptString machine=container --promptString theme=rose-pine
+          chezmoi verify
+
+          test -f "$HOME/.zshrc"
+          test -f "$HOME/.config/sheldon/plugins.toml"
+          test -x "$HOME/.local/bin/theme"
+          test ! -f "$HOME/.config/chezmoi/key.txt"
+
+          git -C "$src" checkout .chezmoidata/secrets.toml

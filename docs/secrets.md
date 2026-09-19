@@ -75,7 +75,13 @@ rbw get "chezmoi age identity" | head -c 20    # AGE-SECRET-KEY-1...
 ```
 
 **3. Record the recipient** in `.chezmoidata/secrets.toml`, then regenerate the
-chezmoi config so it grows an `[age]` section:
+chezmoi config so it grows an `[age]` section.
+
+Doing this before the other machines have the key is safe. They warn on apply
+and carry on, because the identity fetcher never fails the run; only an
+encrypted file would fail, and there are none until step 4. So the order that
+matters is: recipient and key distribution before the first `encrypted_` file
+is committed, not before this step.
 
 ```sh
 chezmoi edit .chezmoidata/secrets.toml   # set ageRecipient = "age1..."
@@ -159,9 +165,13 @@ the first is recognised. The second is not an error: chezmoi treats the file as
 unmanaged and silently writes nothing, so the target never appears and there is
 no message saying why.
 
-**A missing identity fails the apply, it does not skip the file.** chezmoi
-writes nothing for that entry, which is the behaviour you want; there is no path
-where a secret lands as plaintext or an empty file.
+**A missing identity fails that file, not the whole apply.** chezmoi writes
+nothing for the encrypted entry, which is the behaviour you want: there is no
+path where a secret lands as plaintext or an empty file. Everything else still
+applies, because `run_once_before_00-age-identity.sh` warns rather than exiting
+non-zero. It did exit non-zero at first, and that aborted the apply before a
+single file was written, which would have left a keyless machine unable to
+update anything at all.
 
 **`chezmoi add` resolves its source directory from whichever config it finds.**
 Running it with an unexpected `HOME` or `XDG_CONFIG_HOME` writes the new entry
