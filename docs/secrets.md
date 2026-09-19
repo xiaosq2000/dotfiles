@@ -98,9 +98,37 @@ Check it comes back:
 rbw get "chezmoi age identity" | head -c 20    # AGE-SECRET-KEY-1...
 ```
 
-rbw prompts through pinentry, which all three machines have. imrl's default is
-`pinentry-gnome3` and falls back to a terminal prompt over SSH; if it ever does
-not, `rbw config set pinentry pinentry-curses` on that machine settles it.
+> **The GNOME prompt will not let you go and fetch the secret.**
+>
+> rbw prompts through pinentry, and on a desktop `/usr/bin/pinentry` resolves to
+> `pinentry-gnome3`, which uses GNOME's GCR system prompt. That prompt takes a
+> keyboard and pointer grab for as long as it is open, deliberately, so that
+> nothing else can read what you type. The effect during `rbw register` is that
+> you cannot switch to the browser to copy the `client_secret`, which looks like
+> the clipboard refusing to hold it. The clipboard is fine: whatever was copied
+> before the dialog opened still pastes in with Ctrl+V.
+>
+> pinentry-gnome3 does accept `OPTION no-grab`, but rbw never sends it, so the
+> grab cannot be turned off from rbw's side. Move rbw to the terminal prompt
+> instead:
+>
+> ```sh
+> rbw config set pinentry pinentry-curses
+> rbw stop-agent
+> rbw register
+> ```
+>
+> `rbw stop-agent` is not optional. The running agent holds the pinentry choice,
+> so without it the GNOME dialog comes back. Paste into the terminal with
+> Ctrl+Shift+V in kitty, and set it back to `pinentry-gnome3` afterwards if you
+> prefer a graphical prompt for day-to-day unlocking.
+>
+> There is no way round the prompt entirely: rbw 1.15 reads the API key from
+> neither an environment variable nor a file. On Wayland, keep the browser open
+> after copying, because the clipboard needs its source window alive.
+
+Over SSH this does not arise. sicc's default is already `pinentry-curses`, and
+imrl's `pinentry-gnome3` falls back to a terminal prompt with no display.
 
 **3. Record the recipient** in `.chezmoidata/secrets.toml`, then regenerate the
 chezmoi config so it grows an `[age]` section.
