@@ -7,8 +7,10 @@ running.
 
 Nothing here is required for any of the three machines to work. Encryption is
 finished end to end, key backed up and read back; the caches and pre-migration
-environments are reclaimed; the twenty commits are pushed. Nothing on this page
-carries urgency any more, so work down it in whatever order appeals.
+environments are reclaimed; everything is pushed, `chezmoi status` is empty on
+all three machines, and CI is green again after a day red on assertions that
+had outlived what they described. Nothing on this page carries urgency any
+more, so work down it in whatever order appeals.
 
 The disk reclamation of 2026-09-19, for the record, because the numbers were
 not what the plan predicted:
@@ -75,10 +77,10 @@ Two things that deletion did **not** do, both still open:
 
 ### Decide whether imrl and sicc still need a Rust toolchain
 
-Both carry a full rustup: 1.8 GB on imrl, 2.0 GB on sicc. Their machine entries
-say `rust = false`, meaning this repository will not install or maintain one,
-and after the cleanup the only cargo-installed tool left on either is
-`tre-command`, which conda-forge does not package.
+Both carry a full rustup: 1.3 GB on imrl, 1.5 GB on sicc, remeasured 2026-09-19.
+Their machine entries say `rust = false`, meaning this repository will not
+install or maintain one, and after the cleanup the only cargo-installed tool
+left on either is `tre-command`, which conda-forge does not package.
 
 So the toolchain is being kept for one small CLI tool and whatever Rust you
 might write there. If neither, `rustup self uninstall` reclaims about 2 GB per
@@ -138,6 +140,10 @@ where it lives:
 - `run_onchange_before_01-stale-externals.sh`, which removes git-submodule
   remnants. Needs laptop and vps to have applied.
 - Most blocks in `.chezmoiremove`. Each names the machines still outstanding.
+
+The starship fork checkout that `.chezmoiremove` deletes is gone from all
+three now, so the TTY stall it causes over ssh is only ahead of the two
+machines below, not behind anyone.
 
 Workstation, imrl and sicc are done, all three deployed and verified on
 2026-09-18. Laptop and vps are not, and the vps has no `hostnamePattern`, so its
