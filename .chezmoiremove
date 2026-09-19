@@ -140,3 +140,25 @@
 
 {{ if stat (joinPath .chezmoi.homeDir ".local/share/sheldon/plugins.lock") }}.oh-my-zsh
 {{ end }}
+
+################################################################################
+# 2026-09-19: the starship fork checkout
+#
+# ~/.config/starship.toml was a symlink into a clone of
+# github.com/xiaosq2000/starship, which carried one committed config per Rosé
+# Pine variant. The prompt is now rendered by
+# private_dot_config/starship.toml.tmpl from the palette in .chezmoidata, so the
+# clone has no reader and Catppuccin variants get a prompt for the first time.
+#
+# Unconditional, unlike the blocks above, because nothing is lost: the fork is
+# a public repository on GitHub and this checkout was created by
+# .chezmoiexternal.toml rather than by hand. The sibling gnome-terminal
+# checkout under the same themes/rose-pine directory is still an external and
+# is deliberately not listed.
+#
+# chezmoi replaces the old symlink with the rendered file on its own; it is not
+# listed here, because removing a path it also manages would delete and
+# recreate the prompt config on every apply.
+################################################################################
+
+.config/themes/rose-pine/starship

@@ -42,6 +42,13 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash .github/scripts/check-tool-bundles.sh
 
+  theme-data:
+    name: every theme variant is complete
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-theme-palettes.sh
+
   bootstrap:
     name: bootstrap in a clean container
     runs-on: ubuntu-latest

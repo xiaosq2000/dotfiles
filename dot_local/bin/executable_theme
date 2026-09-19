@@ -49,14 +49,14 @@ usage() {
     printf 'usage: theme [--dry-run] <variant>\n\n'
     printf 'current: %s\n\n' "${current:-unknown}"
     printf 'available:\n'
-    # Grouped by scheme, with the tools each variant actually covers, because
-    # coverage is uneven: a scheme with no starship configs leaves the prompt on
-    # starship's own defaults rather than failing, and that is worth seeing
-    # before you switch rather than after.
+    # Grouped by scheme. Every variant covers every tool since starship stopped
+    # depending on a per-scheme checkout, but the list stays printed: it is the
+    # answer to "what will actually change if I switch", and the next scheme
+    # added could reintroduce a gap.
     data '{{ range $scheme, $s := .schemes }}
   {{ $scheme }} — {{ $s.description }}
 {{ range $name, $t := $.themes }}{{ if eq $t.scheme $scheme }}    {{ if eq $name $.theme }}*{{ else }} {{ end }} {{ printf "%-22s" $name }} {{ printf "%-5s" $t.appearance }}  {{ $t.description }}
-      covers: btop kitty alacritty nvim zathura fzf{{ if $s.starshipDir }} starship{{ else }} (no starship port){{ end }}
+      covers: btop kitty alacritty nvim zathura fzf starship
 {{ end }}{{ end }}{{ end }}'
 }
 

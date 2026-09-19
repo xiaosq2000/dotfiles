@@ -93,7 +93,7 @@ Each file holds two things:
   provides them. Selecting a Catppuccin variant installs `catppuccin/nvim`, not
   just a different colorscheme name.
 - `[themes.<slug>]` — the token each tool uses for that variant, its
-  `appearance` (`light` or `dark`), and its fzf palette.
+  `appearance` (`light` or `dark`), and its fzf and starship palettes.
 
 The tokens are per tool because they have to be. Catppuccin's btop theme is
 `catppuccin_mocha`, its kitty theme is `mocha`, and its alacritty theme is
@@ -106,11 +106,18 @@ Theme files are fetched, not vendored, and always to a fixed name:
 variant per tool, which is how the dark kitty copy came to have white and
 bright-white set to Dawn's foreground.
 
-Coverage is uneven and `theme` says so. The starship configs come from a
-personal fork that only carries Rosé Pine, so a Catppuccin variant leaves
-`~/.config/starship.toml` unmanaged. `appearance` is what a tool with no port
-for a scheme can fall back on, and the only field every variant is guaranteed
-to have.
+Not every tool can be fetched, though. Starship has no include mechanism — a
+config is a single file and a palette cannot be imported from another — so
+`~/.config/starship.toml` is rendered from
+[a template](private_dot_config/starship.toml.tmpl) with the palette inlined
+from `[themes.<slug>.starship]`. That replaced a personal fork holding one
+committed config per Rosé Pine variant, three files of the same 177 lines
+differing in seven hex values, which is why Catppuccin had no prompt until now.
+The seven colours are named for their role rather than their scheme, so the one
+template serves both.
+
+`appearance` is what a tool with no port for a scheme falls back on, and the
+only field every variant is guaranteed to have.
 
 To restyle another tool, add a key to each scheme file and reference it from
 that tool's template. Do not hard-code a variant name in a config file: zathura

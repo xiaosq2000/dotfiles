@@ -14,10 +14,11 @@
 #   nvim       catppuccin-mocha
 #   zathura    catppuccin-mocha    the files already in this repository
 #
-# Coverage is honest rather than complete. Starship has no entry, because the
-# starship configs come from a personal fork that only carries Rosé Pine, so
-# selecting a Catppuccin variant leaves ~/.config/starship.toml unmanaged and
-# starship uses its own defaults. `theme` prints which tools a variant covers.
+# Coverage is complete as of 2026-09-19. Starship was the one gap: its configs
+# used to come from a personal fork carrying only Rosé Pine, so a Catppuccin
+# variant left ~/.config/starship.toml unmanaged. The prompt is now rendered
+# from the [themes.<slug>.starship] palettes below, so every variant covers
+# every tool and `theme` no longer has to warn about a missing port.
 #
 # The fzf palettes are Catppuccin's own fzf port rather than a reading of the
 # base palette, so they match what the scheme's authors intended.
@@ -29,8 +30,6 @@ kittyURL = "https://raw.githubusercontent.com/catppuccin/kitty/main/themes/%s.co
 alacrittyURL = "https://raw.githubusercontent.com/catppuccin/alacritty/main/%s.toml"
 nvimRepo = "catppuccin/nvim"
 nvimName = "catppuccin"
-# No starship port in the fork this repository checks out.
-starshipDir = ""
 
 [themes.catppuccin-mocha]
 scheme = "catppuccin"
@@ -41,8 +40,16 @@ kitty = "mocha"
 kittyName = "Catppuccin Mocha"
 alacritty = "catppuccin-mocha"
 nvim = "catppuccin-mocha"
-starship = ""
 zathura = "catppuccin-mocha"
+
+[themes.catppuccin-mocha.starship]
+surface = "#313244"   # the chip background every module sits on
+error = "#f38ba8"   # git deletions, and anything gone wrong
+warn = "#f9e2af"   # git untracked, modified and staged counts
+accent = "#f5e0dc"   # clock, container, commits behind
+lang = "#89b4fa"   # directory and every language version
+vcs = "#94e2d5"   # git branch and commits ahead
+primary = "#cba6f7"   # user, host, and the prompt arrow
 
 [themes.catppuccin-mocha.fzf]
 fg = "#cdd6f4"
@@ -69,8 +76,16 @@ kitty = "macchiato"
 kittyName = "Catppuccin Macchiato"
 alacritty = "catppuccin-macchiato"
 nvim = "catppuccin-macchiato"
-starship = ""
 zathura = "catppuccin-macchiato"
+
+[themes.catppuccin-macchiato.starship]
+surface = "#363a4f"   # the chip background every module sits on
+error = "#ed8796"   # git deletions, and anything gone wrong
+warn = "#eed49f"   # git untracked, modified and staged counts
+accent = "#f4dbd6"   # clock, container, commits behind
+lang = "#8aadf4"   # directory and every language version
+vcs = "#8bd5ca"   # git branch and commits ahead
+primary = "#c6a0f6"   # user, host, and the prompt arrow
 
 [themes.catppuccin-macchiato.fzf]
 fg = "#cad3f5"
@@ -97,8 +112,16 @@ kitty = "frappe"
 kittyName = "Catppuccin Frappé"
 alacritty = "catppuccin-frappe"
 nvim = "catppuccin-frappe"
-starship = ""
 zathura = "catppuccin-frappe"
+
+[themes.catppuccin-frappe.starship]
+surface = "#414559"   # the chip background every module sits on
+error = "#e78284"   # git deletions, and anything gone wrong
+warn = "#e5c890"   # git untracked, modified and staged counts
+accent = "#f2d5cf"   # clock, container, commits behind
+lang = "#8caaee"   # directory and every language version
+vcs = "#81c8be"   # git branch and commits ahead
+primary = "#ca9ee6"   # user, host, and the prompt arrow
 
 [themes.catppuccin-frappe.fzf]
 fg = "#c6d0f5"
@@ -125,8 +148,16 @@ kitty = "latte"
 kittyName = "Catppuccin Latte"
 alacritty = "catppuccin-latte"
 nvim = "catppuccin-latte"
-starship = ""
 zathura = "catppuccin-latte"
+
+[themes.catppuccin-latte.starship]
+surface = "#ccd0da"   # the chip background every module sits on
+error = "#d20f39"   # git deletions, and anything gone wrong
+warn = "#df8e1d"   # git untracked, modified and staged counts
+accent = "#dc8a78"   # clock, container, commits behind
+lang = "#1e66f5"   # directory and every language version
+vcs = "#179299"   # git branch and commits ahead
+primary = "#8839ef"   # user, host, and the prompt arrow
 
 [themes.catppuccin-latte.fzf]
 fg = "#4c4f69"

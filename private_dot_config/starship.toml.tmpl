@@ -1,0 +1,200 @@
+{{- $t := index .themes .theme -}}
+{{- $s := index .schemes $t.scheme -}}
+{{- /*
+Starship's prompt, rendered from theme data rather than checked out per scheme.
+
+This was a symlink into a personal fork holding one committed config per Rosé
+Pine variant. Those three files were the same 177 lines and differed only in the
+palette name, seven hex values, and one line that keeps the branch readable on a
+light background. Catppuccin would have meant four more copies of the same
+thing, and the scheme after that another four, so the layout lives here once and
+the colours live in .chezmoidata beside the fzf palettes they already sit next
+to.
+
+Starship has no include mechanism: a config is a single file and a palette
+cannot be imported from another one, so the palette has to be inlined. That is
+precisely the job templating does.
+
+Adding a scheme is now adding [themes.<slug>.starship] with seven roles. No
+fork, no external, no per-variant file, and .chezmoiignore no longer withholds
+this file from schemes that lack a port, because none do.
+
+Scheme: {{ $s.description }}
+Variant: {{ .theme }} — {{ $t.description }} ({{ $t.appearance }})
+*/ -}}
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$hostname\
+$container\
+$username\
+$directory\
+$git_branch\
+$git_status\
+$fill\
+$c\
+$elixir\
+$elm\
+$golang\
+$haskell\
+$java\
+$julia\
+$nodejs\
+$nim\
+$rust\
+$scala\
+$conda\
+$python\
+$time\n  \
+[󱞪](fg:primary) \
+"""
+
+palette = "{{ .theme }}"
+
+# Rendered from [themes.{{ .theme }}.starship] in .chezmoidata. Every colour the
+# config below names is named for its role, never for a scheme, which is what
+# lets one template serve Rosé Pine and Catppuccin alike.
+[palettes.{{ .theme }}]
+{{ range $role := list "surface" "error" "warn" "accent" "lang" "vcs" "primary" -}}
+{{ $role }} = {{ index $t.starship $role | quote }}
+{{ end }}
+[directory]
+format = "[](fg:surface)[ $path ]($style)[](fg:surface) "
+style = "bg:surface fg:lang"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+Documents = "󰈙"
+Downloads = " "
+Music = " "
+Pictures = " "
+
+[fill]
+style = "fg:surface"
+symbol = " "
+
+[git_branch]
+format = "[](fg:surface)[ $symbol $branch ]($style)[](fg:surface) "
+# vcs is a pale cyan in every scheme here; it vanishes on a light chip.
+style = "bg:surface fg:{{ if eq $t.appearance "light" }}lang{{ else }}vcs{{ end }}"
+symbol = ""
+
+[git_status]
+disabled = false
+style = "bg:surface fg:error"
+format = '[](fg:surface)([$all_status$ahead_behind]($style))[](fg:surface) '
+up_to_date = '[ ✓ ](bg:surface fg:primary)'
+untracked = '[?\($count\)](bg:surface fg:warn)'
+stashed = '[\$](bg:surface fg:primary)'
+modified = '[!\($count\)](bg:surface fg:warn)'
+renamed = '[»\($count\)](bg:surface fg:primary)'
+deleted = '[✘\($count\)](style)'
+staged = '[++\($count\)](bg:surface fg:warn)'
+ahead = '[⇡\(${count}\)](bg:surface fg:vcs)'
+diverged = '⇕[\[](bg:surface fg:primary)[⇡\(${ahead_count}\)](bg:surface fg:vcs)[⇣\(${behind_count}\)](bg:surface fg:accent)[\]](bg:surface fg:primary)'
+behind = '[⇣\(${count}\)](bg:surface fg:accent)'
+
+[time]
+disabled = false
+format = " [](fg:surface)[ $time 󰴈 ]($style)[](fg:surface)"
+style = "bg:surface fg:accent"
+time_format = "%I:%M%P"
+use_12hr = true
+
+[username]
+disabled = false
+format = "[](fg:surface)[ 󰧱 $user ]($style)[](fg:surface) "
+show_always = true
+style_root = "bg:surface fg:primary"
+style_user = "bg:surface fg:primary"
+
+[hostname]
+ssh_only = true
+ssh_symbol = "󰒋"
+format = "[](fg:surface)[ $ssh_symbol $hostname ]($style)($style)[](fg:surface) "
+style = "bg:surface fg:primary"
+
+[container]
+format = "[](fg:surface)[ $symbol $name ]($style)[](fg:surface) "
+style = "bg:surface fg:accent"
+
+# Languages
+
+[c]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[elixir]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[elm]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[golang]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[haskell]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[java]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[julia]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[nodejs]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = "󰎙 "
+
+[nim]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = "󰆥 "
+
+[rust]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[scala]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = " "
+
+[python]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$version ]($style)[](fg:surface)"
+disabled = false
+symbol = ' '
+
+[conda]
+style = "bg:surface fg:lang"
+format = " [](fg:surface)[ $symbol$environment ]($style)[](fg:surface)"
+disabled = false
+symbol = '🅒 '

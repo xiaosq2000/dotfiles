@@ -34,9 +34,6 @@ alacrittyURL = "https://raw.githubusercontent.com/rose-pine/alacritty/main/dist/
 # not always the repository's basename.
 nvimRepo = "rose-pine/neovim"
 nvimName = "rose-pine"
-# Starship configs come from a fork checked out by .chezmoiexternal.toml. Only
-# this scheme has them; see the note on the catppuccin file.
-starshipDir = "themes/rose-pine/starship"
 
 [themes.rose-pine]
 scheme = "rose-pine"
@@ -49,8 +46,16 @@ alacritty = "rose-pine"
 # The rose-pine.nvim plugin registers both rose-pine and rose-pine-main for the
 # dark original. Spelling it out keeps every variant's value the same shape.
 nvim = "rose-pine-main"
-starship = "rose-pine"
 zathura = "rose-pine"
+
+[themes.rose-pine.starship]
+surface = "#26233a"   # the chip background every module sits on
+error = "#eb6f92"   # git deletions, and anything gone wrong
+warn = "#f6c177"   # git untracked, modified and staged counts
+accent = "#ebbcba"   # clock, container, commits behind
+lang = "#31748f"   # directory and every language version
+vcs = "#9ccfd8"   # git branch and commits ahead
+primary = "#c4a7e7"   # user, host, and the prompt arrow
 
 [themes.rose-pine.fzf]
 fg = "#908caa"
@@ -77,8 +82,16 @@ kitty = "rose-pine-moon"
 kittyName = "Rosé Pine Moon"
 alacritty = "rose-pine-moon"
 nvim = "rose-pine-moon"
-starship = "rose-pine-moon"
 zathura = "rose-pine-moon"
+
+[themes.rose-pine-moon.starship]
+surface = "#393552"   # the chip background every module sits on
+error = "#eb6f92"   # git deletions, and anything gone wrong
+warn = "#f6c177"   # git untracked, modified and staged counts
+accent = "#ea9a97"   # clock, container, commits behind
+lang = "#3e8fb0"   # directory and every language version
+vcs = "#9ccfd8"   # git branch and commits ahead
+primary = "#c4a7e7"   # user, host, and the prompt arrow
 
 [themes.rose-pine-moon.fzf]
 fg = "#908caa"
@@ -105,8 +118,16 @@ kitty = "rose-pine-dawn"
 kittyName = "Rosé Pine Dawn"
 alacritty = "rose-pine-dawn"
 nvim = "rose-pine-dawn"
-starship = "rose-pine-dawn"
 zathura = "rose-pine-dawn"
+
+[themes.rose-pine-dawn.starship]
+surface = "#f2e9e1"   # the chip background every module sits on
+error = "#b4637a"   # git deletions, and anything gone wrong
+warn = "#ea9d34"   # git untracked, modified and staged counts
+accent = "#d7827e"   # clock, container, commits behind
+lang = "#286983"   # directory and every language version
+vcs = "#56949f"   # git branch and commits ahead
+primary = "#907aa9"   # user, host, and the prompt arrow
 
 [themes.rose-pine-dawn.fzf]
 fg = "#797593"

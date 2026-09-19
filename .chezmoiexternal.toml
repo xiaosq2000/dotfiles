@@ -38,16 +38,10 @@ type = "file"
 url = {{ printf $s.alacrittyURL $t.alacritty | quote }}
 refreshPeriod = "672h"
 
-{{ if $s.starshipDir -}}
-# Starship prompt configs, one file per variant, from a personal fork. Only
-# Rosé Pine has them, so this block is absent for a scheme that does not, and
-# .chezmoiignore then leaves ~/.config/starship.toml unmanaged rather than
-# pointing it at a file that was never checked out.
-[".config/{{ $s.starshipDir }}"]
-type = "git-repo"
-url = "https://github.com/xiaosq2000/starship"
-refreshPeriod = "672h"
-{{ end }}
+# No starship entry. The prompt is rendered by
+# private_dot_config/starship.toml.tmpl from the palette in .chezmoidata, so
+# there is nothing to check out and no scheme that can be missing a port.
+
 # Not yet theme-aware: the checkout is Rosé Pine only, and nothing loads its
 # template.dconf into dconf. See docs/todo.md.
 [".config/themes/rose-pine/gnome-terminal"]
