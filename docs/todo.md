@@ -61,9 +61,30 @@ Encryption works; two pieces of it are unbuilt.
   The second line is what makes `.ssh/config` managed there; nothing else
   changes.
 
-- **`~/.secrets/env`, the API tokens.** The SSH config went first because it was
-  smaller. Note that `~/.secrets/ssh/config` has 15 hosts and the encrypted
-  `~/.ssh/config` has 4; they differ, and reconciling them is its own small job.
+- **`~/.secrets/ssh/config` has 15 hosts; the encrypted `~/.ssh/config` has 4.**
+  They differ, and reconciling them is its own small job. Worth doing before
+  anything else in `~/.secrets` moves.
+
+The API tokens are no longer part of this. `~/.secrets/env` held ten of them,
+seven LLM keys plus two GitHub tokens and a prefix.dev token, all outdated; it
+was deleted on 2026-09-19 and nothing sourced it, so no shell behaviour changed.
+`~/.secrets` never existed on imrl or sicc, so there was nothing to remove
+there.
+
+Two things that deletion did **not** do, both still open:
+
+- The ten tokens remain in `~/.secrets`'s git history, across 34 commits. The
+  repository has no remote, so they are on this disk only, but a `git log -p`
+  still prints them. Purging means rewriting the whole history:
+
+  ```sh
+  git -C ~/.secrets filter-branch --index-filter 'git rm --cached --ignore-unmatch env' -- --all
+  ```
+
+- Deleting a local copy does not revoke a credential. If any of those keys were
+  never revoked at the provider, they are still live regardless of what this
+  disk holds. Worth a pass through the OpenAI, Anthropic, Google, DeepSeek,
+  SiliconFlow, Tencent, GitHub and prefix.dev dashboards.
 
 ### Decide whether imrl and sicc still need a Rust toolchain
 
