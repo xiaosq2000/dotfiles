@@ -159,7 +159,11 @@ prepend_env PATH "${HOME}/.pixi/bin" # Add pixi to PATH first
 ################################################################################
 ##################################### rust #####################################
 ################################################################################
-[ -f "$HOME/.cargo/env" ] && \. "$HOME/.cargo/env"
+# Not `. "$HOME/.cargo/env"`: rustup's uninstaller strips that exact string out
+# of shell rc files, which leaves a dangling `&&` that swallows the next
+# statement. All the file does is put ~/.cargo/bin on PATH. Appending rather
+# than prepending also keeps pixi's copies in front of any cargo-installed one.
+type append_env >/dev/null 2>&1 && append_env PATH "$HOME/.cargo/bin"
 
 ################################################################################
 ################################### terminal ###################################
@@ -228,28 +232,6 @@ if [ "$TERM" = "xterm-kitty" ] && has kitten; then
         ssh() { kitten ssh "$@" }
     fi
 fi
-set_gnome_terminal_as_default() {
-    local GNOME_TERMINAL_BIN
-
-    if has gnome-terminal; then
-        GNOME_TERMINAL_BIN="$(command -v gnome-terminal)"
-    elif [ -x "/usr/bin/gnome-terminal" ]; then
-        GNOME_TERMINAL_BIN="/usr/bin/gnome-terminal"
-    else
-        warning "gnome-terminal not found"
-        return
-    fi
-
-    if has gsettings; then
-        if gsettings set org.gnome.desktop.default-applications.terminal exec "$GNOME_TERMINAL_BIN" 2>/dev/null; then
-            debug "Set gnome-terminal as default terminal"
-        else
-            error "Failed to set gnome-terminal as default terminal"
-        fi
-    else
-        warning "gsettings not found - cannot set gnome-terminal as default terminal"
-    fi
-}
 
 ################################################################################
 ################## yazi - Blazing fast terminal file manager ###################

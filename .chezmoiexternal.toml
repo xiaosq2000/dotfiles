@@ -2,12 +2,9 @@
 {{- $s := index .schemes $t.scheme -}}
 # Replaces .gitmodules, and carries the per-scheme theme files.
 #
-# Submodules were a poor fit here for two reasons: install.sh only ever ran
-# `git submodule update --init` on the starship one, so a fresh machine silently
-# never checked out the gnome-terminal theme at all; and a submodule pins a
-# commit that only moves when you remember to bump it. An external clones on
-# first apply and pulls on refresh, so both themes arrive on every machine
-# without a separate step.
+# A submodule pins a commit that only moves when you remember to bump it. An
+# external clones on first apply and pulls on refresh, so theme files arrive on
+# every machine without a separate step.
 #
 # This file is always treated as a template, with or without a .tmpl suffix.
 #
@@ -41,13 +38,6 @@ refreshPeriod = "672h"
 # No starship entry. The prompt is rendered by
 # private_dot_config/starship.toml.tmpl from the palette in .chezmoidata, so
 # there is nothing to check out and no scheme that can be missing a port.
-
-# Not yet theme-aware: the checkout is Rosé Pine only, and nothing loads its
-# template.dconf into dconf. See docs/todo.md.
-[".config/themes/rose-pine/gnome-terminal"]
-type = "git-repo"
-url = "https://github.com/xiaosq2000/gnome-terminal"
-refreshPeriod = "672h"
 
 # tpm, the tmux plugin manager. tmux.conf's last line runs
 # ${XDG_DATA_HOME}/tmux/plugins/tpm/tpm, and every `set -g @plugin` above it is

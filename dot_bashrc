@@ -193,7 +193,10 @@ has gh && eval "$(gh completion -s bash)"
 has uv && eval "$(uv generate-shell-completion bash)"
 
 # Rust
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# Not `. "$HOME/.cargo/env"`: rustup's uninstaller strips that exact string out
+# of shell rc files, which leaves a dangling `&&` that swallows the next
+# statement. Appending also keeps pixi's copies in front of a cargo-installed one.
+type append_env >/dev/null 2>&1 && append_env PATH "$HOME/.cargo/bin"
 
 # Node.js
 export NVM_DIR="${XDG_CONFIG_HOME}/nvm"

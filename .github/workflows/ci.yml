@@ -101,13 +101,14 @@ jobs:
           test -x "$HOME/.sh_utils/setup.d/pixi.sh"
           test -x "$HOME/.local/bin/theme"
           test -x "$HOME/.local/bin/machine"
-          # The one remaining external, plus tpm. The starship fork is
-          # deliberately not here any more: since 2026-09-19 the prompt renders
-          # from the palette in .chezmoidata, so assert both halves of that.
-          test -d "$HOME/.config/themes/rose-pine/gnome-terminal"
+          # tpm is the only external left. Two checkouts were dropped and must
+          # stay dropped: the starship fork, replaced on 2026-09-19 by a prompt
+          # rendered from the palette in .chezmoidata, and the gnome-terminal
+          # theme, removed entirely because gnome-terminal is no longer used.
           test -f "$HOME/.local/share/tmux/plugins/tpm/tpm"
           test -f "$HOME/.config/starship.toml"
           test ! -e "$HOME/.config/themes/rose-pine/starship"
+          test ! -e "$HOME/.config/themes/rose-pine/gnome-terminal"
           # repo infrastructure must not be deployed as dotfiles
           test ! -e "$HOME/README.md"
           test ! -e "$HOME/docs"

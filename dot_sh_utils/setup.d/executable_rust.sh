@@ -5,11 +5,13 @@ set -eu
 #
 # Clearing out cargo copies of tools that moved into a pixi bundle happens
 # wherever a cargo exists, because it is a correctness problem rather than a
-# preference: ~/.zshrc sources ~/.cargo/env after it prepends ~/.pixi/bin, and
-# prepend_env leaves a directory where it already is, so ~/.cargo/bin can end up
-# in front and the cargo copy wins. The manifest then says one thing and
-# `command -v` another. imrl and sicc were in exactly that state after the
-# bundles landed, with cargo's eza and tree-sitter shadowing pixi's.
+# preference: the manifest says one thing and `command -v` another. imrl and
+# sicc were in that state after the bundles landed, with cargo's eza and
+# tree-sitter shadowing pixi's.
+#
+# The rc files no longer source ~/.cargo/env, which prepended ~/.cargo/bin and
+# so put it in front of ~/.pixi/bin. They append ~/.cargo/bin instead, so pixi
+# wins by construction and this script only has to remove the duplicates.
 #
 # Installing a toolchain happens only where the machine asks for it, which
 # $RUST_TOOLCHAIN carries in from the machine entry's rust flag. A machine that

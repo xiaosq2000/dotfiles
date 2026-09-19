@@ -108,7 +108,6 @@ software_overview() {
     software_overview_helper "lua" "$(lua -v 2>&1 | cut -d ' ' -f 2)"
     software_overview_helper "luarocks" "$(luarocks --version | head -n 1 | cut -d ' ' -f 2)"
     software_overview_helper "gnome-shell" "$(gnome-shell --version | awk '{ print $3; }')"
-    software_overview_helper "gnome-terminal" "$(gnome-terminal --version | awk '{ print $4; }')"
     software_overview_helper "alacritty" "$(alacritty --version | awk '{ print $2; }')"
     software_overview_helper "kitty" "$(kitty --version | awk '{ print $2; }')"
     software_overview_helper "xclip" "$(xclip -version 2>&1 | head -n 1 | awk '{ print $3;}')"
