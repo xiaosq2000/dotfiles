@@ -56,12 +56,36 @@ age-keygen -y ~/.config/chezmoi/key.txt    # prints the recipient: age1...
 `age-keygen -o` also prints the public key, to stderr, when it creates the file.
 
 **2. Put the identity in Bitwarden.** This is the step nothing can do for you.
-Create an entry named `chezmoi age identity` whose **password** is the single
-`AGE-SECRET-KEY-…` line from the file. Either:
+
+First get rbw talking to the server. Against the official bitwarden.com this
+needs `rbw register` before `rbw login`, and skipping it fails in a way that
+looks like a rejected password:
+
+```
+rbw login: failed to log in to bitwarden instance: api request returned error: 400
+```
+
+That is bot detection, not a wrong password. rbw's own help for `register` says
+so: the official server requires you to log in with a personal API key once,
+after which ordinary logins work. Get the key from the web vault under
+Settings, Security, Keys, "View API Key". It gives a `client_id` beginning
+`user.` and a `client_secret`; `rbw register` prompts for both.
 
 ```sh
-rbw config set email <your-address>    # first time on this machine
+rbw config set email <your-address>
+rbw register                            # asks for the personal API key
 rbw login
+rbw unlock
+```
+
+A self-hosted Vaultwarden needs `rbw config set base_url <url>` first and no
+API key. If the account has two-factor authentication, rbw prompts for the code
+during `rbw login`.
+
+Then create an entry named `chezmoi age identity` whose **password** is the
+single `AGE-SECRET-KEY-…` line from the key file:
+
+```sh
 rbw add "chezmoi age identity"
 ```
 
@@ -73,6 +97,10 @@ Check it comes back:
 ```sh
 rbw get "chezmoi age identity" | head -c 20    # AGE-SECRET-KEY-1...
 ```
+
+rbw prompts through pinentry, which all three machines have. imrl's default is
+`pinentry-gnome3` and falls back to a terminal prompt over SSH; if it ever does
+not, `rbw config set pinentry pinentry-curses` on that machine settles it.
 
 **3. Record the recipient** in `.chezmoidata/secrets.toml`, then regenerate the
 chezmoi config so it grows an `[age]` section.

@@ -16,7 +16,9 @@ has an empty `ageRecipient`, so no `[age]` section is generated and there are no
 `encrypted_*` files yet. It stays off until someone creates a key, and creating
 the Bitwarden entry is the one step nothing can automate.
 
-[docs/secrets.md](secrets.md) has the commands. About ten minutes. The reason to
+[docs/secrets.md](secrets.md) has the commands. About ten minutes, of which the
+fiddly part is that bitwarden.com needs `rbw register` with a personal API key
+before `rbw login` will work at all. The reason to
 bother: `~/.secrets` has no git remote, so the SSH config and the API tokens in
 it exist on exactly one disk.
 
