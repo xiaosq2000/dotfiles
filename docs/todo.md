@@ -3,14 +3,21 @@
 Nothing here is required for any machine to work. What is left needs a machine
 that is not to hand, or is simply worth doing.
 
-**State:** workstation, imrl and sicc are deployed; `chezmoi status` is empty on
-each and CI is green. The laptop has never had chezmoi run on it.
+**State:** workstation, imrl, sicc and vps are deployed; `chezmoi status` is
+empty on each and CI is green. The laptop has never had chezmoi run on it.
 
-The vps takes `bundles = ["core"]`, decided 2026-09-19 against its 5 GB of free
-disk, and is being brought up now. gnome-terminal support was removed from the
-repository entirely the same day: the theme checkout, the dead
-`set_gnome_terminal_as_default` function and the version probe are gone, and
-`.chezmoiremove` deletes the checkout on every machine.
+The vps came up on 2026-09-19 with `bundles = ["core"]`. It ended with *more*
+free disk than it started with, 9.1 GB against 8.3 GB, because the old
+`.sh_utils` layout and a broken rustup came off as the bundle went on. It has no
+age identity and is not getting one: it is internet-facing, so `.chezmoiignore`
+takes the keyless path and simply does not manage `.ssh/config` there.
+
+gnome-terminal support was removed from the repository entirely the same day —
+the theme checkout, the dead `set_gnome_terminal_as_default` function and the
+version probe — and `.chezmoiremove` deletes the checkout on every machine.
+
+No machine sources `~/.cargo/env` any more. rustup is gone from imrl, sicc and
+the vps; only the workstation keeps a toolchain.
 
 ## Blocked on the laptop
 

@@ -42,6 +42,11 @@ chezmoi init --apply \
 A machine not in the table yet can start as `generic`: a working shell, nothing
 else assumed.
 
+Run `chezmoi apply` once more after a first init. `.chezmoiremove` runs before
+the `run_` scripts, and most of its entries are guarded on the replacement
+already being in place, so on a first pass the old copies are still there and
+the guards have not yet been satisfied. The second pass clears them.
+
 ## Day to day
 
 ```sh
