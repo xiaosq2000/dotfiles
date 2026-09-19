@@ -46,3 +46,22 @@ docs
 # Currently: {{ .theme }} has no starship port.
 .config/starship.toml
 {{ end -}}
+
+{{ if not (stat (joinPath .chezmoi.homeDir .secrets.ageIdentity)) -}}
+# No age identity on this machine, so do not manage the encrypted files.
+#
+# Without this, chezmoi tries to decrypt them, fails, and stops the apply where
+# it stood. That is worse than it sounds, because it aborts rather than skips:
+# every target sorting after the failed one is left untouched, and .ssh/config
+# sorts before .zshrc. A machine whose vault happens to be locked would quietly
+# stop updating its shell config, with the error naming only ~/.ssh/config.
+#
+# Ignoring them instead means the machine applies everything it can have and
+# simply does not have these. The identity arrives via
+# run_once_before_00-age-identity.sh, or by hand; see docs/secrets.md.
+#
+# Add an entry here for every new encrypted_ file. CI checks the result rather
+# than the list: a keyless machine has to apply cleanly, which fails the moment
+# an encrypted target is not covered.
+.ssh/config
+{{ end -}}

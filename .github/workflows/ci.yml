@@ -320,25 +320,30 @@ jobs:
             < "$src/private_dot_config/pixi/config.toml.tmpl" > /tmp/pixi-container.toml
           ! grep -qE '^[a-z[]' /tmp/pixi-container.toml
 
-      # Recording a recipient must not brick a machine that has no key yet.
-      # The identity fetcher runs `before`, so a non-zero exit there aborts the
-      # apply before chezmoi writes anything, and the ninety-odd unencrypted
-      # files never land. It warns and continues instead; only the encrypted
-      # files fail, individually, with chezmoi naming the one it could not read.
-      - name: A machine with no key still applies everything else
+      # A machine with no age identity has to apply everything that is not
+      # encrypted, and it is not enough to check that the apply exits zero.
+      #
+      # chezmoi aborts on a decryption failure rather than skipping the entry,
+      # so every target sorting after the failed one is left untouched, and
+      # .ssh/config sorts before .zshrc. The first version of this stopped at
+      # ~/.ssh and silently left the shell config stale. .chezmoiignore now
+      # drops the encrypted entries when the identity is absent, and the test
+      # for that is a target that sorts after the encrypted one.
+      - name: A machine with no key applies everything else, in full
         run: |
           set -eux
-          src="$HOME/.local/share/chezmoi"
-          sed -i 's/^ageRecipient = ""/ageRecipient = "age1ci0000000000000000000000000000000000000000000000000000"/' \
-            "$src/.chezmoidata/secrets.toml"
           rm -f "$HOME/.config/chezmoi/key.txt"
 
           chezmoi init --apply --promptString machine=container --promptString theme=rose-pine
           chezmoi verify
 
+          # Sorts after .ssh/config, so it is the one that would go missing.
           test -f "$HOME/.zshrc"
+          test -f "$HOME/.bashrc"
           test -f "$HOME/.config/sheldon/plugins.toml"
           test -x "$HOME/.local/bin/theme"
-          test ! -f "$HOME/.config/chezmoi/key.txt"
 
-          git -C "$src" checkout .chezmoidata/secrets.toml
+          # The encrypted entry is absent rather than half-written, and no
+          # plaintext stand-in was left in its place.
+          test ! -e "$HOME/.ssh/config"
+          test ! -f "$HOME/.config/chezmoi/key.txt"

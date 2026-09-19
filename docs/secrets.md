@@ -234,13 +234,30 @@ the first is recognised. The second is not an error: chezmoi treats the file as
 unmanaged and silently writes nothing, so the target never appears and there is
 no message saying why.
 
-**A missing identity fails that file, not the whole apply.** chezmoi writes
-nothing for the encrypted entry, which is the behaviour you want: there is no
-path where a secret lands as plaintext or an empty file. Everything else still
-applies, because `run_once_before_00-age-identity.sh` warns rather than exiting
-non-zero. It did exit non-zero at first, and that aborted the apply before a
-single file was written, which would have left a keyless machine unable to
-update anything at all.
+**A missing identity aborts the apply, it does not skip the file.** This is the
+one to know. chezmoi writes nothing for the encrypted entry, so no secret ever
+lands as plaintext or an empty file, but it then stops where it stood: every
+target sorting after the failed one is left untouched. `.ssh/config` sorts before
+`.zshrc`, so a machine whose vault happened to be locked would quietly stop
+updating its shell config, and the only error would name `~/.ssh/config`.
+
+`.chezmoiignore` therefore drops the encrypted entries on a machine with no
+identity, and such a machine applies everything else in full. Add an entry there
+for each new `encrypted_` file. CI checks the outcome rather than the list: a
+keyless apply has to verify clean and produce a target that sorts after the
+encrypted one.
+
+If you ever need to apply on a keyless machine before that gate covers a new
+file:
+
+```sh
+chezmoi apply --exclude=encrypted
+```
+
+Two related failures are separate and both handled.
+`run_once_before_00-age-identity.sh` warns rather than exiting non-zero, because
+it runs `before` and a non-zero exit there aborts the apply before a single file
+is written.
 
 **`chezmoi add` resolves its source directory from whichever config it finds.**
 Running it with an unexpected `HOME` or `XDG_CONFIG_HOME` writes the new entry
