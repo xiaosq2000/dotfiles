@@ -109,18 +109,18 @@ per-scheme checkout on 2026-09-19, this is the last thing in the repository
 still hard-wired to one colour scheme. Either wire it up or drop it; kitty and
 alacritty are what actually get used.
 
-### Neovim leftovers from the retired installer
+### Mason still installs language servers per machine
 
-`neovim.sh` did `cp -a` of the release tarball into `~/.local`, so
-`~/.local/share/nvim/runtime` is a copy of an old Neovim's runtime sitting
-beside `lazy/`, `mason/` and the session files. `.chezmoiremove` deliberately
-does not touch `~/.local/share/nvim`, because plugin state is in there and is
-not replaceable. The stale `runtime/` is inert, since nvim resolves its runtime
-relative to its own binary. Removing it by hand reclaims a few tens of
-megabytes.
+`~/.local/share/nvim/runtime`, the 27 MB copy `neovim.sh` left behind with its
+`cp -a` of a release tarball, was removed on 2026-09-19. It was confirmed inert
+first: nvim resolves `$VIMRUNTIME` to `~/.pixi/envs/nvim/share/nvim/runtime`,
+and the stale directory was not on `runtimepath`, which carries only `site/`
+and the `lazy/` plugins. `lazy/`, `mason/`, `site/`, `sessions/` and
+`auto_session/` are untouched; `.chezmoiremove` still, correctly, refuses to go
+near `~/.local/share/nvim`.
 
-Mason is also still installing language servers per machine on any machine
-without the `lsp` bundle. That is the designed fallback, not a bug.
+What remains is by design, not a bug: Mason installs language servers per
+machine on any machine without the `lsp` bundle. That is the intended fallback.
 
 ### Shell startup is about 510 ms
 
@@ -132,26 +132,60 @@ half a second.
 
 ### Delete the migration scaffolding
 
-Three things exist only to get from the old layout to this one, and each says so
-where it lives:
+Three things exist only to get from the old layout to this one. They were
+written as one blocked item, waiting on "laptop and vps". Surveying the vps on
+2026-09-19 split them apart, and they are no longer blocked on the same thing:
 
 - The legacy theme-name map in `.chezmoi.toml.tmpl`, translating `main`, `moon`
-  and `dawn`. Needs laptop and vps to have run `chezmoi init`.
+  and `dawn`. **Blocked on the laptop alone.** The map rewrites a theme value
+  already *stored* in `~/.config/chezmoi/chezmoi.toml`, and the vps has no such
+  file: chezmoi has never run there. A first init on the vps would be given a
+  current name by hand and never touch the map.
 - `run_onchange_before_01-stale-externals.sh`, which removes git-submodule
-  remnants. Needs laptop and vps to have applied.
-- Most blocks in `.chezmoiremove`. Each names the machines still outstanding.
+  remnants of chezmoi externals. **Blocked on the laptop alone**, for the same
+  reason: no chezmoi on the vps means no externals to have been submodules.
+- Most blocks in `.chezmoiremove`. **These do apply to the vps**, which carries
+  the full old layout — `~/.oh-my-zsh`, `~/.sh_utils`, `~/.fzf`,
+  `~/.local/bin/nvim`, `~/.config/yazi` — installed by the old `.sh_utils`
+  bootstrap rather than by chezmoi.
 
-The starship fork checkout that `.chezmoiremove` deletes is gone from all
-three now, so the TTY stall it causes over ssh is only ahead of the two
-machines below, not behind anyone.
+So two thirds of this item is waiting on the laptop, which is being handled by
+hand and off this machine, and nothing here should assume it.
 
-Workstation, imrl and sicc are done, all three deployed and verified on
-2026-09-18. Laptop and vps are not, and the vps has no `hostnamePattern`, so its
-machine name has to be given by hand at init:
+The starship fork checkout that `.chezmoiremove` deletes is gone from
+workstation, imrl and sicc, so the TTY stall it causes over ssh is only ahead
+of these two machines, not behind anyone.
 
-```sh
-chezmoi init --apply --promptString machine=vps --promptString theme=rose-pine-dawn xiaosq2000
-```
+#### What the vps can actually afford
+
+Surveyed 2026-09-19: BandwagonHOST, Ubuntu 24.04, root, **21 GB disk with
+5.0 GB free (75% used)**. Its job is network plumbing to get past the GFW, and
+nothing else runs there.
+
+Its machine entry says `bundles = ["core"]`, which is the one decision worth
+revisiting before any init. Measured against this workstation, core's
+twenty-two packages are about 680 MB of environments, and rattler's cache holds
+the extracted packages the environments hardlink from, so the real cost on one
+filesystem is roughly 1 to 1.5 GB — a fifth to a third of the free space left,
+for a toolchain a networking box will rarely open. The bulk is not the shell:
+`pre-commit` 271 MB, `difftastic` 140 MB, `sheldon` 117 MB, `sqlite` 90 MB.
+
+`bundles = []`, as the `container` entry already does, costs nothing and still
+deploys every config file. Two consequences to weigh, not to discover
+afterwards:
+
+- `.chezmoiremove` guards each replaced binary on *either* the pixi copy
+  existing *or* the package not being in this machine's bundles. With no
+  bundles the second branch is always true, so `~/.local/bin/nvim`, `~/.fzf`
+  and the rest are removed with nothing arriving to replace them. The vps falls
+  back to whatever the base image ships.
+- `~/.oh-my-zsh` would stay, because its removal is guarded on sheldon having
+  cloned its plugins and sheldon would not be installed.
+
+`.zshrc` itself is safe either way: `sheldon` and `starship` are both behind
+`if has`, so a bundle-less vps gets a working plain zsh and a warning line, not
+a broken login shell. That matters more than usual here, since zsh is root's
+login shell on a box whose whole purpose is being reachable.
 
 ### Every duplicate is gone
 
