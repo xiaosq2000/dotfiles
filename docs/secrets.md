@@ -27,22 +27,33 @@ on those three and they apply everything else in full. Each picks up
 `~/.ssh/config` the moment a key arrives, with no other change — which is
 exactly what the laptop did.
 
-### The fetcher cannot work on a first init
+### Why the fetcher runs on every apply, not once
 
-`run_once_before_00-age-identity.sh` runs before chezmoi writes any file, but
-`rbw` arrives from the `secrets` pixi bundle in
-`run_onchange_after_05-pixi.sh`. On a machine that has never applied, the
-fetcher therefore reaches `rbw not found` and gives up — and being `run_once`,
-it does not retry on the second apply once rbw exists. Observed on the laptop
-on 2026-09-20.
+`run_onchange_before_00-age-identity.sh` runs before chezmoi writes any file, because the
+identity has to exist before any `encrypted_` target is written.
 
-So on a new machine the key goes in by hand, which is the procedure in step 2
-below anyway. The `before` placement is not the mistake: the identity genuinely
-has to exist before any `encrypted_` target is written. What it means is that
-the fetcher only earns its keep on re-inits of a machine that is already
-tooled, and the fix, if it is worth one, is `run_before_` rather than
-`run_once_before_` — it already exits immediately when the identity is present,
-and `rbw unlocked` does not prompt.
+It was `run_once_before_` until 2026-09-20, which made it incapable of ever
+succeeding on a new machine. `rbw` arrives from the `secrets` pixi bundle in
+`run_onchange_after_05-pixi.sh`, so a machine that has never applied always
+reaches `rbw not found` and gives up — and `run_once` meant it never tried
+again on the second apply, once rbw existed. The laptop hit exactly that and
+its key went in by hand.
+
+It is `run_onchange_before_` now, with a marker line in its comments that
+renders `present` or `absent` according to whether `~/.pixi/bin/rbw` exists. On
+a new machine the first apply renders `absent` and gives up, 05-pixi installs
+rbw, and the second apply renders `present` — a different script, so chezmoi
+runs it again and it succeeds. After that the line is stable and it never runs
+again.
+
+Not a plain `run_` script, which would execute on every apply. That sounds
+harmless but leaves `chezmoi status` permanently showing ` R` and makes
+`chezmoi verify` exit 1 for good, and CI runs `chezmoi verify`.
+
+The by-hand route in step 2 below still works and is still the fallback when the
+vault is locked, since the script cannot unlock it — chezmoi runs it from a
+temporary file with no terminal, so rbw's passphrase prompt would have nowhere
+to appear.
 
 ## Why bother
 
@@ -226,7 +237,7 @@ head -c 34 private_dot_ssh/encrypted_private_config.age   # BEGIN AGE ENCRYPTED 
 
 ## A new machine
 
-`run_once_before_00-age-identity.sh` fetches the identity from Bitwarden before
+`run_onchange_before_00-age-identity.sh` fetches the identity from Bitwarden before
 chezmoi writes any file, but it cannot unlock a locked vault: chezmoi runs it
 without a terminal, so a passphrase prompt would have nowhere to appear. So
 either unlock first, or do it by hand:
@@ -296,7 +307,7 @@ chezmoi apply --exclude=encrypted
 ```
 
 Two related failures are separate and both handled.
-`run_once_before_00-age-identity.sh` warns rather than exiting non-zero, because
+`run_onchange_before_00-age-identity.sh` warns rather than exiting non-zero, because
 it runs `before` and a non-zero exit there aborts the apply before a single file
 is written.
 

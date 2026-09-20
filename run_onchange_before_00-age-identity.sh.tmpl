@@ -7,9 +7,34 @@
 # repository as ciphertext, and the one thing that must not be lost is a single
 # key that Bitwarden already backs up.
 #
-# It runs `before`, so the identity exists by the time chezmoi writes any file,
-# and `once`, so it does not ask for a vault on every apply. If you would rather
-# not have `chezmoi apply` reach for your vault at all, do it by hand instead:
+# It runs `before`, so the identity exists by the time chezmoi writes any file.
+#
+# It was `run_once_before_` until 2026-09-20, which made it incapable of ever
+# succeeding on a new machine: it runs before anything is written, but `rbw`
+# arrives from the `secrets` bundle in run_onchange_after_05-pixi.sh, so the
+# first apply always reached "rbw not found" and `once` meant it never tried
+# again once rbw existed. The laptop hit exactly that and its key went in by
+# hand.
+#
+# The fix is the marker below rather than `run_`. A plain `run_` script executes
+# on every apply, which sounds harmless but leaves `chezmoi status` permanently
+# showing ` R` and makes `chezmoi verify` exit 1 for good — and CI runs
+# `chezmoi verify`. So instead this stays `run_onchange_` and the rendered text
+# is made to change exactly when the thing that blocked it goes away:
+#
+#   rbw at apply time: {{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/rbw") }}present{{ else }}absent{{ end }}
+#
+# First apply on a new machine renders `absent`, the script runs and gives up;
+# 05-pixi then installs rbw. The second apply renders `present`, which is a
+# different script, so chezmoi runs it again and it succeeds. After that the
+# line is stable and this never runs again.
+#
+# `stat` on the known path rather than `lookPath`, because lookPath depends on
+# whatever PATH `chezmoi apply` happened to inherit, and the whole problem here
+# is a machine whose PATH does not have ~/.pixi/bin yet.
+#
+# If you would rather not have `chezmoi apply` reach for your vault, do it by
+# hand instead; the script is only a convenience over these two lines:
 #
 #   rbw get {{ .secrets.bitwardenItem | quote }} > ~/.config/chezmoi/key.txt
 #   chmod 600 ~/.config/chezmoi/key.txt

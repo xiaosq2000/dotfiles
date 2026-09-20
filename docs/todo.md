@@ -19,44 +19,17 @@ With the laptop done, the migration scaffolding went with it on the same day:
 machine still carries the old `$HOME`-as-a-git-worktree layout, so there was
 nothing left for any of them to clean.
 
-The laptop took its age identity by hand on 2026-09-20, which is the only way a
-new machine can get one: see [secrets.md](secrets.md), which records why the
-fetcher cannot succeed on a first init. imrl and sicc still have no key and
-apply everything else in full.
+The laptop took its age identity by hand on 2026-09-20, because the fetcher was
+`run_once_before_` and so could never succeed on a first init. It is
+`run_onchange_before_` now, keyed on whether rbw exists yet, so it retries on
+the second apply; see [secrets.md](secrets.md). imrl and sicc still have no key
+and apply everything else in full.
 
 rustup is installed on the workstation and the laptop, the two machines with
 `rust = true`. It is gone from imrl, sicc and the vps, and no machine sources
 `~/.cargo/env`.
 
 ## Do these next
-
-### The workstation has the doubled-keystroke bug and does not know it
-
-`run_onchange_after_07-terminfo.sh` landed on 2026-09-20 and has only run on the
-laptop. The workstation is the other `desktop = true` machine, so it runs kitty
-and the same pixi zsh, and `exec zsh` there will draw every keystroke twice
-until it applies. One `chezmoi update` fixes it. The headless machines are
-unaffected: no kitty, no `xterm-kitty`.
-
-Confirm rather than assume, since the whole point of that bug is that it looks
-like something else:
-
-```sh
-TERM=xterm-kitty zsh -fc 'zmodload zsh/terminfo; echo ${+terminfo[cuu1]}'   # want 1
-```
-
-### Decide what to do about the age-identity fetcher
-
-`run_once_before_00-age-identity.sh` cannot succeed on a machine that has never
-applied: it runs before any file is written, but `rbw` arrives from the
-`secrets` bundle in `run_onchange_after_05-pixi.sh`, and `run_once` means it
-does not retry once rbw exists. [secrets.md](secrets.md) records this; nothing
-has been changed about it.
-
-The options are to leave it and treat the by-hand fetch as the procedure, which
-is what happened on the laptop, or to rename it `run_before_` so it retries. It
-already exits immediately when the identity is present and `rbw unlocked` does
-not prompt, so retrying is nearly free. This is a decision, not a bug.
 
 ### imrl and sicc still have no age key
 
@@ -67,10 +40,20 @@ on a shared lab server and a cluster login node at all.
 
 ## Worth doing
 
-### Shell startup on imrl and sicc has not been measured since the fix
+### Shell startup, fixed and measured everywhere
 
-Fixed on the laptop on 2026-09-20: 750 ms to 216 ms in a nested shell, 325 ms in
-a fresh terminal. The remote machines have not been re-measured.
+All five machines were on the fix and measured on 2026-09-20, ten warm runs each
+with a tty attached:
+
+| machine | before | after |
+| --- | ---: | ---: |
+| laptop | 750 ms | 230 ms (325 ms in a fresh terminal, which pays for `proxy shell on`) |
+| workstation | — | 161 ms |
+| imrl | ~1.1 s | 256 ms |
+| sicc | ~1.1 s | 397 ms |
+
+sicc stays the slowest, which is what you would expect with home on NFS. It is
+no longer the outlier it was.
 
 The entry that stood here blamed `~/.sh_utils/*.sh` — "roughly 1300 lines sourced
 at every shell start" — and proposed autoloaded functions. That was wrong, and
@@ -95,11 +78,11 @@ terminal pays for it.
 The lesson is worth keeping: the line count of what gets sourced was a bad
 proxy for what it cost. Sourcing 2,776 lines of function definitions is 5 ms.
 
-What is left is about 150 ms with nothing individually above 11 ms, so there is
-no single next thing to fix. The `tput` forks in `lib/ui.sh:20-29` are the
-largest remaining item at 15 ms, and they could be replaced by zsh's own `%F{}`
-escapes. Measure imrl and sicc before doing anything else; sicc's home is on
-NFS and the remaining costs there may rank differently.
+What is left is about 150 ms locally with nothing individually above 11 ms, so
+there is no single next thing to fix. The `tput` forks in `lib/ui.sh:20-29` are
+the largest remaining item at 15 ms, and they could be replaced by zsh's own
+`%F{}` escapes — worth more on sicc than here, since ten forks over NFS is where
+its remaining 397 ms mostly goes.
 
 Measure with a tty attached. `lib/ui.sh` skips its `tput` branch when stdout is
 a pipe, so a piped benchmark understates by those 15 ms:
