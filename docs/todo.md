@@ -19,10 +19,10 @@ With the laptop done, the migration scaffolding went with it on the same day:
 machine still carries the old `$HOME`-as-a-git-worktree layout, so there was
 nothing left for any of them to clean.
 
-The workstation is the only machine with an age identity. That is not an
-oversight on the laptop so much as a gap in the bootstrap; see
-[secrets.md](secrets.md), which now records why the fetcher cannot succeed on a
-first init.
+The laptop took its age identity by hand on 2026-09-20, which is the only way a
+new machine can get one: see [secrets.md](secrets.md), which records why the
+fetcher cannot succeed on a first init. imrl and sicc still have no key and
+apply everything else in full.
 
 rustup is installed on the workstation and the laptop, the two machines with
 `rust = true`. It is gone from imrl, sicc and the vps, and no machine sources

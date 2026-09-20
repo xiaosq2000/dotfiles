@@ -20,11 +20,12 @@ Verified rather than assumed: `rbw get "chezmoi age identity" | age-keygen -y`
 prints `age1ke4rf2j…`, the same recipient this repository encrypts to. A backup
 that has not been read back is a hope, not a backup.
 
-The workstation is the only machine carrying the key. laptop, imrl and sicc do
-not, and the vps is not getting one, because it is internet-facing.
-`.chezmoiignore` leaves the encrypted entries unmanaged on all four and they
-apply everything else in full. Each picks up `~/.ssh/config` the moment a key
-arrives, with no other change.
+The workstation and the laptop carry the key; the laptop got it on 2026-09-20,
+by hand. imrl and sicc do not have it, and the vps is not getting one, because
+it is internet-facing. `.chezmoiignore` leaves the encrypted entries unmanaged
+on those three and they apply everything else in full. Each picks up
+`~/.ssh/config` the moment a key arrives, with no other change — which is
+exactly what the laptop did.
 
 ### The fetcher cannot work on a first init
 
