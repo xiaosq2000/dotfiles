@@ -152,6 +152,45 @@ jobs:
           # A real zsh parses it.
           zsh -n "$HOME/.zshrc"
 
+      # Completions are cached to files on fpath rather than evaluated at every
+      # shell start, which was 516 ms of a 750 ms startup before 2026-09-20. See
+      # dot_sh_utils/CAVEATS.md.
+      #
+      # The container machine selects no bundles, so pixi, codex and uv are all
+      # absent here. That is the case worth testing: the block has to put the
+      # directory on fpath, generate nothing, and say nothing. A machine that
+      # does have the tools cannot be tested in a job meant to gate every push,
+      # because installing them pulls a conda environment over the network.
+      - name: Tool completions are cached on fpath, not evaluated
+        run: |
+          set -eux
+          # The eval form is what this replaced; it must not come back.
+          ! grep -q 'eval "$(pixi completion' "$HOME/.zshrc"
+          ! grep -q 'eval "$(codex completion' "$HOME/.zshrc"
+          ! grep -q 'source "$_uv_completion_cache"' "$HOME/.zshrc"
+          # fpath has to be set before compinit, or compinit will not see it.
+          fpath_line=$(grep -n '^fpath=(' "$HOME/.zshrc" | head -1 | cut -d: -f1)
+          compinit_line=$(grep -n '^autoload -Uz compinit' "$HOME/.zshrc" | cut -d: -f1)
+          gen_line=$(grep -n '^_zcompcache=' "$HOME/.zshrc" | cut -d: -f1)
+          pnpm_line=$(grep -n '^export PNPM_HOME=' "$HOME/.zshrc" | cut -d: -f1)
+          test "$fpath_line" -lt "$compinit_line"
+          # Every tool must be on PATH before the block that generates its
+          # completion. codex is a pnpm binary, and pnpm's PATH entry used to sit
+          # below compinit, so a shell that did not already have it inherited
+          # generated no codex completion and never noticed. Caught only on a
+          # login shell with a clean environment.
+          test "$pnpm_line" -lt "$gen_line"
+          # The directory joins fpath even with none of the three tools present.
+          timeout 60 zsh -ic 'print -l $fpath' | grep -q '/zsh/completions$'
+          # Startup raises nothing zsh itself would call an error. Not a silence
+          # check: .zshrc prints its own timing line, and on a machine with no
+          # bundles it also says that yazi and sheldon are missing, which is
+          # true and is the point of saying it. The target is the failure the
+          # old arrangement produced, `command not found: compdef`, which was a
+          # warning on every new shell rather than anything that stopped it.
+          # Hence zsh's own wording rather than a bare "not found".
+          ! timeout 60 zsh -ic 'true' 2>&1 | grep -qE 'command not found|parse error|bad pattern'
+
       # Everything oh-my-zsh used to set as a side effect of being sourced.
       # Dropping the framework dropped these with it, and the failures do not
       # look like a shell misconfiguration: without interactive_comments,

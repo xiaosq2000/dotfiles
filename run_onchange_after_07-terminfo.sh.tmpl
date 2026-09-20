@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Put kitty's terminfo where a conda-built ncurses will actually find it.
+#
+# The symptom is alarming and looks nothing like the cause: in a kitty window,
+# `exec zsh` and every keystroke afterwards appears twice. `a` shows as `aa`.
+# The buffer is fine and commands run correctly -- it is only the drawing that
+# doubles -- but there is no way to tell that while it is happening.
+#
+# The chain:
+#
+#   - kitty's login shell is /usr/bin/zsh, from /etc/passwd. `exec zsh` picks
+#     the first zsh on PATH instead, which is ~/.pixi/envs/zsh/bin/zsh, from
+#     the core bundle. So the two shells are different binaries, and only the
+#     second one is ever reached by hand.
+#   - $TERM is xterm-kitty, which is not in any system terminfo database here:
+#     /usr/share/terminfo/x/xterm-kitty does not exist. kitty ships its own
+#     copy and points $TERMINFO at it.
+#   - conda's ncurses ignores $TERMINFO and $TERMINFO_DIRS, so the pixi zsh
+#     resolves no terminfo at all. `zmodload zsh/terminfo` leaves $terminfo
+#     empty.
+#   - without terminfo, ZLE cannot emit the cursor-movement sequences it needs
+#     to repaint a line in place. zsh-syntax-highlighting repaints on every
+#     keystroke, so each repaint appends instead of overwriting.
+#
+# Which is why it needs all three to show up: the pixi zsh, TERM=xterm-kitty,
+# and zsh-syntax-highlighting. Drop any one and it goes away, which is what
+# makes it so hard to attribute. `TERM=xterm-256color zsh` is also clean, and
+# is the quickest way to confirm the diagnosis by hand.
+#
+# The fix is a copy into ~/.terminfo, which every ncurses build searches before
+# anything else. The wrinkle is the layout: ncurses can store an entry under a
+# directory named for the first letter of the entry, or for that letter's
+# hexadecimal value, and the two builds here disagree -- Ubuntu's uses `x` and
+# conda's uses `78`. Neither reads the other's. So write both; they are 3.7 KB
+# each and a copy costs nothing.
+#
+# Only kitty needs this today, because it is the one terminal whose terminfo is
+# not in the distribution. Any other terminal in the same position would belong
+# here too.
+#
+# terminfo source: {{ $ti := joinPath .chezmoi.homeDir ".local/kitty.app/lib/kitty/terminfo/x/xterm-kitty" }}{{ if stat $ti }}{{ (stat $ti).size }} bytes, mtime {{ (stat $ti).modTime }}{{ else }}absent{{ end }}
+
+set -eu
+
+SRC="{{ $ti }}"
+DEST="${HOME}/.terminfo"
+
+if [ ! -r "$SRC" ]; then
+    echo "terminfo: kitty is not installed here; nothing to do"
+    exit 0
+fi
+
+# 78 is the hex of 'x'. Both spellings, because the two ncurses builds on this
+# machine look in different ones and neither falls back to the other.
+for dir in x 78; do
+    mkdir -p "$DEST/$dir"
+    if ! cmp -s "$SRC" "$DEST/$dir/xterm-kitty"; then
+        cp -f "$SRC" "$DEST/$dir/xterm-kitty"
+        echo "terminfo: installed $DEST/$dir/xterm-kitty"
+    fi
+done
+
+# Report rather than assert. A machine where this does not take is still usable,
+# and failing the apply over a cosmetic redraw would be the wrong trade.
+for zsh_bin in "${HOME}/.pixi/envs/zsh/bin/zsh" /usr/bin/zsh; do
+    [ -x "$zsh_bin" ] || continue
+    if ! TERM=xterm-kitty "$zsh_bin" -fc \
+        'zmodload zsh/terminfo 2>/dev/null; (( ${+terminfo[cuu1]} ))' 2>/dev/null; then
+        echo "terminfo: warning: $zsh_bin still cannot resolve xterm-kitty" >&2
+    fi
+done
