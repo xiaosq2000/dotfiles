@@ -28,6 +28,43 @@ rustup is installed on the workstation and the laptop, the two machines with
 `rust = true`. It is gone from imrl, sicc and the vps, and no machine sources
 `~/.cargo/env`.
 
+## Do these next
+
+### The workstation has the doubled-keystroke bug and does not know it
+
+`run_onchange_after_07-terminfo.sh` landed on 2026-09-20 and has only run on the
+laptop. The workstation is the other `desktop = true` machine, so it runs kitty
+and the same pixi zsh, and `exec zsh` there will draw every keystroke twice
+until it applies. One `chezmoi update` fixes it. The headless machines are
+unaffected: no kitty, no `xterm-kitty`.
+
+Confirm rather than assume, since the whole point of that bug is that it looks
+like something else:
+
+```sh
+TERM=xterm-kitty zsh -fc 'zmodload zsh/terminfo; echo ${+terminfo[cuu1]}'   # want 1
+```
+
+### Decide what to do about the age-identity fetcher
+
+`run_once_before_00-age-identity.sh` cannot succeed on a machine that has never
+applied: it runs before any file is written, but `rbw` arrives from the
+`secrets` bundle in `run_onchange_after_05-pixi.sh`, and `run_once` means it
+does not retry once rbw exists. [secrets.md](secrets.md) records this; nothing
+has been changed about it.
+
+The options are to leave it and treat the by-hand fetch as the procedure, which
+is what happened on the laptop, or to rename it `run_before_` so it retries. It
+already exits immediately when the identity is present and `rbw unlocked` does
+not prompt, so retrying is nearly free. This is a decision, not a bug.
+
+### imrl and sicc still have no age key
+
+So `.chezmoiignore` leaves `~/.ssh/config` unmanaged on both and they apply
+everything else in full. They pick it up the moment a key arrives, with no other
+change. Whether that is worth doing depends on whether you want the SSH config
+on a shared lab server and a cluster login node at all.
+
 ## Worth doing
 
 ### Shell startup on imrl and sicc has not been measured since the fix
@@ -63,6 +100,13 @@ no single next thing to fix. The `tput` forks in `lib/ui.sh:20-29` are the
 largest remaining item at 15 ms, and they could be replaced by zsh's own `%F{}`
 escapes. Measure imrl and sicc before doing anything else; sicc's home is on
 NFS and the remaining costs there may rank differently.
+
+Measure with a tty attached. `lib/ui.sh` skips its `tput` branch when stdout is
+a pipe, so a piped benchmark understates by those 15 ms:
+
+```sh
+time ( for i in $(seq 10); do script -qec "zsh -ic exit" /dev/null >/dev/null 2>&1; done )
+```
 
 ### The typefaces installer
 
