@@ -68,7 +68,7 @@ chezmoi edit-config-template                            # the config template
 ## Themes
 
 ```sh
-theme                          # current variant, and the alternatives
+theme                          # pick a variant with fzf (--help for the plain list)
 theme rose-pine-dawn           # switch everywhere and apply
 theme --dry-run catppuccin-mocha
 ```

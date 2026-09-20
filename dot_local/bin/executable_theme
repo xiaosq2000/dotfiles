@@ -7,10 +7,12 @@
 # selects a variant from .chezmoidata/themes-*.toml and `chezmoi apply` rewrites
 # every tool's config from it.
 #
-#   theme                        show the current variant and the alternatives
+#   theme                        pick a variant with fzf, and apply it
+#   theme --help                 the same list as plain text
 #   theme rose-pine-dawn         switch and apply
 #   theme --dry-run catppuccin-mocha
 #                                show what would change without writing
+#   theme --dry-run              pick a variant, then diff it instead of applying
 #
 # The variant list is not hard-coded here. It used to be, as
 # VARIANTS=(main moon dawn), which meant adding a colour scheme required editing
@@ -20,6 +22,32 @@ set -euo pipefail
 
 CONFIG="${CHEZMOI_CONFIG_FILE:-$HOME/.config/chezmoi/chezmoi.toml}"
 DRY_RUN=false
+
+# Where pick() leaves its answer. A global rather than `want="$(pick)"`, because
+# command substitution runs the function in a subshell and a `die` in there
+# would kill only the subshell: the script would carry on with an empty variant
+# and the error message already printed. Returning through a variable keeps
+# `die` meaning the same thing everywhere in this file.
+PICKED=""
+
+# One line per variant: slug, appearance, description, tab separated.
+#
+# The tabs come from `join` rather than being typed. A literal tab in a bash
+# string is invisible, and it is exactly the kind of character an editor setting
+# or a whitespace hook turns into spaces without anyone noticing; the
+# descriptions contain spaces and em dashes, so splitting on anything else would
+# not survive `read` anyway.
+#
+# Grouped the way usage() groups, by ranging over the schemes on the outside.
+# Sorting `keys .themes` alphabetically happens to produce the same order today,
+# but only because every slug begins with the name of its scheme. That is a
+# naming convention, not a promise this file should be resting on.
+#
+# The second line starts at column 0 on purpose. The newline before `{{ end }}`
+# is the record separator, so anything indenting that line is emitted after it
+# and prefixes every row.
+ROWS='{{ range $scheme, $s := .schemes }}{{ range $name, $t := $.themes }}{{ if eq $t.scheme $scheme }}{{ join "\t" (list $name $t.appearance $t.description) }}
+{{ end }}{{ end }}{{ end }}'
 
 die() {
     printf 'theme: %s\n' "$*" >&2
@@ -46,7 +74,12 @@ variants() {
 usage() {
     local current
     current="$(current_theme)"
-    printf 'usage: theme [--dry-run] <variant>\n\n'
+    printf 'usage: theme [--dry-run] [<variant>]\n\n'
+    # Worth saying, because this listing is now also what you get *instead of*
+    # the picker. Without the second sentence, someone who just lost their
+    # picker to a missing fzf has no way to tell that is what happened.
+    printf 'with no variant, pick one with fzf; this listing is the fallback\n'
+    printf 'when fzf is missing or there is no terminal, and what --help prints.\n\n'
     printf 'current: %s\n\n' "${current:-unknown}"
     printf 'available:\n'
     # Grouped by scheme. Every variant covers every tool since starship stopped
@@ -58,6 +91,108 @@ usage() {
 {{ range $name, $t := $.themes }}{{ if eq $t.scheme $scheme }}    {{ if eq $name $.theme }}*{{ else }} {{ end }} {{ printf "%-22s" $name }} {{ printf "%-5s" $t.appearance }}  {{ $t.description }}
       covers: btop kitty alacritty nvim zathura fzf starship
 {{ end }}{{ end }}{{ end }}'
+}
+
+# The picker, for when `theme` is run with nothing to switch to. Runs only when
+# there is an fzf and a terminal to draw it on; see the call site for why those
+# are checked there rather than here.
+pick() {
+    local current dir self sel slug appearance description marker
+    local n=0 cursor=0 status=0
+    local -a rows=() opts=()
+
+    current="$(current_theme)"
+
+    # Each row is `slug<TAB>display`. --with-nth=2 hides the slug from both the
+    # display and the search, --accept-nth=1 prints it back on accept, and {1}
+    # hands it to the ctrl-d binding — placeholders read the original line,
+    # unlike --nth, which reads the transformed one. So the slug travels through
+    # fzf untouched and nothing downstream has to take the columns apart again,
+    # which matters because a description holds spaces and an em dash.
+    while IFS=$'\t' read -r slug appearance description; do
+        n=$((n + 1))
+        if [ "$slug" = "$current" ]; then
+            marker='*'
+            cursor=$n
+        else
+            marker=' '
+        fi
+        # The same widths usage() uses, so the picker and the listing are
+        # recognisably the same list.
+        rows+=("$(printf '%s\t%s %-22s %-5s %s' \
+            "$slug" "$marker" "$slug" "$appearance" "$description")")
+    done < <(data "$ROWS")
+
+    # An empty list means the data files are gone or unreadable, and fzf on an
+    # empty list is a blank box with no way to say so.
+    [ "${#rows[@]}" -gt 0 ] || die "no variants found in .chezmoidata/themes-*.toml"
+
+    # ctrl-d re-enters this script, so the binding needs a path fzf's child can
+    # run. $0 is whatever the caller typed: the full path when the shell found
+    # `theme` on PATH, but ./theme or a bare theme when it did not. Resolve it
+    # here, while the working directory is still the one $0 was written against.
+    # Two steps rather than one, because in self="$(cd …)/$(basename …)" the
+    # assignment takes its status from the last substitution and a failing cd
+    # would pass unnoticed.
+    dir="$(cd -- "$(dirname -- "$0")" && pwd -P)" || die "cannot resolve the path to $0"
+    self="$dir/$(basename -- "$0")"
+
+    # No --color here on purpose. FZF_DEFAULT_OPTS already carries one, which
+    # dot_zshrc.tmpl generates from the current variant's [themes.<slug>.fzf],
+    # so the picker wears the theme you are leaving. fzf has no action that
+    # changes --color at runtime, so the chrome cannot follow the cursor down
+    # the list however much it would like to. Run from anything that is not an
+    # interactive zsh the variable is unset and fzf's own defaults apply, which
+    # is also fine.
+    #
+    # --with-shell, because fzf runs execute() bindings under $SHELL -c and
+    # $SHELL here is zsh, which does not word-split the result of a parameter
+    # expansion: `${PAGER:-less -R}` reaches it as one word and it reports
+    # `command not found: less -R`. Pinning sh keeps the binding POSIX, which is
+    # what fzf documents anyway.
+    #
+    # Something has to hold the screen for ctrl-d, because fzf redraws over the
+    # child the instant it exits. Leaving it to chezmoi does not work: its pager
+    # defaults to $PAGER and does nothing when that is unset, and it would not
+    # hold the `theme: X -> Y (dry run)` line this script prints before chezmoi
+    # starts. Piping explicitly also means chezmoi sees a pipe and turns its own
+    # pager off, so there is one pager rather than two.
+    #
+    # ctrl-d shadows fzf's own delete-char/eof. Deliberate: esc and ctrl-c still
+    # abort, and del still deletes.
+    opts=(
+        --delimiter=$'\t'
+        --with-nth=2
+        --accept-nth=1
+        --layout=reverse
+        --height='~60%'
+        --border=rounded
+        --border-label=" theme: now ${current:-unknown} "
+        --info=inline
+        --prompt='switch to> '
+        --header='enter: switch and apply    ctrl-d: diff    esc: cancel'
+        --header-first
+        --with-shell='sh -c'
+        --bind="ctrl-d:execute:$self --dry-run {1} 2>&1 | \${PAGER:-less -R}"
+    )
+    # pos() is 1-based, so 0 is not a position. cursor stays 0 when the config
+    # names a variant the data no longer defines, which is a state this script
+    # is otherwise happy to sit in until you ask it to switch.
+    if [ "$cursor" -gt 0 ]; then
+        opts+=(--bind="load:pos($cursor)")
+    fi
+
+    # fzf exits 0 having chosen something, 1 when nothing matched the query and
+    # 130 when it was interrupted. The last two are both "the user did not
+    # pick", which is not a failure: folding them into an empty result is what
+    # keeps them from tripping set -e at the call site, and keeps a real fzf
+    # error loud instead of silently doing nothing.
+    sel="$(printf '%s\n' "${rows[@]}" | fzf "${opts[@]}")" || status=$?
+    case "$status" in
+    0) PICKED="$sel" ;;
+    1 | 130) PICKED="" ;;
+    *) die "fzf exited with status $status" ;;
+    esac
 }
 
 while [ $# -gt 0 ]; do
@@ -83,8 +218,27 @@ command -v chezmoi >/dev/null 2>&1 || die "chezmoi is not on PATH"
 [ -f "$CONFIG" ] || die "chezmoi config not found at $CONFIG; run 'chezmoi init' first"
 
 if [ $# -eq 0 ]; then
-    usage
-    exit 0
+    # The picker is an affordance, not the interface. Without fzf, or without a
+    # terminal to draw it on, `theme` keeps doing what it has always done and
+    # prints the listing. CI depends on that: the workflow runs this script with
+    # no TTY, and a `theme` that blocked on a picker there would hang the job
+    # until the step timed out rather than fail in a way anyone could read.
+    #
+    # stdout because that is where the answer goes and where the reader is
+    # looking — `theme | less` wants the listing. stdin because something
+    # feeding this script down a pipe is not someone who can answer a picker.
+    if ! command -v fzf >/dev/null 2>&1 || [ ! -t 0 ] || [ ! -t 1 ]; then
+        usage
+        exit 0
+    fi
+    pick
+    # Esc, ctrl-c, or a query that matched nothing: nothing was chosen, so there
+    # is nothing to apply and nothing to say. Exiting 0 keeps `theme && ...`
+    # honest.
+    [ -n "$PICKED" ] || exit 0
+    # Through the same door a typed variant comes in by, so everything below
+    # this line is the code it was before the picker existed.
+    set -- "$PICKED"
 fi
 
 want="$1"
@@ -104,6 +258,10 @@ have="$(current_theme)"
 if [ "$DRY_RUN" = true ]; then
     printf 'theme: %s -> %s (dry run)\n\n' "$have" "$want"
     tmp="$(mktemp)"
+    # The only temp file in this process, and so the only EXIT trap. bash keeps
+    # one handler per signal and a second `trap ... EXIT` replaces the first
+    # without a word, so if another temp file is ever added here do not add
+    # another trap: collect the names and have one cleanup function walk them.
     trap 'rm -f "$tmp"' EXIT
     sed "s/^\([[:space:]]*theme[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$want\"/" "$CONFIG" >"$tmp"
     # Two things this line gets right that the old one did not.
@@ -139,7 +297,15 @@ if [ -n "${KITTY_WINDOW_ID:-}" ] && command -v kitten >/dev/null 2>&1; then
         printf 'theme: reloaded kitty\n' || true
 fi
 
-# btop and starship read their config at startup; fzf reads the environment;
-# nvim needs a restart when the scheme change also changes which plugin
-# provides it, because lazy.nvim installs it on the next start.
-printf 'theme: open a new shell for fzf and starship to pick up %s\n' "$want"
+# What is left needing a restart, which is less than this used to claim.
+#
+# starship was never on the list: zsh spawns `starship prompt` for every prompt
+# it draws, so it re-reads starship.toml on the next one and the colours change
+# under you. fzf came off it when FZF_DEFAULT_OPTS moved to a fixed-name file
+# that the zsh wrapper around this script re-sources; from bash, or from a shell
+# without that wrapper, it stays stale until the next shell.
+#
+# nvim is the honest remainder. The colorscheme is applied at startup, and every
+# scheme's plugin is declared so there is nothing left to install — but a
+# running instance keeps the colours it started with.
+printf 'theme: restart nvim to pick up %s\n' "$want"
