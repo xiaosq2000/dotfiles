@@ -2,17 +2,32 @@
 {{- $s := index .schemes $t.scheme -}}
 -- Rendered from .chezmoidata/themes-*.toml for {{ .theme }}.
 --
--- The plugin itself is chosen by the theme, not just the colorscheme name, so
--- selecting a Catppuccin variant installs catppuccin/nvim rather than leaving
--- rose-pine/neovim in place with a colorscheme it does not provide. lazy.nvim
--- installs the new plugin on the next start after a switch, which also makes
--- lazy-lock.json differ from the copy in this repository until it is re-added.
+-- The plugin is chosen by the theme, not just the colorscheme name, so
+-- selecting a Catppuccin variant loads catppuccin/nvim rather than leaving
+-- rose-pine/neovim in place with a colorscheme it does not provide.
+--
+-- Every scheme's plugin is declared, and all but the active one with
+-- `lazy = true`: named but never loaded. This file used to return the active
+-- one alone, which meant switching schemes handed lazy.nvim a repository it had
+-- never seen, so the first nvim after a switch stopped to clone it and
+-- lazy-lock.json gained an entry and lost one. Declaring them all costs one
+-- clone per scheme, once, and makes a switch cost nothing: the plugins are
+-- already on disk and the lock file holds still.
+--
+-- `name` matters as much as the repository. lazy.nvim keys plugins by name, so
+-- the same repository referred to under two names is two plugins to it and gets
+-- cloned twice — which is what happened while plugins/ui/lualine.lua named
+-- rose-pine/neovim as a dependency without one.
 return {
-	"{{ $s.nvimRepo }}",
-	name = "{{ $s.nvimName }}",
-	lazy = false,
-	priority = 1000,
-	config = function()
-		vim.cmd.colorscheme("{{ $t.nvim }}")
-	end,
-}
+	{
+		"{{ $s.nvimRepo }}",
+		name = "{{ $s.nvimName }}",
+		lazy = false,
+		priority = 1000,
+		config = function()
+			vim.cmd.colorscheme("{{ $t.nvim }}")
+		end,
+	},
+{{ range $scheme, $other := .schemes }}{{ if ne $scheme $t.scheme }}	-- {{ $scheme }}: installed so switching to it needs no download.
+	{ "{{ $other.nvimRepo }}", name = "{{ $other.nvimName }}", lazy = true },
+{{ end }}{{ end }}}
