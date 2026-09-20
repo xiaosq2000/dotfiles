@@ -24,31 +24,52 @@ before the sync runs.
 Run the command by hand only to get a zsh before the first apply, on a machine
 with no root and no zsh at all.
 
-## pixi completion has to load after compinit
+## Tool completions are cached on fpath, not evaluated at startup
 
-In `.zshrc`, the line that loads pixi completion sits far below the section that
-adds pixi to `PATH`. The two lines belong together by topic, and they cannot run
-at the same point in the file.
+`.zshrc` does not run `pixi completion --shell zsh` and evaluate the result. It
+writes that output to `${XDG_CACHE_HOME}/zsh/completions/_pixi` and puts the
+directory on `fpath` before `compinit`. codex and uv are handled the same way by
+the same loop.
 
-`pixi completion --shell zsh` prints code that calls `compdef`. The `compdef`
-function only exists after `compinit` has run, and `.zshrc` runs `compinit`
-itself in its completion section, just above the `sheldon source` line, so the
-pixi completion has to load after that. This used to be oh-my-zsh's `compinit`,
-called as a side effect of sourcing `oh-my-zsh.sh`; making the call explicit is
-part of why the framework went away.
+The reason is cost. Those scripts are big — pixi's is 11,781 lines — and `eval`
+has to parse all of it before the shell can draw a prompt. Measured on the
+laptop on 2026-09-20, the three of them were 516 ms of a 750 ms startup. As
+files on `fpath` they cost nothing at startup: `compinit` reads the `#compdef`
+tag on the first line, and zsh loads the body on the first Tab. Startup went to
+216 ms.
 
-Ubuntu hides the problem, because its `/etc/zsh/zshrc` runs `compinit` before
-your `.zshrc` starts, so an early call works by accident. A zsh installed by
-pixi or by homebrew reads no such file, and zsh then prints the following
-warning on every new shell.
+This works because clap, which generates all three, ends each script with a
+dual-mode trailer:
 
+```zsh
+if [ "$funcstack[1]" = "_pixi" ]; then
+    _pixi "$@"
+else
+    compdef _pixi pixi
+fi
 ```
-(eval):11778: command not found: compdef
-```
 
-You can reproduce the same condition on Ubuntu without installing anything,
-because the `noglobalrcs` option tells zsh to skip the files under `/etc/zsh`.
-The command below prints `_pixi` when the completion loaded correctly, and
+Autoloaded, `funcstack[1]` is `_pixi` and the file calls the function it just
+defined. Sourced, it falls through to `compdef`. One file is correct either way.
+
+**This is why the old ordering constraint is gone.** Loading the completion by
+`eval` meant it called `compdef`, which only exists once `compinit` has run, so
+the pixi line had to sit far below the section that puts pixi on `PATH`. Ubuntu
+hid the problem, because its `/etc/zsh/zshrc` runs `compinit` before your
+`.zshrc` starts; a zsh installed by pixi or homebrew reads no such file and
+printed `(eval):11778: command not found: compdef` on every new shell. An fpath
+file never calls `compdef` at all, so the ordering that now matters is the
+opposite one: the directory has to join `fpath` *before* `compinit`, not after.
+
+One wrinkle comes with it. `compinit -C` reuses its dump and never rescans
+`fpath`, so a completion file that is new or newly regenerated would go
+unregistered until the dump ages out, up to a day later. `.zshrc` deletes the
+dump when any cached completion, or `.zshrc` itself, is newer than it, and lets
+`compinit` rebuild.
+
+The check below still applies, and is still worth running after a pixi upgrade.
+`noglobalrcs` tells zsh to skip `/etc/zsh`, reproducing a pixi-installed zsh on
+Ubuntu without installing one. It prints `_pixi` when the completion loaded and
 `missing` when it did not.
 
 ```sh
