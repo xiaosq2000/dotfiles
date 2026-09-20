@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+# One switch for the i-have-adhd always-on ruleset, across Claude Code and Codex.
+#
+#   adhd                     show where always-on stands on this machine
+#   adhd on  [claude|codex]  turn it on  (both agents unless one is named)
+#   adhd off [claude|codex]  turn it off
+#
+# The skill itself is installed by setup.d/adhd.sh and is opt-in on both agents:
+# `/i-have-adhd` in Claude Code, `$i-have-adhd` in Codex, and "stop adhd mode" to
+# drop it again. That per-session route needs no help from this script and keeps
+# working whatever the switch below is set to. What this script controls is the
+# other posture: the rules applying from message one of every session.
+#
+# The two agents need different mechanisms for that, which is the whole reason
+# this command exists rather than a line in the README:
+#
+#   Claude Code  touch a flag file, which the plugin's own SessionStart hook
+#                looks for and answers by injecting the full SKILL.md
+#   Codex        no flag file, no hook, no `plugin disable`, so append the
+#                condensed ten rules to the global AGENTS.md instead, which is
+#                the route the upstream INSTALL.md recommends
+#
+# Remembering which is which, on four machines, is exactly the kind of thing the
+# skill is about not having to do.
+#
+# Upstream: https://github.com/ayghri/i-have-adhd (MIT)
+set -euo pipefail
+
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
+
+FLAG="$CLAUDE_DIR/.i-have-adhd-always"
+AGENTS="$CODEX_DIR/AGENTS.md"
+
+# Markers rather than a whole managed file, because AGENTS.md is a place you are
+# likely to keep your own instructions too. `adhd off` removes what is between
+# them and nothing else.
+BEGIN_MARK='<!-- BEGIN i-have-adhd (managed by `adhd`) -->'
+END_MARK='<!-- END i-have-adhd -->'
+
+die() {
+    printf 'adhd: %s\n' "$*" >&2
+    exit 1
+}
+
+usage() {
+    printf '%s\n' "usage: adhd [on|off|status] [claude|codex]"
+    printf '%s\n' ""
+    printf '%s\n' "  (no arguments)  show where always-on stands"
+    printf '%s\n' "  on              inject the rules from message one"
+    printf '%s\n' "  off             back to opt-in, per session"
+    printf '%s\n' ""
+    printf '%s\n' "Per-session use is unaffected either way: /i-have-adhd in"
+    printf '%s\n' "Claude Code, \$i-have-adhd in Codex, \"stop adhd mode\" to end."
+}
+
+# The condensed ruleset from the upstream INSTALL.md, not the full SKILL.md.
+# Codex reads AGENTS.md into every session, so this is paid on every request:
+# roughly 200 tokens here against roughly 2400 for the whole skill. Claude Code
+# does not have that problem, because its hook injects the skill once at session
+# start rather than on each turn, so it gets the unabridged version.
+read -r -d '' RULES <<'EOF' || true
+## Output style
+
+The reader has ADHD. Shape every response so it can be acted on:
+
+1. Lead with the answer or next action: command, path, or snippet first.
+2. Number multi-step work; one bounded action per step.
+3. End with one next action doable in under two minutes.
+4. Finish the current issue before raising a new one.
+5. Restate progress each turn ("step 3 of 5 done").
+6. Give time estimates in concrete units, never "a bit".
+7. After a change, show what now works.
+8. Errors: state location, cause, and fix. No drama.
+9. Cap lists to 5 items.
+10. No preamble, no recaps, no closers.
+
+Exceptions: explain fully when asked to explain. Confirm before destructive actions. After three failed fixes, stop and name the doubtful assumption. If the request is ambiguous, ask one short question.
+EOF
+
+################################################################################
+# Claude Code
+################################################################################
+
+claude_is_on() { [ -e "$FLAG" ]; }
+
+claude_on() {
+    mkdir -p "$CLAUDE_DIR"
+    touch "$FLAG"
+}
+
+claude_off() { rm -f "$FLAG"; }
+
+# The flag is inert without the plugin, because the hook that reads it ships
+# with the plugin. Worth saying out loud in `adhd status` rather than letting a
+# machine sit at ON doing nothing.
+claude_has_plugin() {
+    grep -qF '"i-have-adhd@i-have-adhd"' \
+        "$CLAUDE_DIR/plugins/installed_plugins.json" 2>/dev/null
+}
+
+################################################################################
+# Codex
+################################################################################
+
+codex_is_on() { [ -f "$AGENTS" ] && grep -qF "$BEGIN_MARK" "$AGENTS"; }
+
+codex_on() {
+    codex_is_on && return 0
+    mkdir -p "$CODEX_DIR"
+    # Keep a blank line between our block and whatever was already there.
+    [ -s "$AGENTS" ] && printf '\n' >>"$AGENTS"
+    printf '%s\n%s\n%s\n' "$BEGIN_MARK" "$RULES" "$END_MARK" >>"$AGENTS"
+}
+
+codex_off() {
+    codex_is_on || return 0
+    local body
+    # Drop the marked block, then any blank lines it left behind at the end of
+    # the file, so an on/off round trip returns AGENTS.md byte for byte.
+    body=$(awk -v b="$BEGIN_MARK" -v e="$END_MARK" '
+        index($0, b) { skip = 1; next }
+        index($0, e) { skip = 0; next }
+        !skip        { line[++n] = $0; if (NF) last = n }
+        END          { for (i = 1; i <= last; i++) print line[i] }
+    ' "$AGENTS")
+    if [ -n "$body" ]; then
+        # Rewrite in place rather than mktemp-and-mv, so the file keeps its mode.
+        printf '%s\n' "$body" >"$AGENTS"
+    else
+        # Our block was the only thing in it, so we created the file. Remove it
+        # rather than leaving an empty AGENTS.md that Codex will still read.
+        rm -f "$AGENTS"
+    fi
+}
+
+codex_has_plugin() {
+    grep -qF '[plugins."i-have-adhd@i-have-adhd"]' \
+        "$CODEX_DIR/config.toml" 2>/dev/null
+}
+
+################################################################################
+# Reporting
+################################################################################
+
+report() {
+    local agent="$1" state="$2" where="$3" missing="$4"
+    local note=""
+    [ "$missing" = true ] && note="  (skill not installed: run ~/.sh_utils/setup.d/adhd.sh)"
+    printf '  %-12s %-3s  %s%s\n' "$agent" "$state" "$where" "$note"
+}
+
+status() {
+    printf '%s\n' "i-have-adhd always-on:"
+    report "claude-code" \
+        "$(claude_is_on && printf ON || printf OFF)" \
+        "$FLAG" \
+        "$(claude_has_plugin && printf false || printf true)"
+    report "codex" \
+        "$(codex_is_on && printf ON || printf OFF)" \
+        "$AGENTS" \
+        "$(codex_has_plugin && printf false || printf true)"
+}
+
+################################################################################
+
+action="${1:-status}"
+target="${2:-both}"
+
+case "$target" in
+    claude | claude-code) want_claude=true want_codex=false ;;
+    codex) want_claude=false want_codex=true ;;
+    both) want_claude=true want_codex=true ;;
+    *) die "unknown target '$target'; use claude, codex, or leave it out for both" ;;
+esac
+
+case "$action" in
+    on)
+        [ "$want_claude" = true ] && claude_on
+        [ "$want_codex" = true ] && codex_on
+        status
+        printf '\n%s\n' "Restart any running claude or codex session to pick this up."
+        ;;
+    off)
+        [ "$want_claude" = true ] && claude_off
+        [ "$want_codex" = true ] && codex_off
+        status
+        printf '\n%s\n' "Restart any running claude or codex session to pick this up."
+        ;;
+    status) status ;;
+    -h | --help | help) usage ;;
+    *)
+        printf 'adhd: unknown command %s\n\n' "'$action'" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

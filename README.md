@@ -106,6 +106,33 @@ field every variant has.
 To restyle another tool, add a key to each scheme file and reference it from
 that tool's template. Never hard-code a variant name in a config file.
 
+## Agent output
+
+```sh
+adhd                           # where always-on stands on this machine
+adhd on                        # rules from message one, both agents
+adhd off                       # back to per-session
+```
+
+[i-have-adhd](https://github.com/ayghri/i-have-adhd) reshapes agent output to be
+acted on: next action first, numbered steps, no preamble.
+[setup.d/adhd.sh](dot_sh_utils/setup.d/executable_adhd.sh) installs it wherever
+`claude` or `codex` is on PATH, and does nothing where neither is, so it is not
+gated on the machine's bundles.
+
+Installing changes nothing by itself. The skill is opt-in on both agents, so
+neither model can reach for it unasked: type `/i-have-adhd` in Claude Code or
+`$i-have-adhd` in Codex, and `stop adhd mode` to end it.
+
+`adhd on` is the other posture, and the two agents need different mechanisms for
+it, which is why there is a command rather than a line here. Claude Code gets a
+flag file that the plugin's SessionStart hook answers with the whole skill; Codex
+has no such hook, so the condensed ten rules go in `~/.codex/AGENTS.md` between
+markers, which `adhd off` removes and nothing else.
+
+The switch is per machine and deliberately not tracked here. Installing is a
+property of the machine; whether every session should open in ADHD mode is a mood.
+
 ## Installed tools
 
 Tools come from pixi in named bundles.
