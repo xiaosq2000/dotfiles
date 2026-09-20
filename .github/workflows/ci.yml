@@ -171,7 +171,15 @@ jobs:
           # fpath has to be set before compinit, or compinit will not see it.
           fpath_line=$(grep -n '^fpath=(' "$HOME/.zshrc" | head -1 | cut -d: -f1)
           compinit_line=$(grep -n '^autoload -Uz compinit' "$HOME/.zshrc" | cut -d: -f1)
+          gen_line=$(grep -n '^_zcompcache=' "$HOME/.zshrc" | cut -d: -f1)
+          pnpm_line=$(grep -n '^export PNPM_HOME=' "$HOME/.zshrc" | cut -d: -f1)
           test "$fpath_line" -lt "$compinit_line"
+          # Every tool must be on PATH before the block that generates its
+          # completion. codex is a pnpm binary, and pnpm's PATH entry used to sit
+          # below compinit, so a shell that did not already have it inherited
+          # generated no codex completion and never noticed. Caught only on a
+          # login shell with a clean environment.
+          test "$pnpm_line" -lt "$gen_line"
           # The directory joins fpath even with none of the three tools present.
           timeout 60 zsh -ic 'print -l $fpath' | grep -q '/zsh/completions$'
           # And startup reports nothing. Not a silence check: .zshrc always

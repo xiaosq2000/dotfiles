@@ -157,6 +157,21 @@ prepend_env PATH "${HOME}/.pixi/bin" # Add pixi to PATH first
 # Completion is cached to a file on fpath by the completion section further
 # down, not loaded here. See ~/.sh_utils/CAVEATS.md
 
+# pnpm (also manages node.js; replaces nvm)
+#
+# Up here rather than with the other tool sections below, because codex is a
+# pnpm binary and the completion cache further down has to find it on PATH
+# before compinit runs. Nothing between here and where this block used to sit
+# touches PATH, so the order it produces is unchanged: pnpm prepends straight
+# after pixi either way, and go, google-drive-upload and opencode still land in
+# front of both.
+export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
+
 ################################################################################
 ##################################### rust #####################################
 ################################################################################
@@ -365,7 +380,18 @@ zvm_config() {
 # move.
 _zcompcache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions"
 _zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
-mkdir -p "$_zcompcache" "${_zcompdump:h}"
+[[ -d "$_zcompcache" ]] || mkdir -p "$_zcompcache"
+
+# compinit refuses a directory on fpath that is writable by group or other, and
+# checks the parent as well. The umask here is 002, so mkdir leaves both 0775,
+# and compinit would then stop on an interactive prompt asking whether to ignore
+# them. It does not do that on this laptop, because compaudit exempts a
+# group-writable directory when the primary group is named after the user and
+# has nobody else in it — which is true here and is not true on sicc, where the
+# group is shared. Two stats on a normal start, and the chmod runs once ever.
+if [[ -n ${_zcompcache}(#qNf:g+w:,f:o+w:) || -n ${_zcompcache:h}(#qNf:g+w:,f:o+w:) ]]; then
+    chmod go-w "${_zcompcache:h}" "$_zcompcache"
+fi
 
 typeset -A _zcompgen=(
     pixi  'pixi completion --shell zsh'
@@ -392,15 +418,22 @@ done
 
 fpath=("$_zcompcache" $fpath)
 
-# compinit -C trusts the dump and never rescans fpath, so anything newer than the
-# dump goes unregistered until the dump ages out, up to a day later. Drop the
-# dump instead and let the compinit below rebuild it.
+# compinit -C sources the dump and never globs fpath, so a name that is new to
+# this directory would go unregistered until the dump ages out, up to a day
+# later. Drop the dump and let the compinit below rebuild it.
 #
-# .zshrc is in the list deliberately. A completion file that is older than the
-# dump still needs a rebuild the first time this directory joins fpath, and the
-# file's own mtime cannot show that; the apply that rewrote this file can. It
-# also covers any later change to what is on fpath. Note that `-nt` is false when
-# the dump is missing, which is harmless: compinit rebuilds in that case anyway.
+# Deliberately broader than it strictly needs to be. Only a *new* name needs a
+# rebuild: the dump records that pixi completes with _pixi, and the body is read
+# from fpath at the first Tab, so rewriting a file in place needs nothing here.
+# Testing mtimes instead re-dumps after a tool upgrade too, which costs one
+# compinit of about 40 ms in one shell. That is cheap enough to be worth not
+# having to track which files the loop above created.
+#
+# .zshrc is in the list because a completion file that is *older* than the dump
+# still needs a rebuild the first time this directory joins fpath, and the file's
+# own mtime cannot show that — only the apply that rewrote this file can. Note
+# `-nt` is false when the dump is missing, which is harmless: compinit rebuilds
+# from scratch in that case anyway.
 for _f in "$_zcompcache"/_*(N) "${ZDOTDIR:-$HOME}/.zshrc"; do
     [[ "$_f" -nt "$_zcompdump" ]] && { rm -f "$_zcompdump"; break; }
 done
@@ -478,13 +511,8 @@ if has eza; then
     alias lt='eza --tree --level=2 --icons=auto'
 fi
 
-# pnpm (also manages node.js; replaces nvm)
-export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
+# pnpm's PATH entry is set up with pixi's, far above, because codex is a pnpm
+# binary and the completion cache has to see it before compinit runs.
 
 # go
 prepend_env PATH "${HOME}/.local/go/bin"
