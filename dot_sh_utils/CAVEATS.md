@@ -24,78 +24,31 @@ before the sync runs.
 Run the command by hand only to get a zsh before the first apply, on a machine
 with no root and no zsh at all.
 
-## Tool completions are cached on fpath, not evaluated at startup
+## pixi completion has to load after compinit
 
-`.zshrc` does not run `pixi completion --shell zsh` and evaluate the result. It
-writes that output to `${XDG_CACHE_HOME}/zsh/completions/_pixi` and puts the
-directory on `fpath` before `compinit`. codex and uv are handled the same way by
-the same loop.
+In `.zshrc`, the line that loads pixi completion sits far below the section that
+adds pixi to `PATH`. The two lines belong together by topic, and they cannot run
+at the same point in the file.
 
-The reason is cost. Those scripts are big — pixi's is 11,781 lines — and `eval`
-has to parse all of it before the shell can draw a prompt. Measured on the
-laptop on 2026-09-20, the three of them were 516 ms of a 750 ms startup. As
-files on `fpath` they cost nothing at startup: `compinit` reads the `#compdef`
-tag on the first line, and zsh loads the body on the first Tab. Startup went to
-216 ms.
+`pixi completion --shell zsh` prints code that calls `compdef`. The `compdef`
+function only exists after `compinit` has run, and `.zshrc` runs `compinit`
+itself in its completion section, just above the `sheldon source` line, so the
+pixi completion has to load after that. This used to be oh-my-zsh's `compinit`,
+called as a side effect of sourcing `oh-my-zsh.sh`; making the call explicit is
+part of why the framework went away.
 
-This works because clap, which generates all three, ends each script with a
-dual-mode trailer:
+Ubuntu hides the problem, because its `/etc/zsh/zshrc` runs `compinit` before
+your `.zshrc` starts, so an early call works by accident. A zsh installed by
+pixi or by homebrew reads no such file, and zsh then prints the following
+warning on every new shell.
 
-```zsh
-if [ "$funcstack[1]" = "_pixi" ]; then
-    _pixi "$@"
-else
-    compdef _pixi pixi
-fi
+```
+(eval):11778: command not found: compdef
 ```
 
-Autoloaded, `funcstack[1]` is `_pixi` and the file calls the function it just
-defined. Sourced, it falls through to `compdef`. One file is correct either way.
-
-**This is why the old ordering constraint is gone.** Loading the completion by
-`eval` meant it called `compdef`, which only exists once `compinit` has run, so
-the pixi line had to sit far below the section that puts pixi on `PATH`. Ubuntu
-hid the problem, because its `/etc/zsh/zshrc` runs `compinit` before your
-`.zshrc` starts; a zsh installed by pixi or homebrew reads no such file and
-printed `(eval):11778: command not found: compdef` on every new shell. An fpath
-file never calls `compdef` at all, so the ordering that now matters is the
-opposite one: the directory has to join `fpath` *before* `compinit`, not after.
-
-Three wrinkles come with it, and all three look arbitrary without the reason.
-
-**The dump has to be thrown away when a completion file is new.** `compinit -C`
-sources its dump and never globs `fpath`, so a name that appeared for the first
-time would go unregistered until the dump ages out, up to a day later. `.zshrc`
-deletes the dump when any cached completion, or `.zshrc` itself, is newer than
-it. `.zshrc` is in that test because a file *older* than the dump still needs a
-rebuild the first time the directory joins `fpath`, and only the apply that
-rewrote `.zshrc` can show that.
-
-**Every tool has to be on `PATH` before the block that generates its
-completion.** This is why pnpm's `PATH` entry sits up with pixi's rather than
-with the other tool sections. `codex` is a pnpm binary, and while pnpm's entry
-was below `compinit`, a shell that did not already have it inherited generated
-no codex completion at all — and said nothing, because the loop skips a tool it
-cannot find. It only shows up on a login shell with a clean environment:
-
-```sh
-rm ~/.cache/zsh/completions/_codex
-env -i HOME=$HOME TERM=xterm PATH=/usr/bin:/bin zsh -ic exit
-ls ~/.cache/zsh/completions/
-```
-
-**The cache directory and its parent must not be group-writable.** `compaudit`
-rejects a group- or other-writable directory on `fpath`, *and* checks the
-parent, and `compinit` then stops on an interactive prompt asking whether to
-ignore it. The umask here is 002, so `mkdir` leaves both 0775. It does not bite
-on this laptop, because `compaudit` exempts a group-writable directory whose
-group is named after the user and has nobody else in it. That exemption does not
-apply on sicc, where the group is shared, so `.zshrc` fixes the modes itself,
-behind a test that costs two stats.
-
-The check below still applies, and is still worth running after a pixi upgrade.
-`noglobalrcs` tells zsh to skip `/etc/zsh`, reproducing a pixi-installed zsh on
-Ubuntu without installing one. It prints `_pixi` when the completion loaded and
+You can reproduce the same condition on Ubuntu without installing anything,
+because the `noglobalrcs` option tells zsh to skip the files under `/etc/zsh`.
+The command below prints `_pixi` when the completion loaded correctly, and
 `missing` when it did not.
 
 ```sh

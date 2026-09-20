@@ -154,23 +154,7 @@ prepend_env PATH "/usr/local/cuda/bin"
 ################################################################################
 # https://github.com/prefix-dev/pixi/
 prepend_env PATH "${HOME}/.pixi/bin" # Add pixi to PATH first
-# Completion is cached to a file on fpath by the completion section further
-# down, not loaded here. See ~/.sh_utils/CAVEATS.md
-
-# pnpm (also manages node.js; replaces nvm)
-#
-# Up here rather than with the other tool sections below, because codex is a
-# pnpm binary and the completion cache further down has to find it on PATH
-# before compinit runs. Nothing between here and where this block used to sit
-# touches PATH, so the order it produces is unchanged: pnpm prepends straight
-# after pixi either way, and go, google-drive-upload and opencode still land in
-# front of both.
-export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
+# Completion is loaded further down, after compinit. See ~/.sh_utils/CAVEATS.md
 
 ################################################################################
 ##################################### rust #####################################
@@ -358,94 +342,16 @@ zvm_config() {
 ################################################################################
 ################################# completion ###################################
 ################################################################################
-# Tool completions, cached to files on fpath rather than evaled at every start.
-#
-# pixi, codex and uv each print a clap-generated completion script. They are
-# large — pixi's is 11,781 lines — and evaluating them cost 516 ms of a 750 ms
-# startup, because eval has to parse the whole thing before the prompt can be
-# drawn. The same text in a file named for its completion function costs nothing
-# here: compinit reads the `#compdef` tag on the first line, and zsh loads the
-# body on the first Tab.
-#
-# Autoloading is what clap emits these for. Each one ends with
-#
-#   if [ "$funcstack[1]" = "_pixi" ]; then _pixi "$@"; else compdef _pixi pixi; fi
-#
-# so a single file is correct whether it is autoloaded or sourced, and this block
-# does not have to care which.
-#
-# Regeneration is keyed on the binary being newer than the cache, which is what
-# the uv block did before this. It has to be: pixi installs itself, uv comes from
-# the pixi manifest and codex from pnpm, and none of them tell chezmoi when they
-# move.
-_zcompcache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions"
-_zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
-[[ -d "$_zcompcache" ]] || mkdir -p "$_zcompcache"
-
-# compinit refuses a directory on fpath that is writable by group or other, and
-# checks the parent as well. The umask here is 002, so mkdir leaves both 0775,
-# and compinit would then stop on an interactive prompt asking whether to ignore
-# them. It does not do that on this laptop, because compaudit exempts a
-# group-writable directory when the primary group is named after the user and
-# has nobody else in it — which is true here and is not true on sicc, where the
-# group is shared. Two stats on a normal start, and the chmod runs once ever.
-if [[ -n ${_zcompcache}(#qNf:g+w:,f:o+w:) || -n ${_zcompcache:h}(#qNf:g+w:,f:o+w:) ]]; then
-    chmod go-w "${_zcompcache:h}" "$_zcompcache"
-fi
-
-typeset -A _zcompgen=(
-    pixi  'pixi completion --shell zsh'
-    codex 'codex completion zsh'
-    uv    'uv generate-shell-completion zsh'
-)
-
-for _t in ${(k)_zcompgen}; do
-    # $commands is zsh's own hash of external commands, so unlike `has` this
-    # costs no fork, and the whole loop is free on a shell whose caches are warm.
-    (( ${+commands[$_t]} )) || continue
-    _f="$_zcompcache/_$_t"
-    [[ -s "$_f" && ! "${commands[$_t]}" -nt "$_f" ]] && continue
-    # Written through a temporary, so a tool that fails or is killed halfway
-    # cannot leave a truncated file behind. That would break Tab for the command
-    # rather than merely leave it uncompleted, and it would persist, because the
-    # staleness test above only compares mtimes.
-    if eval "${_zcompgen[$_t]}" >|"$_f.new" 2>/dev/null && [[ -s "$_f.new" ]]; then
-        mv -f "$_f.new" "$_f"
-    else
-        rm -f "$_f.new"
-    fi
-done
-
-fpath=("$_zcompcache" $fpath)
-
-# compinit -C sources the dump and never globs fpath, so a name that is new to
-# this directory would go unregistered until the dump ages out, up to a day
-# later. Drop the dump and let the compinit below rebuild it.
-#
-# Deliberately broader than it strictly needs to be. Only a *new* name needs a
-# rebuild: the dump records that pixi completes with _pixi, and the body is read
-# from fpath at the first Tab, so rewriting a file in place needs nothing here.
-# Testing mtimes instead re-dumps after a tool upgrade too, which costs one
-# compinit of about 40 ms in one shell. That is cheap enough to be worth not
-# having to track which files the loop above created.
-#
-# .zshrc is in the list because a completion file that is *older* than the dump
-# still needs a rebuild the first time this directory joins fpath, and the file's
-# own mtime cannot show that — only the apply that rewrote this file can. Note
-# `-nt` is false when the dump is missing, which is harmless: compinit rebuilds
-# from scratch in that case anyway.
-for _f in "$_zcompcache"/_*(N) "${ZDOTDIR:-$HOME}/.zshrc"; do
-    [[ "$_f" -nt "$_zcompdump" ]] && { rm -f "$_zcompdump"; break; }
-done
-
-unset _t _f _zcompgen _zcompcache
-
-# compinit has to run here: after the zstyles above, and before fzf-tab loads.
+# compinit has to run here: after the zstyles above, before fzf-tab loads, and
+# before pixi's completion further down, which calls compdef and needs the
+# completion system to exist. See ~/.sh_utils/CAVEATS.md
 #
 # The dump goes under XDG rather than ~/.zcompdump, and the security check is
 # skipped when the dump is less than a day old, which is what oh-my-zsh's
 # lib/completion.zsh did with a cache of its own.
 autoload -Uz compinit
+_zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
+mkdir -p "${_zcompdump:h}"
 if [[ -n ${_zcompdump}(#qNm-1) ]]; then
     compinit -C -d "$_zcompdump"
 else
@@ -511,8 +417,13 @@ if has eza; then
     alias lt='eza --tree --level=2 --icons=auto'
 fi
 
-# pnpm's PATH entry is set up with pixi's, far above, because codex is a pnpm
-# binary and the completion cache has to see it before compinit runs.
+# pnpm (also manages node.js; replaces nvm)
+export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
 
 # go
 prepend_env PATH "${HOME}/.local/go/bin"
@@ -531,12 +442,27 @@ if has tre; then
     tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
 fi
 
-# uv, pixi and codex completions are cached to files on fpath in the completion
-# section above, rather than loaded here.
+# uv shell completion
+if has uv; then
+    _uv_completion_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_uv"
+    if [[ ! -s "$_uv_completion_cache" || "$(command -v uv)" -nt "$_uv_completion_cache" ]]; then
+        mkdir -p "${_uv_completion_cache:h}"
+        uv generate-shell-completion zsh >|"$_uv_completion_cache"
+    fi
+    source "$_uv_completion_cache"
+    unset _uv_completion_cache
+fi
+
+# pixi shell completion; needs compdef, so it must follow compinit.
+# See ~/.sh_utils/CAVEATS.md
+if has pixi; then eval "$(pixi completion --shell zsh)"; fi
 
 ################################################################################
 ################################# coding agent #################################
 ################################################################################
+# codex shell completion
+if has codex; then eval "$(codex completion zsh)"; fi
+
 claude() {
     local country
 
@@ -693,11 +619,7 @@ setup_ros2() {
 }
 
 [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh"
-# `proxy shell on` costs ~130 ms: it probes systemctl, reads the tun state and
-# forks a subshell to resolve the host and port. Everything it sets is exported,
-# so a nested shell or a tmux pane already has it and paying again changes
-# nothing. Only the first shell under a terminal does the work.
-if has proxy && [[ -z "${http_proxy:-}" ]]; then proxy shell on; fi
+if has proxy; then proxy shell on; fi
 
 zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(((zshrc_end_time - zshrc_start_time) / 1000000))
