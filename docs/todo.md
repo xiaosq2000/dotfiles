@@ -22,21 +22,21 @@ nothing left for any of them to clean.
 The laptop took its age identity by hand on 2026-09-20, because the fetcher was
 `run_once_before_` and so could never succeed on a first init. It is
 `run_onchange_before_` now, keyed on whether rbw exists yet, so it retries on
-the second apply; see [secrets.md](secrets.md). imrl and sicc still have no key
-and apply everything else in full.
+the second apply; see [secrets.md](secrets.md). Every machine but the vps now
+carries the key, and the vps deliberately never will.
 
 rustup is installed on the workstation and the laptop, the two machines with
 `rust = true`. It is gone from imrl, sicc and the vps, and no machine sources
 `~/.cargo/env`.
 
-## Do these next
+All five machines were pulled to `38e8d5f` and applied on 2026-09-20, with
+`chezmoi status` empty and `chezmoi verify` exit 0 on each.
 
-### imrl and sicc still have no age key
-
-So `.chezmoiignore` leaves `~/.ssh/config` unmanaged on both and they apply
-everything else in full. They pick it up the moment a key arrives, with no other
-change. Whether that is worth doing depends on whether you want the SSH config
-on a shared lab server and a cluster login node at all.
+One correction worth keeping, because it was believed for a day: this file and
+secrets.md both said imrl and sicc carried no age key. They had carried one
+since 2026-09-19, with `~/.ssh/config` managed at mode 0600 on both. The claim
+was copied forward instead of checked. `age-keygen -y ~/.config/chezmoi/key.txt`
+takes a second and settles it.
 
 ## Worth doing
 

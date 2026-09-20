@@ -20,12 +20,20 @@ Verified rather than assumed: `rbw get "chezmoi age identity" | age-keygen -y`
 prints `age1ke4rf2j…`, the same recipient this repository encrypts to. A backup
 that has not been read back is a hope, not a backup.
 
-The workstation and the laptop carry the key; the laptop got it on 2026-09-20,
-by hand. imrl and sicc do not have it, and the vps is not getting one, because
-it is internet-facing. `.chezmoiignore` leaves the encrypted entries unmanaged
-on those three and they apply everything else in full. Each picks up
-`~/.ssh/config` the moment a key arrives, with no other change — which is
-exactly what the laptop did.
+Four machines carry the key: the workstation, imrl and sicc took it from
+Bitwarden on 2026-09-19, and the laptop by hand on 2026-09-20. `~/.ssh/config`
+is managed on all four, mode 0600, five hosts. Checked on each rather than
+assumed, on 2026-09-20:
+
+```sh
+age-keygen -y ~/.config/chezmoi/key.txt    # must print age1ke4rf2j…
+chezmoi managed | grep '^\.ssh/config$'
+```
+
+The vps is not getting one, because it is internet-facing. `.chezmoiignore`
+leaves the encrypted entries unmanaged there and it applies everything else in
+full; its apply prints `age-identity: rbw not found` and carries on, which is
+the intended keyless path rather than a fault.
 
 ### Why the fetcher runs on every apply, not once
 
@@ -106,8 +114,9 @@ The backup itself needs no tooling: an item called `chezmoi age identity` whose
 password is the `AGE-SECRET-KEY-…` line from `~/.config/chezmoi/key.txt`, made
 in the web vault or the app, is the whole thing.
 
-rbw buys the second half, which is a machine fetching that item by itself, and
-it is now working here. imrl and sicc do not have it set up yet.
+rbw buys the second half, which is a machine fetching that item by itself. It is
+set up and working on the workstation, imrl and sicc, all of which took the key
+that way on 2026-09-19.
 
 First get rbw talking to the server. Against the official bitwarden.com this
 needs `rbw register` before `rbw login`, and skipping it fails in a way that
