@@ -71,23 +71,10 @@ so itself when the template no longer matches the generated config.
 {{-   end -}}
 {{- end -}}
 {{- /*
-   Variants are named after their upstream slug now, so the three old answers
-   have to be translated or every machine's stored value would fail validation
-   below on the first init after pulling this.
-
-   Delete this map once every machine has run `chezmoi init`. Checked off:
-   workstation, imrl and sicc on 2026-09-18; laptop and vps outstanding.
-*/ -}}
-{{- $renamed := dict "main" "rose-pine" "moon" "rose-pine-moon" "dawn" "rose-pine-dawn" -}}
-{{- /*
-   promptStringOnce, not promptChoiceOnce: the choice form validates against a
-   list before this template can translate an old name, and its error does not
-   say what the valid names are.
+   promptStringOnce, not promptChoiceOnce: the choice form's error names no
+   valid answers, while the fail below lists every variant it knows.
 */ -}}
 {{- $theme := promptStringOnce . "theme" "theme" "rose-pine" -}}
-{{- if hasKey $renamed $theme -}}
-{{-   $theme = index $renamed $theme -}}
-{{- end -}}
 {{- if not (hasKey $themes $theme) -}}
 {{-   fail (printf "unknown theme %q; known variants are: %s" $theme (keys $themes | sortAlpha | join ", ")) -}}
 {{- end -}}

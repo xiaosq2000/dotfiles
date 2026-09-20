@@ -249,11 +249,11 @@ jobs:
           grep -q '^palette = "rose-pine"$' "$HOME/.config/starship.toml"
           chezmoi verify
 
-      # Both of these have to be driven by a stored config rather than by
-      # --promptString, because promptStringOnce returns the value already in
-      # the config and ignores the flag entirely once one is recorded. Asserting
-      # it with a flag passes for the wrong reason.
-      - name: An unknown theme fails at init, and a legacy name migrates
+      # Driven by a stored config rather than by --promptString, because
+      # promptStringOnce returns the value already in the config and ignores
+      # the flag entirely once one is recorded. Asserting it with a flag passes
+      # for the wrong reason.
+      - name: An unknown theme fails at init, and says what the valid ones are
         run: |
           set -eux
           src="$HOME/.local/share/chezmoi"
@@ -267,14 +267,6 @@ jobs:
           fi
           grep -q 'unknown theme' /tmp/err
           grep -q 'catppuccin-mocha' /tmp/err
-
-          # main, moon and dawn were the names before the variants took their
-          # upstream slugs. A machine that has not run init since carries one of
-          # them, and it has to be translated rather than rejected.
-          sed 's/theme = "[^"]*"/theme = "dawn"/' "$cfg" > /tmp/cfg-legacy.toml
-          chezmoi --config /tmp/cfg-legacy.toml --config-format toml \
-            execute-template --init < "$src/.chezmoi.toml.tmpl" > /tmp/cfg-migrated.toml
-          grep -q 'theme = "rose-pine-dawn"' /tmp/cfg-migrated.toml
 
       # `ageRecipient` in .chezmoidata/secrets.toml is the switch, and it has
       # been filled in since 2026-09-19, so neither state can be read off the

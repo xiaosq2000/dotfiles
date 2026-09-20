@@ -3,38 +3,30 @@
 Nothing here is required for any machine to work. What is left needs a machine
 that is not to hand, or is simply worth doing.
 
-**State:** workstation, imrl, sicc and vps are deployed; `chezmoi status` is
-empty on each and CI is green. The laptop has never had chezmoi run on it.
+**State:** all five machines — workstation, laptop, imrl, sicc and vps — are
+deployed; `chezmoi status` is empty on each and CI is green.
 
-The vps came up on 2026-09-19 with `bundles = ["core"]`. It ended with *more*
-free disk than it started with, 9.1 GB against 8.3 GB, because the old
-`.sh_utils` layout and a broken rustup came off as the bundle went on. It has no
-age identity and is not getting one: it is internet-facing, so `.chezmoiignore`
-takes the keyless path and simply does not manage `.ssh/config` there.
+The laptop came up on 2026-09-20, the last of the five, and its second apply
+cleared about 115 MB of pre-chezmoi leftovers: oh-my-zsh, the fzf checkout, and
+the `~/.local/bin` copies of nvim, uv, lazydocker and the huggingface tools.
+The stale 27 MB `~/.local/share/nvim/runtime` came off by hand at the same
+time; `.chezmoiremove` could never take it, because its siblings under
+`~/.local/share/nvim` are lazy, mason and session state.
 
-gnome-terminal support was removed from the repository entirely the same day —
-the theme checkout, the dead `set_gnome_terminal_as_default` function and the
-version probe — and `.chezmoiremove` deletes the checkout on every machine.
+With the laptop done, the migration scaffolding went with it on the same day:
+`.chezmoiremove`, `run_onchange_before_01-stale-externals.sh` and the legacy
+`main`/`moon`/`dawn` theme-name map in `.chezmoi.toml.tmpl` are all deleted. No
+machine still carries the old `$HOME`-as-a-git-worktree layout, so there was
+nothing left for any of them to clean.
 
-No machine sources `~/.cargo/env` any more. rustup is gone from imrl, sicc and
-the vps; only the workstation keeps a toolchain.
+The workstation is the only machine with an age identity. That is not an
+oversight on the laptop so much as a gap in the bootstrap; see
+[secrets.md](secrets.md), which now records why the fetcher cannot succeed on a
+first init.
 
-## Blocked on the laptop
-
-The laptop is being handled by hand, off this machine. Until it has run
-`chezmoi init --apply`, three pieces of migration scaffolding have to stay:
-
-- the legacy theme-name map in `.chezmoi.toml.tmpl`, translating `main`, `moon`
-  and `dawn`;
-- `run_onchange_before_01-stale-externals.sh`, which removes git-submodule
-  remnants of chezmoi externals;
-- most blocks in `.chezmoiremove`.
-
-The first two act only on state a previous chezmoi init leaves behind, so they
-are no-ops on the vps and blocked on the laptop alone. `.chezmoiremove` does
-apply to the vps, which carries the old `.sh_utils` layout.
-
-Deleting all three is one commit once the laptop is done.
+rustup is installed on the workstation and the laptop, the two machines with
+`rust = true`. It is gone from imrl, sicc and the vps, and no machine sources
+`~/.cargo/env`.
 
 ## Worth doing
 
@@ -44,6 +36,8 @@ Deleting all three is one commit once the laptop is done.
 a 614-line network script, and `setup_texlive` globs the texlive tree every
 time. Autoloaded functions would fix most of it. The remote figure is the one
 that stings, and sicc's home is on NFS.
+
+The laptop measures 657 ms, so this is not only a remote problem.
 
 ### The typefaces installer
 

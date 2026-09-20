@@ -42,11 +42,6 @@ chezmoi init --apply \
 A machine not in the table yet can start as `generic`: a working shell, nothing
 else assumed.
 
-Run `chezmoi apply` once more after a first init. `.chezmoiremove` runs before
-the `run_` scripts, and most of its entries are guarded on the replacement
-already being in place, so on a first pass the old copies are still there and
-the guards have not yet been satisfied. The second pass clears them.
-
 ## Day to day
 
 ```sh
@@ -61,9 +56,8 @@ Editing a file in `~` does not update the repository. Use `chezmoi edit`, or
 edit in place and run `chezmoi re-add`.
 
 `chezmoi edit` takes a target path, so it cannot reach the files that have no
-target: `.chezmoidata/*.toml`, `.chezmoiignore`, `.chezmoiexternal.toml` and
-`.chezmoiremove` are read by chezmoi and never deployed. Reach them through the
-source tree:
+target: `.chezmoidata/*.toml`, `.chezmoiignore` and `.chezmoiexternal.toml` are
+read by chezmoi and never deployed. Reach them through the source tree:
 
 ```sh
 chezmoi cd                                              # then edit normally

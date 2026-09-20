@@ -14,16 +14,34 @@ Encryption is on, since 2026-09-19.
 | Key created | done, `~/.config/chezmoi/key.txt` |
 | Recipient recorded | done, `age1ke4rf2j…` in `.chezmoidata/secrets.toml` |
 | `~/.ssh/config` encrypted | done, `private_dot_ssh/encrypted_private_config.age` |
-| Deployed to all three machines | done |
 | Key backed up in Bitwarden | done, item `chezmoi age identity`, verified 2026-09-19 |
 
 Verified rather than assumed: `rbw get "chezmoi age identity" | age-keygen -y`
 prints `age1ke4rf2j…`, the same recipient this repository encrypts to. A backup
 that has not been read back is a hope, not a backup.
 
-imrl and sicc still carry no key, and that is fine. `.chezmoiignore` leaves the
-encrypted entries unmanaged there and both apply everything else in full. They
-pick up `~/.ssh/config` the moment a key arrives, with no other change.
+The workstation is the only machine carrying the key. laptop, imrl and sicc do
+not, and the vps is not getting one, because it is internet-facing.
+`.chezmoiignore` leaves the encrypted entries unmanaged on all four and they
+apply everything else in full. Each picks up `~/.ssh/config` the moment a key
+arrives, with no other change.
+
+### The fetcher cannot work on a first init
+
+`run_once_before_00-age-identity.sh` runs before chezmoi writes any file, but
+`rbw` arrives from the `secrets` pixi bundle in
+`run_onchange_after_05-pixi.sh`. On a machine that has never applied, the
+fetcher therefore reaches `rbw not found` and gives up — and being `run_once`,
+it does not retry on the second apply once rbw exists. Observed on the laptop
+on 2026-09-20.
+
+So on a new machine the key goes in by hand, which is the procedure in step 2
+below anyway. The `before` placement is not the mistake: the identity genuinely
+has to exist before any `encrypted_` target is written. What it means is that
+the fetcher only earns its keep on re-inits of a machine that is already
+tooled, and the fix, if it is worth one, is `run_before_` rather than
+`run_once_before_` — it already exits immediately when the identity is present,
+and `rbw unlocked` does not prompt.
 
 ## Why bother
 
@@ -177,8 +195,8 @@ chezmoi: .chezmoidata/secrets.toml: not managed
 ```
 
 The same goes for `machines.toml`, `tools.toml`, the theme files,
-`.chezmoiignore`, `.chezmoiexternal.toml` and `.chezmoiremove`. `chezmoi cd`
-opens a shell where all of them are in front of you.
+`.chezmoiignore` and `.chezmoiexternal.toml`. `chezmoi cd` opens a shell where
+all of them are in front of you.
 
 **4. Move a secret in.** Done for the SSH config:
 
