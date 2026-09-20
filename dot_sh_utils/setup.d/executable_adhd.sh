@@ -11,16 +11,16 @@ set -eu
 #   Codex        codex plugin marketplace add / plugin add
 #
 # Not a shared skill under ~/.agents/skills, which is where every other skill in
-# this repository lives and would have been simpler. Two reasons. The plugin
-# carries a SessionStart hook that the `adhd` command drives, and a plain
-# SKILL.md cannot; and vendoring a copy here would mean hand-syncing it against
-# an upstream that is still moving. The cost is that this is imperative state
-# per machine, which is what this script is for.
+# this repository lives. Vendoring a copy would mean hand-syncing it against an
+# upstream that is still moving, and the plugin brings hooks a plain SKILL.md
+# cannot. The cost is that this is imperative state per machine, which is what
+# this script is for.
 #
 # Installing changes nothing on its own. The skill is opt-in on both agents
 # (`disable-model-invocation: true` for Claude Code, `allow_implicit_invocation:
 # false` for Codex), so neither model can reach for it unasked. Turning it on is
-# `/i-have-adhd` for a session, or `adhd on` for every session.
+# `/i-have-adhd` in Claude Code or `$i-have-adhd` in Codex, per session, and
+# "stop adhd mode" to end it.
 #
 # Idempotent, and cheap when there is nothing to do: an already-installed agent
 # costs one grep, not a network round trip. Both upstream CLIs are idempotent
@@ -180,10 +180,10 @@ fi
 if [ "$DRY_RUN" = true ]; then
     hint "dry run, nothing was written"
 else
-    # Deliberately not turning it on here. Installing is a property of the
-    # machine and belongs in this repository; whether every session should open
-    # in ADHD mode is a preference, and lives wherever you last ran `adhd`.
-    hint "always-on left as it was; \`adhd\` shows the switch, \`adhd on\` flips it"
+    # Installing is a property of the machine and belongs in this repository.
+    # Whether a given conversation wants the skill is a decision per session,
+    # and the agent already has a way to say so.
+    hint "opt-in: \`/i-have-adhd\` in Claude Code, \`\$i-have-adhd\` in Codex"
 fi
 
 footer "i-have-adhd"

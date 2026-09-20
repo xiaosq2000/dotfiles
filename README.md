@@ -109,9 +109,9 @@ that tool's template. Never hard-code a variant name in a config file.
 ## Agent output
 
 ```sh
-adhd                           # where always-on stands on this machine
-adhd on                        # rules from message one, both agents
-adhd off                       # back to per-session
+/i-have-adhd                   # Claude Code, for this session
+$i-have-adhd                   # Codex, for this session
+stop adhd mode                 # end it
 ```
 
 [i-have-adhd](https://github.com/ayghri/i-have-adhd) reshapes agent output to be
@@ -120,18 +120,15 @@ acted on: next action first, numbered steps, no preamble.
 `claude` or `codex` is on PATH, and does nothing where neither is, so it is not
 gated on the machine's bundles.
 
-Installing changes nothing by itself. The skill is opt-in on both agents, so
-neither model can reach for it unasked: type `/i-have-adhd` in Claude Code or
-`$i-have-adhd` in Codex, and `stop adhd mode` to end it.
+Installing changes nothing by itself, which is the point. The skill is opt-in on
+both agents, so neither model can reach for it unasked and `chezmoi update` does
+not quietly change how a machine's agents talk.
 
-`adhd on` is the other posture, and the two agents need different mechanisms for
-it, which is why there is a command rather than a line here. Claude Code gets a
-flag file that the plugin's SessionStart hook answers with the whole skill; Codex
-has no such hook, so the condensed ten rules go in `~/.codex/AGENTS.md` between
-markers, which `adhd off` removes and nothing else.
-
-The switch is per machine and deliberately not tracked here. Installing is a
-property of the machine; whether every session should open in ADHD mode is a mood.
+There was briefly an `adhd on` command here that made the rules apply from
+message one of every session, by touching a flag the plugin's SessionStart hook
+reads and writing the condensed rules into `~/.codex/AGENTS.md`. It is gone: two
+mechanisms and a wrapper to remember them, against typing nine characters when
+you actually want it. Upstream's flag file still works if the itch returns.
 
 ## Installed tools
 
