@@ -294,15 +294,38 @@ setup_fzf() {
     fi
     # Print tree structure in the preview window
     export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-    # Theme: {{ .theme }} — {{ (index .themes .theme).description }}
+    # FZF_DEFAULT_OPTS, composed from the variant's palette in
+    # .chezmoidata/themes-*.toml. The data used to hold the whole option string
+    # per variant, four lines of comma-separated pairs that had to be got right
+    # by hand; adding a scheme is pasting fourteen hex values now.
     #
-    # Composed from the variant's palette in .chezmoidata/themes-*.toml. The
-    # data used to hold this whole option string per variant, four lines of
-    # comma-separated pairs that had to be got right by hand; adding a scheme
-    # is pasting fourteen hex values now. Before that, all three strings sat
-    # here with two of them commented out.
-{{- $c := (index .themes .theme).fzf }}
-    export FZF_DEFAULT_OPTS="--color=fg:{{ $c.fg }},bg:{{ $c.bg }},hl:{{ $c.hl }} --color=fg+:{{ $c.fgPlus }},bg+:{{ $c.bgPlus }},hl+:{{ $c.hlPlus }} --color=border:{{ $c.border }},header:{{ $c.header }},gutter:{{ $c.gutter }} --color=spinner:{{ $c.spinner }},info:{{ $c.info }} --color=pointer:{{ $c.pointer }},marker:{{ $c.marker }},prompt:{{ $c.prompt }}"
+    # Sourced rather than rendered here, because this is the one part of a theme
+    # switch that cannot reach a shell already running: an exported variable
+    # belongs to the shell that exported it, and chezmoi rewriting this file
+    # does nothing to the zsh reading it. Behind a fixed name the `theme`
+    # wrapper below can re-source it, the same way kitty gets poked over its
+    # socket and starship re-reads its config on the next prompt.
+    [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]] &&
+        source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
+}
+
+# `theme` is a script in ~/.local/bin, and a script cannot change the
+# environment of the shell that ran it. Everything else a switch touches
+# re-reads its own config — starship spawns a fresh process per prompt, kitty is
+# poked over its socket, btop and zathura read theirs at startup — so this
+# wrapper exists for FZF_DEFAULT_OPTS alone.
+#
+# Which is also the answer to why `theme` does not exec a new shell: one
+# variable is not worth the directory stack, the background jobs, and whatever
+# you were half-way through typing. Other shells already open stay stale either
+# way, and a new one was always going to be correct.
+#
+# `command` so this is a wrapper and not a loop. Guarded on success so a typo or
+# an abandoned picker does not re-source anything.
+theme() {
+    command theme "$@" || return
+    [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]] &&
+        source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
 }
 
 ################################################################################
