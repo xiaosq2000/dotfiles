@@ -244,8 +244,18 @@ if [ "$TERM" = "xterm-kitty" ] && has kitten; then
     # remote shell started by `kitten ssh` also has TERM=xterm-kitty and a copied
     # `kitten` on PATH, so a second hop from there would run a kitten that has no
     # kitty window to talk to. See ~/.sh_utils/CAVEATS.md
+    # NOTE: the kitten only when stdin and stdout are both a terminal. It
+    # refuses to run otherwise ("The SSH kitten is meant for interactive use
+    # only"), and its bootstrap talks to the terminal, so a piped `ssh host cmd`
+    # and every AI agent's shell, whose stdin is /dev/null, get plain ssh.
     if [[ -n $KITTY_WINDOW_ID && -n $KITTY_PID ]]; then
-        ssh() { kitten ssh "$@" }
+        ssh() {
+            if [[ -t 0 && -t 1 ]]; then
+                kitten ssh "$@"
+            else
+                command ssh "$@"
+            fi
+        }
     fi
 fi
 
