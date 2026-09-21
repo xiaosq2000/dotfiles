@@ -85,10 +85,13 @@ jobs:
     runs-on: ubuntu-latest
     container: ubuntu:24.04
     steps:
+      # python3 is for the key guard: its hook, and the modify_ scripts that
+      # merge it into the Claude Code and Codex configs. The image has none, and
+      # every real machine does.
       - name: Install prerequisites
         run: |
           apt-get update
-          apt-get install -y curl git unzip ca-certificates zsh
+          apt-get install -y curl git unzip ca-certificates zsh python3
 
       - uses: actions/checkout@v4
 
@@ -436,6 +439,67 @@ jobs:
           chezmoi execute-template \
             < "$src/private_dot_config/pixi/config.toml.tmpl" > /tmp/pixi-container.toml
           ! grep -qE '^[a-z[]' /tmp/pixi-container.toml || exit 1
+
+      # The key guard. Claude Code and Codex write their config files
+      # themselves, so chezmoi merges the guard in with modify_ scripts instead
+      # of owning the files. The merge has to keep what the agent wrote, change
+      # nothing on a second run, and never fail an apply.
+      - name: Agents are kept away from private keys
+        run: |
+          set -eux
+          src="$HOME/.local/share/chezmoi"
+          guard="$HOME/.agents/hooks/key-guard.py"
+
+          # The deployed guard, run by its shebang the way the agents run it,
+          # then against every case the source copy is held to.
+          test -x "$guard"
+          rc=0
+          echo '{"tool_name":"Bash","tool_input":{"command":"cat ~/.ssh/id_rsa"}}' | "$guard" || rc=$?
+          test "$rc" -eq 2
+          bash "$src/.github/scripts/check-key-guard.sh" "$guard"
+
+          # Each agent is wired to it.
+          test -f "$HOME/.config/opencode/plugins/key-guard.js"
+          test "$(stat -c %a "$HOME/.codex/config.toml")" = 600
+          python3 - <<'EOF'
+          import json, os, tomllib
+          home = os.environ["HOME"]
+          claude = json.load(open(home + "/.claude/settings.json"))
+          assert "Read(~/.ssh/id_ed25519)" in claude["permissions"]["deny"], claude
+          assert "Read(~/.config/chezmoi/key.txt)" in claude["permissions"]["deny"], claude
+          hooks = [h["command"] for g in claude["hooks"]["PreToolUse"] for h in g["hooks"]]
+          assert hooks == ["~/.agents/hooks/key-guard.py"], hooks
+          codex_hooks = json.load(open(home + "/.codex/hooks.json"))
+          assert codex_hooks["hooks"]["PreToolUse"][0]["hooks"][0]["command"] == "~/.agents/hooks/key-guard.py"
+          codex = tomllib.load(open(home + "/.codex/config.toml", "rb"))
+          assert codex["default_permissions"] == "key-guard", codex
+          assert codex["permissions"]["key-guard"]["filesystem"]["~/.ssh/id_ed25519"] == "deny", codex
+          EOF
+
+          # What the agents wrote survives an apply, and the guard joins it.
+          printf '{"theme": "dark", "permissions": {"allow": ["Bash(ls)"]}}\n' > "$HOME/.claude/settings.json"
+          printf 'model = "o3"\n\n[projects."/tmp"]\ntrust_level = "trusted"\n' > "$HOME/.codex/config.toml"
+          chezmoi apply --force "$HOME/.claude/settings.json" "$HOME/.codex/config.toml"
+          python3 - <<'EOF'
+          import json, os, tomllib
+          home = os.environ["HOME"]
+          claude = json.load(open(home + "/.claude/settings.json"))
+          assert claude["theme"] == "dark" and claude["permissions"]["allow"] == ["Bash(ls)"], claude
+          assert len(claude["permissions"]["deny"]) == 8, claude
+          codex = tomllib.load(open(home + "/.codex/config.toml", "rb"))
+          assert codex["model"] == "o3" and codex["projects"]["/tmp"]["trust_level"] == "trusted", codex
+          assert codex["default_permissions"] == "key-guard", codex
+          EOF
+          # A second pass finds nothing left to change.
+          chezmoi verify
+
+          # Without python3 the files pass through untouched, and the apply goes on.
+          mkdir -p /tmp/nopy
+          ln -sf /bin/cat /tmp/nopy/cat
+          PATH=/tmp/nopy /bin/sh "$src/dot_claude/modify_settings.json" < "$HOME/.claude/settings.json" > /tmp/nopy-settings.json
+          cmp "$HOME/.claude/settings.json" /tmp/nopy-settings.json
+          PATH=/tmp/nopy /bin/sh "$src/dot_codex/modify_private_config.toml" < "$HOME/.codex/config.toml" > /tmp/nopy-config.toml
+          cmp "$HOME/.codex/config.toml" /tmp/nopy-config.toml
 
       # A machine with no age identity has to apply everything that is not
       # encrypted, and it is not enough to check that the apply exits zero.

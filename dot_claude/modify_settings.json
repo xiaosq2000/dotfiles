@@ -1,0 +1,78 @@
+#!/bin/sh
+# chezmoi modify script for ~/.claude/settings.json. It adds the rules that keep
+# Claude Code from reading ssh private keys and the chezmoi age identity, and
+# leaves every other key in the file alone.
+#
+# The file cannot be a plain managed file, because Claude Code writes to it too
+# (plugins, theme, trusted marketplaces), and so does ai-privacy (env). chezmoi
+# passes the current file on stdin and writes whatever this prints, so an apply
+# only ever adds the rules below. A rule removed from these lists stays in the
+# file until someone deletes it by hand.
+#
+# The rules, and what each one covers, are described in docs/secrets.md:
+#   - Read deny rules, which Claude Code applies to Read, Grep and Glob and to
+#     Bash commands it recognises, such as cat and head;
+#   - a PreToolUse hook, ~/.agents/hooks/key-guard.py, which refuses any call
+#     that names a key, including keys with names not listed here.
+#
+# An apply must never fail over this file, so without python3 the file passes
+# through unchanged, and so does a file that is not a JSON object.
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "claude settings: python3 not found, so ~/.claude/settings.json gets no key guard" >&2
+    exec cat
+fi
+
+# The program comes in on fd 3, because stdin carries the settings file.
+exec python3 /dev/fd/3 3<<'PY'
+import copy
+import json
+import sys
+
+# Default key names only: a Read(~/.ssh/id_*) glob would also deny the .pub
+# files, and a !-rule cannot carve them back out of a ~/ path. The hook covers
+# keys with other names.
+DENY = [
+    "Read(~/.ssh/id_rsa)",
+    "Read(~/.ssh/id_dsa)",
+    "Read(~/.ssh/id_ecdsa)",
+    "Read(~/.ssh/id_ecdsa_sk)",
+    "Read(~/.ssh/id_ed25519)",
+    "Read(~/.ssh/id_ed25519_sk)",
+    "Read(~/.ssh/id_xmss)",
+    "Read(~/.config/chezmoi/key.txt)",
+]
+HOOK = "~/.agents/hooks/key-guard.py"
+# Monitor runs shell commands like Bash does, and an MCP server can read any
+# file its tool is asked for.
+MATCHER = "Bash|Monitor|Read|Grep|Glob|mcp__.*"
+
+raw = sys.stdin.read()
+try:
+    before = json.loads(raw) if raw.strip() else {}
+    if not isinstance(before, dict):
+        raise ValueError("the top level is not a JSON object")
+    after = copy.deepcopy(before)
+
+    deny = after.setdefault("permissions", {}).setdefault("deny", [])
+    deny.extend(rule for rule in DENY if rule not in deny)
+
+    groups = after.setdefault("hooks", {}).setdefault("PreToolUse", [])
+    ours = [g for g in groups if any(h.get("command") == HOOK for h in g.get("hooks", []))]
+    if ours:
+        for group in ours:
+            group["matcher"] = MATCHER
+    else:
+        groups.append({"matcher": MATCHER, "hooks": [{"type": "command", "command": HOOK}]})
+except Exception as e:  # anything at all: the apply must go on
+    sys.stderr.write("claude settings: left ~/.claude/settings.json unchanged: %s\n" % e)
+    sys.stdout.write(raw)
+    sys.exit(0)
+
+# Unchanged input goes back byte for byte, so chezmoi diff stays quiet when the
+# rules are already there, however Claude Code last formatted the file.
+if after == before and raw.strip():
+    sys.stdout.write(raw)
+else:
+    sys.stdout.write(json.dumps(after, indent=2, ensure_ascii=False) + "\n")
+PY

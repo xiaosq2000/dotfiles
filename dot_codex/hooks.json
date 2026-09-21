@@ -1,0 +1,18 @@
+{
+  "description": "Managed by chezmoi. Refuses a tool call that names an ssh private key or the chezmoi age identity; see docs/secrets.md in the dotfiles repository.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "~/.agents/hooks/key-guard.py",
+            "statusMessage": "Checking for private key paths",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|mcp__.*"
+      }
+    ]
+  }
+}
