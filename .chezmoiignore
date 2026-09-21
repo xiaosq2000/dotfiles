@@ -62,4 +62,9 @@ docs
 # than the list: a keyless machine has to apply cleanly, which fails the moment
 # an encrypted target is not covered.
 .ssh/config
+
+# The machines skill goes whole rather than just its encrypted pages. Its
+# SKILL.md is plaintext and could deploy, but it tells an agent to read pages
+# that would not be there.
+.agents/skills/machines
 {{ end -}}

@@ -439,3 +439,11 @@ jobs:
           # plaintext stand-in was left in its place.
           test ! -e "$HOME/.ssh/config"
           test ! -f "$HOME/.config/chezmoi/key.txt"
+
+          # The machines skill is left out whole, not just its encrypted pages,
+          # since a SKILL.md pointing at pages that are not there would send an
+          # agent looking for them. The other skills sort after it, so their
+          # arrival shows the apply did not stop at it.
+          test ! -e "$HOME/.agents/skills/machines"
+          test -f "$HOME/.agents/skills/plain-writing/SKILL.md"
+          test -f "$HOME/.agents/skills/translate-zh/SKILL.md"

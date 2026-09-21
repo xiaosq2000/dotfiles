@@ -14,6 +14,7 @@ Encryption is on, since 2026-09-19.
 | Key created | done, `~/.config/chezmoi/key.txt` |
 | Recipient recorded | done, `age1ke4rf2j…` in `.chezmoidata/secrets.toml` |
 | `~/.ssh/config` encrypted | done, `private_dot_ssh/encrypted_private_config.age` |
+| Machine pages encrypted | done, `dot_agents/skills/private_machines/references/`, 2026-09-21 |
 | Plaintext refused at commit | done, the `check-encrypted` pre-commit hook, 2026-09-21 |
 | Key backed up in Bitwarden | done, item `chezmoi age identity`, verified 2026-09-19 |
 
@@ -87,6 +88,7 @@ secrets. What is secret is the addresses, account names and tokens.
 | age identity, the private half | `~/.config/chezmoi/key.txt` | never |
 | A copy of the identity | Bitwarden entry `chezmoi age identity` | n/a |
 | SSH config, tokens | `encrypted_*` files here | yes, as ciphertext |
+| Machine pages: addresses, accounts, hardware, quirks | `dot_agents/skills/private_machines/references/encrypted_*` | yes, as ciphertext |
 
 A recipient can only encrypt, so publishing it costs nothing. `.chezmoiignore`
 lists `.config/chezmoi/key.txt` so a stray `chezmoi add` cannot pull the
@@ -274,6 +276,16 @@ of an age error on some unrelated file later.
 chezmoi edit ~/.ssh/config     # decrypts, opens $EDITOR, re-encrypts
 chezmoi cat ~/.ssh/config      # read without editing
 ```
+
+An agent cannot drive `chezmoi edit`, which waits on an interactive editor. It
+edits the decrypted file in `~` instead and hands it back:
+
+```sh
+chezmoi re-add ~/.agents/skills/machines/references/imrl.md
+```
+
+`re-add` keeps the `encrypted_` attribute, so the source stays ciphertext.
+`chezmoi help re-add` says so, and it was checked on chezmoi 2.72.1.
 
 To rotate, create a new key, re-encrypt every `encrypted_*` file to the new
 recipient, update `ageRecipient`, update Bitwarden, and re-run `chezmoi init`

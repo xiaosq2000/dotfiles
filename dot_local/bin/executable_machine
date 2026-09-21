@@ -46,7 +46,7 @@ describe='{{- $m := index .machines .machine }}
   pixi       defaults; home has room
 {{ end }}
 {{- if $m.docs }}
-  docs       {{ $m.docs }} (private embodied-ai repository)
+  docs       ~/{{ $m.docs }}{{ if not (stat (joinPath .chezmoi.homeDir $m.docs)) }} (absent; decrypted only where the age key is){{ end }}
 {{ end }}'
 
 list='{{ range $name, $m := .machines }}{{ if eq $name $.machine }}* {{ else }}  {{ end }}{{ printf "%-12s" $name }} {{ $m.description }}
