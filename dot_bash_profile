@@ -1,0 +1,25 @@
+# shellcheck shell=bash
+# ~/.bash_profile: read by bash login shells, instead of ~/.profile.
+#
+# Where bash is the recorded login shell, an interactive login hands over to
+# the pixi zsh here, under the same conditions as ~/.zprofile, which explains
+# them. ~/.sh_utils/CAVEATS.md has the full reasoning. Not ~/.bashrc, which
+# bash reads for every interactive shell, so that running `bash` on purpose
+# still gives you bash.
+#
+# A job script that starts with `#!/bin/bash -l` reads this file too. It is not
+# interactive, so it stays in bash and runs what was submitted.
+case $- in
+    *i*)
+        if [ -z "${BASH_EXECUTION_STRING:-}" ] && [ -z "${NO_ZSH:-}" ] &&
+            [ "${SHELL:-}" != "$HOME/.pixi/bin/zsh" ] &&
+            "$HOME/.pixi/bin/zsh" -fc : 2>/dev/null; then
+            export SHELL="$HOME/.pixi/bin/zsh"
+            exec "$SHELL" -l
+        fi
+        ;;
+esac
+
+# Once this file exists bash no longer reads ~/.profile, so read it here.
+# shellcheck source=/dev/null
+[ -f "$HOME/.profile" ] && . "$HOME/.profile"

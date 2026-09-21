@@ -1,0 +1,48 @@
+# vim:fileencoding=utf-8:ft=conf
+#
+# Configuration for the ssh kitten. See
+# https://sw.kovidgoyal.net/kitty/kittens/ssh/
+#
+# The host list is rendered from the sshHosts of every machine in
+# .chezmoidata/machines.toml, so a machine added there is covered here without
+# another edit.
+
+# On the machines this repository sets up, start the wrapper that a local kitty
+# window starts, not the recorded login shell. The login shell would hand over
+# to the pixi zsh from ~/.zprofile or ~/.bash_profile, and that exec throws away
+# the shell integration the kitten had just installed. A session with no
+# integration never reports its directory, so new_window_with_cwd (ctrl+a)
+# passes the local directory to the remote, and the kitten's bootstrap fails on
+# it. A login_shell whose name is zsh makes the kitten take its zsh branch
+# directly, so the integration is installed in the shell that stays running.
+#
+# The wrapper, not the pixi zsh itself, because the kitten execs a named
+# login_shell without checking that it exists: with a broken pixi zsh the
+# session would end at once, where the wrapper falls back to the login shell.
+# ~/.local/libexec/zsh and ~/.sh_utils/CAVEATS.md have the rest.
+#
+# Only these hosts, not `hostname *`. A machine this repository has not set up
+# has no wrapper, and the kitten would fail on it in the same way; there the
+# kitten's default, the login shell, is right. For the same reason, a machine
+# of yours needs one `chezmoi update` over plain ssh before `kitten ssh` into it
+# works again, once this file names the wrapper and the machine does not have it
+# yet.
+#
+# The kitten writes these values into a script that the remote sh sources,
+# inside double quotes, so $HOME is expanded on the remote and no account name
+# is needed here. Checked against kittens/ssh/main.go and config.go in kitty
+# 0.49.0 on 2026-09-21. Spellings that look simpler do not work: ~ is not
+# expanded inside those quotes, a bare name is only looked up on sshd's PATH
+# and in a fixed list of system directories, and $( is escaped, so no test can
+# be written into the value either.
+#
+# hostname is matched against the name typed on the command line, which is the
+# alias in ~/.ssh/config. Names are separated by spaces.
+{{- $hosts := list }}
+{{- range $name, $m := .machines }}
+{{-   $hosts = concat $hosts $m.sshHosts }}
+{{- end }}
+{{- if $hosts }}
+hostname {{ $hosts | join " " }}
+login_shell $HOME/.local/libexec/zsh
+{{- end }}

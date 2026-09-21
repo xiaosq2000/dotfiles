@@ -15,9 +15,11 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply xiaosq2000
 ```
 
 Needs `curl`, `git`, `unzip` and a [Nerd Font](https://www.nerdfonts.com/)
-enabled in your terminal. `zsh` is not a prerequisite; without root,
-`pixi global install zsh` puts one in your home directory — see
-[CAVEATS.md](dot_sh_utils/CAVEATS.md) for that and the other shell-setup
+enabled in your terminal. `zsh` is not a prerequisite: the `core` bundle
+installs one under `~/.pixi`, with no root needed. Every interactive shell
+hands over to that zsh, while the login shell recorded for the account stays
+whatever the system has, so a broken install cannot lock you out of ssh. See
+[CAVEATS.md](dot_sh_utils/CAVEATS.md) for the rule and the other shell-setup
 constraints.
 
 `init` asks two questions and records the answers in

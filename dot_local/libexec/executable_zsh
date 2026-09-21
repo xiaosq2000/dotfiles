@@ -1,0 +1,31 @@
+#!/bin/sh
+# The shell kitty starts: in a local window through `shell` in kitty.conf, and
+# over `kitten ssh` through `login_shell` in ssh.conf. It runs the pixi zsh
+# when that works and the recorded login shell when it does not.
+#
+# kitty has no fallback of its own. A missing `shell` leaves every new window
+# at "Failed to launch child", and the ssh kitten execs a named login_shell
+# without checking that it exists, so on the first apply of a machine, before
+# pixi has installed zsh, or after an update that broke it, kitty would give
+# you no shell at all. The test run, not a -x check, is because the pixi
+# trampoline can exist while the zsh behind it is gone.
+#
+# It is called zsh because kitty chooses its shell integration from the file
+# name alone, so whichever zsh ends up running gets the integration. It lives
+# outside PATH so that nothing else mistakes it for zsh.
+#
+# It exports SHELL for the same reason the login-shell handoff does: kitty
+# does not set it, and without it $SHELL would name the login shell. See
+# ~/.sh_utils/CAVEATS.md.
+pixi_zsh="$HOME/.pixi/bin/zsh"
+if "$pixi_zsh" -fc : 2>/dev/null; then
+    SHELL="$pixi_zsh"
+    export SHELL
+    exec "$pixi_zsh" "$@"
+fi
+
+login_shell=$(getent passwd "$(id -un)" 2>/dev/null | cut -d: -f7)
+[ -x "$login_shell" ] || login_shell=/bin/sh
+SHELL="$login_shell"
+export SHELL
+exec "$login_shell" "$@"

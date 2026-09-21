@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # Put kitty's terminfo where a conda-built ncurses will actually find it.
 #
-# The symptom is alarming and looks nothing like the cause: in a kitty window,
-# `exec zsh` and every keystroke afterwards appears twice. `a` shows as `aa`.
+# The symptom is alarming and looks nothing like the cause: in a kitty window
+# running the pixi zsh, every keystroke appears twice. `a` shows as `aa`.
 # The buffer is fine and commands run correctly -- it is only the drawing that
 # doubles -- but there is no way to tell that while it is happening.
 #
 # The chain:
 #
-#   - kitty's login shell is /usr/bin/zsh, from /etc/passwd. `exec zsh` picks
-#     the first zsh on PATH instead, which is ~/.pixi/envs/zsh/bin/zsh, from
-#     the core bundle. So the two shells are different binaries, and only the
-#     second one is ever reached by hand.
+#   - kitty runs the pixi zsh, ~/.pixi/envs/zsh/bin/zsh from the core bundle,
+#     through ~/.local/libexec/zsh. Until 2026-09-21 it ran the system zsh, and
+#     only a hand-typed `exec zsh` reached the pixi one, which is why the
+#     symptom looked tied to that command.
 #   - $TERM is xterm-kitty, which is not in any system terminfo database here:
 #     /usr/share/terminfo/x/xterm-kitty does not exist. kitty ships its own
 #     copy and points $TERMINFO at it.
