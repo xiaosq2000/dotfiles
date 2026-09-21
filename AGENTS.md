@@ -94,7 +94,8 @@ chezmoi --source "$PWD" managed
 
 CI in `.github/workflows/ci.yml` bootstraps a clean container with no key and
 asserts on the result. When a change alters what lands in `~`, add an
-assertion there.
+assertion there. Write a negated one as `! grep -q x file || exit 1`, because
+`set -e` ignores a command negated with `!`; a pre-commit hook enforces it.
 
 A run script must not fail the apply over a missing optional tool. It warns and
 exits 0. This matters most for `before` scripts, where a non-zero exit stops the

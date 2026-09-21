@@ -61,3 +61,12 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
+      # bash's set -e does not stop on a command negated with `!`, so in a CI
+      # step `! grep -q x file` passes whether or not x is found, unless it
+      # happens to be the step's last line. Nine such assertions checked nothing
+      # until 2026-09-21. `! cmd || exit 1` fails when it should.
+      - id: negated-assertions
+        name: negated CI assertions end in || exit 1
+        entry: '^\s+! (?!.*\|\| exit 1\s*$)'
+        language: pygrep
+        files: ^\.github/workflows/.*\.ya?ml$
