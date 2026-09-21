@@ -185,6 +185,11 @@ Two things are encrypted: `~/.ssh/config`, and the machine pages of the
 plaintext where either lives, and on a machine with the key `git diff` shows
 both decrypted.
 
+Claude Code, Codex and opencode are kept from reading ssh private keys and the
+age identity, and pre-commit hooks refuse a commit that contains either.
+[docs/secrets.md](docs/secrets.md#keeping-agents-away-from-private-keys) lists
+what each agent gets and what it does not stop.
+
 [.chezmoidata/machines.toml](.chezmoidata/machines.toml) is deliberately in the
 clear: bundles, roles and filesystem layout are not secrets. Addresses, account
 names and tokens are.

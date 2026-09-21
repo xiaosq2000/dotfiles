@@ -80,6 +80,41 @@ jobs:
           # And the tree is clean again.
           check
 
+  # The pre-commit job runs the key hooks over a tree that holds no key, so it
+  # would pass even if they could no longer catch one. This job feeds them keys.
+  private-keys:
+    name: private keys are refused before a commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pre-commit
+      - name: It refuses a key by name and by content
+        run: |
+          set -eux
+          # Built at run time, so this file holds no key for the hooks to find.
+          ssh_key=$(printf -- '-----BEGIN %s PRIVATE KEY-----' OPENSSH)
+          age_key=AGE-SECRET-KEY-1$(printf 'Q%.0s' $(seq 58))
+
+          # .gitignore takes what `chezmoi add` would write for a key...
+          git check-ignore -q --no-index private_dot_ssh/private_id_ed25519
+          git check-ignore -q --no-index private_dot_config/chezmoi/private_key.txt
+          # ...but not ciphertext, and not a public half.
+          ! git check-ignore -q --no-index private_dot_ssh/encrypted_private_id_ed25519.age || exit 1
+          ! git check-ignore -q --no-index private_dot_ssh/id_ed25519.pub || exit 1
+
+          # The content hooks, on a name no .gitignore pattern covers.
+          printf '%s\nb3BlbnNzaC1rZXktdjEA\n' "$ssh_key" > leak.txt
+          if pre-commit run detect-private-key --files leak.txt; then echo "an ssh private key passed" >&2; exit 1; fi
+          printf '%s\n' "$age_key" > leak.txt
+          if pre-commit run no-age-identity --files leak.txt; then echo "an age identity passed" >&2; exit 1; fi
+          # A placeholder in a document is not a key.
+          printf 'AGE-SECRET-KEY-1...\n' > leak.txt
+          pre-commit run no-age-identity --files leak.txt
+          rm leak.txt
+
   bootstrap:
     name: bootstrap in a clean container
     runs-on: ubuntu-latest

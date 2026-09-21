@@ -193,12 +193,17 @@ the file on disk is only a handle to the device.
   rbw-present marker line. As `run_once_` it never retries after the first
   apply fails for lack of rbw, and as a plain `run_` it makes `chezmoi verify`
   fail for good.
-- **The plaintext guard works only where the hooks are installed.** The
-  `check-encrypted` pre-commit hook refuses plaintext under the protected
-  directories. `run_onchange_after_08-source-repo.sh` installs the hooks on
-  every machine that has pre-commit. In a clone without them, nothing stops a
-  plaintext commit before the push, and CI runs only after the push has
-  published it.
+- **The plaintext guards work only where the hooks are installed.** Three
+  pre-commit hooks refuse a commit:
+  - `check-encrypted` refuses plaintext under the protected directories;
+  - `detect-private-key` refuses an ssh or TLS private key under any name;
+  - `no-age-identity` refuses an age identity.
+
+  `run_onchange_after_08-source-repo.sh` installs the hooks on every machine
+  that has pre-commit. In a clone without them, nothing stops such a commit
+  before the push, and CI runs only after the push has published it.
+  `.gitignore` names the usual key files too, but it stops only `git add .`;
+  `git add -f` gets past it.
 - **`chezmoi add` writes into whichever source tree its config names.** With
   an unexpected `HOME` or `XDG_CONFIG_HOME`, a new encrypted file can land in
   another repository. Run `git status` after every `add --encrypt`.

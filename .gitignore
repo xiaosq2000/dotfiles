@@ -1,0 +1,28 @@
+# Private keys never belong in this public repository, in any form git can read.
+# The patterns match anywhere in the tree and after any chezmoi prefix, because
+# `chezmoi add ~/.ssh/id_ed25519` would write private_dot_ssh/private_id_ed25519.
+#
+# This only stops `git add .` and friends; `git add -f` and a file that is
+# already tracked get past it. The detect-private-key and no-age-identity
+# pre-commit hooks read the content instead, and catch a key under any name.
+#
+# An encrypted_*.age copy ends in .age and is not matched: ciphertext is how
+# this repository keeps secrets. See docs/secrets.md.
+
+# ssh private keys under their default names; the .pub files are not matched
+*id_rsa
+*id_dsa
+*id_ecdsa
+*id_ecdsa_sk
+*id_ed25519
+*id_ed25519_sk
+*id_xmss
+
+# other private key and certificate bundle formats
+*.pem
+*.ppk
+*.p12
+*.pfx
+
+# the chezmoi age identity, which decrypts every .age file here
+**/chezmoi/*key.txt

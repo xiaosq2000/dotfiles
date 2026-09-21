@@ -25,6 +25,9 @@ repos:
         # template is not valid YAML until it is rendered.
         exclude: \.tmpl$
       - id: check-added-large-files
+      # A private key in any file, under any name. .gitignore stops the usual
+      # names, but only for `git add .`; this reads what is actually staged.
+      - id: detect-private-key
       # A chezmoi modify_ script keeps the name of the file it edits, so
       # modify_settings.json is a shell script, not JSON.
       - id: check-json
@@ -65,6 +68,14 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
+      # The age identity decrypts every encrypted_ file here, so it must never
+      # be committed anywhere in the tree, in plaintext. detect-private-key does
+      # not know its format. The length keeps a placeholder such as
+      # AGE-SECRET-KEY-1... in a document from matching.
+      - id: no-age-identity
+        name: no age identity
+        entry: AGE-SECRET-KEY-1[0-9A-Z]{58}
+        language: pygrep
       # The guard that keeps agents from reading private keys, against the calls
       # it must refuse and the ones it must let through.
       - id: key-guard
