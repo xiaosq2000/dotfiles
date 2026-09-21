@@ -291,6 +291,22 @@ jobs:
 
           rm -r "$HOME/.pixi/bin"
 
+      # ~/.pixi/bin/zsh is pixi's trampoline, which hands the shell its
+      # environment's variables and bin directory. .zshrc takes them back, and
+      # leaves a real conda activation alone.
+      - name: The shell undoes the pixi trampoline's environment
+        run: |
+          set -eux
+          env_dir="$HOME/.pixi/envs/zsh"
+          env CONDA_PREFIX="$env_dir" CONDA_SHLVL=6 CONDA_ENV_SHLVL_6_CONDA_PREFIX=/elsewhere \
+            PATH="$env_dir/bin:$PATH" timeout 60 zsh -ic \
+            'print -r -- "left:${CONDA_PREFIX-}${CONDA_SHLVL-}${CONDA_ENV_SHLVL_6_CONDA_PREFIX-}"; print -rl -- $path' \
+            > /tmp/out 2>/dev/null
+          grep -qx 'left:' /tmp/out
+          ! grep -qx "$env_dir/bin" /tmp/out || exit 1
+          env CONDA_PREFIX=/opt/real timeout 60 zsh -ic 'print -r -- "prefix:$CONDA_PREFIX"' > /tmp/out 2>/dev/null
+          grep -qx 'prefix:/opt/real' /tmp/out
+
       # The manifest is rendered from the bundles a machine selects, so the
       # thing worth testing is that the selection reaches the file. The
       # container machine selects nothing, which has to produce a manifest with

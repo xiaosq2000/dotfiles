@@ -255,6 +255,31 @@ all.
 ssh -t <host> "bash --noprofile --norc"
 ```
 
+## The pixi zsh arrives through a trampoline
+
+`~/.pixi/bin/zsh` is not zsh itself. Like every command in `~/.pixi/bin`, it is
+a hard link to one small program, pixi's trampoline; on the workstation on
+2026-09-21, 78 commands shared one 767 KB file. The trampoline reads
+`~/.pixi/bin/trampoline_configuration/zsh.json`, sets the variables that
+activating the zsh environment would, puts `~/.pixi/envs/zsh/bin` first on
+`PATH`, and execs `~/.pixi/envs/zsh/bin/zsh`.
+
+For a program that exits, those changes go with it. A shell keeps them for the
+whole session and passes them to every command it runs:
+
+- conda's `tput`, `clear`, `reset`, `tic` and `infocmp` ahead of `/usr/bin`.
+  conda's ncurses is what caused the doubled keystrokes above.
+- `CONDA_PREFIX` and `CONDA_SHLVL` for an environment nobody activated, and a
+  stale `CONDA_ENV_SHLVL_<n>_CONDA_PREFIX` that pixi captured at install time.
+  uv ignored the stray `CONDA_PREFIX` when tried on 2026-09-21, because the zsh
+  environment has no Python, and nothing else has been seen to break on it.
+
+The top of `.zshrc` undoes all of this, but only when `CONDA_PREFIX` is the
+trampoline's, so a real conda activation survives. The point is that the pixi
+zsh and the system zsh should not differ in ways nobody chose. A command that
+neovim runs through `zsh -c` reads no `.zshrc` and still sees the changes;
+nothing there has needed the cleanup.
+
 ## ssh is a function so that kitty does not take over its completion
 
 In `.zshrc`, the kitty section defines `ssh` as a shell function that calls

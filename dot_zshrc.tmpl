@@ -1,6 +1,19 @@
 #!/usr/bin/env zsh
 zshrc_start_time=$(date +%s%N)
 
+# ~/.pixi/bin/zsh is pixi's trampoline, not zsh itself: it sets the variables
+# that activating the zsh environment would, puts that environment's bin first
+# on PATH, and execs the real zsh. For a program that exits, that is harmless.
+# A shell passes all of it to every command it runs, which put conda's tput,
+# clear and reset ahead of /usr/bin and left a CONDA_PREFIX naming an
+# environment nobody activated. Undo it here, before anything below runs tput,
+# and only when the values are the trampoline's, so that a real activation
+# survives. See ~/.sh_utils/CAVEATS.md
+if [[ ${CONDA_PREFIX:-} == "$HOME/.pixi/envs/zsh" ]]; then
+    unset CONDA_PREFIX CONDA_SHLVL ${(k)parameters[(I)CONDA_ENV_SHLVL_*]}
+    path=(${path:#$HOME/.pixi/envs/zsh/bin})
+fi
+
 source ~/.sh_utils/basics.sh
 source ~/.sh_utils/helpers.sh
 source ~/.sh_utils/checkers.sh
