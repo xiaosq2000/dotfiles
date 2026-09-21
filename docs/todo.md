@@ -40,26 +40,17 @@ takes a second and settles it.
 
 ## Worth doing
 
-### Hand machine facts over from embodied-ai and from Claude's memory
+### Apply the machine-context change on the laptop
 
-The machine pages moved into this repository on 2026-09-21, as the `machines`
-skill. Two older copies of the same facts remain, and they will drift from the
-new pages unless they are cut back.
+The laptop was not reachable on 2026-09-21, so it has not applied `94fc56a`: the
+`machines` skill, the source-repo hooks and diff driver, and the `ssh`
+fallback. The workstation, imrl, sicc and the vps applied it that day, each
+with `chezmoi verify` clean. Run `chezmoi update` on the laptop, then drop this
+entry.
 
-- **embodied-ai's `docs/shared/reference/compute-resources/`.** Trim each page
-  to what is specific to the project (`DATA_ROOT`, datasets, pixi environments,
-  job IDs, the EGL and rendering workarounds, the code sync workflow) and point
-  at the `machines` skill for the rest. Drop its advice to use
-  `ssh -F "$HOME/.ssh/config"` on the workstation. That never helped in an agent
-  shell inside kitty, and since 2026-09-21 plain `ssh` works there.
-- **Claude Code's memory on the workstation.** `machine-reachability`,
-  `vps-is-network-plumbing`, `sicc-hpc-zsh-setup`, `nvidia-runfile-under-dkms`
-  and `aic8800-driver-fork` are machine facts that only Claude on the
-  workstation can see. Their content is in the pages now, so delete them once
-  this branch is merged and applied, and point `MEMORY.md` at the skill.
-
-Apply on each keyed machine after the merge (`chezmoi update` on the
-workstation, laptop, imrl and sicc) so the pages and the hooks land there.
+The rest of that change's follow-up is done. embodied-ai's compute-resources
+pages keep only project facts and point at the skill (`294eb25` on its `dev`),
+and the five Claude Code memories the pages replaced are deleted.
 
 ### Shell startup, fixed and measured everywhere
 
