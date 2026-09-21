@@ -40,6 +40,44 @@ takes a second and settles it.
 
 ## Worth doing
 
+### Hand machine facts over from embodied-ai and from Claude's memory
+
+The machine pages moved into this repository on 2026-09-21, as the `machines`
+skill. Two older copies of the same facts remain, and they will drift from the
+new pages unless they are cut back.
+
+- **embodied-ai's `docs/shared/reference/compute-resources/`.** Trim each page
+  to what is specific to the project (`DATA_ROOT`, datasets, pixi environments,
+  job IDs, the EGL and rendering workarounds, the code sync workflow) and point
+  at the `machines` skill for the rest. Its advice to use
+  `ssh -F "$HOME/.ssh/config"` on the workstation is already wrong: in an agent
+  shell inside kitty, `ssh` is the `kitten ssh` function and fails either way,
+  and `command ssh` is what works.
+- **Claude Code's memory on the workstation.** `machine-reachability`,
+  `vps-is-network-plumbing`, `sicc-hpc-zsh-setup`, `nvidia-runfile-under-dkms`
+  and `aic8800-driver-fork` are machine facts that only Claude on the
+  workstation can see. Their content is in the pages now, so delete them once
+  this branch is merged and applied, and point `MEMORY.md` at the skill.
+
+Apply on each keyed machine after the merge (`chezmoi update` on the
+workstation, laptop, imrl and sicc) so the pages and the hooks land there.
+
+### Let `ssh` fall back to plain ssh without a terminal
+
+The `ssh` function in `dot_zshrc.tmpl` always runs `kitten ssh`, which refuses
+to run when stdin is not a terminal. That is every agent's shell, so agents have
+to know to type `command ssh`. Checking `[[ -t 0 ]]` in the function and calling
+`command ssh` otherwise would remove the trap.
+
+### CI assertions written as `! grep` never fail
+
+Several CI steps assert absence with `! grep -q …` under `set -e`. bash does not
+exit on a command whose status is inverted with `!`, so those lines pass whether
+or not the pattern is found, unless one happens to be the last command in its
+step. `bash -c 'set -e; ! true; echo reached'` prints `reached`. Rewriting them
+as `if grep -q …; then exit 1; fi`, or appending `|| exit 1` to each, would make
+them check what they say they check.
+
 ### Shell startup, fixed and measured everywhere
 
 All five machines were on the fix and measured on 2026-09-20, ten warm runs each
