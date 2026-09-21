@@ -8,6 +8,12 @@
 # Re-runs when the script or any skill changes.
 # agent_skills.sh sha256: {{ include "dot_sh_utils/setup.d/executable_agent_skills.sh" | sha256sum }}
 # skills sha256: {{ range (glob (joinPath .chezmoi.sourceDir "dot_agents/skills/*/SKILL.md")) }}{{ include . | sha256sum }}{{ end }}
+#
+# The machines skill only deploys where the age key is (see .chezmoiignore), so
+# a machine that gets the key later gains a skill without any SKILL.md changing.
+# This line changes with it, so the links follow on that apply rather than
+# waiting for some unrelated skill edit.
+# age identity: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
 
 set -eu
 

@@ -167,6 +167,11 @@ identity lives at `~/.config/chezmoi/key.txt`, with a copy in Bitwarden so a new
 machine can fetch it once. [docs/secrets.md](docs/secrets.md) has the design and
 the commands.
 
+Two things are encrypted: `~/.ssh/config`, and the machine pages of the
+`machines` agent skill. A pre-commit hook refuses a commit that would put
+plaintext where either lives, and on a machine with the key `git diff` shows
+both decrypted.
+
 [.chezmoidata/machines.toml](.chezmoidata/machines.toml) is deliberately in the
 clear: bundles, roles and filesystem layout are not secrets. Addresses, account
 names and tokens are.

@@ -21,8 +21,13 @@
 # machine and has to be readable before any key is available. See
 # docs/secrets.md if you would rather move them behind encryption.
 #
-# Hardware inventory deliberately stays out. It is maintained per machine in the
-# private embodied-ai repository, and `docs` points at the page.
+# Hardware inventory stays out too. Each machine has a page in the machines
+# agent skill, dot_agents/skills/private_machines/references, age-encrypted like
+# the SSH config because it holds addresses and account names, and decrypted to
+# ~/.agents/skills/machines/references on apply. `docs` names that page. Until
+# 2026-09-21 the pages lived in the private embodied-ai repository; what is
+# specific to that project, its datasets, environments and job records, stays
+# there.
 
 ################################################################################
 # Fields
@@ -38,7 +43,8 @@
 #   typefaces              fetch the Nerd Fonts; implies a desktop
 #   rust                   install a rustup toolchain, for the handful of tools
 #                          conda-forge does not package
-#   docs                   page in the private embodied-ai repository
+#   docs                   the machine's page, relative to $HOME; present only
+#                          where the age key is, since it is decrypted on apply
 #   pixi.cacheDir          relocate ~/.cache/rattler here; empty means leave it
 #   pixi.detachedEnvironments
 #                          put workspace .pixi/envs here; empty means leave them
@@ -76,7 +82,7 @@ desktop = true
 # Maple Mono and friends into ~/.local/share/fonts.
 typefaces = false
 rust = true
-docs = "docs/shared/reference/compute-resources/workstation.md"
+docs = ".agents/skills/machines/references/workstation.md"
 # Home is on a local NVMe with room to spare, so pixi's defaults are right.
 [machines.workstation.pixi]
 cacheDir = ""
@@ -103,7 +109,7 @@ desktop = true
 # See the note on the workstation entry.
 typefaces = false
 rust = true
-docs = "docs/shared/reference/compute-resources/laptop.md"
+docs = ".agents/skills/machines/references/laptop.md"
 # One 468 GB volume holds home, the checkout and the environments. Worth
 # watching, but still local and still one filesystem.
 [machines.laptop.pixi]
@@ -131,7 +137,7 @@ sudo = true
 desktop = false
 typefaces = false
 rust = false
-docs = "docs/shared/reference/compute-resources/imrl.md"
+docs = ".agents/skills/machines/references/imrl.md"
 # Measured 2026-09-18: 31 GB of package cache in home, on a root filesystem 89%
 # full with 208 GB left, while the volume carrying DATA_ROOT had 1.5 TB free.
 # Global environments were 718 MB and no workspace had an environment here, so
@@ -155,7 +161,7 @@ sudo = false
 desktop = false
 typefaces = false
 rust = false
-docs = "docs/shared/reference/compute-resources/sicc.md"
+docs = ".agents/skills/machines/references/sicc.md"
 # Measured 2026-09-18: home is NFS with a 200 GB quota and held 36 GB, of which
 # 18 GB was package cache. Global environments were 718 MB and the embodied-ai
 # workspace 1.2 GB, so the cache alone was half of everything in home and
@@ -180,7 +186,9 @@ sudo = true
 desktop = false
 typefaces = false
 rust = false
-docs = ""
+# The page exists in the repository but never lands on the vps itself, which
+# never gets the age key.
+docs = ".agents/skills/machines/references/vps.md"
 [machines.vps.pixi]
 cacheDir = ""
 detachedEnvironments = ""

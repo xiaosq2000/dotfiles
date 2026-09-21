@@ -39,6 +39,20 @@ If a real file or directory is sitting where a link belongs, the script reports
 it and stops rather than deleting it. Move or delete that path by hand, then run
 the script again.
 
+## A skill with encrypted files
+
+`machines` holds facts about the user's machines, including addresses and
+account names, and this repository is public. Its source directory is
+`private_machines`, so it lands with mode 0700, and its pages under
+`references/` are `encrypted_` files that chezmoi decrypts on apply. Its
+`SKILL.md` stays plaintext, because an agent reads only its name and description
+until the skill is needed, and neither holds a secret.
+
+On a machine without the age key, `.chezmoiignore` leaves out the whole skill,
+so no agent there is pointed at pages that are missing. To edit a page, change
+the decrypted file under `~/.agents/skills/machines` and run `chezmoi re-add` on
+it; the skill's own `SKILL.md` says the same.
+
 ## Keeping skills portable
 
 Only the `name` and `description` keys in the frontmatter are understood by all
