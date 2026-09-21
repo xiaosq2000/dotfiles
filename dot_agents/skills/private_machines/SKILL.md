@@ -31,9 +31,11 @@ machines that hold the age key. The vps never does.
 ## Running ssh
 
 On the workstation and the laptop, inside kitty, `ssh` is a shell function that
-runs `kitten ssh`, which fails without a terminal. Call `command ssh` instead.
-On imrl and sicc, a command passed over ssh runs without `~/.pixi/bin` on
-`PATH`, so export it in the command. `network.md` has both in full.
+falls back to plain ssh when there is no terminal, so it works from an agent's
+shell. If it fails with "The SSH kitten is meant for interactive use only", the
+shell predates that fallback; `command ssh` skips the function and works. On
+imrl and sicc, a command passed over ssh runs without `~/.pixi/bin` on `PATH`,
+so export it in the command. `network.md` has both in full.
 
 ## How far to trust a page
 

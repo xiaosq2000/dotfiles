@@ -226,6 +226,24 @@ jobs:
           # Hence zsh's own wording rather than a bare "not found".
           ! timeout 60 zsh -ic 'true' 2>&1 | grep -qE 'command not found|parse error|bad pattern'
 
+      # Inside kitty, `ssh` is a function that runs `kitten ssh`, and the kitten
+      # refuses to run without a terminal, which broke ssh in every AI agent's
+      # shell. It now falls back to plain ssh unless stdin and stdout are both a
+      # terminal. Stubs stand in for both programs, since the container has
+      # neither, and `script` supplies the terminal.
+      - name: ssh uses the kitten only at a terminal
+        run: |
+          set -eux
+          mkdir -p /tmp/stub
+          printf '#!/bin/sh\necho kitten "$@"\n' > /tmp/stub/kitten
+          printf '#!/bin/sh\necho plain "$@"\n' > /tmp/stub/ssh
+          chmod +x /tmp/stub/kitten /tmp/stub/ssh
+          export PATH="/tmp/stub:$PATH" TERM=xterm-kitty KITTY_WINDOW_ID=1 KITTY_PID=1
+          at_tty() { timeout 60 script -qec "zsh -ic '$1'" /dev/null 2>/dev/null | tr -d '\r' | tail -1; }
+          test "$(timeout 60 zsh -ic 'ssh somehost' < /dev/null 2>/dev/null | tail -1)" = "plain somehost"
+          test "$(at_tty 'ssh somehost | cat')" = "plain somehost"
+          test "$(at_tty 'ssh somehost')" = "kitten ssh somehost"
+
       # Everything oh-my-zsh used to set as a side effect of being sourced.
       # Dropping the framework dropped these with it, and the failures do not
       # look like a shell misconfiguration: without interactive_comments,

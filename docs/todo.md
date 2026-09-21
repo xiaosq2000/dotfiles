@@ -49,10 +49,9 @@ new pages unless they are cut back.
 - **embodied-ai's `docs/shared/reference/compute-resources/`.** Trim each page
   to what is specific to the project (`DATA_ROOT`, datasets, pixi environments,
   job IDs, the EGL and rendering workarounds, the code sync workflow) and point
-  at the `machines` skill for the rest. Its advice to use
-  `ssh -F "$HOME/.ssh/config"` on the workstation is already wrong: in an agent
-  shell inside kitty, `ssh` is the `kitten ssh` function and fails either way,
-  and `command ssh` is what works.
+  at the `machines` skill for the rest. Drop its advice to use
+  `ssh -F "$HOME/.ssh/config"` on the workstation. That never helped in an agent
+  shell inside kitty, and since 2026-09-21 plain `ssh` works there.
 - **Claude Code's memory on the workstation.** `machine-reachability`,
   `vps-is-network-plumbing`, `sicc-hpc-zsh-setup`, `nvidia-runfile-under-dkms`
   and `aic8800-driver-fork` are machine facts that only Claude on the
@@ -61,13 +60,6 @@ new pages unless they are cut back.
 
 Apply on each keyed machine after the merge (`chezmoi update` on the
 workstation, laptop, imrl and sicc) so the pages and the hooks land there.
-
-### Let `ssh` fall back to plain ssh without a terminal
-
-The `ssh` function in `dot_zshrc.tmpl` always runs `kitten ssh`, which refuses
-to run when stdin is not a terminal. That is every agent's shell, so agents have
-to know to type `command ssh`. Checking `[[ -t 0 ]]` in the function and calling
-`command ssh` otherwise would remove the trap.
 
 ### CI assertions written as `! grep` never fail
 

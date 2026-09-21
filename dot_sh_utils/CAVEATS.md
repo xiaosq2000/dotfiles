@@ -232,6 +232,21 @@ that error is gone and `kitty` and `kitten` complete normally. The cost is
 substring completion, which zsh has no unanchored way to express. The `ssh`
 function stays regardless, for the reason in the next section.
 
+The function also decides between the kitten and plain ssh. It runs
+`kitten ssh` only when stdin and stdout are both a terminal, and `command ssh`
+otherwise. The kitten exists for interactive sessions, and without a terminal it
+stops at once:
+
+```
+Error: The SSH kitten is meant for interactive use only, STDIN must be a terminal
+```
+
+Before 2026-09-21 the function called the kitten unconditionally, so
+`ssh host cmd < file` failed, and so did ssh from every AI agent's shell, whose
+stdin is `/dev/null`. Agents had to know to type `command ssh`. A piped stdout
+gets plain ssh as well, because the kitten's bootstrap talks to the terminal and
+its traffic ended up in the pipe when tried under a test terminal.
+
 ## TERM does not tell you whether you are inside a kitty window
 
 The `ssh` function above sits inside a block that runs when `TERM` is
