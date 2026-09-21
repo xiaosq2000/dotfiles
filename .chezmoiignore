@@ -62,7 +62,7 @@ CLAUDE.md
 #
 # Ignoring them instead means the machine applies everything it can have and
 # simply does not have these. The identity arrives via
-# run_once_before_00-age-identity.sh, or by hand; see docs/secrets.md.
+# run_onchange_before_00-age-identity.sh, or by hand; see docs/secrets.md.
 #
 # Add an entry here for every new encrypted_ file. CI checks the result rather
 # than the list: a keyless machine has to apply cleanly, which fails the moment
