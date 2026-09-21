@@ -187,6 +187,18 @@ jobs:
           test ! -e "$HOME/CLAUDE.md"
           test ! -e "$HOME/.gitattributes"
 
+      # ssh.conf names the zsh on sicc through $HOME, which the kitten's remote
+      # sh expands, so no account name has to appear in it. kitty.conf renders
+      # its exe_search_path from the home directory for the same reason.
+      - name: kitty's config names no account
+        run: |
+          set -eux
+          grep -q '^hostname sicc$' "$HOME/.config/kitty/ssh.conf"
+          grep -q '^login_shell \$HOME/.pixi/bin/zsh$' "$HOME/.config/kitty/ssh.conf"
+          grep -q '^env SHELL=\$HOME/.pixi/bin/zsh$' "$HOME/.config/kitty/ssh.conf"
+          grep -q "^exe_search_path $HOME/.local/bin$" "$HOME/.config/kitty/kitty.conf"
+          ! grep -q '/home/' "$HOME/.config/kitty/ssh.conf" || exit 1
+
       # The manifest is rendered from the bundles a machine selects, so the
       # thing worth testing is that the selection reaches the file. The
       # container machine selects nothing, which has to produce a manifest with

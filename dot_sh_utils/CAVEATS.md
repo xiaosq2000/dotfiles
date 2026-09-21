@@ -193,6 +193,11 @@ with the command below.
 ssh -t <host> "bash --noprofile --norc"
 ```
 
+The kitty ssh kitten never reaches `~/.bash_profile` on sicc, because
+`~/.config/kitty/ssh.conf` names the zsh to start, with `$HOME` rather than an
+account name. The comment there explains why the handoff would otherwise lose
+kitty's shell integration, and why `$HOME` works where `~` does not.
+
 ## ssh is a function so that kitty does not take over its completion
 
 In `.zshrc`, the kitty section defines `ssh` as a shell function that calls
