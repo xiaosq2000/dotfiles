@@ -49,3 +49,15 @@ repos:
         language: system
         files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_(theme|machine|ai-privacy|zathura)$)
         exclude: (^dot_sh_utils/tools(\.sh|/)|\.tmpl$)
+      # The repository is public, so plaintext must never reach a commit under
+      # a directory that holds secrets. The script reads the whole index itself,
+      # for the reasons at its top, so it takes no file names and runs on every
+      # commit. The top-level exclude above would otherwise hide every .age file
+      # from it.
+      - id: check-encrypted
+        name: secrets stay encrypted
+        entry: bash .github/scripts/check-encrypted.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

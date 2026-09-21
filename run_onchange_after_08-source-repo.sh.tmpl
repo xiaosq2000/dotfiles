@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Set up this repository's own clone: install its git hooks, and make diffs of
+# the encrypted files readable.
+#
+# Both settings live in .git, which no commit carries, so every clone needs them
+# once and nothing else sets them. Before this script, `pre-commit install` had
+# never been run in the workstation's clone, so none of the hooks in
+# .pre-commit-config.yaml ran on a commit made there. CI was the first place
+# they ran, and for a public repository CI runs after the push has already
+# published whatever the hooks would have stopped.
+#
+# It reruns whenever the rendered text changes, which includes these lines:
+#
+#   pre-commit at apply time: {{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/pre-commit") }}present{{ else }}absent{{ end }}
+#   age identity at apply time: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
+#   chezmoi binary: {{ .chezmoi.executable }}
+#   hook config sha256: {{ include ".pre-commit-config.yaml" | sha256sum }}
+#
+# pre-commit arrives with the core bundle in run_onchange_after_05-pixi.sh, so
+# on a new machine the first apply renders `absent` and gives up, and the next
+# renders `present` and installs the hooks. The age identity line works the same
+# way for the diff driver. run_onchange_before_00-age-identity.sh explains why
+# this is run_onchange with markers rather than a plain run_ script.
+#
+# It never fails the apply. Every problem is a warning, because a hook that
+# cannot be installed is no reason to leave the rest of the machine unapplied.
+
+set -u
+
+SRC={{ .chezmoi.workingTree | quote }}
+CHEZMOI={{ .chezmoi.executable | quote }}
+IDENTITY={{ joinPath .chezmoi.homeDir .secrets.ageIdentity | quote }}
+
+note() { printf 'source-repo: %s\n' "$*"; }
+warn() { printf 'source-repo: %s\n' "$*" >&2; }
+
+# CI copies the checkout into place with `cp -a`, and git refuses to work in a
+# tree owned by another user. A source tree that is not a clone at all is just
+# as possible. Neither is worth failing over.
+if ! git -C "$SRC" rev-parse --git-dir >/dev/null 2>&1; then
+    warn "$SRC is not a git clone git will work in; skipping"
+    exit 0
+fi
+
+# Readable diffs. .gitattributes routes *.age through a diff driver named age,
+# and this defines it as `chezmoi decrypt`, which prints the plaintext of the
+# file git hands it. Only where the key is: without it every `git diff` touching
+# an .age file would fail outright instead of showing ciphertext.
+if [ -f "$IDENTITY" ]; then
+    if git -C "$SRC" config diff.age.textconv "$CHEZMOI decrypt"; then
+        note "git diff shows .age files decrypted in this clone"
+    else
+        warn "could not set diff.age.textconv in $SRC"
+    fi
+else
+    git -C "$SRC" config --unset diff.age.textconv 2>/dev/null || true
+fi
+
+# The hooks. `pre-commit install` reads default_install_hook_types from the
+# config, so this installs both the pre-commit and the commit-msg hook.
+PRE_COMMIT=""
+if command -v pre-commit >/dev/null 2>&1; then
+    PRE_COMMIT="$(command -v pre-commit)"
+elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/pre-commit" ]; then
+    PRE_COMMIT="${PIXI_HOME:-$HOME/.pixi}/bin/pre-commit"
+fi
+
+if [ -z "$PRE_COMMIT" ]; then
+    warn "pre-commit not found, so the hooks are not installed; it comes from the core bundle"
+elif (cd "$SRC" && "$PRE_COMMIT" install >/dev/null); then
+    note "pre-commit hooks installed in $SRC"
+else
+    warn "pre-commit install failed; run it by hand in $SRC"
+fi
+
+exit 0

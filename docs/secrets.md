@@ -14,6 +14,7 @@ Encryption is on, since 2026-09-19.
 | Key created | done, `~/.config/chezmoi/key.txt` |
 | Recipient recorded | done, `age1ke4rf2j…` in `.chezmoidata/secrets.toml` |
 | `~/.ssh/config` encrypted | done, `private_dot_ssh/encrypted_private_config.age` |
+| Plaintext refused at commit | done, the `check-encrypted` pre-commit hook, 2026-09-21 |
 | Key backed up in Bitwarden | done, item `chezmoi age identity`, verified 2026-09-19 |
 
 Verified rather than assumed: `rbw get "chezmoi age identity" | age-keygen -y`
@@ -278,6 +279,35 @@ To rotate, create a new key, re-encrypt every `encrypted_*` file to the new
 recipient, update `ageRecipient`, update Bitwarden, and re-run `chezmoi init`
 on every machine. Keep the old key until every machine has the new one, because
 a machine with neither cannot apply at all.
+
+## Keeping plaintext out of commits
+
+The repository is public and CI runs after a push, so the check that matters is
+the one before the commit. Two pieces do that, and a third makes review
+possible.
+
+**The `check-encrypted` pre-commit hook** runs
+[check-encrypted.sh](../.github/scripts/check-encrypted.sh) over the whole
+index. Every file under `private_dot_ssh/` and
+`dot_agents/skills/private_machines/references/` must be named `encrypted_*.age`
+and must start with an age header. The first test catches `chezmoi add` without
+`--encrypt`, the second a hand-made file with the right name and plaintext
+inside. A directory that starts holding encrypted files goes in its `PROTECTED`
+list. CI runs the same script, and a separate job proves it still fails on both
+mistakes.
+
+**The hooks have to be installed.** They live in `.git/hooks`, which no commit
+carries. Until 2026-09-21 the workstation's clone had never run
+`pre-commit install`, so no hook in `.pre-commit-config.yaml` ran on a commit
+made there. `run_onchange_after_08-source-repo.sh` now installs them on every
+machine that has pre-commit, which comes with the core bundle.
+
+**Diffs decrypt locally.** `.gitattributes` sends `*.age` through a diff driver
+named `age`, and the same script defines it in `.git/config` as
+`chezmoi decrypt`, on machines with the key only. `git diff` and `git log -p`
+then show plaintext changes on a keyed machine, while GitHub still shows
+ciphertext. Git will not take a diff command from a committed file, which is why
+the definition is set per clone.
 
 ## Four things worth knowing
 

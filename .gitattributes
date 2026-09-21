@@ -1,0 +1,7 @@
+# Show age ciphertext as plaintext in local diffs, on machines that hold the key.
+#
+# This only names the driver. What `age` means is set per clone in .git/config,
+# by run_onchange_after_08-source-repo.sh, because git will not take a diff
+# command from a committed file. A clone without that setting, GitHub's included,
+# shows the ciphertext as before.
+*.age diff=age
