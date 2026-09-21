@@ -25,9 +25,16 @@ repos:
         # template is not valid YAML until it is rendered.
         exclude: \.tmpl$
       - id: check-added-large-files
+      # A private key in any file, under any name. .gitignore stops the usual
+      # names, but only for `git add .`; this reads what is actually staged.
+      - id: detect-private-key
+      # A chezmoi modify_ script keeps the name of the file it edits, so
+      # modify_settings.json is a shell script, not JSON.
       - id: check-json
+        exclude: (^|/)modify_
       - id: pretty-format-json
         args: [--autofix]
+        exclude: (^|/)modify_
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.0.0
     hooks:
@@ -47,7 +54,7 @@ repos:
         name: shellcheck
         entry: shellcheck --severity=warning
         language: system
-        files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_(theme|machine|ai-privacy|zathura)$)
+        files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_(theme|machine|ai-privacy|zathura)$|^dot_(claude|codex)/modify_)
         exclude: (^dot_sh_utils/tools(\.sh|/)|\.tmpl$)
       # The repository is public, so plaintext must never reach a commit under
       # a directory that holds secrets. The script reads the whole index itself,
@@ -61,6 +68,31 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
+      # The age identity decrypts every encrypted_ file here, so it must never
+      # be committed anywhere in the tree, in plaintext. detect-private-key does
+      # not know its format. The length keeps a placeholder such as
+      # AGE-SECRET-KEY-1... in a document from matching.
+      - id: no-age-identity
+        name: no age identity
+        entry: AGE-SECRET-KEY-1[0-9A-Z]{58}
+        language: pygrep
+      # A /home/<name>/ path is an account name, and this repository is public.
+      # Write $HOME in a shell file and {{ .chezmoi.homeDir }} in a template.
+      # The two excluded files hold placeholders only: an upstream comment in
+      # the btop config, and the key-guard test cases.
+      - id: no-home-paths
+        name: no plaintext home paths
+        entry: /home/[A-Za-z0-9._-]+/
+        language: pygrep
+        exclude: ^(private_dot_config/btop/btop\.conf\.tmpl|\.github/scripts/check-key-guard\.sh)$
+      # The guard that keeps agents from reading private keys, against the calls
+      # it must refuse and the ones it must let through.
+      - id: key-guard
+        name: key guard refuses what it should
+        entry: bash .github/scripts/check-key-guard.sh
+        language: system
+        pass_filenames: false
+        files: ^(dot_agents/hooks/executable_key-guard\.py|\.github/scripts/check-key-guard\.sh)$
       # bash's set -e does not stop on a command negated with `!`, so in a CI
       # step `! grep -q x file` passes whether or not x is found, unless it
       # happens to be the step's last line. Nine such assertions checked nothing

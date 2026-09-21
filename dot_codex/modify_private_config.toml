@@ -1,0 +1,128 @@
+#!/bin/sh
+# chezmoi modify script for ~/.codex/config.toml. It adds a permissions profile
+# that keeps Codex's sandboxed commands from reading ssh private keys, makes it
+# the default, and leaves every other line in the file alone.
+#
+# The file cannot be a plain managed file, because Codex writes to it too
+# (trusted projects, plugins, hook trust, skills), and so does ai-privacy (otel).
+# chezmoi passes the current file on stdin and writes whatever this prints.
+#
+# What this adds:
+#   default_permissions = "key-guard"   at the top of the file
+#   [permissions.key-guard]             at the end: Codex's :workspace profile,
+#                                       plus a read deny on the default key names
+# Codex enforces the deny with bubblewrap, so it holds for every sandboxed
+# command, however the command names the file. It does not cover a command Codex
+# runs outside the sandbox after approval; the key-guard hook in
+# ~/.codex/hooks.json still sees those. docs/secrets.md has the full picture.
+#
+# The age identity is not denied here, unlike in the hook: chezmoi reads it to
+# decrypt, and a sandboxed `chezmoi diff` would fail without it.
+#
+# An apply must never fail over this file. Without python3, without a TOML
+# parser to check the edit, or when the edit would change anything besides the
+# profile, the file passes through unchanged with a warning. The same happens
+# when the file uses sandbox_mode, which Codex says not to combine with
+# default_permissions.
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "codex config: python3 not found, so ~/.codex/config.toml gets no key guard" >&2
+    exec cat
+fi
+
+# The program comes in on fd 3, because stdin carries the config file.
+exec python3 /dev/fd/3 3<<'PY'
+import copy
+import json
+import re
+import sys
+
+PROFILE = "key-guard"
+KEYS = ["id_rsa", "id_dsa", "id_ecdsa", "id_ecdsa_sk", "id_ed25519", "id_ed25519_sk", "id_xmss"]
+WANT = {
+    "description": "Workspace access without ssh private keys. Set by chezmoi.",
+    "extends": ":workspace",
+    "filesystem": {"~/.ssh/" + k: "deny" for k in KEYS},
+}
+COMMENT = [
+    "# Set by chezmoi from dot_codex/modify_private_config.toml, so an edit to",
+    "# this profile is undone by the next apply. See docs/secrets.md.",
+]
+DEFAULT = 'default_permissions = "%s"' % PROFILE
+
+HEADER = re.compile(r"^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*(#.*)?$")
+TOP_DEFAULT = re.compile(r"^\s*default_permissions\s*=\s*(.*?)\s*(#.*)?$")
+
+
+def warn(msg):
+    sys.stderr.write("codex config: " + msg + "\n")
+
+
+def is_ours(table):
+    name = re.sub(r"[\s\"']", "", table)
+    return name == "permissions." + PROFILE or name.startswith("permissions." + PROFILE + ".")
+
+
+def block():
+    q = json.dumps  # a JSON string is a valid TOML basic string for these values
+    lines = COMMENT + ["[permissions.%s]" % PROFILE]
+    lines += ["description = " + q(WANT["description"]), "extends = " + q(WANT["extends"]), ""]
+    lines += ["[permissions.%s.filesystem]" % PROFILE]
+    lines += ["%s = %s" % (q(path), q(access)) for path, access in WANT["filesystem"].items()]
+    return "\n".join(lines) + "\n"
+
+
+def edit(raw):
+    """Return raw with the guard stripped out and put back in its place."""
+    kept, old_default = [], None
+    in_top, in_ours = True, False
+    for line in raw.splitlines():
+        m = HEADER.match(line)
+        if m:
+            in_top, in_ours = False, is_ours(m.group(1))
+        if in_ours or line in COMMENT:
+            continue
+        d = TOP_DEFAULT.match(line) if in_top else None
+        if d:
+            old_default = d.group(1)
+            continue
+        kept.append(line)
+    body = "\n".join(kept).strip("\n")
+    out = DEFAULT + "\n" + (body + "\n\n" if body else "\n") + block()
+    return out, old_default
+
+
+def without_guard(config):
+    config = copy.deepcopy(config)
+    config.pop("default_permissions", None)
+    profiles = config.get("permissions")
+    if isinstance(profiles, dict):
+        profiles.pop(PROFILE, None)
+        if not profiles:
+            config.pop("permissions")
+    return config
+
+
+raw = sys.stdin.read()
+try:
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib  # python older than 3.11, if tomli is installed
+
+    before = tomllib.loads(raw)
+    if "sandbox_mode" in before or "sandbox_workspace_write" in before:
+        raise ValueError("it sets sandbox_mode, which Codex says not to combine with default_permissions")
+    out, old_default = edit(raw)
+    after = tomllib.loads(out)
+    if without_guard(after) != without_guard(before):
+        raise ValueError("the edit would have changed more than the key-guard profile")
+    if after.get("default_permissions") != PROFILE or after["permissions"][PROFILE] != WANT:
+        raise ValueError("the edit did not produce the key-guard profile")
+    if old_default not in (None, json.dumps(PROFILE)):
+        warn("replaced default_permissions = %s with %s" % (old_default, json.dumps(PROFILE)))
+except Exception as e:  # anything at all: the apply must go on
+    warn("left ~/.codex/config.toml unchanged: %s" % e)
+    out = raw
+sys.stdout.write(out)
+PY

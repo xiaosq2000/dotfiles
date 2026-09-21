@@ -114,6 +114,66 @@ rbw unlock
 Keep the old key until every machine has the new one. A machine with neither
 cannot apply at all.
 
+## Keeping agents away from private keys
+
+Claude Code, Codex and opencode run as you, so by default they can read any
+file you can. Two kinds of file are kept from them: ssh private keys, and the
+age identity, which decrypts every `encrypted_*` file in this repository. If an
+agent read either one, the key would go to the model provider, and an agent
+misled by a web page or a file it read could send the key anywhere.
+
+The guarded files:
+
+- every name in `~/.ssh` except `config`, `config.d`, `known_hosts`,
+  `authorized_keys` and `*.pub`, which covers a key with a custom name without
+  listing it;
+- `~/.config/chezmoi/key.txt`.
+
+| Agent | What refuses the read | Where it comes from |
+| --- | --- | --- |
+| Claude Code | `Read` deny rules for the default key names and the age identity, and the key-guard hook | `dot_claude/modify_settings.json` merges both into `~/.claude/settings.json` |
+| Codex | The `key-guard` permissions profile, whose bubblewrap sandbox cannot open the default key names, and the key-guard hook | `dot_codex/modify_private_config.toml` and `dot_codex/hooks.json` |
+| opencode | `read` rules in `opencode.json`, and a plugin that runs the key-guard hook | `private_dot_config/opencode/` |
+
+The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
+guarded file and tells the agent to ask you instead. The calls it must refuse
+and the ones it must let through are listed in
+`.github/scripts/check-key-guard.sh`, which both pre-commit and CI run.
+
+The settings files of Claude Code and Codex are rewritten by the agents
+themselves, so chezmoi does not own them. The modify scripts add the guard and
+leave every other key alone. Deleting a rule from a script does not delete it
+from `~`: the scripts only ever add rules.
+
+**Codex skips the hook until you trust it.** On each machine, after the first
+apply that brings `~/.codex/hooks.json`, open Codex and trust the hook in
+`/hooks`. Do it again whenever `hooks.json` changes. Until then only the sandbox
+profile guards the keys in Codex.
+
+A key with a custom name is already covered by the hook and by opencode's rules.
+Codex's sandbox and Claude Code's `Read` rules list the default names only
+(`id_rsa`, `id_ed25519` and the rest). To cover a custom name there too, add it
+to the lists in both modify scripts.
+
+What none of this stops:
+
+- **A command that builds the path at run time.** The hook matches text, so a
+  command that decodes a key path from base64 gets past it. For the default key
+  names, Codex's sandbox still refuses the read. In Claude Code and opencode
+  nothing else does. Claude Code's own sandbox would, but it was turned down on
+  2026-09-21: it also puts every Bash command behind a network allowlist, and it
+  needs bubblewrap and socat installed on each machine.
+- **A Codex command you approve to run outside the sandbox.** Only the hook
+  sees it.
+- **A command you type yourself** with `!` in Claude Code. No hook sees it.
+- **What an MCP server does in its own process.** The hooks see the arguments of
+  an MCP call, not the files the server opens.
+
+A passphrase on the key is the one guard that no agent gets around:
+`ssh-keygen -p -f ~/.ssh/id_ed25519`. An agent that reads the file then gets
+ciphertext. A hardware key made with `ssh-keygen -t ed25519-sk` goes further:
+the file on disk is only a handle to the device.
+
 ## Caveats
 
 - **A missing key aborts the whole apply, not just the file.** Every target
@@ -133,12 +193,17 @@ cannot apply at all.
   rbw-present marker line. As `run_once_` it never retries after the first
   apply fails for lack of rbw, and as a plain `run_` it makes `chezmoi verify`
   fail for good.
-- **The plaintext guard works only where the hooks are installed.** The
-  `check-encrypted` pre-commit hook refuses plaintext under the protected
-  directories. `run_onchange_after_08-source-repo.sh` installs the hooks on
-  every machine that has pre-commit. In a clone without them, nothing stops a
-  plaintext commit before the push, and CI runs only after the push has
-  published it.
+- **The plaintext guards work only where the hooks are installed.** Three
+  pre-commit hooks refuse a commit:
+  - `check-encrypted` refuses plaintext under the protected directories;
+  - `detect-private-key` refuses an ssh or TLS private key under any name;
+  - `no-age-identity` refuses an age identity.
+
+  `run_onchange_after_08-source-repo.sh` installs the hooks on every machine
+  that has pre-commit. In a clone without them, nothing stops such a commit
+  before the push, and CI runs only after the push has published it.
+  `.gitignore` names the usual key files too, but it stops only `git add .`;
+  `git add -f` gets past it.
 - **`chezmoi add` writes into whichever source tree its config names.** With
   an unexpected `HOME` or `XDG_CONFIG_HOME`, a new encrypted file can land in
   another repository. Run `git status` after every `add --encrypt`.

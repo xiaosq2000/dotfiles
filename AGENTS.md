@@ -71,6 +71,11 @@ A new encrypted target needs two more changes:
 2. If it sits in a new directory, that directory in `PROTECTED` in
    `.github/scripts/check-encrypted.sh`.
 
+Agents cannot read ssh private keys or the age identity. A hook and each
+agent's own read rules refuse any call that names one, as `docs/secrets.md`
+explains. If a call is refused that way, the guard is working, not broken: ask
+the user instead of finding another route to the file.
+
 In a clone where the key is present, `git diff` shows `.age` files decrypted,
 through the `age` diff driver in `.gitattributes`. On GitHub they stay
 ciphertext. The vps has no key and never will.

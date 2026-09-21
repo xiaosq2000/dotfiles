@@ -8,6 +8,18 @@
     "external_directory": {
       "~/.local/texlive": "allow",
       "~/.local/texlive/**": "allow"
+    },
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow",
+      "~/.config/chezmoi/key.txt": "deny",
+      "~/.ssh/*": "deny",
+      "~/.ssh/*.pub": "allow",
+      "~/.ssh/authorized_keys*": "allow",
+      "~/.ssh/config*": "allow",
+      "~/.ssh/known_hosts*": "allow"
     }
   },
   "plugin": [

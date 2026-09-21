@@ -25,6 +25,13 @@ CLAUDE.md
 # explicitly.
 .config/chezmoi/key.txt
 
+# ssh private keys, for the same reason. chezmoi does not manage them, and a
+# stray `chezmoi add ~/.ssh` must not start. With this entry chezmoi refuses the
+# keys even with --encrypt, and still takes ~/.ssh/config. The public halves
+# are harmless, so they stay addable.
+.ssh/id_*
+!.ssh/id_*.pub
+
 # .secrets is a separate, local-only repository that happens to live in $HOME.
 # It must never be managed here and must never reach this public repo. chezmoi
 # would not pick it up on its own, but a stray `chezmoi add ~/.secrets` would,
