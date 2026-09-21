@@ -1,0 +1,10 @@
+# Keep the bundled focus animation without dimming inactive panes.
+# Matches the upstream timing checked on 2026-09-21.
+startgroup
+    animation_start window-focus-in
+    animation_stop 750
+    animation_curve ease-in
+    animation_step 16
+    var float INACTIVE_DIM = 1.0
+    shaders focus-highlight
+endgroup

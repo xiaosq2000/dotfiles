@@ -290,6 +290,17 @@ jobs:
           # The paste that found this: a trailing comment must be a comment.
           test "$(timeout 60 zsh -ic 'echo ok # trailing comment' 2>/dev/null | tail -1)" = ok
 
+      - name: Kitty enables blaze trails and focus highlighting
+        run: |
+          set -eux
+          conf="$HOME/.config/kitty/kitty.conf"
+          grep -qx 'cursor_trail 1' "$conf"
+          grep -qx 'custom_shaders cursor-trail-blaze focus-highlight-only' "$conf"
+          pipeline="$HOME/.config/kitty/shaders/focus-highlight-only.pipeline"
+          grep -qx '    var float INACTIVE_DIM = 1.0' "$pipeline"
+          grep -qx '    animation_start window-focus-in' "$pipeline"
+          grep -qx '    animation_stop 750' "$pipeline"
+
       - name: Theme renders and switches
         run: |
           set -eux
