@@ -1,3 +1,6 @@
+.worktrees/
+.*/worktrees/
+
 # Private keys never belong in this public repository, in any form git can read.
 # The patterns match anywhere in the tree and after any chezmoi prefix, because
 # `chezmoi add ~/.ssh/id_ed25519` would write private_dot_ssh/private_id_ed25519.
