@@ -113,6 +113,12 @@ jobs:
           # A placeholder in a document is not a key.
           printf 'AGE-SECRET-KEY-1...\n' > leak.txt
           pre-commit run no-age-identity --files leak.txt
+          # A plaintext home path is an account name. Built at run time, so
+          # this file holds none.
+          printf 'login_shell /%s/%s/.pixi/bin/zsh\n' home somebody > leak.txt
+          if pre-commit run no-home-paths --files leak.txt; then echo "a home path passed" >&2; exit 1; fi
+          printf 'login_shell $HOME/.pixi/bin/zsh\n' > leak.txt
+          pre-commit run no-home-paths --files leak.txt
           rm leak.txt
 
   bootstrap:

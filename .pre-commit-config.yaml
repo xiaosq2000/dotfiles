@@ -76,6 +76,15 @@ repos:
         name: no age identity
         entry: AGE-SECRET-KEY-1[0-9A-Z]{58}
         language: pygrep
+      # A /home/<name>/ path is an account name, and this repository is public.
+      # Write $HOME in a shell file and {{ .chezmoi.homeDir }} in a template.
+      # The two excluded files hold placeholders only: an upstream comment in
+      # the btop config, and the key-guard test cases.
+      - id: no-home-paths
+        name: no plaintext home paths
+        entry: /home/[A-Za-z0-9._-]+/
+        language: pygrep
+        exclude: ^(private_dot_config/btop/btop\.conf\.tmpl|\.github/scripts/check-key-guard\.sh)$
       # The guard that keeps agents from reading private keys, against the calls
       # it must refuse and the ones it must let through.
       - id: key-guard
