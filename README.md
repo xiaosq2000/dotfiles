@@ -130,6 +130,19 @@ reads and writing the condensed rules into `~/.codex/AGENTS.md`. It is gone: two
 mechanisms and a wrapper to remember them, against typing nine characters when
 you actually want it. Upstream's flag file still works if the itch returns.
 
+## Context for agents
+
+[AGENTS.md](AGENTS.md), which `CLAUDE.md` imports, is for an agent changing this
+repository. It covers the source-versus-target model, the naming attributes, and
+the rules that keep secrets out of a public repository.
+
+The `machines` skill is for an agent working anywhere else. It carries a page per
+machine (what it is for, how to reach it, accounts, hardware, storage, rules and
+quirks) plus a page on the network between them. The pages are age-encrypted in
+[dot_agents/skills/private_machines](dot_agents/skills/private_machines) and
+decrypted to `~/.agents/skills/machines` on apply, so they exist only where the
+key is. `machine` prints the path of the current machine's page.
+
 ## Installed tools
 
 Tools come from pixi in named bundles.

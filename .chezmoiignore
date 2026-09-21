@@ -13,6 +13,12 @@
 README.md
 docs
 
+# Instructions for agents working on this repository, at the root where agents
+# look for them. Deployed, they would land in ~, and ~/CLAUDE.md in particular
+# would load into every Claude Code session started in the home directory.
+AGENTS.md
+CLAUDE.md
+
 # The age identity: the one file that must never be committed, since it decrypts
 # every encrypted_ file in this repository. chezmoi would not add it on its own,
 # but ~/.config/chezmoi is a directory this repository does write to, so say so

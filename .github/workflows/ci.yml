@@ -140,10 +140,14 @@ jobs:
           test -f "$HOME/.config/starship.toml"
           test ! -e "$HOME/.config/themes/rose-pine/starship"
           test ! -e "$HOME/.config/themes/rose-pine/gnome-terminal"
-          # repo infrastructure must not be deployed as dotfiles
+          # repo infrastructure must not be deployed as dotfiles. A ~/CLAUDE.md
+          # would also load into every Claude Code session started in ~.
           test ! -e "$HOME/README.md"
           test ! -e "$HOME/docs"
           test ! -e "$HOME/.github"
+          test ! -e "$HOME/AGENTS.md"
+          test ! -e "$HOME/CLAUDE.md"
+          test ! -e "$HOME/.gitattributes"
 
       # The manifest is rendered from the bundles a machine selects, so the
       # thing worth testing is that the selection reaches the file. The
