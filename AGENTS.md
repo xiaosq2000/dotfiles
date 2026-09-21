@@ -111,6 +111,10 @@ Comments and documents here explain why, in full sentences, and date any fact
 that can go stale ("checked on 2026-09-21"). Match that. Say what was verified
 and what was assumed.
 
+Documents under `docs/` say what to do next. History belongs in git: keep a past
+event only as a caveat that changes what someone would do, and delete a todo
+entry once it is done.
+
 ## Where things are written down
 
 | Topic | Place |

@@ -1,120 +1,55 @@
 # Outstanding work
 
-Nothing here is required for any machine to work. What is left needs a machine
-that is not to hand, or is simply worth doing.
+What is left to do, most useful first. Nothing here stops a machine from
+working. Delete an entry once it is done; git keeps the history.
 
-**State:** all five machines — workstation, laptop, imrl, sicc and vps — are
-deployed; `chezmoi status` is empty on each and CI is green.
+## Apply the latest changes on the laptop
 
-The laptop came up on 2026-09-20, the last of the five, and its second apply
-cleared about 115 MB of pre-chezmoi leftovers: oh-my-zsh, the fzf checkout, and
-the `~/.local/bin` copies of nvim, uv, lazydocker and the huggingface tools.
-The stale 27 MB `~/.local/share/nvim/runtime` came off by hand at the same
-time; `.chezmoiremove` could never take it, because its siblings under
-`~/.local/share/nvim` are lazy, mason and session state.
+The laptop is the only machine that has not applied the `machines` skill, the
+source-repo hooks and the `ssh` fallback, because it was unreachable when the
+others did. On the laptop:
 
-With the laptop done, the migration scaffolding went with it on the same day:
-`.chezmoiremove`, `run_onchange_before_01-stale-externals.sh` and the legacy
-`main`/`moon`/`dawn` theme-name map in `.chezmoi.toml.tmpl` are all deleted. No
-machine still carries the old `$HOME`-as-a-git-worktree layout, so there was
-nothing left for any of them to clean.
+1. Run `chezmoi update`. If it asks about a file, that file was edited on the
+   laptop since its last apply; `chezmoi diff <file>` shows what would change.
+2. Open a new terminal, so the shell picks up the new `ssh` function.
+3. Run `chezmoi verify && machine | grep docs`. The docs line should show the
+   page path with no "(absent)" note after it.
 
-The laptop took its age identity by hand on 2026-09-20, because the fetcher was
-`run_once_before_` and so could never succeed on a first init. It is
-`run_onchange_before_` now, keyed on whether rbw exists yet, so it retries on
-the second apply; see [secrets.md](secrets.md). Every machine but the vps now
-carries the key, and the vps deliberately never will.
+Then delete this entry.
 
-rustup is installed on the workstation and the laptop, the two machines with
-`rust = true`. It is gone from imrl, sicc and the vps, and no machine sources
-`~/.cargo/env`.
+## Cut the last `tput` calls from shell startup
 
-All five machines were pulled to `38e8d5f` and applied on 2026-09-20, with
-`chezmoi status` empty and `chezmoi verify` exit 0 on each.
+Shell startup took 160 to 260 ms on the workstation, laptop and imrl, and about
+400 ms on sicc, when measured on 2026-09-20. The largest single cost left is ten
+`tput` calls in
+`dot_sh_utils/lib/ui.sh`, about 15 ms locally and more on sicc, where home is on
+NFS. Replace them with literal escape sequences such as `printf '\033[1m'`.
 
-One correction worth keeping, because it was believed for a day: this file and
-secrets.md both said imrl and sicc carried no age key. They had carried one
-since 2026-09-19, with `~/.ssh/config` managed at mode 0600 on both. The claim
-was copied forward instead of checked. `age-keygen -y ~/.config/chezmoi/key.txt`
-takes a second and settles it.
+- Do not use zsh's `%F{}` escapes. The bash scripts in `setup.d/` source
+  `lib/ui.sh` too.
+- Measure with a terminal attached. `lib/ui.sh` skips `tput` when stdout is a
+  pipe, so a piped benchmark hides exactly this cost:
 
-## Worth doing
+  ```sh
+  time ( for i in $(seq 10); do script -qec "zsh -ic exit" /dev/null >/dev/null 2>&1; done )
+  ```
 
-### Apply the machine-context change on the laptop
+- Profile before changing anything else. Guessing from line counts has been
+  wrong here before: sourcing all 2,776 lines of `~/.sh_utils` costs 5 ms.
+  `PS4` xtrace timestamps show where the time actually goes.
 
-The laptop was not reachable on 2026-09-21, so it has not applied `94fc56a`: the
-`machines` skill, the source-repo hooks and diff driver, and the `ssh`
-fallback. The workstation, imrl, sicc and the vps applied it that day, each
-with `chezmoi verify` clean. Run `chezmoi update` on the laptop, then drop this
-entry.
+## Move the typefaces installer to `.chezmoiexternal.toml`
 
-The rest of that change's follow-up is done. embodied-ai's compute-resources
-pages keep only project facts and point at the skill (`294eb25` on its `dev`),
-and the five Claude Code memories the pages replaced are deleted.
+`dot_sh_utils/setup.d/executable_typefaces.sh` is 433 lines and installs
+sixteen font families, each with its own release-asset naming. chezmoi's
+`gitHubLatestReleaseAssetURL` would replace most of it.
 
-### Shell startup, fixed and measured everywhere
+- Every machine has `typefaces = false`, so nothing runs the script today, and
+  testing a rewrite means downloading about a gigabyte of fonts.
+- The workstation's fonts were installed outside this repository. Nothing here
+  manages or removes them.
 
-All five machines were on the fix and measured on 2026-09-20, ten warm runs each
-with a tty attached:
+## Not bugs
 
-| machine | before | after |
-| --- | ---: | ---: |
-| laptop | 750 ms | 230 ms (325 ms in a fresh terminal, which pays for `proxy shell on`) |
-| workstation | — | 161 ms |
-| imrl | ~1.1 s | 256 ms |
-| sicc | ~1.1 s | 397 ms |
-
-sicc stays the slowest, which is what you would expect with home on NFS. It is
-no longer the outlier it was.
-
-The entry that stood here blamed `~/.sh_utils/*.sh` — "roughly 1300 lines sourced
-at every shell start" — and proposed autoloaded functions. That was wrong, and
-profiling with `PS4` xtrace timestamps said so plainly:
-
-| cost | ms | |
-| --- | ---: | --- |
-| `eval "$(pixi completion --shell zsh)"` | 375 | 11,781 lines, re-parsed every shell |
-| `proxy shell on` | 133 | systemctl and tun probes |
-| `eval "$(codex completion zsh)"` | 102 | 4,232 lines |
-| `source` the uv completion | 30 | 552 KB read every shell |
-| 10 × `tput` in `lib/ui.sh` | 15 | only when stdout is a tty |
-| **sourcing all of `~/.sh_utils`** | **5** | what the entry blamed |
-| `setup_texlive` | 0.3 | what the entry blamed |
-
-Two thirds of startup was three completion scripts being re-parsed on every
-shell. They are cached to files on `fpath` now and load on the first Tab
-instead; see [CAVEATS.md](../dot_sh_utils/CAVEATS.md). `proxy shell on` is
-skipped when `http_proxy` is already set, so only the first shell under a
-terminal pays for it.
-
-The lesson is worth keeping: the line count of what gets sourced was a bad
-proxy for what it cost. Sourcing 2,776 lines of function definitions is 5 ms.
-
-What is left is about 150 ms locally with nothing individually above 11 ms, so
-there is no single next thing to fix. The `tput` forks in `lib/ui.sh:20-29` are
-the largest remaining item at 15 ms, and they could be replaced by zsh's own
-`%F{}` escapes — worth more on sicc than here, since ten forks over NFS is where
-its remaining 397 ms mostly goes.
-
-Measure with a tty attached. `lib/ui.sh` skips its `tput` branch when stdout is
-a pipe, so a piped benchmark understates by those 15 ms:
-
-```sh
-time ( for i in $(seq 10); do script -qec "zsh -ic exit" /dev/null >/dev/null 2>&1; done )
-```
-
-### The typefaces installer
-
-`setup.d/typefaces.sh` is 433 lines, the largest thing left in that directory.
-It installs sixteen families, each with its own release-asset naming and wanted
-extensions. Every machine has `typefaces = false`, so a rewrite to
-`.chezmoiexternal.toml` would be large and untestable without downloading about
-a gigabyte of fonts. `gitHubLatestReleaseAssetURL` would do most of the work.
-
-Fonts are installed on the workstation despite the flag being false; they came
-from elsewhere and nothing removes them.
-
-### Mason installs language servers per machine
-
-On any machine without the `lsp` bundle. This is the intended fallback, not a
-bug. Listed so it is not rediscovered as one.
+- Neovim's Mason installs language servers on a machine without the `lsp`
+  bundle. That is the intended fallback.
