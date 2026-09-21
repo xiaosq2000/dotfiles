@@ -61,15 +61,6 @@ new pages unless they are cut back.
 Apply on each keyed machine after the merge (`chezmoi update` on the
 workstation, laptop, imrl and sicc) so the pages and the hooks land there.
 
-### CI assertions written as `! grep` never fail
-
-Several CI steps assert absence with `! grep -q …` under `set -e`. bash does not
-exit on a command whose status is inverted with `!`, so those lines pass whether
-or not the pattern is found, unless one happens to be the last command in its
-step. `bash -c 'set -e; ! true; echo reached'` prints `reached`. Rewriting them
-as `if grep -q …; then exit 1; fi`, or appending `|| exit 1` to each, would make
-them check what they say they check.
-
 ### Shell startup, fixed and measured everywhere
 
 All five machines were on the fix and measured on 2026-09-20, ten warm runs each

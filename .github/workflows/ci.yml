@@ -177,8 +177,11 @@ jobs:
           set -eux
           test -f "$HOME/.config/sheldon/plugins.toml"
           grep -q 'zsh-vi-mode' "$HOME/.config/sheldon/plugins.toml"
-          ! grep -q 'oh-my-zsh.sh' "$HOME/.zshrc"
-          ! grep -q 'ZSH_CUSTOM' "$HOME/.zshrc"
+          # `|| exit 1` on every negated check: set -e ignores a command negated
+          # with `!`, so a bare `! grep` passes whether or not it matches. The
+          # negated-assertions hook in .pre-commit-config.yaml enforces this.
+          ! grep -q 'oh-my-zsh.sh' "$HOME/.zshrc" || exit 1
+          ! grep -q 'ZSH_CUSTOM' "$HOME/.zshrc" || exit 1
           test ! -e "$HOME/.sh_utils/setup.d/zsh.sh"
           # The replacements for what the framework used to provide.
           grep -q 'autoload -Uz compinit' "$HOME/.zshrc"
@@ -200,9 +203,9 @@ jobs:
         run: |
           set -eux
           # The eval form is what this replaced; it must not come back.
-          ! grep -q 'eval "$(pixi completion' "$HOME/.zshrc"
-          ! grep -q 'eval "$(codex completion' "$HOME/.zshrc"
-          ! grep -q 'source "$_uv_completion_cache"' "$HOME/.zshrc"
+          ! grep -q 'eval "$(pixi completion' "$HOME/.zshrc" || exit 1
+          ! grep -q 'eval "$(codex completion' "$HOME/.zshrc" || exit 1
+          ! grep -q 'source "$_uv_completion_cache"' "$HOME/.zshrc" || exit 1
           # fpath has to be set before compinit, or compinit will not see it.
           fpath_line=$(grep -n '^fpath=(' "$HOME/.zshrc" | head -1 | cut -d: -f1)
           compinit_line=$(grep -n '^autoload -Uz compinit' "$HOME/.zshrc" | cut -d: -f1)
@@ -224,7 +227,7 @@ jobs:
           # old arrangement produced, `command not found: compdef`, which was a
           # warning on every new shell rather than anything that stopped it.
           # Hence zsh's own wording rather than a bare "not found".
-          ! timeout 60 zsh -ic 'true' 2>&1 | grep -qE 'command not found|parse error|bad pattern'
+          ! timeout 60 zsh -ic 'true' 2>&1 | grep -qE 'command not found|parse error|bad pattern' || exit 1
 
       # Inside kitty, `ssh` is a function that runs `kitten ssh`, and the kitten
       # refuses to run without a terminal, which broke ssh in every AI agent's
@@ -386,8 +389,8 @@ jobs:
           sed -i 's/^ageRecipient = .*/ageRecipient = ""/' "$data"
           render > /tmp/cfg-off.toml
           grep -qi 'no encryption' /tmp/cfg-off.toml
-          ! grep -q '^encryption' /tmp/cfg-off.toml
-          ! grep -q '^\[age\]' /tmp/cfg-off.toml
+          ! grep -q '^encryption' /tmp/cfg-off.toml || exit 1
+          ! grep -q '^\[age\]' /tmp/cfg-off.toml || exit 1
 
           # Recipient present: the whole mechanism switches on.
           sed -i 's/^ageRecipient = .*/ageRecipient = "age1ci0000000000000000000000000000000000000000000000000000"/' "$data"
@@ -432,7 +435,7 @@ jobs:
           # rather than an empty or malformed one.
           chezmoi execute-template \
             < "$src/private_dot_config/pixi/config.toml.tmpl" > /tmp/pixi-container.toml
-          ! grep -qE '^[a-z[]' /tmp/pixi-container.toml
+          ! grep -qE '^[a-z[]' /tmp/pixi-container.toml || exit 1
 
       # A machine with no age identity has to apply everything that is not
       # encrypted, and it is not enough to check that the apply exits zero.
