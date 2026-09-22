@@ -31,27 +31,6 @@ others did. On the laptop:
 
 Then delete this entry.
 
-## Cut the last `tput` calls from shell startup
-
-Shell startup took 160 to 260 ms on the workstation, laptop and imrl, and about
-400 ms on sicc, when measured on 2026-09-20. The largest single cost left is ten
-`tput` calls in
-`dot_sh_utils/lib/ui.sh`, about 15 ms locally and more on sicc, where home is on
-NFS. Replace them with literal escape sequences such as `printf '\033[1m'`.
-
-- Do not use zsh's `%F{}` escapes. The bash scripts in `setup.d/` source
-  `lib/ui.sh` too.
-- Measure with a terminal attached. `lib/ui.sh` skips `tput` when stdout is a
-  pipe, so a piped benchmark hides exactly this cost:
-
-  ```sh
-  time ( for i in $(seq 10); do script -qec "zsh -ic exit" /dev/null >/dev/null 2>&1; done )
-  ```
-
-- Profile before changing anything else. Guessing from line counts has been
-  wrong here before: sourcing all 2,776 lines of `~/.sh_utils` costs 5 ms.
-  `PS4` xtrace timestamps show where the time actually goes.
-
 ## Move the typefaces installer to `.chezmoiexternal.toml`
 
 `dot_sh_utils/setup.d/executable_typefaces.sh` is 433 lines and installs
