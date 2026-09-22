@@ -1,5 +1,5 @@
 {
-  "description": "Managed by chezmoi. Refuses a tool call that names an ssh private key or the chezmoi age identity; see docs/secrets.md in the dotfiles repository.",
+  "description": "Managed by chezmoi. Refuses a tool call that could read an ssh private key or the chezmoi age identity; see docs/secrets.md in the dotfiles repository.",
   "hooks": {
     "PreToolUse": [
       {

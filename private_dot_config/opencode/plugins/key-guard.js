@@ -1,7 +1,7 @@
 // Runs ~/.agents/hooks/key-guard.py before every opencode tool call, so opencode
 // refuses the same calls as Claude Code and Codex, which run that script as a
-// PreToolUse hook. The script exits 2 when a call names an ssh private key or the
-// chezmoi age identity, and its message tells the agent to ask the user instead.
+// PreToolUse hook. The script exits 2 when a call could read an ssh private key or
+// the chezmoi age identity, and its message tells the agent to ask the user instead.
 //
 // opencode has no sandbox, so this and the read rules in opencode.json are its
 // only guards: a command that builds a key path at run time gets through. See

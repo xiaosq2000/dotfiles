@@ -27,9 +27,8 @@ one. On each machine that has run Codex:
 2. `find ~/.ssh -maxdepth 1 -name 'id_*' -type f -empty -delete`. Only empty
    files match, so a real key is never touched.
 
-Machines still to do: laptop, imrl, sicc, vps. Drop a name once it is done,
-and delete this entry when none are left. The caveat about Codex's deny list in
-[secrets.md](secrets.md) explains the cause.
+Machine still to do: the laptop. Delete this entry once it is done. The caveat
+about Codex's deny list in [secrets.md](secrets.md) explains the cause.
 
 ## Apply the latest changes on the laptop
 
