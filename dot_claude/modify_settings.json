@@ -11,9 +11,9 @@
 #
 # The rules, and what each one covers, are described in docs/secrets.md:
 #   - Read deny rules, which Claude Code applies to Read, Grep and Glob and to
-#     Bash commands it recognises, such as cat and head;
+#     Bash commands it recognises, such as cat, head, ls and stat;
 #   - a PreToolUse hook, ~/.agents/hooks/key-guard.py, which refuses any call
-#     that names a key, including keys with names not listed here.
+#     that could read a key, including keys with names not listed here.
 #
 # An apply must never fail over this file, so without python3 the file passes
 # through unchanged, and so does a file that is not a JSON object.

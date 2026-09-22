@@ -136,9 +136,22 @@ The guarded files:
 | opencode | `read` rules in `opencode.json`, and a plugin that runs the key-guard hook | `private_dot_config/opencode/` |
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
-guarded file and tells the agent to ask you instead. The calls it must refuse
-and the ones it must let through are listed in
-`.github/scripts/check-key-guard.sh`, which both pre-commit and CI run.
+guarded file, and tells the agent to ask you instead. The one exception is a
+shell command that names an ssh key only to use it or to look at its name and
+mode: `ssh`, `scp` or `sftp -i`, `ssh -o IdentityFile=`, `ssh-add`,
+`ssh-keygen -y` or `-l`, and `ls`, `stat`, `test`, `chmod` or `mkdir`. The hook
+splits the command into words to find those places. A command sent over ssh is
+checked the same way, so `ssh sicc 'mkdir -p ~/.ssh'` passes and
+`ssh sicc 'cat ~/.ssh/id_ed25519'` does not. A command the split cannot follow,
+such as one with `$(...)`, is refused if it names a key at all, and no command
+may name the age identity. The calls it must refuse and the ones it must let
+through are listed in `.github/scripts/check-key-guard.sh`, which both
+pre-commit and CI run.
+
+In Claude Code, its own `Read` rules still refuse `ls` or `stat` on a default
+key name, because Claude Code counts those commands as reading the file.
+`ls -la ~/.ssh` shows the same and passes. Checked with Claude Code 2.1.276 on
+2026-09-22.
 
 The settings files of Claude Code and Codex are rewritten by the agents
 themselves, so chezmoi does not own them. The modify scripts add the guard and
@@ -165,6 +178,10 @@ What none of this stops:
   nothing else does. Claude Code's own sandbox would, but it was turned down on
   2026-09-21: it also puts every Bash command behind a network allowlist, and it
   needs bubblewrap and socat installed on each machine.
+- **A key path passed on through a file.** The hook lets `ls -d ~/.ssh/*` print
+  key paths and refuses piping them into `xargs cat`, but a command that saves
+  them to a file for a later command to open gets past it. That is the same
+  gap as a path built at run time.
 - **A Codex command you approve to run outside the sandbox.** Only the hook
   sees it.
 - **A command you type yourself** with `!` in Claude Code. No hook sees it.
