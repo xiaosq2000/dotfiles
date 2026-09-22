@@ -26,7 +26,7 @@ machines that hold the age key. The vps never does.
 | `references/laptop.md` | the personal laptop, used off campus over the university VPN |
 | `references/imrl.md` | the shared lab GPU server; storage, GPU etiquette and health, Gitea |
 | `references/sicc.md` | the university HPC login node; shell, Slurm, proxy variables, storage and quota |
-| `references/vps.md` | the public VPS for network plumbing; what runs there, and why to leave it alone |
+| `references/vps.md` | the public VPS for network plumbing; what runs there, why nothing sensitive goes there, and why to leave it alone |
 
 ## Running ssh
 
