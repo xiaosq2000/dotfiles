@@ -246,6 +246,11 @@ jobs:
           # A real zsh parses it.
           zsh -n "$HOME/.zshrc"
 
+      # A pipe skips UI styles, so it cannot catch regressions in the terminal
+      # startup path. Check the deployed library through a PTY in both shells.
+      - name: UI styles respect the terminal without spawning tput
+        run: python3 "$HOME/.local/share/chezmoi/.github/scripts/check-ui.py" "$HOME/.sh_utils/lib/ui.sh"
+
       # Completions are cached to files on fpath rather than evaluated at every
       # shell start, which was 516 ms of a 750 ms startup before 2026-09-20. See
       # dot_sh_utils/CAVEATS.md.

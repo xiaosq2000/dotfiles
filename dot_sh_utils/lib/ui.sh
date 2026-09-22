@@ -14,30 +14,36 @@ else
     INTERACTIVE=false
 fi
 
+# Clear every style on each source, including when a terminal becomes a pipe.
+BOLD=""
+DIM=""
+GREY=""
+UNDERLINE=""
+RED=""
+GREEN=""
+YELLOW=""
+BLUE=""
+MAGENTA=""
+RESET=""
 
-if [ "$INTERACTIVE" = true ]; then
-    # Style and color setup (prefer tput; fall back to empty). Colors disabled when not interactive.
-    BOLD="$(tput bold 2>/dev/null || printf '')"
-    DIM="$(tput dim 2>/dev/null || printf '')"
-    GREY="$(tput setaf 0 2>/dev/null || printf '')"
-    UNDERLINE="$(tput smul 2>/dev/null || printf '')"
-    RED="$(tput setaf 1 2>/dev/null || printf '')"
-    GREEN="$(tput setaf 2 2>/dev/null || printf '')"
-    YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
-    BLUE="$(tput setaf 4 2>/dev/null || printf '')"
-    MAGENTA="$(tput setaf 5 2>/dev/null || printf '')"
-    RESET="$(tput sgr0 2>/dev/null || printf '')"
-else
-    BOLD=""
-    DIM=""
-    GREY=""
-    UNDERLINE=""
-    RED=""
-    GREEN=""
-    YELLOW=""
-    BLUE=""
-    MAGENTA=""
-    RESET=""
+if [ "$INTERACTIVE" = true ] && [ -z "${NO_COLOR:-}" ]; then
+    # These terminal families support ANSI SGR. Unknown, unset and dumb TERM
+    # values stay plain. Bash and zsh both decode these literals without the
+    # ten subprocesses that querying terminfo used to start on every shell.
+    case "${TERM:-}" in
+        ansi|linux|xterm*|rxvt*|screen*|tmux*|alacritty*|foot*|wezterm*|kitty*)
+            BOLD=$'\033[1m'
+            DIM=$'\033[2m'
+            GREY=$'\033[30m'
+            UNDERLINE=$'\033[4m'
+            RED=$'\033[31m'
+            GREEN=$'\033[32m'
+            YELLOW=$'\033[33m'
+            BLUE=$'\033[34m'
+            MAGENTA=$'\033[35m'
+            RESET=$'\033[0m'
+            ;;
+    esac
 fi
 
 # Detect Nerd Font support
