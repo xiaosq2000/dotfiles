@@ -1408,7 +1408,10 @@ dim_opacity 0.7
 
 #: Advanced {{{
 
-# shell .
+# The pixi zsh, through a wrapper that falls back to the login shell when the
+# pixi zsh is missing or broken, because kitty has no fallback of its own. See
+# ~/.local/libexec/zsh and ~/.sh_utils/CAVEATS.md.
+shell [[ .chezmoi.homeDir ]]/.local/libexec/zsh
 
 #: The shell program to execute. The default value of . means to use
 #: the value of of the SHELL environment variable or if unset,

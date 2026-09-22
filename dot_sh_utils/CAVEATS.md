@@ -102,21 +102,22 @@ Ubuntu without installing one. It prints `_pixi` when the completion loaded and
 zsh -o noglobalrcs -i -c 'echo "${_comps[pixi]:-missing}"'
 ```
 
-## In kitty, `exec zsh` used to make every keystroke appear twice
+## In kitty, the pixi zsh used to draw every keystroke twice
 
 Typing `a` drew `aa`. The buffer was correct and commands ran correctly, so it
 was only the repaint that doubled, but there is no way to tell that while it is
 happening. Fixed by `run_onchange_after_07-terminfo.sh`, which is where the
 full reasoning lives. The short version, because the shape of it generalises:
 
-kitty starts `/usr/bin/zsh`, the login shell from `/etc/passwd`. `exec zsh`
-picks the first zsh on `PATH` instead, which is `~/.pixi/envs/zsh/bin/zsh` from
-the `core` bundle — so the two are different binaries and the second is only
-ever reached by hand. `$TERM` is `xterm-kitty`, which no system terminfo
-database here carries; kitty ships its own and points `$TERMINFO` at it, and
-conda's ncurses ignores `$TERMINFO`. The pixi zsh therefore resolved no
-terminfo at all, ZLE could not emit the cursor movements needed to repaint a
-line in place, and zsh-syntax-highlighting repaints on every keystroke.
+It showed up after `exec zsh`, because while kitty started the system zsh that
+was the only way to reach the pixi zsh, `~/.pixi/envs/zsh/bin/zsh` from the
+`core` bundle. kitty now starts the pixi zsh in every window (see the section
+on the login shell below), so every window depends on this fix. `$TERM` is
+`xterm-kitty`, which no system terminfo database here carries; kitty ships its
+own and points `$TERMINFO` at it, and conda's ncurses ignores `$TERMINFO`. The
+pixi zsh therefore resolved no terminfo at all, ZLE could not emit the cursor
+movements needed to repaint a line in place, and zsh-syntax-highlighting
+repaints on every keystroke.
 
 It takes all three — the pixi zsh, `TERM=xterm-kitty`, and
 zsh-syntax-highlighting — and removing any one hides it. That is what made it
@@ -135,12 +136,27 @@ hex value, and the two builds here disagree: Ubuntu's uses `x`, conda's uses
 Worth remembering generally: a conda-built tool may not share the system's
 ncurses view of the world, and the failure will not look like terminfo.
 
-## Changing the login shell is not always possible
+## Every interactive shell is the pixi zsh, and the login shell is the system's
 
-`chsh` fails on many shared machines for two separate reasons. First, the
-account may live in a directory service such as LDAP rather than in
-`/etc/passwd`, and then `chsh` has no local record it can edit. The command
-below prints nothing when the account is not local.
+The rule is the same on every machine. The login shell recorded for the account
+stays whatever the system has, and every interactive shell becomes
+`~/.pixi/bin/zsh`, the zsh from the `core` bundle. Until 2026-09-21 the system
+zsh started first on most machines and the pixi zsh only on sicc, and that
+split caused three separate bugs: doubled keystrokes in kitty (the section
+above), kitty's shell integration lost on sicc, and a `tmux.conf` that named
+`/bin/zsh`, which sicc does not have. CI now fails if a rendered config names
+the system zsh.
+
+### Why the login shell stays
+
+It is the safety net. sshd starts it before anything from this repository
+runs, and the handoff below tests the pixi zsh before handing over, so a broken
+pixi environment leaves you in the login shell rather than locked out of ssh.
+
+It is also often the only choice. `chsh` fails on many shared machines for two
+separate reasons. First, the account may live in a directory service such as
+LDAP rather than in `/etc/passwd`, and then `chsh` has no local record it can
+edit. The command below prints nothing when the account is not local.
 
 ```sh
 getent -s files passwd "$(id -un)"
@@ -149,54 +165,128 @@ getent -s files passwd "$(id -un)"
 Second, `chsh` only accepts a shell listed in `/etc/shells`, and a shell
 installed under your home directory is never listed there.
 
-The way around it is to leave the recorded login shell as bash and to start zsh
-from `~/.bash_profile`. Use `~/.bash_profile` rather than `~/.bashrc`, and guard
-the handoff so that it only runs for interactive shells. Each part prevents a
-specific failure.
+### How each way in reaches the pixi zsh
 
-- bash reads `~/.bash_profile` for login shells and `~/.bashrc` for other
-  shells, so a handoff in `~/.bashrc` also replaces the shell when you run
-  `bash` on purpose.
-- `scp`, `sftp` and `rsync` run a non-interactive shell and read its output as
-  data, so anything an unexpected shell prints will corrupt the transfer.
-- A job script that starts with `#!/bin/bash -l` runs a login shell that is not
-  interactive, and replacing that shell changes what the submitted job runs.
+| Way in | What starts the pixi zsh |
+| --- | --- |
+| plain `ssh`, a console login, `su -` | the login shell reads `~/.zprofile` (zsh) or `~/.bash_profile` (bash), which hand over |
+| a kitty window | `shell` in `kitty.conf` names the wrapper `~/.local/libexec/zsh` |
+| `kitten ssh` to one of your machines | `login_shell` in `ssh.conf` names the same wrapper on the remote |
+| a tmux pane | `default-shell` in `tmux.conf` |
+| `:!` and `:terminal` in neovim | `shell` in `core/options.lua` |
 
-Once `~/.bash_profile` exists, bash reads it instead of `~/.profile`, so the
-fallback path in it has to source `~/.profile` itself.
+The last four start the pixi zsh directly, so no system zsh starts first and
+kitty's shell integration survives. Each of them falls back when the pixi zsh
+is missing, as it is on the first apply of a machine, before `pixi global sync`
+has run, or after an update that broke it. Neovim and tmux explicitly select
+`/bin/sh` when their probe fails: an existing session can still export a
+`SHELL` that names the broken pixi trampoline.
 
-`~/.bash_profile` is not tracked in this repository, because the handoff is only
-wanted on a machine where you cannot change the login shell. A working version
-is below.
+### The handoff in the login profiles
 
-```sh
-case $- in
-    *i*)
-        for _zsh in "$HOME/.pixi/bin/zsh" /usr/bin/zsh /bin/zsh; do
-            if [ -z "${NO_ZSH:-}" ] && [ -x "$_zsh" ]; then
-                export SHELL="$_zsh"
-                unset _zsh
-                exec "$SHELL" -l
-            fi
-        done
-        unset _zsh
-        ;;
-esac
+`~/.zprofile` and `~/.bash_profile` hand over only when all of these hold. Each
+condition prevents a specific failure.
 
-[ -f "$HOME/.profile" ] && . "$HOME/.profile"
-```
+- **The shell is interactive.** `scp`, `sftp` and `rsync` run a non-interactive
+  shell and read its output as data, so anything an unexpected shell prints
+  corrupts the transfer. A job script that starts with `#!/bin/bash -l` runs a
+  login shell that is not interactive, and replacing that shell changes what
+  the submitted job runs.
+- **It was not given a command:** `$ZSH_EXECUTION_STRING` or
+  `$BASH_EXECUTION_STRING` is empty. `bash -lic cmd` is interactive and a login
+  shell at once, and kitty runs `$SHELL -l -i -c env` to find your editor. The
+  hand-made handoff this replaced exec'd zsh there and silently dropped the
+  command, which was reproduced on sicc on 2026-09-21.
+- **`NO_ZSH` is unset.** It is the way to stay in the system shell on purpose.
+- **`$SHELL` is not already `~/.pixi/bin/zsh`.** This is what stops an exec
+  loop. The handoff exports it before the exec, tmux sets it in every pane to
+  its `default-shell`, and the wrapper exports it, so a login shell that
+  already is the pixi zsh never execs itself again. If the check ever misfires,
+  the cost is one extra start, not a loop. It also means that `/usr/bin/zsh -l`
+  typed inside the pixi zsh stays in the system zsh, as asked.
+- **`~/.pixi/bin/zsh -fc :` succeeds.** A `-x` test only proves the trampoline
+  exists, and it can exist while the environment behind it is gone; after an
+  `exec` there is no way back to the login shell. The test run took 1.3 ms on
+  the workstation and 4 ms on sicc, measured on 2026-09-21.
 
-To get back to bash on a machine set up this way, set `NO_ZSH=1`, or connect
-with the command below.
+The files are chosen as carefully as the conditions. zsh reads `.zprofile` for
+login shells only, after `.zshenv` and before `.zshrc`. `.zshenv` would also
+run for scp and for every command passed over ssh. `.zlogin` runs after
+`.zshrc`, so the system zsh would do its whole startup first. `.zshrc` runs
+after `/etc/zsh/zshrc`, which on Ubuntu has already run `compinit`.
+
+On the bash side it is `.bash_profile` rather than `.bashrc`, because bash
+reads `.bashrc` for every interactive shell, and running `bash` on purpose
+would then hand over too. Once `.bash_profile` exists, bash reads it instead of
+`~/.profile`, so it sources `~/.profile` itself.
+
+Both files are tracked and reach every machine, because the rule is the same
+everywhere; each machine reads only the one that matches its login shell. They
+used to be untracked, when the handoff was wanted only where `chsh` fails, and
+the untracked copy on sicc is the one that dropped commands.
+
+### The wrapper that kitty starts
+
+kitty has no fallback of its own. A missing `shell` leaves every new window at
+"Failed to launch child" (`kitty/child.c`). The ssh kitten execs a named
+`login_shell` without checking that it exists; `bootstrap-utils.sh` in kitty's
+shell integration only checks a shell that it looked up itself. So kitty starts
+`~/.local/libexec/zsh`, which runs the pixi zsh when the same test run passes
+and the recorded login shell when it does not, and exports `SHELL` either way.
+
+It is named `zsh` because kitty chooses its shell integration from the file
+name alone (`get_supported_shell_name` in `kitty/shell_integration.py`), so
+whichever zsh ends up running gets the integration. It lives outside `PATH` so
+that nothing else takes it for zsh. All of this was checked against kitty
+0.49.0 on 2026-09-21.
+
+`ssh.conf` names the wrapper only for the aliases listed as `sshHosts` in
+`.chezmoidata/machines.toml`, never for `hostname *`, so a machine you ssh into
+for a one-off task is not affected. A machine this repository never set up has
+no wrapper, and the kitten would fail on it at once. A machine of yours whose
+last apply predates the wrapper fails the same way; `chezmoi update` over plain
+ssh fixes it. The comment in `ssh.conf` explains why the value is written with
+`$HOME` and not `~`.
+
+### Getting back to the system shell
+
+Set `NO_ZSH=1`, or connect with the command below, which reads no profile at
+all.
 
 ```sh
 ssh -t <host> "bash --noprofile --norc"
 ```
 
-The kitty ssh kitten never reaches `~/.bash_profile` on sicc, because
-`~/.config/kitty/ssh.conf` names the zsh to start, with `$HOME` rather than an
-account name. The comment there explains why the handoff would otherwise lose
-kitty's shell integration, and why `$HOME` works where `~` does not.
+## The pixi zsh arrives through a trampoline
+
+`~/.pixi/bin/zsh` is not zsh itself. Like every command in `~/.pixi/bin`, it is
+a hard link to one small program, pixi's trampoline; on the workstation on
+2026-09-21, 78 commands shared one 767 KB file. The trampoline reads
+`~/.pixi/bin/trampoline_configuration/zsh.json`, sets the variables that
+activating the zsh environment would, puts `~/.pixi/envs/zsh/bin` first on
+`PATH`, and execs `~/.pixi/envs/zsh/bin/zsh`.
+
+For a program that exits, those changes go with it. A shell keeps them for the
+whole session and passes them to every command it runs:
+
+- conda's `tput`, `clear`, `reset`, `tic` and `infocmp` ahead of `/usr/bin`.
+  conda's ncurses is what caused the doubled keystrokes above.
+- `CONDA_PREFIX` and `CONDA_SHLVL` for an environment nobody activated, and a
+  stale `CONDA_ENV_SHLVL_<n>_CONDA_PREFIX` that pixi captured at install time.
+  uv ignored the stray `CONDA_PREFIX` when tried on 2026-09-21, because the zsh
+  environment has no Python, and nothing else has been seen to break on it.
+
+The top of `.zshrc` removes the tool environment's variables and bin directory
+when `CONDA_PREFIX` is the trampoline's. It leaves an inherited activation
+alone if the shell was started without the trampoline; it cannot recover values
+that the trampoline has already overwritten.
+
+Neovim runs `~/.pixi/envs/zsh/bin/zsh` directly after probing it with `-fc :`.
+Its `zsh -c` commands read no `.zshrc`, and they must preserve the editor's
+`PATH`, `CONDA_PREFIX` and `VIRTUAL_ENV`. Going through the trampoline instead
+made `uv pip list` select a project's `.venv` over an activated conda
+environment, reproduced on 2026-09-22. Running the binary directly also keeps
+the environment intact in `:terminal`.
 
 ## ssh is a function so that kitty does not take over its completion
 

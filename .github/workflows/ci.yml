@@ -132,7 +132,7 @@ jobs:
       - name: Install prerequisites
         run: |
           apt-get update
-          apt-get install -y curl git unzip ca-certificates zsh python3
+          apt-get install -y curl git unzip ca-certificates zsh python3 neovim tmux
 
       - uses: actions/checkout@v4
 
@@ -193,17 +193,123 @@ jobs:
           test ! -e "$HOME/CLAUDE.md"
           test ! -e "$HOME/.gitattributes"
 
-      # ssh.conf names the zsh on sicc through $HOME, which the kitten's remote
-      # sh expands, so no account name has to appear in it. kitty.conf renders
-      # its exe_search_path from the home directory for the same reason.
+      # ssh.conf names the shell wrapper through $HOME, which the kitten's
+      # remote sh expands, so no account name has to appear in it. kitty.conf
+      # renders its paths from the home directory for the same reason.
+      #
+      # The hosts come from every machine's sshHosts in machines.toml, whichever
+      # machine renders the file, so the container sees the full list. Never
+      # `hostname *`: a machine this repository never set up has no wrapper, and
+      # the kitten execs a named login_shell without checking it exists.
       - name: kitty's config names no account
         run: |
           set -eux
-          grep -q '^hostname sicc$' "$HOME/.config/kitty/ssh.conf"
-          grep -q '^login_shell \$HOME/.pixi/bin/zsh$' "$HOME/.config/kitty/ssh.conf"
-          grep -q '^env SHELL=\$HOME/.pixi/bin/zsh$' "$HOME/.config/kitty/ssh.conf"
+          ssh_conf="$HOME/.config/kitty/ssh.conf"
+          grep '^hostname ' "$ssh_conf" | tr ' ' '\n' > /tmp/ssh-hosts
+          for alias in workstation workstation-imrl imrl sicc vps; do
+            grep -qx -- "$alias" /tmp/ssh-hosts
+          done
+          ! grep -qx 'hostname \*' "$ssh_conf" || exit 1
+          grep -qx 'login_shell $HOME/.local/libexec/zsh' "$ssh_conf"
+          grep -qx "shell $HOME/.local/libexec/zsh" "$HOME/.config/kitty/kitty.conf"
           grep -q "^exe_search_path $HOME/.local/bin$" "$HOME/.config/kitty/kitty.conf"
-          ! grep -q '/home/' "$HOME/.config/kitty/ssh.conf" || exit 1
+          ! grep -q '/home/' "$ssh_conf" || exit 1
+
+      # One rule for which shell runs: the pixi zsh, reached through the login
+      # profiles, the kitty wrapper, tmux or neovim, with the system's login
+      # shell left alone. A config naming the system zsh is the old split coming
+      # back; tmux.conf named /bin/zsh, which sicc does not have. The class
+      # before the slash is there because ~/.pixi/bin/zsh contains /bin/zsh.
+      # Markdown is left out, since CAVEATS.md has to name the system zsh to
+      # explain the rule.
+      - name: No rendered config names the system zsh
+        run: |
+          set -eu
+          chezmoi managed --include=files --path-style=absolute | grep -v '\.md$' > /tmp/managed
+          test -s /tmp/managed
+          while IFS= read -r f; do
+            ! grep -HE '(^|[^[:alnum:]._-])/(usr/)?bin/zsh' "$f" || exit 1
+          done < /tmp/managed
+          # The launchers name the pixi zsh instead.
+          grep -q '"$HOME/.pixi/bin/zsh"' "$HOME/.config/tmux/tmux.conf"
+          grep -q 'require("core.shell")' "$HOME/.config/nvim/lua/core/options.lua"
+          grep -q '"/.pixi/envs/zsh/bin/zsh"' "$HOME/.config/nvim/lua/core/shell.lua"
+
+      - name: Editor commands preserve their environment and panes survive broken pixi
+        run: bash .github/scripts/check-shell-launchers.sh "$HOME/.config"
+
+      # Every interactive login hands over to the pixi zsh through ~/.zprofile
+      # or ~/.bash_profile, and nothing else does: not scp or rsync, not a
+      # `#!/bin/bash -l` job script, and not `bash -lic cmd`, whose command the
+      # old hand-made handoff silently dropped. The container has no pixi zsh,
+      # so a stub stands in for it, and `script` supplies the terminal that an
+      # interactive login needs.
+      - name: Interactive logins hand over to the pixi zsh, and nothing else does
+        run: |
+          set -eux
+          stub="$HOME/.pixi/bin/zsh"
+          mkdir -p "$HOME/.pixi/bin"
+          # $1 is -fc only for the handoff's test run; `good` passes it.
+          make_stub() {
+            printf '#!/bin/sh\n[ "$1" = -fc ] && exit %s\necho "pixi zsh SHELL=$SHELL $*"\n' "$1" > "$stub"
+            chmod +x "$stub"
+          }
+          login() {
+            printf 'exit\n' | SHELL=/bin/sh timeout 60 script -qec "$1" /dev/null 2>/dev/null | tr -d '\r'
+          }
+          make_stub 0
+
+          # An interactive login hands over from either shell, and says so in
+          # SHELL.
+          login 'bash -l' | grep -qx "pixi zsh SHELL=$stub -l"
+          login 'zsh -l' | grep -qx "pixi zsh SHELL=$stub -l"
+
+          # A login shell with a command keeps it, interactive or not.
+          test "$(bash -lc 'echo stayed' < /dev/null)" = stayed
+          test "$(zsh -lc 'echo stayed' < /dev/null)" = stayed
+          login "bash -lic 'echo stayed'" > /tmp/out
+          grep -qx stayed /tmp/out
+          ! grep -q 'pixi zsh' /tmp/out || exit 1
+          login "zsh -lic 'echo stayed'" > /tmp/out
+          grep -qx stayed /tmp/out
+          ! grep -q 'pixi zsh' /tmp/out || exit 1
+
+          # Declined, or already done: no handoff, and so no exec loop.
+          ! login 'env NO_ZSH=1 bash -l' | grep -q 'pixi zsh' || exit 1
+          ! login "env SHELL=$stub zsh -l" | grep -q 'pixi zsh' || exit 1
+
+          # A pixi zsh that is there but does not run is never exec'd.
+          make_stub 1
+          ! login 'bash -l' | grep -q 'pixi zsh' || exit 1
+          ! login 'zsh -l' | grep -q 'pixi zsh' || exit 1
+
+          # kitty's wrapper: the pixi zsh when it runs, and the recorded login
+          # shell when it does not, with SHELL naming whichever it chose.
+          wrapper="$HOME/.local/libexec/zsh"
+          test -x "$wrapper"
+          make_stub 0
+          test "$("$wrapper" -l)" = "pixi zsh SHELL=$stub -l"
+          make_stub 1
+          login_shell=$(getent passwd "$(id -un)" | cut -d: -f7)
+          test "$("$wrapper" -c 'echo "$SHELL"')" = "$login_shell"
+
+          rm -r "$HOME/.pixi/bin"
+
+      # ~/.pixi/bin/zsh is pixi's trampoline, which hands the shell its
+      # environment's variables and bin directory. .zshrc takes them back, and
+      # leaves a real conda activation alone.
+      - name: The shell undoes the pixi trampoline's environment
+        run: |
+          set -eux
+          env_dir="$HOME/.pixi/envs/zsh"
+          env CONDA_PREFIX="$env_dir" CONDA_SHLVL=6 CONDA_ENV_SHLVL_6_CONDA_PREFIX=/elsewhere \
+            PATH="$env_dir/bin:$PATH" timeout 60 zsh -ic \
+            'print -r -- "left:${CONDA_PREFIX-}${CONDA_SHLVL-}${CONDA_ENV_SHLVL_6_CONDA_PREFIX-}"; print -rl -- $path' \
+            > /tmp/out 2>/dev/null
+          grep -qx 'left:' /tmp/out
+          ! grep -qx "$env_dir/bin" /tmp/out || exit 1
+          env CONDA_PREFIX=/opt/real timeout 60 zsh -ic 'print -r -- "prefix:$CONDA_PREFIX"' > /tmp/out 2>/dev/null
+          grep -qx 'prefix:/opt/real' /tmp/out
 
       # The manifest is rendered from the bundles a machine selects, so the
       # thing worth testing is that the selection reaches the file. The

@@ -45,6 +45,10 @@
 #                          conda-forge does not package
 #   docs                   the machine's page, relative to $HOME; present only
 #                          where the age key is, since it is decrypted on apply
+#   sshHosts               the ~/.ssh/config aliases that reach this machine;
+#                          kitty's ssh.conf starts the pixi zsh wrapper on
+#                          exactly these, so empty means nothing ssh's into it.
+#                          Aliases only: addresses stay in the encrypted config
 #   pixi.cacheDir          relocate ~/.cache/rattler here; empty means leave it
 #   pixi.detachedEnvironments
 #                          put workspace .pixi/envs here; empty means leave them
@@ -83,6 +87,8 @@ desktop = true
 typefaces = false
 rust = true
 docs = ".agents/skills/machines/references/workstation.md"
+# Two aliases, because other machines reach it by a different route.
+sshHosts = ["workstation", "workstation-imrl"]
 # Home is on a local NVMe with room to spare, so pixi's defaults are right.
 [machines.workstation.pixi]
 cacheDir = ""
@@ -110,6 +116,8 @@ desktop = true
 typefaces = false
 rust = true
 docs = ".agents/skills/machines/references/laptop.md"
+# Only ever a client.
+sshHosts = []
 # One 468 GB volume holds home, the checkout and the environments. Worth
 # watching, but still local and still one filesystem.
 [machines.laptop.pixi]
@@ -138,6 +146,7 @@ desktop = false
 typefaces = false
 rust = false
 docs = ".agents/skills/machines/references/imrl.md"
+sshHosts = ["imrl"]
 # Measured 2026-09-18: 31 GB of package cache in home, on a root filesystem 89%
 # full with 208 GB left, while the volume carrying DATA_ROOT had 1.5 TB free.
 # Global environments were 718 MB and no workspace had an environment here, so
@@ -162,6 +171,7 @@ desktop = false
 typefaces = false
 rust = false
 docs = ".agents/skills/machines/references/sicc.md"
+sshHosts = ["sicc"]
 # Measured 2026-09-18: home is NFS with a 200 GB quota and held 36 GB, of which
 # 18 GB was package cache. Global environments were 718 MB and the embodied-ai
 # workspace 1.2 GB, so the cache alone was half of everything in home and
@@ -189,6 +199,7 @@ rust = false
 # The page exists in the repository but never lands on the vps itself, which
 # never gets the age key.
 docs = ".agents/skills/machines/references/vps.md"
+sshHosts = ["vps"]
 [machines.vps.pixi]
 cacheDir = ""
 detachedEnvironments = ""
@@ -206,6 +217,7 @@ desktop = false
 typefaces = false
 rust = false
 docs = ""
+sshHosts = []
 [machines.container.pixi]
 cacheDir = ""
 detachedEnvironments = ""
@@ -223,6 +235,8 @@ desktop = false
 typefaces = false
 rust = false
 docs = ""
+# An unrecognised machine has no alias to name.
+sshHosts = []
 [machines.generic.pixi]
 cacheDir = ""
 detachedEnvironments = ""

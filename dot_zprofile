@@ -1,0 +1,21 @@
+# ~/.zprofile: read by zsh login shells, after ~/.zshenv and before ~/.zshrc.
+#
+# The recorded login shell stays the system's, so that a broken pixi
+# environment can never lock you out of ssh, and this is where an interactive
+# login hands over to the pixi zsh. ~/.bash_profile does the same for a machine
+# whose login shell is bash. Each condition prevents a specific failure, and
+# ~/.sh_utils/CAVEATS.md explains them; in short:
+#
+#   interactive, no -c   scp, rsync, `ssh host cmd` and `zsh -lic cmd` keep
+#                        the shell they asked for, and their command
+#   NO_ZSH               the way to stay in the system zsh on purpose
+#   SHELL                already the pixi zsh means this shell is it, or chose
+#                        not to be; this is what stops an exec loop
+#   the test run         the trampoline can exist while the zsh behind it is
+#                        gone, and after exec there is no way back
+if [[ -o interactive && -z ${ZSH_EXECUTION_STRING:-} && -z ${NO_ZSH:-} &&
+    ${SHELL:-} != "$HOME/.pixi/bin/zsh" ]] &&
+    "$HOME/.pixi/bin/zsh" -fc : 2>/dev/null; then
+    export SHELL="$HOME/.pixi/bin/zsh"
+    exec "$SHELL" -l
+fi
