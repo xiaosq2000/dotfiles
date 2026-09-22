@@ -178,7 +178,9 @@ installed under your home directory is never listed there.
 The last four start the pixi zsh directly, so no system zsh starts first and
 kitty's shell integration survives. Each of them falls back when the pixi zsh
 is missing, as it is on the first apply of a machine, before `pixi global sync`
-has run, or after an update that broke it.
+has run, or after an update that broke it. Neovim and tmux explicitly select
+`/bin/sh` when their probe fails: an existing session can still export a
+`SHELL` that names the broken pixi trampoline.
 
 ### The handoff in the login profiles
 
@@ -274,11 +276,17 @@ whole session and passes them to every command it runs:
   uv ignored the stray `CONDA_PREFIX` when tried on 2026-09-21, because the zsh
   environment has no Python, and nothing else has been seen to break on it.
 
-The top of `.zshrc` undoes all of this, but only when `CONDA_PREFIX` is the
-trampoline's, so a real conda activation survives. The point is that the pixi
-zsh and the system zsh should not differ in ways nobody chose. A command that
-neovim runs through `zsh -c` reads no `.zshrc` and still sees the changes;
-nothing there has needed the cleanup.
+The top of `.zshrc` removes the tool environment's variables and bin directory
+when `CONDA_PREFIX` is the trampoline's. It leaves an inherited activation
+alone if the shell was started without the trampoline; it cannot recover values
+that the trampoline has already overwritten.
+
+Neovim runs `~/.pixi/envs/zsh/bin/zsh` directly after probing it with `-fc :`.
+Its `zsh -c` commands read no `.zshrc`, and they must preserve the editor's
+`PATH`, `CONDA_PREFIX` and `VIRTUAL_ENV`. Going through the trampoline instead
+made `uv pip list` select a project's `.venv` over an activated conda
+environment, reproduced on 2026-09-22. Running the binary directly also keeps
+the environment intact in `:terminal`.
 
 ## ssh is a function so that kitty does not take over its completion
 

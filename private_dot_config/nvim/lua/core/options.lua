@@ -49,13 +49,7 @@ vim.o.inccommand = "split"
 --------------------------------------------------------------------------------
 ------------------------------------ shell -------------------------------------
 --------------------------------------------------------------------------------
--- :!, :terminal and system() run in the pixi zsh, like every interactive shell
--- here, rather than in whatever $SHELL the editor inherited. When it is not
--- installed, 'shell' keeps its default, $SHELL. See ~/.sh_utils/CAVEATS.md.
-local pixi_zsh = vim.env.HOME .. "/.pixi/bin/zsh"
-if vim.fn.executable(pixi_zsh) == 1 then
-	vim.o.shell = pixi_zsh
-end
+vim.o.shell = require("core.shell")
 
 --------------------------------------------------------------------------------
 --------------------------------- diagnostics ----------------------------------

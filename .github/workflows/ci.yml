@@ -132,7 +132,7 @@ jobs:
       - name: Install prerequisites
         run: |
           apt-get update
-          apt-get install -y curl git unzip ca-certificates zsh python3
+          apt-get install -y curl git unzip ca-certificates zsh python3 neovim tmux
 
       - uses: actions/checkout@v4
 
@@ -232,7 +232,11 @@ jobs:
           done < /tmp/managed
           # The launchers name the pixi zsh instead.
           grep -q '"$HOME/.pixi/bin/zsh"' "$HOME/.config/tmux/tmux.conf"
-          grep -q '"/.pixi/bin/zsh"' "$HOME/.config/nvim/lua/core/options.lua"
+          grep -q 'require("core.shell")' "$HOME/.config/nvim/lua/core/options.lua"
+          grep -q '"/.pixi/envs/zsh/bin/zsh"' "$HOME/.config/nvim/lua/core/shell.lua"
+
+      - name: Editor commands preserve their environment and panes survive broken pixi
+        run: bash .github/scripts/check-shell-launchers.sh "$HOME/.config"
 
       # Every interactive login hands over to the pixi zsh through ~/.zprofile
       # or ~/.bash_profile, and nothing else does: not scp or rsync, not a
