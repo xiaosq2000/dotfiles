@@ -542,8 +542,21 @@ jobs:
           assert codex_hooks["hooks"]["PreToolUse"][0]["hooks"][0]["command"] == "~/.agents/hooks/key-guard.py"
           codex = tomllib.load(open(home + "/.codex/config.toml", "rb"))
           assert codex["default_permissions"] == "key-guard", codex
-          assert codex["permissions"]["key-guard"]["filesystem"]["~/.ssh/id_ed25519"] == "deny", codex
+          # Globs only: Codex creates an empty file at an exact path that does
+          # not exist, and can leave it behind.
+          deny = {p: "deny" for p in ["~/.ssh/id_*[!b]", "~/.ssh/id_*[!u]b", "~/.ssh/id_*[!p]ub", "~/.ssh/id_*[!.]pub"]}
+          assert codex["permissions"]["key-guard"]["filesystem"] == deny, codex
           assert codex["permissions"]["key-guard"]["network"]["enabled"] is True, codex
+          # The globs select every id_* name except a .pub file, as Python's
+          # fnmatch reads them. That Codex reads them the same way was checked
+          # by hand, since the container has no Codex.
+          from fnmatch import fnmatchcase
+          def denied(name):
+              return any(fnmatchcase("~/.ssh/" + name, p) for p in deny)
+          for name in ["id_rsa", "id_ed25519", "id_ed25519_sk", "id_work", "id_club"]:
+              assert denied(name), name
+          for name in ["id_ed25519.pub", "id_work.pub", "config", "known_hosts"]:
+              assert not denied(name), name
           EOF
 
           # What the agents wrote survives an apply, and the guard joins it.

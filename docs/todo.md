@@ -17,6 +17,20 @@ Machines still to do: workstation, laptop, imrl, sicc, vps. Drop a name once
 it is done, and delete this entry when none are left. The background is under
 "Keeping agents away from private keys" in [secrets.md](secrets.md).
 
+## Delete the empty key files Codex left in `~/.ssh`
+
+Until the `key-guard` profile switched to globs, Codex could leave empty 0444
+files at the default key names, such as `id_rsa`, and ssh warns about each
+one. On each machine that has run Codex:
+
+1. `chezmoi update`, so Codex stops making them.
+2. `find ~/.ssh -maxdepth 1 -name 'id_*' -type f -empty -delete`. Only empty
+   files match, so a real key is never touched.
+
+Machines still to do: laptop, imrl, sicc, vps. Drop a name once it is done,
+and delete this entry when none are left. The caveat about Codex's deny list in
+[secrets.md](secrets.md) explains the cause.
+
 ## Apply the latest changes on the laptop
 
 The laptop is the only machine that has not applied the `machines` skill, the
