@@ -538,6 +538,7 @@ jobs:
           codex = tomllib.load(open(home + "/.codex/config.toml", "rb"))
           assert codex["default_permissions"] == "key-guard", codex
           assert codex["permissions"]["key-guard"]["filesystem"]["~/.ssh/id_ed25519"] == "deny", codex
+          assert codex["permissions"]["key-guard"]["network"]["enabled"] is True, codex
           EOF
 
           # What the agents wrote survives an apply, and the guard joins it.
@@ -553,6 +554,7 @@ jobs:
           codex = tomllib.load(open(home + "/.codex/config.toml", "rb"))
           assert codex["model"] == "o3" and codex["projects"]["/tmp"]["trust_level"] == "trusted", codex
           assert codex["default_permissions"] == "key-guard", codex
+          assert codex["permissions"]["key-guard"]["network"]["enabled"] is True, codex
           EOF
           # A second pass finds nothing left to change.
           chezmoi verify

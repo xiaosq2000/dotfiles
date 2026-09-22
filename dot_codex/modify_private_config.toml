@@ -10,7 +10,9 @@
 # What this adds:
 #   default_permissions = "key-guard"   at the top of the file
 #   [permissions.key-guard]             at the end: Codex's :workspace profile,
-#                                       plus a read deny on the default key names
+#                                       with networking and key read denies
+# The inherited profile disables networking. Enable it so Git and the GitHub
+# CLI can reach their remotes while the file restrictions still apply.
 # Codex enforces the deny with bubblewrap, so it holds for every sandboxed
 # command, however the command names the file. It does not cover a command Codex
 # runs outside the sandbox after approval; the key-guard hook in
@@ -40,9 +42,10 @@ import sys
 PROFILE = "key-guard"
 KEYS = ["id_rsa", "id_dsa", "id_ecdsa", "id_ecdsa_sk", "id_ed25519", "id_ed25519_sk", "id_xmss"]
 WANT = {
-    "description": "Workspace access without ssh private keys. Set by chezmoi.",
+    "description": "Workspace and network access without ssh private keys. Set by chezmoi.",
     "extends": ":workspace",
     "filesystem": {"~/.ssh/" + k: "deny" for k in KEYS},
+    "network": {"enabled": True},
 }
 COMMENT = [
     "# Set by chezmoi from dot_codex/modify_private_config.toml, so an edit to",
@@ -69,6 +72,7 @@ def block():
     lines += ["description = " + q(WANT["description"]), "extends = " + q(WANT["extends"]), ""]
     lines += ["[permissions.%s.filesystem]" % PROFILE]
     lines += ["%s = %s" % (q(path), q(access)) for path, access in WANT["filesystem"].items()]
+    lines += ["", "[permissions.%s.network]" % PROFILE, "enabled = " + q(WANT["network"]["enabled"])]
     return "\n".join(lines) + "\n"
 
 
