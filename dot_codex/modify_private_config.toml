@@ -40,11 +40,22 @@ import re
 import sys
 
 PROFILE = "key-guard"
-KEYS = ["id_rsa", "id_dsa", "id_ecdsa", "id_ecdsa_sk", "id_ed25519", "id_ed25519_sk", "id_xmss"]
+# Every file in ~/.ssh named id_* that does not end in .pub, so a new key is
+# covered without being listed. Codex takes a glob for deny only, and a read
+# rule cannot carve the .pub files back out, so the four patterns spell "does
+# not end in .pub" one letter at a time. Only the names id_, id_b, id_ub and
+# id_pub slip through.
+#
+# Never an exact path. For an exact path that does not exist, Codex creates an
+# empty 0444 file there while a sandboxed command runs, and leaves it behind if
+# the command dies; ssh then warns about it as an unprotected key. A glob
+# matches only files that exist. Both checked with codex-cli 0.155.1 on
+# 2026-09-22.
+KEYS = ["~/.ssh/id_*[!b]", "~/.ssh/id_*[!u]b", "~/.ssh/id_*[!p]ub", "~/.ssh/id_*[!.]pub"]
 WANT = {
     "description": "Workspace and network access without ssh private keys. Set by chezmoi.",
     "extends": ":workspace",
-    "filesystem": {"~/.ssh/" + k: "deny" for k in KEYS},
+    "filesystem": {k: "deny" for k in KEYS},
     "network": {"enabled": True},
 }
 COMMENT = [

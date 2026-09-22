@@ -132,7 +132,7 @@ The guarded files:
 | Agent | What refuses the read | Where it comes from |
 | --- | --- | --- |
 | Claude Code | `Read` deny rules for the default key names and the age identity, and the key-guard hook | `dot_claude/modify_settings.json` merges both into `~/.claude/settings.json` |
-| Codex | The `key-guard` permissions profile, whose bubblewrap sandbox cannot open the default key names, and the key-guard hook | `dot_codex/modify_private_config.toml` and `dot_codex/hooks.json` |
+| Codex | The `key-guard` permissions profile, whose bubblewrap sandbox cannot open any `~/.ssh/id_*` file except a `.pub`, and the key-guard hook | `dot_codex/modify_private_config.toml` and `dot_codex/hooks.json` |
 | opencode | `read` rules in `opencode.json`, and a plugin that runs the key-guard hook | `private_dot_config/opencode/` |
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
@@ -142,8 +142,9 @@ and the ones it must let through are listed in
 
 The settings files of Claude Code and Codex are rewritten by the agents
 themselves, so chezmoi does not own them. The modify scripts add the guard and
-leave every other key alone. Deleting a rule from a script does not delete it
-from `~`: the scripts only ever add rules.
+leave every other key alone. The Claude Code script only ever adds rules, so
+deleting one from it does not delete it from `~`. The Codex script rewrites its
+whole profile on every apply.
 
 **Codex skips the hook until you trust it.** On each machine, after the first
 apply that brings `~/.codex/hooks.json`, open Codex and trust the hook in
@@ -151,15 +152,16 @@ apply that brings `~/.codex/hooks.json`, open Codex and trust the hook in
 profile guards the keys in Codex.
 
 A key with a custom name is already covered by the hook and by opencode's rules.
-Codex's sandbox and Claude Code's `Read` rules list the default names only
-(`id_rsa`, `id_ed25519` and the rest). To cover a custom name there too, add it
-to the lists in both modify scripts.
+Codex's sandbox covers any name that starts with `id_` and does not end in
+`.pub`, so name a new key `id_*`. Claude Code's `Read` rules list the default
+names only (`id_rsa`, `id_ed25519` and the rest). To cover another name there,
+add it to the list in `dot_claude/modify_settings.json`.
 
 What none of this stops:
 
 - **A command that builds the path at run time.** The hook matches text, so a
-  command that decodes a key path from base64 gets past it. For the default key
-  names, Codex's sandbox still refuses the read. In Claude Code and opencode
+  command that decodes a key path from base64 gets past it. For an `id_*` key,
+  Codex's sandbox still refuses the read. In Claude Code and opencode
   nothing else does. Claude Code's own sandbox would, but it was turned down on
   2026-09-21: it also puts every Bash command behind a network allowlist, and it
   needs bubblewrap and socat installed on each machine.
@@ -207,3 +209,12 @@ the file on disk is only a handle to the device.
 - **`chezmoi add` writes into whichever source tree its config names.** With
   an unexpected `HOME` or `XDG_CONFIG_HOME`, a new encrypted file can land in
   another repository. Run `git status` after every `add --encrypt`.
+- **Codex's deny list takes globs, never an exact path.** For an exact path
+  that does not exist, Codex creates an empty 0444 file there while each
+  sandboxed command runs, and a command that dies leaves the file behind. ssh
+  then warns about it as an unprotected private key. Checked with codex-cli
+  0.155.1 on 2026-09-22. To delete such files, which touches empty files only:
+
+  ```sh
+  find ~/.ssh -maxdepth 1 -name 'id_*' -type f -empty -delete
+  ```
