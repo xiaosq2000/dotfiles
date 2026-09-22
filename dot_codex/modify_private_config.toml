@@ -10,7 +10,8 @@
 # What this adds:
 #   default_permissions = "key-guard"   at the top of the file
 #   [permissions.key-guard]             at the end: Codex's :workspace profile,
-#                                       with networking and key read denies
+#                                       with networking, key read denies, and
+#                                       /etc/ssh/ssh_config.d hidden so ssh runs
 # The inherited profile disables networking. Enable it so Git and the GitHub
 # CLI can reach their remotes while the file restrictions still apply.
 # Codex enforces the deny with bubblewrap, so it holds for every sandboxed
@@ -46,16 +47,30 @@ PROFILE = "key-guard"
 # not end in .pub" one letter at a time. Only the names id_, id_b, id_ub and
 # id_pub slip through.
 #
-# Never an exact path. For an exact path that does not exist, Codex creates an
-# empty 0444 file there while a sandboxed command runs, and leaves it behind if
-# the command dies; ssh then warns about it as an unprotected key. A glob
-# matches only files that exist. Both checked with codex-cli 0.155.1 on
+# Never an exact path here. For an exact path that does not exist, Codex
+# creates an empty 0444 file there while a sandboxed command runs, and leaves it
+# behind if the command dies; ssh then warns about it as an unprotected key. A
+# glob matches only files that exist. Both checked with codex-cli 0.155.1 on
 # 2026-09-22.
 KEYS = ["~/.ssh/id_*[!b]", "~/.ssh/id_*[!u]b", "~/.ssh/id_*[!p]ub", "~/.ssh/id_*[!.]pub"]
+# Without this, ssh cannot run in the sandbox at all. There, files that root
+# owns show as owned by nobody, and ssh stops at any config file it includes
+# that is not owned by root or the user. Ubuntu's /etc/ssh/ssh_config includes
+# /etc/ssh/ssh_config.d/*.conf, where systemd puts 20-systemd-ssh-proxy.conf,
+# so every ssh, git push and rsync in the sandbox failed with "Bad owner or
+# permissions". Denying the directory makes that Include match nothing. Nothing
+# that worked is lost, because ssh refuses every file there.
+#
+# Hiding the files instead does not work: OpenSSH 10 stops at an included file
+# it cannot open, and a glob here matches neither the symlink systemd installs
+# nor the directory. The exact path is safe, unlike under ~/.ssh: where the
+# directory is missing, Codex cannot create a stand-in in /etc. All checked
+# with codex-cli 0.155.1 and OpenSSH 10.2 on 2026-09-22.
+SSH_DROP_INS = "/etc/ssh/ssh_config.d"
 WANT = {
     "description": "Workspace and network access without ssh private keys. Set by chezmoi.",
     "extends": ":workspace",
-    "filesystem": {k: "deny" for k in KEYS},
+    "filesystem": {**{k: "deny" for k in KEYS}, SSH_DROP_INS: "deny"},
     "network": {"enabled": True},
 }
 COMMENT = [

@@ -170,6 +170,16 @@ Codex's sandbox covers any name that starts with `id_` and does not end in
 names only (`id_rsa`, `id_ed25519` and the rest). To cover another name there,
 add it to the list in `dot_claude/modify_settings.json`.
 
+Agents log in with the key through the ssh agent, so ssh works in Codex's
+sandbox although it cannot open the key file. For ssh to run there at all, the
+`key-guard` profile also hides `/etc/ssh/ssh_config.d`. In the sandbox, root's
+files show as owned by nobody, and ssh refuses to read a config file it
+includes that has such an owner. On Ubuntu that stopped every ssh, `git push`
+and `scp` in Codex with `Bad owner or permissions`. Hidden, the directory
+matches nothing, and ssh runs without its drop-ins. Checked with codex-cli
+0.155.1 and OpenSSH 10.2 on 2026-09-22. Where no ssh agent holds the key, ssh
+in Codex's sandbox cannot log in with it.
+
 What none of this stops:
 
 - **A command that builds the path at run time.** The hook matches text, so a
@@ -226,11 +236,13 @@ the file on disk is only a handle to the device.
 - **`chezmoi add` writes into whichever source tree its config names.** With
   an unexpected `HOME` or `XDG_CONFIG_HOME`, a new encrypted file can land in
   another repository. Run `git status` after every `add --encrypt`.
-- **Codex's deny list takes globs, never an exact path.** For an exact path
-  that does not exist, Codex creates an empty 0444 file there while each
-  sandboxed command runs, and a command that dies leaves the file behind. ssh
-  then warns about it as an unprotected private key. Checked with codex-cli
-  0.155.1 on 2026-09-22. To delete such files, which touches empty files only:
+- **Codex's deny list takes globs under `~/.ssh`, never an exact path.** For
+  an exact path that does not exist, Codex creates an empty 0444 file there
+  while each sandboxed command runs, and a command that dies leaves the file
+  behind. ssh then warns about it as an unprotected private key. An exact path
+  in `/etc`, such as `/etc/ssh/ssh_config.d`, is safe, because Codex runs as
+  you and cannot create anything there. Checked with codex-cli 0.155.1 on 2026-09-22. To
+  delete such files, which touches empty files only:
 
   ```sh
   find ~/.ssh -maxdepth 1 -name 'id_*' -type f -empty -delete
