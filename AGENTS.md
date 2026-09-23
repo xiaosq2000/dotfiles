@@ -100,10 +100,34 @@ chezmoi --source "$PWD" cat ~/.zshrc
 chezmoi --source "$PWD" managed
 ```
 
-Do not put another checkout inside the source tree. chezmoi reads nested
-`.chezmoidata` even when an ignore rule excludes the containing directory, so a
-review checkout can silently override the real machine definitions. Use a
-sibling directory or `/tmp` for worktrees.
+### Worktrees go beside the source tree, never inside it
+
+chezmoi reads the whole source directory, not only what it deploys.
+`.chezmoiignore` decides what lands in `~`, but it does not stop chezmoi from
+reading a nested `.chezmoidata`, whose values then merge into the template
+data. A git worktree is a full second copy of the repository, so a checkout of
+an older branch inside the source tree can quietly replace the machine
+definitions. On 2026-09-23, with two worktrees under `.worktrees/`,
+`chezmoi data` gave the workstation an older branch's ten bundles instead of
+main's thirteen, plus keys main had dropped. The files rendered that day still
+used main's data, so the fault showed only in `chezmoi data`; do not count on
+that.
+
+Put worktrees next to the source tree, or under `/tmp`:
+
+```sh
+git worktree add ../chezmoi-<name> <branch>        # run in the source tree
+git worktree move <nested-path> ../chezmoi-<name>  # rescue a nested one
+```
+
+The `.gitignore` entries for `.worktrees/` and `.*/worktrees/` only keep a
+nested checkout out of commits; they do not make it safe. An agent tool that
+creates worktrees inside the repository, for example under `.claude/worktrees/`,
+has the same problem. This prints nothing when the source tree is clean:
+
+```sh
+find "$(chezmoi source-path)" -mindepth 2 -name .chezmoidata -not -path '*/.git/*'
+```
 
 chezmoi never downloads applications or fonts; `dotfiles-fetch` does, into
 `~/.local/opt/dotfiles` and `~/.local/share/fonts/dotfiles`, and nothing else
