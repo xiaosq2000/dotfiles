@@ -154,6 +154,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `media` | audio, video and image conversion |
 | `ml` | model and dataset transfer |
 | `secrets` | age, sops, Bitwarden client |
+| `github` | the GitHub CLI; every machine except the vps |
 | `extras` | convenience and diagnostics, including `tre`; nothing load-bearing |
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | fourteen more document, design, CJK and emoji families |

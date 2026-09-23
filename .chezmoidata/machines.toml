@@ -45,6 +45,7 @@ bundles = [
     "media",
     "ml",
     "secrets",
+    "github",
     "extras",
     "desktop",
     "fonts",
@@ -71,6 +72,7 @@ bundles = [
     "media",
     "ml",
     "secrets",
+    "github",
     "extras",
     "desktop",
     "fonts",
@@ -98,6 +100,7 @@ bundles = [
     "media",
     "ml",
     "secrets",
+    "github",
     "extras",
 ]
 sudo = true
@@ -121,7 +124,7 @@ hostnamePattern = "^login[0-9]+$"
 # Deliberately short. This is a shared login node that runs editing, git and
 # job submission; anything heavier belongs in a Slurm allocation, and anything
 # project-specific belongs in the workspace's own pixi environment.
-bundles = ["core", "dev-py", "ml", "secrets"]
+bundles = ["core", "dev-py", "ml", "secrets", "github"]
 sudo = false
 docs = ".agents/skills/machines/references/sicc.md"
 # Measured 2026-09-18: home is NFS with a 200 GB quota and held 36 GB, of which

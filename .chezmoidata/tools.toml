@@ -112,6 +112,12 @@ packages = ["huggingface_hub"]
 description = "age, sops and the Bitwarden client; see docs/secrets.md"
 packages = ["age", "go-sops", "rbw", "libsecret"]
 
+[bundles.github]
+# Its own bundle rather than part of core, because core reaches the vps, and a
+# GitHub login is one of the credentials that must never be kept there.
+description = "The GitHub CLI; every machine except the vps"
+packages = ["gh"]
+
 [bundles.extras]
 description = "Convenience and diagnostics; nothing here is load-bearing"
 packages = ["fastfetch", "speedtest-cli", "git-filter-repo", "lazydocker"]
