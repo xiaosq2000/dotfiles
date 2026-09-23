@@ -1,33 +1,11 @@
-# The machine layer: one entry per machine, and every per-host decision this
-# repository makes is a lookup in it.
+# Machine names are stable identities selected at init. Hostname patterns only
+# suggest the initial answer; templates always look up the selected machine.
+# Bundles describe software and desktop roles, while the remaining fields
+# describe machine capabilities and storage.
 #
-# Before this file existed there were exactly two per-host knobs, both booleans
-# answered once at `chezmoi init`: installBinaries and installTypefaces. That
-# made every machine either "everything" or "config files only", which is why a
-# shared HPC login node ended up carrying ffmpeg, resvg, deno and a 60-binary
-# clang-tools environment. A machine is now described rather than toggled, and
-# the templates read the description.
-#
-# The key is a stable name chosen once at `chezmoi init` and stored in
-# ~/.config/chezmoi/chezmoi.toml, NOT the hostname. SICC's login nodes answer as
-# login01, login02 and so on, so a hostname is not an identity there.
-# `hostnamePattern` exists only to supply init's default answer; a machine with
-# no pattern is always chosen by hand.
-#
-# Nothing secret belongs here, because this repository is public. Addresses,
-# account names and tokens live in the age-encrypted files described in
-# docs/secrets.md. The paths below are the one grey area: they name university
-# filesystems. They are here because a relocated cache is a property of the
-# machine and has to be readable before any key is available. See
-# docs/secrets.md if you would rather move them behind encryption.
-#
-# Hardware inventory stays out too. Each machine has a page in the machines
-# agent skill, dot_agents/skills/private_machines/references, age-encrypted like
-# the SSH config because it holds addresses and account names, and decrypted to
-# ~/.agents/skills/machines/references on apply. `docs` names that page. Until
-# 2026-09-21 the pages lived in the private embodied-ai repository; what is
-# specific to that project, its datasets, environments and job records, stays
-# there.
+# This repository is public. Addresses, account names and tokens belong in the
+# encrypted machines skill. Filesystem paths below are the deliberate exception
+# explained in docs/secrets.md: cache locations must work before a key exists.
 
 ################################################################################
 # Fields
@@ -35,14 +13,9 @@
 #   description            one line, shown by `machine` and in `chezmoi data`
 #   hostnamePattern        regex; supplies the default answer at init only
 #   bundles                names from .chezmoidata/tools.toml; renders the pixi
-#                          global manifest
+#                          global manifest and selects external resources
 #   sudo                   whether root is available, for hints rather than for
 #                          anything this repository runs
-#   desktop                a graphical session exists, so terminal emulators,
-#                          input methods and font caches are worth configuring
-#   typefaces              fetch the Nerd Fonts; implies a desktop
-#   rust                   install a rustup toolchain, for the handful of tools
-#                          conda-forge does not package
 #   docs                   the machine's page, relative to $HOME; present only
 #                          where the age key is, since it is decrypted on apply
 #   pixi.cacheDir          relocate ~/.cache/rattler here; empty means leave it
@@ -73,15 +46,11 @@ bundles = [
     "ml",
     "secrets",
     "extras",
+    "desktop",
+    "fonts",
+    "research",
 ]
 sudo = true
-desktop = true
-# false although this is a desktop: the Nerd Font in use here was installed
-# outside this repository, and all three machines checked on 2026-09-18 had the
-# old installTypefaces answer set to false. Flip it to have run_onchange fetch
-# Maple Mono and friends into ~/.local/share/fonts.
-typefaces = false
-rust = true
 docs = ".agents/skills/machines/references/workstation.md"
 # Home is on a local NVMe with room to spare, so pixi's defaults are right.
 [machines.workstation.pixi]
@@ -103,12 +72,11 @@ bundles = [
     "ml",
     "secrets",
     "extras",
+    "desktop",
+    "fonts",
+    "research",
 ]
 sudo = true
-desktop = true
-# See the note on the workstation entry.
-typefaces = false
-rust = true
 docs = ".agents/skills/machines/references/laptop.md"
 # One 468 GB volume holds home, the checkout and the environments. Worth
 # watching, but still local and still one filesystem.
@@ -134,9 +102,6 @@ bundles = [
 ]
 sudo = true
 # Shared and headless: reached over SSH, so no terminal emulator or font cache.
-desktop = false
-typefaces = false
-rust = false
 docs = ".agents/skills/machines/references/imrl.md"
 # Measured 2026-09-18: 31 GB of package cache in home, on a root filesystem 89%
 # full with 208 GB left, while the volume carrying DATA_ROOT had 1.5 TB free.
@@ -158,9 +123,6 @@ hostnamePattern = "^login[0-9]+$"
 # project-specific belongs in the workspace's own pixi environment.
 bundles = ["core", "dev-py", "ml", "secrets"]
 sudo = false
-desktop = false
-typefaces = false
-rust = false
 docs = ".agents/skills/machines/references/sicc.md"
 # Measured 2026-09-18: home is NFS with a 200 GB quota and held 36 GB, of which
 # 18 GB was package cache. Global environments were 718 MB and the embodied-ai
@@ -183,9 +145,6 @@ description = "Public VPS, reverse proxy and network plumbing"
 hostnamePattern = ""
 bundles = ["core"]
 sudo = true
-desktop = false
-typefaces = false
-rust = false
 # The page exists in the repository but never lands on the vps itself, which
 # never gets the age key.
 docs = ".agents/skills/machines/references/vps.md"
@@ -202,9 +161,6 @@ description = "Throwaway container; config files only, no tool chain"
 hostnamePattern = ""
 bundles = []
 sudo = true
-desktop = false
-typefaces = false
-rust = false
 docs = ""
 [machines.container.pixi]
 cacheDir = ""
@@ -219,9 +175,6 @@ description = "Unrecognised machine; a working shell and nothing assumed"
 hostnamePattern = ""
 bundles = ["core"]
 sudo = false
-desktop = false
-typefaces = false
-rust = false
 docs = ""
 [machines.generic.pixi]
 cacheDir = ""

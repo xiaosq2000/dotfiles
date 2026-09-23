@@ -17,17 +17,6 @@ Machines still to do: workstation, imrl, sicc, vps. Drop a name once
 it is done, and delete this entry when none are left. The background is under
 "Keeping agents away from private keys" in [secrets.md](secrets.md).
 
-## Move the typefaces installer to `.chezmoiexternal.toml`
-
-`dot_sh_utils/setup.d/executable_typefaces.sh` is 433 lines and installs
-sixteen font families, each with its own release-asset naming. chezmoi's
-`gitHubLatestReleaseAssetURL` would replace most of it.
-
-- Every machine has `typefaces = false`, so nothing runs the script today, and
-  testing a rewrite means downloading about a gigabyte of fonts.
-- The workstation's fonts were installed outside this repository. Nothing here
-  manages or removes them.
-
 ## Not bugs
 
 - Neovim's Mason installs language servers on a machine without the `lsp`

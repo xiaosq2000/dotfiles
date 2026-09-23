@@ -1,0 +1,16 @@
+{{- $selection := includeTemplate "software-selection" . | fromJson -}}
+{{- $resources := dict -}}
+{{- $fonts := false -}}
+{{- $apps := false -}}
+{{- range $id, $spec := .downloads -}}
+{{-   $owned := stat (joinPath $.chezmoi.homeDir ".local/state/dotfiles/downloads" (printf "%s.json" $id)) -}}
+{{-   if or (has $id $selection.externals) $owned -}}
+{{-     if eq $spec.kind "font" }}{{ $fonts = true }}{{ end -}}
+{{-     if eq $spec.kind "app" }}{{ $apps = true }}{{ end -}}
+{{-   end -}}
+{{-   if has $id $selection.externals -}}
+{{-     $targets := includeTemplate "download-targets" $spec | fromJson -}}
+{{-     $_ := set $resources $id (dict "kind" $spec.kind "targets" $targets) -}}
+{{-   end -}}
+{{- end -}}
+{{- dict "home" .chezmoi.homeDir "resources" $resources "fonts" $fonts "apps" $apps | toJson -}}

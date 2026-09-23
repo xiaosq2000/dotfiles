@@ -14,8 +14,8 @@ Managed with [chezmoi](https://www.chezmoi.io/). This repository is the chezmoi
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply xiaosq2000
 ```
 
-Needs `curl`, `git`, `unzip` and a [Nerd Font](https://www.nerdfonts.com/)
-enabled in your terminal. `zsh` is not a prerequisite; without root,
+Needs `curl`, `git`, `unzip` and Python 3. Desktop bundles install the terminal
+font; a remote machine uses the font of the terminal you connect from. `zsh` is not a prerequisite; without root,
 `pixi global install zsh` puts one in your home directory — see
 [CAVEATS.md](dot_sh_utils/CAVEATS.md) for that and the other shell-setup
 constraints.
@@ -56,7 +56,7 @@ Editing a file in `~` does not update the repository. Use `chezmoi edit`, or
 edit in place and run `chezmoi re-add`.
 
 `chezmoi edit` takes a target path, so it cannot reach the files that have no
-target: `.chezmoidata/*.toml`, `.chezmoiignore` and `.chezmoiexternal.toml` are
+target: `.chezmoidata/*.toml`, `.chezmoiignore` and `.chezmoiexternals/*` are
 read by chezmoi and never deployed. Reach them through the source tree:
 
 ```sh
@@ -116,19 +116,13 @@ stop adhd mode                 # end it
 
 [i-have-adhd](https://github.com/ayghri/i-have-adhd) reshapes agent output to be
 acted on: next action first, numbered steps, no preamble.
-[setup.d/adhd.sh](dot_sh_utils/setup.d/executable_adhd.sh) installs it wherever
+[agent-plugins.sh](dot_local/libexec/dotfiles/executable_agent-plugins.sh) installs it wherever
 `claude` or `codex` is on PATH, and does nothing where neither is, so it is not
 gated on the machine's bundles.
 
 Installing changes nothing by itself, which is the point. The skill is opt-in on
 both agents, so neither model can reach for it unasked and `chezmoi update` does
 not quietly change how a machine's agents talk.
-
-There was briefly an `adhd on` command here that made the rules apply from
-message one of every session, by touching a flag the plugin's SessionStart hook
-reads and writing the condensed rules into `~/.codex/AGENTS.md`. It is gone: two
-mechanisms and a wrapper to remember them, against typing nine characters when
-you actually want it. Upstream's flag file still works if the itch returns.
 
 ## Context for agents
 
@@ -143,32 +137,84 @@ quirks) plus a page on the network between them. The pages are age-encrypted in
 decrypted to `~/.agents/skills/machines` on apply, so they exist only where the
 key is. `machine` prints the path of the current machine's page.
 
-## Installed tools
+## Installed software
 
-Tools come from pixi in named bundles.
-[.chezmoidata/tools.toml](.chezmoidata/tools.toml) defines the bundles; each
-machine selects the ones it wants:
+A machine's `bundles` list selects its software and desktop configuration.
+[tools.toml](.chezmoidata/tools.toml) lists Pixi packages and named external
+resources; [downloads.toml](.chezmoidata/downloads.toml) describes each external
+once, including its upstream, archive layout, and owned paths.
 
 | bundle | contents |
 | --- | --- |
-| `core` | shell, editor, navigation — every machine, including a login node |
+| `core` | shell, editor, navigation and Kitty terminfo for local or remote sessions |
 | `dev-c` `dev-py` `dev-web` `dev-tex` | per-language build and format tooling |
 | `lsp` | language servers and the binaries Neovim's plugins call |
 | `media` | audio, video and image conversion |
 | `ml` | model and dataset transfer |
 | `secrets` | age, sops, Bitwarden client |
-| `extras` | convenience and diagnostics; nothing load-bearing |
+| `extras` | convenience and diagnostics, including the upstream `tre` binary |
+| `desktop` | Kitty, Maple Mono NF CN and GUI configuration |
+| `fonts` | fourteen additional document, design, CJK and emoji families |
+| `research` | Zotero and its launcher |
 
-`~/.pixi/manifests/pixi-global.toml` is **generated** from `tools.toml` and
-`machines.toml`, so add a package to a bundle and run `chezmoi apply`. A
-`pixi global install` by hand is undone by the next apply.
+Workstation and laptop select all three desktop-related bundles. Headless
+machines receive no GUI configuration or desktop downloads. Alacritty, Zathura,
+Fcitx and desktop services remain system-installed; `desktop` supplies their
+configuration. Removing that bundle preserves existing application settings.
+Download resources currently support Linux x86-64; selecting one on an
+unsupported platform fails before installation.
 
-`pixi global sync` makes a machine match the manifest exactly, so dropping a
-bundle from a machine uninstalls its tools.
+Pixi owns the generated global manifest, with a separate environment for each
+package and explicitly exposed commands. Add a package to a bundle and apply;
+a manual `pixi global install` is undone by the next manifest synchronization.
+Rust toolchains are managed separately; `tre` uses an upstream binary.
 
-Each package gets its own environment, and `exposed` is listed explicitly, so
-one dependency conflict cannot break a whole bundle and conda-forge runtimes
-(`node`, `openssl`, `python3.14`, `tclsh`, `wish`) stay off `PATH`.
+chezmoi owns downloadable apps and fonts through native externals. Kitty stays
+in `~/.local/kitty.app`, Zotero in `~/.local/zotero`, and fonts in named directories
+under `~/.local/share/fonts`. A font family directory belongs entirely to its
+resource. Put unrelated fonts in a separate directory.
+
+On first adoption, existing payloads and launchers are copied to
+`~/.local/state/dotfiles/backups/<resource>/`. The original backup is retained
+across subsequent applies. Successful installation records ownership under
+`~/.local/state/dotfiles/downloads/`. Deselecting a resource removes its recorded
+payload and integration files, preserving profiles, Zotero libraries and other
+manual installations. A resource that has never been adopted is left alone.
+Keep resource IDs and owned paths stable; changing them needs an explicit
+migration. To restore a pre-adoption copy, first deselect the resource and apply,
+then copy the saved paths back from its backup directory.
+
+Downloads follow stable releases where upstream provides release assets. Font
+repositories without assets follow their existing branches; TeX Gyre Pagella
+uses GUST's published versioned URL. Archive downloads are cached, moving URLs
+refresh after four weeks, and GitHub release metadata is cached for one day.
+Zotero's built-in updater is disabled so it does not compete with
+chezmoi over the installed application.
+
+```sh
+chezmoi diff
+chezmoi apply
+chezmoi verify
+```
+
+To check all releases and refresh downloads immediately:
+
+```sh
+chezmoi state delete-bucket --bucket=gitHubLatestReleaseState
+chezmoi apply --refresh-externals
+```
+
+Lifecycle scripts live in `.chezmoiscripts/`. They handle Pixi synchronization,
+pnpm configuration, adoption backups, cache refreshes and agent integration.
+Download and extraction logic belongs to chezmoi. `verify` excludes scripts in
+the generated config because cache refreshes run on every apply; it still checks
+all managed destination files. Run `chezmoi init` after updating an existing
+checkout to regenerate the verification and release-cache settings.
+
+Routine CI uses small local archives to exercise adoption, updates, removal and
+reinstallation. A manual CI run also checks every real upstream font and app;
+locally, run `python3 .github/scripts/check-software.py --live`. It creates a
+disposable home, downloads the collection and needs several gigabytes of space.
 
 ## Secrets
 

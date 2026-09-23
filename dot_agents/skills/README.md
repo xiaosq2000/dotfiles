@@ -27,7 +27,7 @@ script never touches that directory.
 Create the directory and its `SKILL.md` here, then run the setup script:
 
 ```sh
-~/.sh_utils/setup.d/agent_skills.sh
+~/.local/libexec/dotfiles/agent-skills.sh
 ```
 
 The script is safe to run at any time. It creates missing links, repairs links

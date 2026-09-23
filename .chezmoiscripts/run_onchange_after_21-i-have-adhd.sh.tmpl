@@ -9,10 +9,10 @@
 # Re-runs when adhd.sh changes, so a new machine installs on its first apply and
 # an edit here reaches the others on `chezmoi update`. It never passes --update,
 # because that would make every apply refetch a marketplace nobody asked it to;
-# picking up an upstream change is `~/.sh_utils/setup.d/adhd.sh --update`, by
+# picking up an upstream change is `~/.local/libexec/dotfiles/agent-plugins.sh --update`, by
 # hand, on the machine you are sitting at.
-# adhd.sh sha256: {{ include "dot_sh_utils/setup.d/executable_adhd.sh" | sha256sum }}
+# adhd.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-plugins.sh" | sha256sum }}
 
 set -eu
 
-exec "$HOME/.sh_utils/setup.d/adhd.sh"
+exec "$HOME/.local/libexec/dotfiles/agent-plugins.sh"

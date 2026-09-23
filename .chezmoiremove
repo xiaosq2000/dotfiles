@@ -1,0 +1,36 @@
+{{- $selection := includeTemplate "software-selection" . | fromJson -}}
+{{- range $id, $spec := .downloads -}}
+{{- $marker := printf ".local/state/dotfiles/downloads/%s.json" $id -}}
+{{- if and (not (has $id $selection.externals)) (stat (joinPath $.chezmoi.homeDir $marker)) }}
+{{- /* Empty integration templates perform their own removal. */ -}}
+{{ range (includeTemplate "download-targets" $spec | fromJson) -}}
+{{ if not (has . (get $spec "integration" | default list)) }}{{ . }}
+{{ end -}}
+{{ end }}{{ $marker }}
+{{ end -}}
+{{- if and (has $id $selection.externals) (eq $spec.kind "font") (hasKey $spec "ownership") -}}
+{{- /* A direct font download still owns a whole family directory. Remove old
+      alternate builds after the before hook has backed up that directory. */ -}}
+{{- $files := list -}}
+{{- range $spec.entries }}{{ $files = append $files (joinPath $.chezmoi.homeDir .target) }}{{ end -}}
+{{- range $directory := $spec.ownership -}}
+{{- range $path := glob (joinPath $.chezmoi.homeDir $directory "*") -}}
+{{- if not (has $path $files) }}
+{{ trimPrefix (printf "%s/" $.chezmoi.homeDir) $path }}
+{{ end -}}
+{{ end -}}
+{{ end -}}
+{{ end -}}
+{{ end }}
+# Retired installers have no useful target state. Name only repository files,
+# because a user may have their own helpers beside them.
+.sh_utils/setup.d/adhd.sh
+.sh_utils/setup.d/agent_skills.sh
+.sh_utils/setup.d/aider.sh
+.sh_utils/setup.d/google_drive_upload.sh
+.sh_utils/setup.d/nodejs.sh
+.sh_utils/setup.d/pixi.sh
+.sh_utils/setup.d/rust.sh
+.sh_utils/setup.d/typefaces.sh
+.sh_utils/setup.d/zotero.sh
+.sh_utils/lib/platform.sh

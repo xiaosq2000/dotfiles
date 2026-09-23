@@ -19,12 +19,15 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 python3 - <<'PY'
 import sys
+import re
+from pathlib import Path, PurePosixPath
 import tomllib
 
 machines = tomllib.load(open(".chezmoidata/machines.toml", "rb"))["machines"]
 tools = tomllib.load(open(".chezmoidata/tools.toml", "rb"))
 bundles = tools["bundles"]
 overrides = tools.get("packages", {})
+downloads = tomllib.load(open(".chezmoidata/downloads.toml", "rb"))["downloads"]
 
 errors = []
 warnings = []
@@ -84,8 +87,52 @@ for name, m in sorted(machines.items()):
 
 for w in warnings:
     print(f"warning  {w}", file=sys.stderr)
-for e in errors:
-    print(f"ERROR    {e}", file=sys.stderr)
+
+# Downloads share one ownership catalog with the remover. Reject broad or
+# overlapping claims before an apply can remove an unrelated directory.
+owner = {}
+for name, spec in downloads.items():
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
+        errors.append(f"invalid resource id {name!r}")
+    if not spec.get("platforms"):
+        errors.append(f"{name}: missing supported platforms")
+    if spec.get("kind") not in {"font", "app", "binary", "terminal"}:
+        errors.append(f"{name}: invalid resource kind")
+    release_source = bool(spec.get("repo")) and (bool(spec.get("asset")) != bool(spec.get("releaseFile")))
+    if bool(spec.get("url")) == release_source:
+        errors.append(f"{name}: specify either a URL or a repository with one release selector")
+    entries = spec.get("entries", [])
+    if not entries:
+        errors.append(f"{name}: no external entries")
+    targets = spec.get("ownership", [e["target"] for e in entries]) + spec.get("integration", [])
+    for target in targets:
+        path = PurePosixPath(target)
+        if path.is_absolute() or ".." in path.parts or len(path.parts) < 2 or target in {".local/bin", ".local/share", ".local/state", ".local/libexec", ".local/share/fonts", ".local/share/applications", ".local/state/dotfiles"}:
+            errors.append(f"{name}: unsafe ownership target {target!r}")
+        for previous, previous_owner in owner.items():
+            if previous_owner != name and (target == previous or target.startswith(previous + "/") or previous.startswith(target + "/")):
+                errors.append(f"{name} and {previous_owner} claim overlapping paths: {target}")
+        owner[target] = name
+    for entry in entries:
+        if not any(entry["target"] == p or entry["target"].startswith(p + "/") for p in targets):
+            errors.append(f"{name}: entry {entry['target']} is outside its ownership paths")
+        if entry.get("source") and not Path(entry["source"]).is_file():
+            errors.append(f"{name}: missing local external source {entry['source']}")
+for name, bundle in bundles.items():
+    for external in bundle.get("externals", []):
+        if external not in downloads:
+            errors.append(f"bundle {name}: unknown external {external!r}")
+referenced = {p for b in bundles.values() for p in b.get("externals", [])}
+for name in downloads.keys() - referenced:
+    errors.append(f"resource {name!r} is not selected by any bundle")
+for name, machine in machines.items():
+    for obsolete in ["desktop", "typefaces", "rust"]:
+        if obsolete in machine:
+            errors.append(f"{name}: {obsolete} must be expressed through bundles")
+
+# Print errors added by the external-resource checks as well.
+for error in errors:
+    print(f"ERROR    {error}", file=sys.stderr)
 
 if errors:
     print("\nerror: bundle data is inconsistent", file=sys.stderr)

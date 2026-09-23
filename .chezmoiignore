@@ -19,6 +19,10 @@ docs
 AGENTS.md
 CLAUDE.md
 
+# Keep local archives out of the destination. Actual checkouts must live outside
+# this tree: ignoring them does not stop chezmoi loading their template data.
+.worktrees
+
 # The age identity: the one file that must never be committed, since it decrypts
 # every encrypted_ file in this repository. chezmoi would not add it on its own,
 # but ~/.config/chezmoi is a directory this repository does write to, so say so
@@ -80,4 +84,24 @@ CLAUDE.md
 # SKILL.md is plaintext and could deploy, but it tells an agent to read pages
 # that would not be there.
 .agents/skills/machines
+{{ end -}}
+
+{{ if not (has "desktop" (index .machines .machine).bundles) -}}
+# GUI settings are retained when deselected, like application profiles.
+.config/kitty
+.config/alacritty
+.config/zathura
+.config/fcitx5
+.config/kmonad
+.config/environment.d/im.conf
+.config/autostart/org.fcitx.Fcitx5.desktop
+.local/bin/zathura
+{{ end -}}
+{{- $selection := includeTemplate "software-selection" . | fromJson -}}
+{{- range $id, $spec := .downloads -}}
+{{- if and (not (has $id $selection.externals)) (not (stat (joinPath $.chezmoi.homeDir ".local/state/dotfiles/downloads" (printf "%s.json" $id)))) }}
+# An unselected, never-adopted resource must not replace a manual installation.
+{{ range (includeTemplate "download-targets" $spec | fromJson) }}{{ . }}
+{{ end -}}
+{{ end -}}
 {{ end -}}

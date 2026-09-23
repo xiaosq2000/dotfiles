@@ -18,8 +18,8 @@
 
 set -eu
 
-{{ if not (index .machines .machine).bundles -}}
-echo "machine {{ .machine }} selects no bundles; skipping sheldon lock"
+{{ if not (has "sheldon" (includeTemplate "software-selection" . | fromJson).packages) -}}
+echo "machine {{ .machine }} does not select sheldon; skipping plugin setup"
 exit 0
 {{ end -}}
 
@@ -33,7 +33,7 @@ elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/sheldon" ]; then
 else
     echo "sheldon not found; it comes from the core bundle, so check that" >&2
     echo "'pixi global sync' succeeded earlier in this apply" >&2
-    exit 1
+    exit 0
 fi
 
 echo "locking zsh plugins from ${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml"

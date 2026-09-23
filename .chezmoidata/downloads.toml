@@ -1,0 +1,231 @@
+# Download locations and archive layouts, checked on 2026-09-23.
+# A resource owns only its entries and integration paths. The lifecycle records
+# adoption before those paths become eligible for removal. Never claim a shared
+# directory such as .local/bin or .local/share/fonts as an entire resource.
+
+[typography]
+terminalFamily = "Maple Mono NF CN"
+
+[downloads.kitty]
+kind = "app"
+platforms = ["linux-amd64"]
+repo = "kovidgoyal/kitty"
+asset = "kitty-*-x86_64.txz"
+integration = [".local/bin/kitty", ".local/bin/kitten", ".local/share/applications/kitty.desktop", ".local/share/applications/kitty-open.desktop"]
+[[downloads.kitty.entries]]
+target = ".local/kitty.app"
+type = "archive"
+format = "tar.xz"
+exact = true
+
+[downloads.zotero]
+kind = "app"
+ownership = [".local/zotero"]
+platforms = ["linux-amd64"]
+url = "https://www.zotero.org/download/client/dl?channel=release&platform=linux-x86_64"
+integration = [".local/bin/zotero", ".local/share/applications/zotero.desktop"]
+[[downloads.zotero.entries]]
+target = ".local/zotero"
+type = "archive"
+format = "tar.xz"
+stripComponents = 1
+exact = true
+# The distribution policy is supplied by this repository.
+exclude = ["*/distribution/policies.json"]
+[[downloads.zotero.entries]]
+target = ".local/zotero/distribution/policies.json"
+type = "file"
+source = ".chezmoitemplates/zotero-policy.json"
+
+[downloads.tre]
+kind = "binary"
+platforms = ["linux-amd64"]
+repo = "dduan/tre"
+asset = "tre-*-x86_64-unknown-linux-musl.tar.gz"
+[[downloads.tre.entries]]
+target = ".local/bin/tre"
+type = "archive-file"
+path = "tre"
+executable = true
+
+[downloads.kitty-terminfo]
+kind = "terminal"
+platforms = ["linux-amd64"]
+url = "https://raw.githubusercontent.com/kovidgoyal/kitty/master/terminfo/x/xterm-kitty"
+# Ubuntu ncurses and conda ncurses search different directory spellings.
+[[downloads.kitty-terminfo.entries]]
+target = ".terminfo/x/xterm-kitty"
+type = "file"
+[[downloads.kitty-terminfo.entries]]
+target = ".terminfo/78/xterm-kitty"
+type = "file"
+
+[downloads.maplemono-nf-cn-unhinted]
+kind = "font"
+platforms = ["linux-amd64"]
+repo = "subframe7536/maple-font"
+asset = "MapleMono-NF-CN-unhinted.zip"
+[[downloads.maplemono-nf-cn-unhinted.entries]]
+target = ".local/share/fonts/maplemono-nf-cn-unhinted"
+type = "archive"
+exact = true
+include = ["**/", "*.ttf", "**/*.ttf"]
+
+[downloads.fira]
+kind = "font"
+platforms = ["linux-amd64"]
+# This upstream publishes its fonts in the repository, without release assets.
+url = "https://codeload.github.com/mozilla/Fira/zip/refs/heads/master"
+[[downloads.fira.entries]]
+target = ".local/share/fonts/fira"
+type = "archive"
+exact = true
+stripComponents = 2
+include = ["**/", "*/otf/*.otf"]
+
+[downloads.nerd-font-fira-code]
+kind = "font"
+platforms = ["linux-amd64"]
+repo = "ryanoasis/nerd-fonts"
+asset = "FiraCode.zip"
+[[downloads.nerd-font-fira-code.entries]]
+target = ".local/share/fonts/nerd-font-fira-code"
+type = "archive"
+exact = true
+include = ["**/", "*.ttf", "**/*.ttf"]
+
+[downloads.tex-gyre-pagella]
+kind = "font"
+platforms = ["linux-amd64"]
+# GUST publishes this family at a versioned URL, with no latest-release API.
+url = "https://www.gust.org.pl/projects/e-foundry/tex-gyre/pagella/qpl2_501otf.zip"
+[[downloads.tex-gyre-pagella.entries]]
+target = ".local/share/fonts/tex-gyre-pagella"
+type = "archive"
+exact = true
+include = ["**/", "*.otf", "**/*.otf"]
+
+[downloads.libertinus]
+kind = "font"
+platforms = ["linux-amd64"]
+repo = "alerque/libertinus"
+asset = "Libertinus-*.zip"
+[[downloads.libertinus.entries]]
+target = ".local/share/fonts/libertinus"
+type = "archive"
+exact = true
+stripComponents = 1
+include = ["**/", "**/*.otf"]
+
+[downloads.source-sans]
+kind = "font"
+platforms = ["linux-amd64"]
+repo = "adobe-fonts/source-sans"
+asset = "OTF-source-sans-*.zip"
+[[downloads.source-sans.entries]]
+target = ".local/share/fonts/source-sans"
+type = "archive"
+exact = true
+include = ["**/", "*.otf", "**/*.otf"]
+
+[downloads.source-serif]
+kind = "font"
+platforms = ["linux-amd64"]
+repo = "adobe-fonts/source-serif"
+asset = "source-serif-*_Desktop.zip"
+[[downloads.source-serif.entries]]
+target = ".local/share/fonts/source-serif"
+type = "archive"
+exact = true
+stripComponents = 1
+include = ["**/", "**/*.otf"]
+
+[downloads.source-han-sans-sc]
+kind = "font"
+platforms = ["linux-amd64"]
+repo = "adobe-fonts/source-han-sans"
+asset = "09_SourceHanSansSC.zip"
+[[downloads.source-han-sans-sc.entries]]
+target = ".local/share/fonts/source-han-sans-sc"
+type = "archive"
+exact = true
+stripComponents = 2
+include = ["**/", "*.otf", "**/*.otf"]
+
+[downloads.source-han-serif-cn]
+kind = "font"
+platforms = ["linux-amd64"]
+repo = "adobe-fonts/source-han-serif"
+asset = "14_SourceHanSerifCN.zip"
+[[downloads.source-han-serif-cn.entries]]
+target = ".local/share/fonts/source-han-serif-cn"
+type = "archive"
+exact = true
+stripComponents = 2
+include = ["**/", "*.otf", "**/*.otf"]
+
+[downloads.apple-color-emoji]
+kind = "font"
+ownership = [".local/share/fonts/apple-color-emoji"]
+platforms = ["linux-amd64"]
+repo = "samuelngs/apple-emoji-ttf"
+asset = "AppleColorEmoji-Linux.ttf"
+[[downloads.apple-color-emoji.entries]]
+target = ".local/share/fonts/apple-color-emoji/AppleColorEmoji-Linux.ttf"
+type = "file"
+
+[downloads.noto-color-emoji]
+kind = "font"
+ownership = [".local/share/fonts/noto-color-emoji"]
+platforms = ["linux-amd64"]
+# The main branch no longer contains binary fonts (checked on 2026-09-23).
+# The latest release tag still publishes the Linux font we need.
+repo = "googlefonts/noto-emoji"
+releaseFile = "fonts/NotoColorEmoji.ttf"
+[[downloads.noto-color-emoji.entries]]
+target = ".local/share/fonts/noto-color-emoji/NotoColorEmoji.ttf"
+type = "file"
+
+[downloads.san-francisco-pro]
+kind = "font"
+platforms = ["linux-amd64"]
+url = "https://codeload.github.com/sahibjotsaggu/San-Francisco-Pro-Fonts/zip/refs/heads/master"
+[[downloads.san-francisco-pro.entries]]
+target = ".local/share/fonts/san-francisco-pro"
+type = "archive"
+exact = true
+stripComponents = 1
+include = ["**/", "**/*.otf"]
+
+[downloads.san-francisco-mono]
+kind = "font"
+platforms = ["linux-amd64"]
+url = "https://codeload.github.com/supercomputra/SF-Mono-Font/zip/refs/heads/master"
+[[downloads.san-francisco-mono.entries]]
+target = ".local/share/fonts/san-francisco-mono"
+type = "archive"
+exact = true
+stripComponents = 1
+include = ["**/", "**/*.otf"]
+
+[downloads.new-york]
+kind = "font"
+platforms = ["linux-amd64"]
+url = "https://codeload.github.com/yell0wsuit/New-York-fonts/zip/refs/heads/master"
+[[downloads.new-york.entries]]
+target = ".local/share/fonts/new-york"
+type = "archive"
+exact = true
+stripComponents = 1
+include = ["**/", "**/*.otf"]
+
+[downloads.pingfang]
+kind = "font"
+platforms = ["linux-amd64"]
+url = "https://codeload.github.com/jimmyctk/PingFang-OTF-Fonts/zip/refs/heads/main"
+[[downloads.pingfang.entries]]
+target = ".local/share/fonts/pingfang"
+type = "archive"
+exact = true
+stripComponents = 1
+include = ["**/", "**/*.otf"]

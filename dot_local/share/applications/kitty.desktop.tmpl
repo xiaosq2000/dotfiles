@@ -1,0 +1,12 @@
+{{ if has "kitty" (includeTemplate "software-selection" . | fromJson).externals -}}
+[Desktop Entry]
+Type=Application
+Name=kitty
+GenericName=Terminal emulator
+Comment=Fast, feature-rich, GPU based terminal
+Exec="{{ .chezmoi.homeDir }}/.local/kitty.app/bin/kitty"
+Icon={{ .chezmoi.homeDir }}/.local/kitty.app/share/icons/hicolor/256x256/apps/kitty.png
+Categories=System;TerminalEmulator;
+StartupNotify=true
+Terminal=false
+{{ end -}}

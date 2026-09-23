@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+{{ include ".chezmoitemplates/download-state.py" }}
+run("before", json.loads({{ includeTemplate "download-plan" . | quote }}))

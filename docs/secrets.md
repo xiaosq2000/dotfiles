@@ -216,7 +216,7 @@ the file on disk is only a handle to the device.
 - **`encryption = "age"` has to sit above `[data]` in `.chezmoi.toml.tmpl`.**
   Below it, TOML makes it `data.encryption`, and chezmoi carries on unencrypted
   with only a warning. CI checks the order.
-- **The key fetcher, `run_onchange_before_00-age-identity.sh`, must never exit
+- **The key fetcher, `.chezmoiscripts/run_onchange_before_00-age-identity.sh.tmpl`, must never exit
   non-zero.** It runs before any file is written, so a failure there would stop
   every file from applying. It must also stay `run_onchange_` with its
   rbw-present marker line. As `run_once_` it never retries after the first
@@ -228,7 +228,7 @@ the file on disk is only a handle to the device.
   - `detect-private-key` refuses an ssh or TLS private key under any name;
   - `no-age-identity` refuses an age identity.
 
-  `run_onchange_after_08-source-repo.sh` installs the hooks on every machine
+  `.chezmoiscripts/run_onchange_after_08-source-repo.sh.tmpl` installs the hooks on every machine
   that has pre-commit. In a clone without them, nothing stops such a commit
   before the push, and CI runs only after the push has published it.
   `.gitignore` names the usual key files too, but it stops only `git add .`;

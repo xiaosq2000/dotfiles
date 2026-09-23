@@ -1,0 +1,23 @@
+{{- /* Resolve both providers before any download or pruning can happen. */ -}}
+{{- $packages := list -}}
+{{- $externals := list -}}
+{{- $machine := index .machines .machine -}}
+{{- range $bundle := $machine.bundles -}}
+{{-   if not (hasKey $.bundles $bundle) -}}
+{{-     fail (printf "unknown bundle %q selected by machine %q" $bundle $.machine) -}}
+{{-   end -}}
+{{-   $spec := index $.bundles $bundle -}}
+{{-   $packages = concat $packages $spec.packages -}}
+{{-   $externals = concat $externals (get $spec "externals" | default list) -}}
+{{- end -}}
+{{- $platform := printf "%s-%s" .chezmoi.os .chezmoi.arch -}}
+{{- range $id := $externals | uniq -}}
+{{-   if not (hasKey $.downloads $id) -}}
+{{-     fail (printf "unknown external resource %q" $id) -}}
+{{-   end -}}
+{{-   $spec := index $.downloads $id -}}
+{{-   if not (has $platform $spec.platforms) -}}
+{{-     fail (printf "external resource %q does not support %s" $id $platform) -}}
+{{-   end -}}
+{{- end -}}
+{{- dict "packages" ($packages | uniq | sortAlpha) "externals" ($externals | uniq | sortAlpha) | toJson -}}

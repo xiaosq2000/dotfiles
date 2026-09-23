@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -eu
+
+# Sync whenever this machine's rendered package set changes.
+# manifest sha256: {{ includeTemplate "dot_pixi/manifests/pixi-global.toml.tmpl" . | sha256sum }}
+{{ $selection := includeTemplate "software-selection" . | fromJson -}}
+{{ if not $selection.packages -}}
+exit 0
+{{ end -}}
+# shellcheck source=/dev/null
+. "$HOME/.sh_utils/lib/ui.sh"
+
+# Ensure pixi is installed (without modifying PATH)
+if command -v pixi >/dev/null 2>&1; then
+    PIXI_BIN="$(command -v pixi)"
+elif [ -x "$HOME/.pixi/bin/pixi" ]; then
+    PIXI_BIN="$HOME/.pixi/bin/pixi"
+else
+    curl -fsSL https://pixi.sh/install.sh | PIXI_NO_PATH_UPDATE=1 sh
+    if [ -x "$HOME/.pixi/bin/pixi" ]; then
+        PIXI_BIN="$HOME/.pixi/bin/pixi"
+    elif command -v pixi >/dev/null 2>&1; then
+        PIXI_BIN="$(command -v pixi)"
+    else
+        error "pixi installation failed or is not on PATH"
+        exit 1
+    fi
+fi
+
+# Synchronization prunes packages absent from the generated manifest.
+PIXI_HOME="${PIXI_HOME:-$HOME/.pixi}"
+MANIFEST="$PIXI_HOME/manifests/pixi-global.toml"
+
+if [ ! -f "$MANIFEST" ]; then
+    error "pixi global manifest not found at $MANIFEST"
+    error "chezmoi renders it from .chezmoidata/tools.toml; run 'chezmoi apply' first"
+    exit 1
+fi
+
+# Protect the executable needed for subsequent applies.
+if [ -x "$PIXI_HOME/bin/chezmoi" ] && ! grep -q '^\[envs\.chezmoi\]' "$MANIFEST"; then
+    error "chezmoi is installed via pixi but absent from $MANIFEST"
+    error "syncing would uninstall it, leaving no chezmoi to apply with"
+    error "fix by putting chezmoi back in the core bundle in .chezmoidata/tools.toml"
+    exit 1
+fi
+
+info "syncing global tools from $MANIFEST"
+"$PIXI_BIN" global sync

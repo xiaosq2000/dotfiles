@@ -1,0 +1,26 @@
+{{- $selection := includeTemplate "software-selection" . | fromJson -}}
+{{- range $id := $selection.externals -}}
+{{-   $spec := index $.downloads $id -}}
+{{-   $url := get $spec "url" -}}
+{{-   if not $url -}}
+{{-     if hasKey $spec "releaseFile" -}}
+{{-       $tag := (gitHubLatestRelease $spec.repo).TagName | toString -}}
+{{-       $url = printf "https://raw.githubusercontent.com/%s/%s/%s" $spec.repo $tag $spec.releaseFile -}}
+{{-     else -}}
+{{-       $url = gitHubLatestReleaseAssetURL $spec.repo $spec.asset -}}
+{{-     end -}}
+{{-   end -}}
+{{-   range $entry := $spec.entries }}
+[{{ $entry.target | quote }}]
+{{- $attributes := omit $entry "target" "source" -}}
+{{- $entryURL := $url -}}
+{{- if hasKey $entry "source" -}}
+{{-   $entryURL = printf "file://%s" (joinPath $.chezmoi.sourceDir $entry.source) -}}
+{{- end -}}
+{{- $_ := set $attributes "url" $entryURL -}}
+{{- /* A local policy must follow source edits immediately, without a network
+      refresh flag. Its file URL costs only a local read. */ -}}
+{{- $_ := set $attributes "refreshPeriod" (ternary "1ns" "672h" (hasKey $entry "source")) }}
+{{ $attributes | toToml }}
+{{ end -}}
+{{ end -}}

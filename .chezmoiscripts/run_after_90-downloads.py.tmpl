@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+# Run after every apply: external refreshes can change bytes without changing
+# a run_onchange script's rendered text, and cache updates must follow removal.
+{{ include ".chezmoitemplates/download-state.py" }}
+run("after", json.loads({{ includeTemplate "download-plan" . | quote }}))

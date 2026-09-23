@@ -26,8 +26,7 @@ set -eu
 # costs one grep, not a network round trip. Both upstream CLIs are idempotent
 # too, so a re-run after a partial install finishes the job.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
+UI_LIB="$HOME/.sh_utils/lib/ui.sh"
 
 if [ -f "$UI_LIB" ]; then
     # shellcheck disable=SC1090
@@ -48,7 +47,7 @@ UPDATE=false
 
 usage() {
     cat <<'EOF'
-usage: adhd.sh [--update] [--dry-run] [--help]
+usage: agent-plugins.sh [--update] [--dry-run] [--help]
 
   --update    refresh the marketplace and reinstall, picking up upstream changes
   --dry-run   report what would change without writing anything
@@ -172,7 +171,7 @@ info "installed $INSTALLED, already present $SKIPPED, failed $FAILED"
 
 if [ "$FAILED" -gt 0 ]; then
     warning "$FAILED agent(s) did not install, see above"
-    hint "rerun with ~/.sh_utils/setup.d/adhd.sh once the network is back"
+    hint "rerun with ~/.local/libexec/dotfiles/agent-plugins.sh once the network is back"
     footer "i-have-adhd"
     exit 1
 fi
