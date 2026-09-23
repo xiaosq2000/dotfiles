@@ -153,7 +153,11 @@ prepend_env PATH "/usr/local/cuda/bin"
 ##################################### pixi #####################################
 ################################################################################
 # https://github.com/prefix-dev/pixi/
-prepend_env PATH "${HOME}/.pixi/bin" # Add pixi to PATH first
+# pixi first, then the commands dotfiles-fetch installs from
+# .chezmoidata/downloads.toml, such as kitty and tre. Both come before
+# ~/.local/bin, so what a machine's bundles select wins over a copy installed
+# by hand.
+prepend_env PATH "${HOME}/.pixi/bin" "${HOME}/.local/opt/dotfiles/bin"
 # Completion is cached to a file on fpath by the completion section further
 # down, not loaded here. See ~/.sh_utils/CAVEATS.md
 

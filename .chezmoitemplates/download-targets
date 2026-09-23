@@ -1,8 +1,0 @@
-{{- $targets := get . "ownership" | default list -}}
-{{- if not $targets -}}
-{{-   range .entries -}}
-{{-     $targets = append $targets .target -}}
-{{-   end -}}
-{{- end -}}
-{{- $targets = concat $targets (get . "integration" | default list) -}}
-{{- $targets | uniq | sortAlpha | toJson -}}

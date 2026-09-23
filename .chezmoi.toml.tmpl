@@ -123,15 +123,6 @@ encryption = "age"
 # docs/secrets.md.
 {{- end }}
 
-# Repeated applies must not exhaust GitHub's anonymous API allowance.
-[gitHub]
-    refreshPeriod = "24h"
-
-# Cache refresh and adoption checks run after every apply. They are actions,
-# not destination files, so verification checks the file state independently.
-[verify]
-    exclude = ["scripts"]
-
 [data]
     # Which entry of .chezmoidata/machines.toml describes this machine. Every
     # per-host decision is a lookup in that entry, so this is the only line

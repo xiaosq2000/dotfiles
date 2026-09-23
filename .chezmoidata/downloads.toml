@@ -1,231 +1,139 @@
-# Download locations and archive layouts, checked on 2026-09-23.
-# A resource owns only its entries and integration paths. The lifecycle records
-# adoption before those paths become eligible for removal. Never claim a shared
-# directory such as .local/bin or .local/share/fonts as an entire resource.
+# Software that no conda-forge package provides, fetched by dotfiles-fetch
+# (dot_local/bin/executable_dotfiles-fetch). A bundle in tools.toml selects an
+# entry by its id, chezmoi renders the selection into
+# ~/.config/dotfiles/downloads.json, and dotfiles-fetch installs from that.
+# chezmoi never downloads these itself: large archives in its source state made
+# every `chezmoi cat` and `diff` take seconds and a gigabyte of memory.
+#
+# Everything installed lives under paths this repository owns outright:
+#   ~/.local/opt/dotfiles/<id>/<version>   application payloads
+#   ~/.local/opt/dotfiles/bin              command links, on PATH
+#   ~/.local/share/fonts/dotfiles/<id>     font files
+# so a manual installation elsewhere is never adopted, backed up or replaced.
+#
+# Fields:
+#   github    owner/repo; resolves the latest release. Needs asset or file.
+#   asset     release asset name, a glob
+#   file      path in the repository at the latest release tag
+#   url       a direct download, instead of github
+#   asset, file and url take a string, or a table keyed by platform
+#   ("linux-amd64", "linux-arm64"). A platform missing from the table is
+#   skipped with a warning. A plain string applies to every platform.
+#   strip     leading path components to drop from an archive
+#   bin       payload paths to link into ~/.local/opt/dotfiles/bin
+#   fonts     globs matched against archive paths; `*` also matches `/`.
+#             Matching files are installed flat, and nothing else is kept.
+#   write     payload-relative path = contents, written after extraction
+#   copy      home-relative path = payload path. Written if missing, and
+#             updated or removed only while it still holds what was written.
+#
+# Upstreams checked on 2026-09-23.
 
+# The family the maple-mono entry installs, as fontconfig names it. Kitty and
+# Alacritty both render it.
 [typography]
 terminalFamily = "Maple Mono NF CN"
 
+################################################################################
+# Applications
+################################################################################
+
 [downloads.kitty]
-kind = "app"
-platforms = ["linux-amd64"]
-repo = "kovidgoyal/kitty"
-asset = "kitty-*-x86_64.txz"
-integration = [".local/bin/kitty", ".local/bin/kitten", ".local/share/applications/kitty.desktop", ".local/share/applications/kitty-open.desktop"]
-[[downloads.kitty.entries]]
-target = ".local/kitty.app"
-type = "archive"
-format = "tar.xz"
-exact = true
+github = "kovidgoyal/kitty"
+asset = { linux-amd64 = "kitty-*-x86_64.txz", linux-arm64 = "kitty-*-arm64.txz" }
+bin = ["bin/kitty", "bin/kitten"]
+# conda's ncurses, which the pixi zsh uses, ignores the $TERMINFO kitty sets and
+# reads ~/.terminfo in the hex layout, 78; Ubuntu's reads the letter layout, x.
+# `kitten ssh` writes the same two files on a remote machine, which is why this
+# is a copy rather than a file chezmoi manages: copy never fights it.
+copy = { ".terminfo/x/xterm-kitty" = "lib/kitty/terminfo/x/xterm-kitty", ".terminfo/78/xterm-kitty" = "lib/kitty/terminfo/x/xterm-kitty" }
 
 [downloads.zotero]
-kind = "app"
-ownership = [".local/zotero"]
-platforms = ["linux-amd64"]
-url = "https://www.zotero.org/download/client/dl?channel=release&platform=linux-x86_64"
-integration = [".local/bin/zotero", ".local/share/applications/zotero.desktop"]
-[[downloads.zotero.entries]]
-target = ".local/zotero"
-type = "archive"
-format = "tar.xz"
-stripComponents = 1
-exact = true
-# The distribution policy is supplied by this repository.
-exclude = ["*/distribution/policies.json"]
-[[downloads.zotero.entries]]
-target = ".local/zotero/distribution/policies.json"
-type = "file"
-source = ".chezmoitemplates/zotero-policy.json"
+url = { linux-amd64 = "https://www.zotero.org/download/client/dl?channel=release&platform=linux-x86_64", linux-arm64 = "https://www.zotero.org/download/client/dl?channel=release&platform=linux-arm64" }
+strip = 1
+bin = ["zotero"]
+# The payload is replaced by `dotfiles-fetch update`, so Zotero's own updater
+# would only fight it.
+write = { "distribution/policies.json" = '{"policies": {"DisableAppUpdate": true}}' }
 
 [downloads.tre]
-kind = "binary"
-platforms = ["linux-amd64"]
-repo = "dduan/tre"
-asset = "tre-*-x86_64-unknown-linux-musl.tar.gz"
-[[downloads.tre.entries]]
-target = ".local/bin/tre"
-type = "archive-file"
-path = "tre"
-executable = true
+github = "dduan/tre"
+asset = { linux-amd64 = "tre-*-x86_64-unknown-linux-musl.tar.gz" }
+bin = ["tre"]
 
-[downloads.kitty-terminfo]
-kind = "terminal"
-platforms = ["linux-amd64"]
-url = "https://raw.githubusercontent.com/kovidgoyal/kitty/master/terminfo/x/xterm-kitty"
-# Ubuntu ncurses and conda ncurses search different directory spellings.
-[[downloads.kitty-terminfo.entries]]
-target = ".terminfo/x/xterm-kitty"
-type = "file"
-[[downloads.kitty-terminfo.entries]]
-target = ".terminfo/78/xterm-kitty"
-type = "file"
+################################################################################
+# Fonts
+################################################################################
 
-[downloads.maplemono-nf-cn-unhinted]
-kind = "font"
-platforms = ["linux-amd64"]
-repo = "subframe7536/maple-font"
+[downloads.maple-mono]
+github = "subframe7536/maple-font"
 asset = "MapleMono-NF-CN-unhinted.zip"
-[[downloads.maplemono-nf-cn-unhinted.entries]]
-target = ".local/share/fonts/maplemono-nf-cn-unhinted"
-type = "archive"
-exact = true
-include = ["**/", "*.ttf", "**/*.ttf"]
+fonts = ["*.ttf"]
 
+# These upstreams publish fonts in the repository without release assets, so
+# they follow a branch. The archive's other formats are left out.
 [downloads.fira]
-kind = "font"
-platforms = ["linux-amd64"]
-# This upstream publishes its fonts in the repository, without release assets.
 url = "https://codeload.github.com/mozilla/Fira/zip/refs/heads/master"
-[[downloads.fira.entries]]
-target = ".local/share/fonts/fira"
-type = "archive"
-exact = true
-stripComponents = 2
-include = ["**/", "*/otf/*.otf"]
-
-[downloads.nerd-font-fira-code]
-kind = "font"
-platforms = ["linux-amd64"]
-repo = "ryanoasis/nerd-fonts"
-asset = "FiraCode.zip"
-[[downloads.nerd-font-fira-code.entries]]
-target = ".local/share/fonts/nerd-font-fira-code"
-type = "archive"
-exact = true
-include = ["**/", "*.ttf", "**/*.ttf"]
-
-[downloads.tex-gyre-pagella]
-kind = "font"
-platforms = ["linux-amd64"]
-# GUST publishes this family at a versioned URL, with no latest-release API.
-url = "https://www.gust.org.pl/projects/e-foundry/tex-gyre/pagella/qpl2_501otf.zip"
-[[downloads.tex-gyre-pagella.entries]]
-target = ".local/share/fonts/tex-gyre-pagella"
-type = "archive"
-exact = true
-include = ["**/", "*.otf", "**/*.otf"]
-
-[downloads.libertinus]
-kind = "font"
-platforms = ["linux-amd64"]
-repo = "alerque/libertinus"
-asset = "Libertinus-*.zip"
-[[downloads.libertinus.entries]]
-target = ".local/share/fonts/libertinus"
-type = "archive"
-exact = true
-stripComponents = 1
-include = ["**/", "**/*.otf"]
-
-[downloads.source-sans]
-kind = "font"
-platforms = ["linux-amd64"]
-repo = "adobe-fonts/source-sans"
-asset = "OTF-source-sans-*.zip"
-[[downloads.source-sans.entries]]
-target = ".local/share/fonts/source-sans"
-type = "archive"
-exact = true
-include = ["**/", "*.otf", "**/*.otf"]
-
-[downloads.source-serif]
-kind = "font"
-platforms = ["linux-amd64"]
-repo = "adobe-fonts/source-serif"
-asset = "source-serif-*_Desktop.zip"
-[[downloads.source-serif.entries]]
-target = ".local/share/fonts/source-serif"
-type = "archive"
-exact = true
-stripComponents = 1
-include = ["**/", "**/*.otf"]
-
-[downloads.source-han-sans-sc]
-kind = "font"
-platforms = ["linux-amd64"]
-repo = "adobe-fonts/source-han-sans"
-asset = "09_SourceHanSansSC.zip"
-[[downloads.source-han-sans-sc.entries]]
-target = ".local/share/fonts/source-han-sans-sc"
-type = "archive"
-exact = true
-stripComponents = 2
-include = ["**/", "*.otf", "**/*.otf"]
-
-[downloads.source-han-serif-cn]
-kind = "font"
-platforms = ["linux-amd64"]
-repo = "adobe-fonts/source-han-serif"
-asset = "14_SourceHanSerifCN.zip"
-[[downloads.source-han-serif-cn.entries]]
-target = ".local/share/fonts/source-han-serif-cn"
-type = "archive"
-exact = true
-stripComponents = 2
-include = ["**/", "*.otf", "**/*.otf"]
-
-[downloads.apple-color-emoji]
-kind = "font"
-ownership = [".local/share/fonts/apple-color-emoji"]
-platforms = ["linux-amd64"]
-repo = "samuelngs/apple-emoji-ttf"
-asset = "AppleColorEmoji-Linux.ttf"
-[[downloads.apple-color-emoji.entries]]
-target = ".local/share/fonts/apple-color-emoji/AppleColorEmoji-Linux.ttf"
-type = "file"
-
-[downloads.noto-color-emoji]
-kind = "font"
-ownership = [".local/share/fonts/noto-color-emoji"]
-platforms = ["linux-amd64"]
-# The main branch no longer contains binary fonts (checked on 2026-09-23).
-# The latest release tag still publishes the Linux font we need.
-repo = "googlefonts/noto-emoji"
-releaseFile = "fonts/NotoColorEmoji.ttf"
-[[downloads.noto-color-emoji.entries]]
-target = ".local/share/fonts/noto-color-emoji/NotoColorEmoji.ttf"
-type = "file"
+fonts = ["*/otf/*.otf"]
 
 [downloads.san-francisco-pro]
-kind = "font"
-platforms = ["linux-amd64"]
 url = "https://codeload.github.com/sahibjotsaggu/San-Francisco-Pro-Fonts/zip/refs/heads/master"
-[[downloads.san-francisco-pro.entries]]
-target = ".local/share/fonts/san-francisco-pro"
-type = "archive"
-exact = true
-stripComponents = 1
-include = ["**/", "**/*.otf"]
+fonts = ["*.otf"]
 
 [downloads.san-francisco-mono]
-kind = "font"
-platforms = ["linux-amd64"]
 url = "https://codeload.github.com/supercomputra/SF-Mono-Font/zip/refs/heads/master"
-[[downloads.san-francisco-mono.entries]]
-target = ".local/share/fonts/san-francisco-mono"
-type = "archive"
-exact = true
-stripComponents = 1
-include = ["**/", "**/*.otf"]
+fonts = ["*.otf"]
 
 [downloads.new-york]
-kind = "font"
-platforms = ["linux-amd64"]
 url = "https://codeload.github.com/yell0wsuit/New-York-fonts/zip/refs/heads/master"
-[[downloads.new-york.entries]]
-target = ".local/share/fonts/new-york"
-type = "archive"
-exact = true
-stripComponents = 1
-include = ["**/", "**/*.otf"]
+fonts = ["*.otf"]
 
 [downloads.pingfang]
-kind = "font"
-platforms = ["linux-amd64"]
 url = "https://codeload.github.com/jimmyctk/PingFang-OTF-Fonts/zip/refs/heads/main"
-[[downloads.pingfang.entries]]
-target = ".local/share/fonts/pingfang"
-type = "archive"
-exact = true
-stripComponents = 1
-include = ["**/", "**/*.otf"]
+fonts = ["*.otf"]
+
+[downloads.nerd-font-fira-code]
+github = "ryanoasis/nerd-fonts"
+asset = "FiraCode.zip"
+fonts = ["*.ttf"]
+
+# GUST publishes this family at a versioned URL and has no release API.
+[downloads.tex-gyre-pagella]
+url = "https://www.gust.org.pl/projects/e-foundry/tex-gyre/pagella/qpl2_501otf.zip"
+fonts = ["*.otf"]
+
+[downloads.libertinus]
+github = "alerque/libertinus"
+asset = "Libertinus-*.zip"
+fonts = ["*.otf"]
+
+[downloads.source-sans]
+github = "adobe-fonts/source-sans"
+asset = "OTF-source-sans-*.zip"
+fonts = ["*.otf"]
+
+[downloads.source-serif]
+github = "adobe-fonts/source-serif"
+asset = "source-serif-*_Desktop.zip"
+fonts = ["*.otf"]
+
+[downloads.source-han-sans-sc]
+github = "adobe-fonts/source-han-sans"
+asset = "09_SourceHanSansSC.zip"
+fonts = ["*.otf"]
+
+[downloads.source-han-serif-cn]
+github = "adobe-fonts/source-han-serif"
+asset = "14_SourceHanSerifCN.zip"
+fonts = ["*.otf"]
+
+[downloads.apple-color-emoji]
+github = "samuelngs/apple-emoji-ttf"
+asset = "AppleColorEmoji-Linux.ttf"
+fonts = ["*.ttf"]
+
+# The main branch no longer carries the binary font; the release tag does.
+[downloads.noto-color-emoji]
+github = "googlefonts/noto-emoji"
+file = "fonts/NotoColorEmoji.ttf"
+fonts = ["*.ttf"]

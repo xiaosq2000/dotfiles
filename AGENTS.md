@@ -24,7 +24,7 @@ File names carry attributes, and the order matters:
 | `run_onchange_before_` and `run_onchange_after_` | scripts that run when their rendered text changes |
 
 Some files have no target in `~`. `.chezmoidata/*.toml`, `.chezmoiignore`,
-`.chezmoiexternals/*` and `.chezmoi.toml.tmpl` are read by chezmoi and never
+`.chezmoiexternal.toml` and `.chezmoi.toml.tmpl` are read by chezmoi and never
 deployed, so edit them in the source tree directly. `chezmoi edit` cannot reach
 them.
 
@@ -36,8 +36,9 @@ chezmoi deploys it into `~`. Names starting with `.`, such as `.github` and
 Per-machine behaviour is a lookup in `.chezmoidata/machines.toml`, keyed by the
 `machine` answer given at `chezmoi init`, never by the hostname. Run `machine`
 to see the current entry. Software comes from the bundles in
-`.chezmoidata/tools.toml`, with native downloads in `.chezmoidata/downloads.toml`.
-A `pixi global install` by hand is undone by the next manifest synchronization.
+`.chezmoidata/tools.toml`: pixi packages, and downloads from
+`.chezmoidata/downloads.toml` that `dotfiles-fetch` installs. A `pixi global
+install` by hand is undone by the next apply.
 
 ## The repository is public
 
@@ -61,8 +62,9 @@ chezmoi add --encrypt ~/path/to/new-secret-file  # a new encrypted file
 Never write plaintext into the source tree, even for a moment, and never
 `chezmoi add` a secret without `--encrypt`. The `check-encrypted` pre-commit
 hook refuses both under the protected directories, but only in a clone where
-`pre-commit install` has run. `.chezmoiscripts/run_onchange_after_08-source-repo.sh.tmpl` does that
-on every machine with pre-commit.
+`pre-commit install` has run.
+`.chezmoiscripts/run_onchange_after_08-source-repo.sh.tmpl` does that on every
+machine with pre-commit.
 
 A new encrypted target needs two more changes:
 
@@ -85,7 +87,7 @@ ciphertext. The vps has no key and never will.
 
 ```sh
 chezmoi diff                          # what apply would change in ~
-chezmoi apply && chezmoi verify       # file state; config excludes lifecycle scripts
+chezmoi apply && chezmoi verify       # verify exits 0 once ~ matches
 pre-commit run --all-files
 ```
 
@@ -103,9 +105,12 @@ Do not put another checkout inside the source tree. chezmoi reads nested
 review checkout can silently override the real machine definitions. Use a
 sibling directory or `/tmp` for worktrees.
 
-A downloaded resource owns its catalogued paths only after successful adoption.
-The before hook backs up existing payloads, and `.chezmoiremove` prunes only
-resources with an ownership record. Keep application data outside payloads.
+chezmoi never downloads applications or fonts; `dotfiles-fetch` does, into
+`~/.local/opt/dotfiles` and `~/.local/share/fonts/dotfiles`, and nothing else
+writes there. Keep it that way, and do not give chezmoi a file that another
+program also writes: `kitten ssh` rewrites `~/.terminfo` on every connection,
+and chezmoi would then stop a non-interactive apply to ask about the change.
+`python3 .github/scripts/check-fetch.py` tests `dotfiles-fetch` in seconds.
 
 CI in `.github/workflows/ci.yml` bootstraps a clean container with no key and
 asserts on the result. When a change alters what lands in `~`, add an

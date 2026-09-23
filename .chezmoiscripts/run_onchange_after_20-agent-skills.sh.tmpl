@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Point every installed AI agent at the shared skills in ~/.agents/skills.
 #
-# Separate from the tool chain script because it is not gated on the machine's
-# bundles: agent_skills.sh checks for each agent itself and does nothing when
-# none is installed, so it is cheap and safe everywhere.
+# Not gated on the machine's bundles: agent-skills.sh checks for each agent
+# itself and does nothing when none is installed, so it is cheap and safe
+# everywhere.
 #
 # Re-runs when the script or any skill changes.
-# agent_skills.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-skills.sh" | sha256sum }}
+# agent-skills.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-skills.sh" | sha256sum }}
 # skills sha256: {{ range (glob (joinPath .chezmoi.sourceDir "dot_agents/skills/*/SKILL.md")) }}{{ include . | sha256sum }}{{ end }}
 #
 # The machines skill only deploys where the age key is (see .chezmoiignore), so

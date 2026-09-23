@@ -30,7 +30,7 @@ PRUNE=false
 
 usage() {
     cat <<'EOF'
-usage: agent_skills.sh [--prune] [--dry-run] [--help]
+usage: agent-skills.sh [--prune] [--dry-run] [--help]
 
   --prune     remove links under an agent whose canonical skill no longer exists
   --dry-run   report what would change without writing anything

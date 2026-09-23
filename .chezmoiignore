@@ -86,22 +86,18 @@ CLAUDE.md
 .agents/skills/machines
 {{ end -}}
 
-{{ if not (has "desktop" (index .machines .machine).bundles) -}}
-# GUI settings are retained when deselected, like application profiles.
-.config/kitty
-.config/alacritty
-.config/zathura
-.config/fcitx5
-.config/kmonad
-.config/environment.d/im.conf
-.config/autostart/org.fcitx.Fcitx5.desktop
-.local/bin/zathura
-{{ end -}}
-{{- $selection := includeTemplate "software-selection" . | fromJson -}}
-{{- range $id, $spec := .downloads -}}
-{{- if and (not (has $id $selection.externals)) (not (stat (joinPath $.chezmoi.homeDir ".local/state/dotfiles/downloads" (printf "%s.json" $id)))) }}
-# An unselected, never-adopted resource must not replace a manual installation.
-{{ range (includeTemplate "download-targets" $spec | fromJson) }}{{ . }}
-{{ end -}}
-{{ end -}}
+# Configuration a machine's bundles do not select, from the `config` lists in
+# .chezmoidata/tools.toml. The second pattern of each pair matters: a bare
+# directory hides the files chezmoi manages there, but not an external fetched
+# into it, such as the kitty theme. An ignored path is left as it is, so a
+# machine that drops a bundle keeps its settings, the way an application keeps
+# its profile.
+{{ $selection := includeTemplate "software-selection" . | fromJson -}}
+{{ range $name, $bundle := .bundles -}}
+{{   range $path := get $bundle "config" | default list -}}
+{{     if not (has $path $selection.config) -}}
+{{ $path }}
+{{ $path }}/**
+{{     end -}}
+{{   end -}}
 {{ end -}}

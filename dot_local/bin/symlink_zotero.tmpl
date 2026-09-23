@@ -1,3 +1,0 @@
-{{- if has "zotero" (includeTemplate "software-selection" . | fromJson).externals -}}
-{{ joinPath .chezmoi.homeDir ".local/zotero/zotero" }}
-{{- end -}}

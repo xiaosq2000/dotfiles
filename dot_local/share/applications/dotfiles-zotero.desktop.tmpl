@@ -1,0 +1,16 @@
+{{- /* See dotfiles-kitty.desktop.tmpl. */ -}}
+{{- if has "zotero" (includeTemplate "software-selection" . | fromJson).downloads -}}
+{{- $zotero := joinPath .chezmoi.homeDir ".local/opt/dotfiles/zotero/current" -}}
+[Desktop Entry]
+Type=Application
+Name=Zotero
+GenericName=Reference Manager
+TryExec={{ $zotero }}/zotero
+Exec="{{ $zotero }}/zotero" -url %U
+Icon={{ $zotero }}/icons/icon128.png
+Categories=Office;
+MimeType=x-scheme-handler/zotero;
+StartupNotify=true
+StartupWMClass=Zotero
+Terminal=false
+{{ end -}}

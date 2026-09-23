@@ -29,7 +29,7 @@ jobs:
       - uses: pre-commit/action@v3.0.1
 
   setup-scripts:
-    name: lifecycle scripts render and parse
+    name: every machine's scripts, manifest and ignores render
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,32 +41,28 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - run: bash .github/scripts/check-setup-scripts.sh
 
-  software-lifecycle:
-    name: software installation and removal
+  # dotfiles-fetch against local fixtures shaped like each upstream: install,
+  # offline sync, update, deselect, failure and migration, in seconds.
+  downloads:
+    name: dotfiles-fetch installs, updates and removes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install chezmoi and launcher validator
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y desktop-file-utils
-          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - run: python3 .github/scripts/check-software.py
+      - run: python3 .github/scripts/check-fetch.py
 
-  software-upstreams:
-    name: real software and font downloads
+  # The same against the real upstreams, by hand, because it downloads a few
+  # gigabytes and depends on servers this repository does not control.
+  downloads-live:
+    name: dotfiles-fetch installs the real catalog
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install download check prerequisites
+      - name: Install what the checks run
         run: |
           sudo apt-get update
-          sudo apt-get install -y fontconfig desktop-file-utils libgl1 libxkbcommon0 libxkbcommon-x11-0
-          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - run: python3 .github/scripts/check-software.py --live
+          sudo apt-get install -y fontconfig zsh libgl1 libxkbcommon0 libxkbcommon-x11-0
+      - run: python3 .github/scripts/check-fetch.py --live
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -214,8 +210,13 @@ jobs:
           test ! -e "$HOME/.config/alacritty"
           test ! -e "$HOME/.config/zathura"
           test ! -e "$HOME/.config/fcitx5"
-          test ! -e "$HOME/.local/kitty.app"
-          test ! -e "$HOME/.local/zotero"
+          # No bundle selects a download here, so dotfiles-fetch installs
+          # nothing and no launcher renders.
+          test -x "$HOME/.local/bin/dotfiles-fetch"
+          python3 -c 'import json, sys; sys.exit(bool(json.load(open(sys.argv[1]))["resources"]))' \
+            "$HOME/.config/dotfiles/downloads.json"
+          test ! -e "$HOME/.local/opt/dotfiles"
+          test ! -e "$HOME/.local/share/applications/dotfiles-kitty.desktop"
           test -x "$HOME/.local/bin/theme"
           test -x "$HOME/.local/bin/machine"
           # The headless profile keeps tpm and the btop theme. These checkouts must
@@ -235,8 +236,30 @@ jobs:
           test ! -e "$HOME/CLAUDE.md"
           test ! -e "$HOME/.gitattributes"
 
-      # GUI rendering, including account-free Kitty SSH settings, is covered
-      # by software-lifecycle. This container deliberately has no desktop.
+      # This container selects no desktop bundle, so its GUI config is rendered
+      # for the workstation instead. ssh.conf names the zsh on sicc through
+      # $HOME, which the kitten's remote sh expands, so no account name has to
+      # appear in it. kitty.conf renders its exe_search_path from the home
+      # directory for the same reason.
+      - name: A desktop's kitty config renders, names no account, and has its effects
+        run: |
+          set -eux
+          src="$HOME/.local/share/chezmoi"
+          conf=/tmp/kitty.conf
+          chezmoi execute-template --override-data '{"machine":"workstation"}' \
+            --file "$src/private_dot_config/kitty/kitty.conf.tmpl" > "$conf"
+          grep -q "^exe_search_path $HOME/.local/bin$" "$conf"
+          grep -q '^font_family      family="Maple Mono NF CN"$' "$conf"
+          grep -qx 'cursor_trail 1' "$conf"
+          grep -qx 'custom_shaders cursor-trail-blaze focus-highlight-only' "$conf"
+          grep -q '^hostname sicc$' "$src/private_dot_config/kitty/ssh.conf"
+          grep -q '^login_shell \$HOME/.pixi/bin/zsh$' "$src/private_dot_config/kitty/ssh.conf"
+          grep -q '^env SHELL=\$HOME/.pixi/bin/zsh$' "$src/private_dot_config/kitty/ssh.conf"
+          ! grep -q '/home/' "$src/private_dot_config/kitty/ssh.conf" || exit 1
+          pipeline="$src/private_dot_config/kitty/shaders/focus-highlight-only.pipeline"
+          grep -qx '    var float INACTIVE_DIM = 1.0' "$pipeline"
+          grep -qx '    animation_start window-focus-in' "$pipeline"
+          grep -qx '    animation_stop 750' "$pipeline"
 
       # The manifest is rendered from the bundles a machine selects, so the
       # thing worth testing is that the selection reaches the file. The
@@ -401,6 +424,19 @@ jobs:
           # read them never mention a variant.
           grep -q '^color_theme = "current"$' "$HOME/.config/btop/btop.conf"
           test -s "$HOME/.config/btop/themes/current.theme"
+          # The kitty and Alacritty theme files are ignored here along with
+          # the rest of the desktop config, so fetch them by hand: a scheme
+          # whose port moved would otherwise fail only on a desktop's apply.
+          for variant in rose-pine rose-pine-dawn catppuccin-mocha; do
+            for port in kitty alacritty; do
+              url=$(chezmoi execute-template --override-data "{\"theme\":\"$variant\"}" \
+                "{{ \$t := index .themes .theme }}{{ \$s := index .schemes \$t.scheme }}{{ printf (index \$s \"${port}URL\") (index \$t \"$port\") }}")
+              test -n "$(curl -fsSL "$url")"
+            done
+            chezmoi execute-template --override-data "{\"machine\":\"workstation\",\"theme\":\"$variant\"}" \
+              --file "$HOME/.local/share/chezmoi/private_dot_config/zathura/zathurarc.tmpl" |
+              grep "^include $variant$" >/dev/null
+          done
 
           # A variant switch within the scheme.
           "$HOME/.local/bin/theme" rose-pine-dawn

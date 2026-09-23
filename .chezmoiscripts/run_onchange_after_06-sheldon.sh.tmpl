@@ -33,7 +33,7 @@ elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/sheldon" ]; then
 else
     echo "sheldon not found; it comes from the core bundle, so check that" >&2
     echo "'pixi global sync' succeeded earlier in this apply" >&2
-    exit 0
+    exit 1
 fi
 
 echo "locking zsh plugins from ${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml"

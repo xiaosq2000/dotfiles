@@ -1,0 +1,629 @@
+#!/usr/bin/env python3
+"""Install the downloads this machine's bundles select.
+
+chezmoi renders the selection into ~/.config/dotfiles/downloads.json from
+.chezmoidata/downloads.toml, and runs `dotfiles-fetch sync` whenever that file
+changes. This program owns only paths under its own names:
+
+    ~/.local/opt/dotfiles/<id>/<version>   application payloads, and `current`
+    ~/.local/opt/dotfiles/bin              command links, on PATH
+    ~/.local/share/fonts/dotfiles/<id>     font files
+
+so it never adopts, backs up or replaces an installation made some other way.
+The one exception is a `copy` entry, which writes a file into a shared path
+only if the file is missing, and afterwards touches it only while it still
+holds what was written. ~/.local/state/dotfiles/downloads.lock.json records
+what was installed; removal follows the lock, not the current catalog.
+
+Commands:
+    sync            install what is selected at the locked version, and
+                    remove what is no longer selected. Offline once installed.
+    update [ID...]  move the named downloads, or all of them, to the latest
+                    upstream release and reinstall what changed.
+    outdated        list GitHub releases newer than the locked version.
+    status          list what is selected, installed and pending, offline.
+    migrate         list font directories left by the retired typefaces.sh;
+                    --apply removes them.
+
+GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`, raises GitHub's API allowance.
+"""
+
+import argparse
+import contextlib
+import fcntl
+import fnmatch
+import hashlib
+import http.client
+import json
+import os
+from pathlib import Path, PurePosixPath
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
+import zipfile
+
+HOME = Path.home()
+MANIFEST = HOME / ".config/dotfiles/downloads.json"
+STORE = HOME / ".local/opt/dotfiles"
+BIN = STORE / "bin"
+FONTS = HOME / ".local/share/fonts/dotfiles"
+LOCK = HOME / ".local/state/dotfiles/downloads.lock.json"
+# Overridable so the tests in .github/scripts/check-fetch.py can serve
+# releases from local files.
+API = os.environ.get("DOTFILES_FETCH_GITHUB_API", "https://api.github.com")
+RAW = os.environ.get("DOTFILES_FETCH_GITHUB_RAW", "https://raw.githubusercontent.com")
+SOURCE_KEYS = ("github", "asset", "file", "url")
+
+
+class Failure(Exception):
+    """A download that could not be installed. Others still proceed."""
+
+
+def log(message):
+    print(f"dotfiles-fetch: {message}", flush=True)
+
+
+def warn(message):
+    print(f"dotfiles-fetch: warning: {message}", file=sys.stderr, flush=True)
+
+
+def digest(path):
+    hasher = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def fingerprint(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def rmtree(path):
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def inside(root, relative):
+    """root/relative, refusing a path that would leave root."""
+    parts = PurePosixPath(relative).parts
+    if not parts or PurePosixPath(relative).is_absolute() or ".." in parts:
+        raise Failure(f"unsafe path {relative!r}")
+    return root.joinpath(*parts)
+
+
+def replace_file(path, write):
+    """Write through a temporary file, so a reader never sees half of it."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    write(temporary)
+    os.replace(temporary, path)
+
+
+def swap(new, final):
+    """Put directory new at final, replacing whatever is there, with only a
+    rename's worth of time in which final is missing."""
+    old = final.with_name(f".{final.name}.old")
+    rmtree(old)
+    if final.exists() or final.is_symlink():
+        os.rename(final, old)
+    os.rename(new, final)
+    rmtree(old)
+
+
+def replace_link(path, target):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    rmtree(temporary)
+    temporary.symlink_to(target)
+    os.replace(temporary, path)
+
+
+# --------------------------------------------------------------------------
+# Resolving and downloading
+
+
+_token = None
+
+
+def github_token():
+    global _token
+    if _token is None:
+        _token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+        if not _token and shutil.which("gh"):
+            result = subprocess.run(["gh", "auth", "token"], capture_output=True,
+                                    text=True, timeout=10, check=False)
+            _token = result.stdout.strip() if result.returncode == 0 else ""
+    return _token
+
+
+def fetch(url):
+    request = urllib.request.Request(url, headers={"User-Agent": "dotfiles-fetch"})
+    if url.startswith(API + "/"):
+        request.add_header("Accept", "application/vnd.github+json")
+        if github_token():
+            request.add_header("Authorization", f"Bearer {github_token()}")
+    try:
+        return urllib.request.urlopen(request, timeout=60)
+    except urllib.error.HTTPError as error:
+        hint = ""
+        if error.code in (403, 429) and url.startswith(API + "/"):
+            hint = "; set GITHUB_TOKEN or run `gh auth login` for a larger allowance"
+        raise Failure(f"{url}: HTTP {error.code}{hint}") from None
+    except (urllib.error.URLError, OSError) as error:
+        raise Failure(f"{url}: {getattr(error, 'reason', error)}") from None
+
+
+def source(spec, platform):
+    """The one source field, resolved for this platform, or None."""
+    for key in ("asset", "file", "url"):
+        if key in spec:
+            value = spec[key]
+            if isinstance(value, dict):
+                value = value.get(platform)
+            return (key, value) if value else None
+    raise Failure("no asset, file or url")
+
+
+def resolve(spec, platform):
+    """Where the latest version lives: url, version (None if unknown until
+    downloaded) and the sha256 GitHub publishes, when it does."""
+    kind, value = source(spec, platform)
+    if kind == "url":
+        return {"url": value, "version": None, "sha256": None}
+    repo = spec["github"]
+    with fetch(f"{API}/repos/{repo}/releases/latest") as response:
+        release = json.load(response)
+    tag = release["tag_name"]
+    if kind == "file":
+        return {"url": f"{RAW}/{repo}/{tag}/{value}", "version": tag, "sha256": None}
+    assets = [a for a in release.get("assets", []) if fnmatch.fnmatchcase(a["name"], value)]
+    if len(assets) != 1:
+        raise Failure(f"{len(assets)} assets of {repo} {tag} match {value!r}")
+    published = assets[0].get("digest") or ""
+    return {"url": assets[0]["browser_download_url"], "version": tag,
+            "sha256": published[7:] if published.startswith("sha256:") else None}
+
+
+def download(url, directory):
+    """Stream url into directory. Returns the file, its sha256, and a file
+    name for it: the requested URL's, which for a GitHub asset is the asset's
+    name, or else the redirected one's, as for Zotero's download link."""
+    descriptor, name = tempfile.mkstemp(dir=directory, prefix="download-")
+    hasher = hashlib.sha256()
+    with os.fdopen(descriptor, "wb") as output, fetch(url) as response:
+        final = response.geturl()
+        for chunk in iter(lambda: response.read(1 << 20), b""):
+            hasher.update(chunk)
+            output.write(chunk)
+    names = [PurePosixPath(urllib.parse.urlsplit(u).path).name for u in (url, final)]
+    basename = next((n for n in names if "." in n), names[0] or "download")
+    return Path(name), hasher.hexdigest(), urllib.parse.unquote(basename)
+
+
+# --------------------------------------------------------------------------
+# Unpacking
+
+
+def stripped(name, strip):
+    parts = [p for p in name.split("/") if p not in ("", ".")]
+    if ".." in parts:
+        raise Failure(f"archive member {name!r} leaves the archive")
+    return "/".join(parts[strip:]) if len(parts) > strip else None
+
+
+def unpack(archive, basename, destination, strip):
+    """Unpack a zip or tar of any compression, or place a lone file, into
+    destination. The format comes from the bytes, not the name."""
+    destination.mkdir(parents=True)
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive) as bundle:
+            for info in bundle.infolist():
+                relative = stripped(info.filename, strip)
+                if relative is None:
+                    continue
+                target = inside(destination, relative)
+                if info.is_dir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with bundle.open(info) as member, open(target, "wb") as output:
+                    shutil.copyfileobj(member, output)
+                if (info.external_attr >> 16) & 0o111:
+                    target.chmod(0o755)
+    elif tarfile.is_tarfile(archive):
+        with tarfile.open(archive) as bundle:
+            for member in bundle.getmembers():
+                relative = stripped(member.name, strip)
+                if relative is None:
+                    continue
+                inside(destination, relative)
+                member.name = relative
+                if member.islnk():
+                    member.linkname = stripped(member.linkname, strip) or ""
+                if hasattr(tarfile, "data_filter"):
+                    bundle.extract(member, destination, filter="data")
+                    continue
+                # Python before the extraction filters: allow only what the
+                # "data" filter would, for the members archives here contain.
+                if member.issym():
+                    link = os.path.normpath(os.path.join(os.path.dirname(relative), member.linkname))
+                    if os.path.isabs(member.linkname) or link.startswith(".."):
+                        raise Failure(f"symlink {relative} points outside the archive")
+                elif not (member.isfile() or member.isdir() or member.islnk()):
+                    raise Failure(f"archive member {relative} is not a file")
+                bundle.extract(member, destination)
+    else:
+        shutil.copyfile(archive, inside(destination, basename))
+
+
+# --------------------------------------------------------------------------
+# Installing
+
+
+def payload(identifier):
+    return STORE / identifier / "current"
+
+
+def installed(identifier, spec, entry):
+    if "fonts" in spec:
+        return (FONTS / identifier).is_dir()
+    if not payload(identifier).is_dir():
+        return False
+    return all((BIN / PurePosixPath(p).name).exists() for p in spec.get("bin", []))
+
+
+def install(identifier, spec, entry, target, scratch):
+    """Download target["url"] and make it the installed version. Returns the
+    new lock entry, or None when the download is what is already installed.
+    Nothing visible changes until every check has passed."""
+    archive, sha256, basename = download(target["url"], scratch)
+    expected = target.get("sha256")
+    if expected and sha256 != expected:
+        raise Failure(f"{target['url']}: sha256 {sha256}, expected {expected}")
+    if (entry and sha256 == entry["sha256"] and entry["spec"] == fingerprint(spec)
+            and installed(identifier, spec, entry)):
+        archive.unlink()
+        return None
+    version = target.get("version") or f"sha256-{sha256[:12]}"
+    staging = Path(tempfile.mkdtemp(dir=scratch, prefix=identifier + "-"))
+    unpacked = staging / "payload"
+    unpack(archive, basename, unpacked, spec.get("strip", 0))
+    archive.unlink()
+
+    for relative, contents in spec.get("write", {}).items():
+        replace_file(inside(unpacked, relative), lambda p, c=contents: p.write_text(c + "\n"))
+    for relative in list(spec.get("bin", [])) + list(spec.get("copy", {}).values()):
+        if not inside(unpacked, relative).is_file():
+            raise Failure(f"{relative} is not in the download")
+
+    if "fonts" in spec:
+        install_fonts(identifier, spec["fonts"], unpacked)
+    else:
+        install_payload(identifier, spec, unpacked, version, entry)
+
+    new = {"source": fingerprint([spec.get(k) for k in SOURCE_KEYS]),
+           "spec": fingerprint(spec), "url": target["url"], "version": version,
+           "sha256": sha256, "bin": [PurePosixPath(p).name for p in spec.get("bin", [])]}
+    new["copies"] = sync_copies(identifier, spec, (entry or {}).get("copies", {}))
+    shutil.rmtree(staging)
+    return new
+
+
+def install_fonts(identifier, globs, unpacked):
+    """Keep only the files matching globs, flat, in the family's directory."""
+    chosen = {}
+    for path in sorted(unpacked.rglob("*")):
+        relative = path.relative_to(unpacked).as_posix().lower()
+        if path.is_file() and any(fnmatch.fnmatchcase(relative, g.lower()) for g in globs):
+            chosen.setdefault(path.name, path)
+    if not chosen:
+        raise Failure(f"no file in the download matches {globs}")
+    new = FONTS / f".{identifier}.new"
+    rmtree(new)
+    new.mkdir(parents=True)
+    for name, path in chosen.items():
+        shutil.move(str(path), str(new / name))
+    swap(new, FONTS / identifier)
+
+
+def install_payload(identifier, spec, unpacked, version, entry):
+    """Move the payload to <id>/<version>, point `current` at it, link its
+    commands, and keep the previous version for a manual rollback."""
+    for relative in spec.get("bin", []):
+        link = BIN / PurePosixPath(relative).name
+        if link.is_symlink() and not os.readlink(link).startswith(f"../{identifier}/"):
+            raise Failure(f"{link} already belongs to another download")
+    home = STORE / identifier
+    home.mkdir(parents=True, exist_ok=True)
+    directory = home / version.replace("/", "_")
+    new = home / f".{directory.name}.new"
+    rmtree(new)
+    shutil.move(str(unpacked), str(new))
+    swap(new, directory)
+    replace_link(home / "current", directory.name)
+    for relative in spec.get("bin", []):
+        replace_link(BIN / PurePosixPath(relative).name, os.path.join("..", identifier, "current", relative))
+    for name in (entry or {}).get("bin", []):
+        if name not in {PurePosixPath(p).name for p in spec.get("bin", [])}:
+            unlink_command(identifier, name)
+    keep = {"current", directory.name, (entry or {}).get("version", "").replace("/", "_")}
+    for child in home.iterdir():
+        if child.name not in keep and not child.name.startswith("."):
+            rmtree(child)
+
+
+def sync_copies(identifier, spec, recorded):
+    """Write each copy entry that is missing or still holds what was written
+    last time. Returns what this download now owns."""
+    owned = {}
+    for relative, source_path in spec.get("copy", {}).items():
+        destination = inside(HOME, relative)
+        wanted = inside(payload(identifier), source_path)
+        want = digest(wanted)
+        have = digest(destination) if destination.exists() else None
+        if have is None or (have == recorded.get(relative) and have != want):
+            replace_file(destination, lambda p, w=wanted: shutil.copyfile(w, p))
+            owned[relative] = want
+        elif have == want:
+            owned[relative] = want
+        else:
+            log(f"left {destination} alone; something else wrote it")
+    for relative in set(recorded) - set(owned) - set(spec.get("copy", {})):
+        remove_copy(relative, recorded[relative])
+    return owned
+
+
+def remove_copy(relative, recorded):
+    destination = inside(HOME, relative)
+    if destination.exists() and digest(destination) == recorded:
+        destination.unlink()
+
+
+def unlink_command(identifier, name):
+    link = BIN / name
+    if link.is_symlink() and os.readlink(link).startswith(f"../{identifier}/"):
+        link.unlink()
+
+
+def remove(identifier, entry):
+    for name in entry.get("bin", []):
+        unlink_command(identifier, name)
+    for relative, recorded in entry.get("copies", {}).items():
+        remove_copy(relative, recorded)
+    rmtree(STORE / identifier)
+    rmtree(FONTS / identifier)
+
+
+# --------------------------------------------------------------------------
+# Commands
+
+
+def load(path, default):
+    try:
+        return json.loads(path.read_text())
+    except FileNotFoundError:
+        return default
+
+
+def save(lock):
+    replace_file(LOCK, lambda p: p.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n"))
+
+
+def selected(manifest):
+    """The manifest's downloads that exist for this platform."""
+    platform = manifest["platform"]
+    chosen = {}
+    for identifier, spec in sorted(manifest["resources"].items()):
+        try:
+            found = source(spec, platform)
+        except Failure as error:
+            warn(f"{identifier}: {error}; skipped")
+            continue
+        if found is None:
+            warn(f"{identifier} has no download for {platform}; skipped")
+            continue
+        chosen[identifier] = spec
+    return chosen
+
+
+def refresh_caches(fonts_changed):
+    jobs = [("update-desktop-database", HOME / ".local/share/applications")]
+    if fonts_changed:
+        jobs.insert(0, ("fc-cache", HOME / ".local/share/fonts"))
+    for program, directory in jobs:
+        if not directory.is_dir():
+            continue
+        if not shutil.which(program):
+            warn(f"{program} is not installed; skipping its cache refresh")
+        elif subprocess.run([program, str(directory)], check=False).returncode:
+            warn(f"{program} failed; run it again once the error above is fixed")
+
+
+def tidy():
+    """Remove what an interrupted run left: its scratch directory, with any
+    partial download, and a half-swapped payload or font directory, which
+    fontconfig would otherwise scan. The flock means no other run is using
+    them."""
+    leftovers = list(STORE.glob(".scratch-*")) + list(STORE.glob("*/.*.new")) + list(STORE.glob("*/.*.old"))
+    leftovers += list(FONTS.glob(".*.new")) + list(FONTS.glob(".*.old"))
+    for path in leftovers:
+        rmtree(path)
+
+
+def sync(manifest, lock, update=()):
+    """Bring the machine to the manifest. `update` names the downloads to move
+    to their latest release; every other one keeps its locked version."""
+    tidy()
+    wanted = selected(manifest)
+    resources = lock.setdefault("resources", {})
+    failed = []
+    changed = fonts_changed = False
+    for identifier in sorted(set(resources) - set(wanted)):
+        fonts_changed |= (FONTS / identifier).exists()
+        remove(identifier, resources.pop(identifier))
+        save(lock)
+        changed = True
+        log(f"removed {identifier}")
+    with contextlib.ExitStack() as stack:
+        scratch = None
+        for identifier, spec in wanted.items():
+            entry = resources.get(identifier)
+            try:
+                same_source = entry and entry["source"] == fingerprint([spec.get(k) for k in SOURCE_KEYS])
+                if identifier in update or not same_source:
+                    target = resolve(spec, manifest["platform"])
+                    if (same_source and target["version"] and target["url"] == entry["url"]
+                            and entry["spec"] == fingerprint(spec) and installed(identifier, spec, entry)):
+                        continue
+                elif entry["spec"] == fingerprint(spec) and installed(identifier, spec, entry):
+                    # Installed as selected. Only a copy someone deleted
+                    # needs putting back.
+                    copies = sync_copies(identifier, spec, entry.get("copies", {}))
+                    if copies != entry.get("copies", {}):
+                        entry["copies"] = copies
+                        save(lock)
+                    continue
+                else:
+                    # A release asset is immutable, so a re-download must
+                    # match. A branch or rolling URL may have moved on.
+                    target = {"url": entry["url"], "version": None, "sha256": None}
+                    if spec.get("github"):
+                        target.update(version=entry["version"], sha256=entry["sha256"])
+                if scratch is None:
+                    STORE.mkdir(parents=True, exist_ok=True)
+                    scratch = Path(stack.enter_context(tempfile.TemporaryDirectory(dir=STORE, prefix=".scratch-")))
+                new = install(identifier, spec, entry, target, scratch)
+            except (Failure, OSError, http.client.HTTPException, tarfile.TarError,
+                    zipfile.BadZipFile, KeyError, ValueError) as error:
+                warn(f"{identifier}: {error}")
+                failed.append(identifier)
+                continue
+            if new is None:
+                continue
+            resources[identifier] = new
+            save(lock)
+            changed = True
+            fonts_changed |= "fonts" in spec
+            if not entry:
+                log(f"installed {identifier} {new['version']}")
+            elif entry["version"] == new["version"]:
+                log(f"reinstalled {identifier} {new['version']}")
+            else:
+                log(f"updated {identifier} {entry['version']} -> {new['version']}")
+    if changed:
+        refresh_caches(fonts_changed)
+    if failed:
+        warn(f"not installed: {', '.join(failed)}; the next sync retries")
+        return 1
+    return 0
+
+
+def outdated(manifest, lock):
+    resources = lock.get("resources", {})
+    for identifier, spec in selected(manifest).items():
+        entry = resources.get(identifier)
+        if not spec.get("github"):
+            print(f"{identifier:24} {entry['version'] if entry else '-':20} "
+                  "follows a URL; `dotfiles-fetch update` downloads it to check")
+            continue
+        try:
+            target = resolve(spec, manifest["platform"])
+        except Failure as error:
+            warn(f"{identifier}: {error}")
+            continue
+        if not entry or target["url"] != entry["url"]:
+            print(f"{identifier:24} {entry['version'] if entry else '-':20} -> {target['version']}")
+    return 0
+
+
+def status(manifest, lock):
+    resources = lock.get("resources", {})
+    wanted = selected(manifest)
+    for identifier, spec in wanted.items():
+        entry = resources.get(identifier)
+        if not entry:
+            state = "not installed"
+        elif not installed(identifier, spec, entry):
+            state = f"{entry['version']}, missing files"
+        else:
+            state = entry["version"]
+        print(f"{identifier:24} {state}")
+    for identifier in sorted(set(resources) - set(wanted)):
+        print(f"{identifier:24} {resources[identifier]['version']}, removed by the next sync")
+    return 0
+
+
+def migrate(apply):
+    """typefaces.sh wrote .installed-ref into every family directory it made,
+    so such a directory is provably this repository's and safe to delete."""
+    fonts = HOME / ".local/share/fonts"
+    legacy = sorted(p.parent for p in fonts.glob("*/.installed-ref"))
+    for directory in legacy:
+        print(f"{'removing' if apply else 'would remove'} {directory}")
+        if apply:
+            shutil.rmtree(directory)
+    others = [".local/kitty.app", ".local/zotero", ".local/bin/kitty", ".local/bin/kitten",
+              ".local/bin/zotero", ".local/share/applications/kitty.desktop",
+              ".local/share/applications/kitty-open.desktop",
+              ".local/share/applications/zotero.desktop", ".cargo/bin/tre"]
+    for relative in others:
+        if os.path.lexists(HOME / relative):
+            print(f"left alone: {HOME / relative}; delete it once the dotfiles copy works")
+    if not legacy:
+        print("no font directories from typefaces.sh")
+    elif not apply:
+        print("run `dotfiles-fetch migrate --apply` to remove them")
+    elif shutil.which("fc-cache"):
+        subprocess.run(["fc-cache", str(fonts)], check=False)
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest="command")
+    commands.add_parser("sync")
+    updating = commands.add_parser("update")
+    updating.add_argument("ids", nargs="*")
+    commands.add_parser("outdated")
+    commands.add_parser("status")
+    migrating = commands.add_parser("migrate")
+    migrating.add_argument("--apply", action="store_true")
+    arguments = parser.parse_args()
+    command = arguments.command or "sync"
+    if command == "migrate":
+        return migrate(arguments.apply)
+
+    manifest = load(MANIFEST, None)
+    if manifest is None:
+        warn(f"{MANIFEST} does not exist; `chezmoi apply` writes it")
+        return 1
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOCK.with_name(".downloads.flock"), "w") as guard:
+        fcntl.flock(guard, fcntl.LOCK_EX)
+        lock = load(LOCK, {"resources": {}})
+        if command == "status":
+            return status(manifest, lock)
+        if command == "outdated":
+            return outdated(manifest, lock)
+        update = ()
+        if command == "update":
+            update = set(arguments.ids or manifest["resources"])
+            unknown = update - set(manifest["resources"])
+            if unknown:
+                warn(f"not selected on this machine: {', '.join(sorted(unknown))}")
+                return 1
+        return sync(manifest, lock, update)
+
+
+if __name__ == "__main__":
+    with contextlib.suppress(KeyboardInterrupt):
+        sys.exit(main())
+    sys.exit(130)

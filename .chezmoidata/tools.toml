@@ -1,17 +1,40 @@
-# Bundles select Pixi packages and named resources from downloads.toml.
-# Edit these declarations rather than running `pixi global install`: the next
-# manifest synchronization restores the selected package set.
+# Named sets of pixi packages, and the binaries each package should expose.
 #
-# Each package gets its own environment so one dependency conflict cannot
-# affect an entire bundle. Exposure overrides list only the commands we use;
-# exposing bundled runtimes such as node or openssl would shadow other tools.
+# ~/.pixi/manifests/pixi-global.toml used to be a hand-held file: you ran
+# `pixi global install X`, then `chezmoi re-add`, and the install was the edit.
+# That was pleasant to use and gave every machine the same 34 environments,
+# which is how a shared HPC login node ended up with ffmpeg, resvg, deno and a
+# clang-tools environment exposing 60 binaries. The manifest is now rendered
+# from the bundles a machine selects in .chezmoidata/machines.toml.
+#
+# The cost of that change is real and worth stating: `pixi global install X` is
+# no longer how you add a tool, because the next `chezmoi apply` would render
+# the manifest again and remove it. Add the package to a bundle here instead,
+# then `chezmoi apply`.
+#
+# One environment per package, not one per bundle. Grouping a bundle into a
+# single environment would make its packages share one solve, so a single
+# conflicting dependency would break every tool in the bundle at once.
+#
+# `exposed` is mandatory, not a nicety. Omit it and `pixi global sync` installs
+# the environment and links nothing at all, leaving the tool present but
+# invisible. It also has to be accurate: naming a binary the package does not
+# ship fails the sync. Several conda-forge packages carry an entire runtime
+# alongside the tool you wanted, so exposing everything would be actively
+# harmful. bash-language-server ships node, npm and openssl; cmake-language-
+# server ships python3.14, tclsh and wish; taplo ships openssl.
+#
+# A bundle may also name `downloads`, ids from .chezmoidata/downloads.toml for
+# software conda-forge does not package, and `config`, destination paths that
+# only a machine selecting the bundle should receive. .chezmoiignore skips the
+# config of every unselected bundle; a machine that drops a bundle keeps the
+# files it already has, the way an application keeps its profile.
 
 ################################################################################
 # Bundles
 ################################################################################
 
 [bundles.core]
-externals = ["kitty-terminfo"]
 description = "Shell, editor and navigation. Every machine, including a login node."
 packages = [
     "chezmoi",
@@ -90,19 +113,31 @@ description = "age, sops and the Bitwarden client; see docs/secrets.md"
 packages = ["age", "go-sops", "rbw", "libsecret"]
 
 [bundles.extras]
-externals = ["tre"]
 description = "Convenience and diagnostics; nothing here is load-bearing"
 packages = ["fastfetch", "speedtest-cli", "git-filter-repo", "lazydocker"]
+downloads = ["tre"]
 
 [bundles.desktop]
-description = "Kitty, its terminal font, and desktop configuration"
+description = "Kitty, its terminal font, and the configuration of the GUI programs"
 packages = []
-externals = ["kitty", "maplemono-nf-cn-unhinted"]
+downloads = ["kitty", "maple-mono"]
+# Alacritty, Zathura, Fcitx5 and kmonad come from the distribution; this bundle
+# only supplies their configuration.
+config = [
+    ".config/kitty",
+    ".config/alacritty",
+    ".config/zathura",
+    ".config/fcitx5",
+    ".config/kmonad",
+    ".config/environment.d/im.conf",
+    ".config/autostart/org.fcitx.Fcitx5.desktop",
+    ".local/bin/zathura",
+]
 
 [bundles.fonts]
 description = "Document, design, CJK and emoji fonts"
 packages = []
-externals = [
+downloads = [
     "fira", "nerd-font-fira-code", "tex-gyre-pagella", "libertinus",
     "source-sans", "source-serif", "source-han-sans-sc", "source-han-serif-cn",
     "apple-color-emoji", "noto-color-emoji", "san-francisco-pro",
@@ -110,9 +145,9 @@ externals = [
 ]
 
 [bundles.research]
-description = "Zotero and its desktop launcher"
+description = "Zotero"
 packages = []
-externals = ["zotero"]
+downloads = ["zotero"]
 
 ################################################################################
 # Exposed binaries

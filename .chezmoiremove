@@ -1,29 +1,8 @@
-{{- $selection := includeTemplate "software-selection" . | fromJson -}}
-{{- range $id, $spec := .downloads -}}
-{{- $marker := printf ".local/state/dotfiles/downloads/%s.json" $id -}}
-{{- if and (not (has $id $selection.externals)) (stat (joinPath $.chezmoi.homeDir $marker)) }}
-{{- /* Empty integration templates perform their own removal. */ -}}
-{{ range (includeTemplate "download-targets" $spec | fromJson) -}}
-{{ if not (has . (get $spec "integration" | default list)) }}{{ . }}
-{{ end -}}
-{{ end }}{{ $marker }}
-{{ end -}}
-{{- if and (has $id $selection.externals) (eq $spec.kind "font") (hasKey $spec "ownership") -}}
-{{- /* A direct font download still owns a whole family directory. Remove old
-      alternate builds after the before hook has backed up that directory. */ -}}
-{{- $files := list -}}
-{{- range $spec.entries }}{{ $files = append $files (joinPath $.chezmoi.homeDir .target) }}{{ end -}}
-{{- range $directory := $spec.ownership -}}
-{{- range $path := glob (joinPath $.chezmoi.homeDir $directory "*") -}}
-{{- if not (has $path $files) }}
-{{ trimPrefix (printf "%s/" $.chezmoi.homeDir) $path }}
-{{ end -}}
-{{ end -}}
-{{ end -}}
-{{ end -}}
-{{ end }}
-# Retired installers have no useful target state. Name only repository files,
-# because a user may have their own helpers beside them.
+# Installers this repository used to deploy to ~/.sh_utils/setup.d. Their work
+# moved to pixi bundles, dotfiles-fetch and .chezmoiscripts, and an apply that
+# left them behind would keep a second, stale way to install the same things.
+# Only files this repository wrote are named, because a user may keep helpers
+# of their own beside them.
 .sh_utils/setup.d/adhd.sh
 .sh_utils/setup.d/agent_skills.sh
 .sh_utils/setup.d/aider.sh
