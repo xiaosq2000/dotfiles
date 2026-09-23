@@ -44,6 +44,11 @@ earlier ones are never touched automatically.
    the workstation, keep only one. The release dotfiles-fetch installs upgrades
    the library's database when it opens it, and an older Zotero may then
    refuse it.
+6. Check `git config --global --get-all credential.https://github.com.helper`.
+   If it still names `/usr/bin/gh`, run `gh auth setup-git` once the `gh` from
+   the `github` bundle is logged in. chezmoi does not manage `~/.gitconfig`, and
+   on the workstation, once `/usr/bin/gh` was gone, every HTTPS push and fetch
+   failed with "/usr/bin/gh: not found".
 
 ## Not bugs
 
