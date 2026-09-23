@@ -14,7 +14,7 @@ startup_mode="Maximized"
 title = "Terminal"
 
 [font]
-normal = { family = "MapleMono NF CN", style = "Regular" }
+normal = { family = {{ .typography.terminalFamily | quote }}, style = "Regular" }
 size = 18
 offset = { x = 0, y = 0 }
 

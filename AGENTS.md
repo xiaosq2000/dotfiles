@@ -35,9 +35,10 @@ chezmoi deploys it into `~`. Names starting with `.`, such as `.github` and
 
 Per-machine behaviour is a lookup in `.chezmoidata/machines.toml`, keyed by the
 `machine` answer given at `chezmoi init`, never by the hostname. Run `machine`
-to see the current entry. Tools come from the bundles in
-`.chezmoidata/tools.toml`, and a `pixi global install` by hand is undone by the
-next apply.
+to see the current entry. Software comes from the bundles in
+`.chezmoidata/tools.toml`: pixi packages, and downloads from
+`.chezmoidata/downloads.toml` that `dotfiles-fetch` installs. A `pixi global
+install` by hand is undone by the next apply.
 
 ## The repository is public
 
@@ -61,8 +62,9 @@ chezmoi add --encrypt ~/path/to/new-secret-file  # a new encrypted file
 Never write plaintext into the source tree, even for a moment, and never
 `chezmoi add` a secret without `--encrypt`. The `check-encrypted` pre-commit
 hook refuses both under the protected directories, but only in a clone where
-`pre-commit install` has run. `run_onchange_after_08-source-repo.sh` does that
-on every machine with pre-commit.
+`pre-commit install` has run.
+`.chezmoiscripts/run_onchange_after_08-source-repo.sh.tmpl` does that on every
+machine with pre-commit.
 
 A new encrypted target needs two more changes:
 
@@ -97,6 +99,18 @@ chezmoi --source "$PWD" diff
 chezmoi --source "$PWD" cat ~/.zshrc
 chezmoi --source "$PWD" managed
 ```
+
+Do not put another checkout inside the source tree. chezmoi reads nested
+`.chezmoidata` even when an ignore rule excludes the containing directory, so a
+review checkout can silently override the real machine definitions. Use a
+sibling directory or `/tmp` for worktrees.
+
+chezmoi never downloads applications or fonts; `dotfiles-fetch` does, into
+`~/.local/opt/dotfiles` and `~/.local/share/fonts/dotfiles`, and nothing else
+writes there. Keep it that way, and do not give chezmoi a file that another
+program also writes: `kitten ssh` rewrites `~/.terminfo` on every connection,
+and chezmoi would then stop a non-interactive apply to ask about the change.
+`python3 .github/scripts/check-fetch.py` tests `dotfiles-fetch` in seconds.
 
 CI in `.github/workflows/ci.yml` bootstraps a clean container with no key and
 asserts on the result. When a change alters what lands in `~`, add an

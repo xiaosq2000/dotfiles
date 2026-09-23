@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Install and remove the downloads this machine's bundles select, by running
+# `dotfiles-fetch sync` whenever the manifest or the program changes.
+#
+# manifest sha256:       {{ includeTemplate "private_dot_config/dotfiles/downloads.json.tmpl" . | sha256sum }}
+# dotfiles-fetch sha256: {{ include "dot_local/bin/executable_dotfiles-fetch" | sha256sum }}
+#
+# A sync that cannot reach an upstream exits 1 once the others are done. That
+# leaves this script unrecorded, so the next apply retries it; every file has
+# been written by then, because this is an after script. It runs last so the
+# failure cannot hold back another script.
+
+set -eu
+
+{{ if not (includeTemplate "software-selection" . | fromJson).downloads -}}
+# Nothing is selected, so there is only something to do if an earlier selection
+# left downloads behind.
+[ -f "$HOME/.local/state/dotfiles/downloads.lock.json" ] || exit 0
+{{ end -}}
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "downloads: warning: python3 is not installed; run 'dotfiles-fetch sync' once it is" >&2
+    exit 0
+fi
+
+exec python3 "$HOME/.local/bin/dotfiles-fetch" sync

@@ -19,6 +19,10 @@ docs
 AGENTS.md
 CLAUDE.md
 
+# Keep local archives out of the destination. Actual checkouts must live outside
+# this tree: ignoring them does not stop chezmoi loading their template data.
+.worktrees
+
 # The age identity: the one file that must never be committed, since it decrypts
 # every encrypted_ file in this repository. chezmoi would not add it on its own,
 # but ~/.config/chezmoi is a directory this repository does write to, so say so
@@ -80,4 +84,20 @@ CLAUDE.md
 # SKILL.md is plaintext and could deploy, but it tells an agent to read pages
 # that would not be there.
 .agents/skills/machines
+{{ end -}}
+
+# Configuration a machine's bundles do not select, from the `config` lists in
+# .chezmoidata/tools.toml. The second pattern of each pair matters: a bare
+# directory hides the files chezmoi manages there, but not an external fetched
+# into it, such as the kitty theme. An ignored path is left as it is, so a
+# machine that drops a bundle keeps its settings, the way an application keeps
+# its profile.
+{{ $selection := includeTemplate "software-selection" . | fromJson -}}
+{{ range $name, $bundle := .bundles -}}
+{{   range $path := get $bundle "config" | default list -}}
+{{     if not (has $path $selection.config) -}}
+{{ $path }}
+{{ $path }}/**
+{{     end -}}
+{{   end -}}
 {{ end -}}

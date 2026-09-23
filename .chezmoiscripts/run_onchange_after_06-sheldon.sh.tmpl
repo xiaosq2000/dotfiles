@@ -18,8 +18,8 @@
 
 set -eu
 
-{{ if not (index .machines .machine).bundles -}}
-echo "machine {{ .machine }} selects no bundles; skipping sheldon lock"
+{{ if not (has "sheldon" (includeTemplate "software-selection" . | fromJson).packages) -}}
+echo "machine {{ .machine }} does not select sheldon; skipping plugin setup"
 exit 0
 {{ end -}}
 

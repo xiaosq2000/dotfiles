@@ -1,0 +1,15 @@
+# Installers this repository used to deploy to ~/.sh_utils/setup.d. Their work
+# moved to pixi bundles, dotfiles-fetch and .chezmoiscripts, and an apply that
+# left them behind would keep a second, stale way to install the same things.
+# Only files this repository wrote are named, because a user may keep helpers
+# of their own beside them.
+.sh_utils/setup.d/adhd.sh
+.sh_utils/setup.d/agent_skills.sh
+.sh_utils/setup.d/aider.sh
+.sh_utils/setup.d/google_drive_upload.sh
+.sh_utils/setup.d/nodejs.sh
+.sh_utils/setup.d/pixi.sh
+.sh_utils/setup.d/rust.sh
+.sh_utils/setup.d/typefaces.sh
+.sh_utils/setup.d/zotero.sh
+.sh_utils/lib/platform.sh

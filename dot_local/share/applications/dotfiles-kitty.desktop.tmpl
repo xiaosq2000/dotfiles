@@ -1,0 +1,19 @@
+{{- /*
+   Named dotfiles-* so it can never collide with a launcher installed some other
+   way, and TryExec keeps it hidden until dotfiles-fetch has installed kitty.
+   Deselecting kitty renders this empty, which makes chezmoi remove it.
+*/ -}}
+{{- if has "kitty" (includeTemplate "software-selection" . | fromJson).downloads -}}
+{{- $kitty := joinPath .chezmoi.homeDir ".local/opt/dotfiles/kitty/current" -}}
+[Desktop Entry]
+Type=Application
+Name=kitty
+GenericName=Terminal emulator
+Comment=Fast, feature-rich, GPU based terminal
+TryExec={{ $kitty }}/bin/kitty
+Exec="{{ $kitty }}/bin/kitty"
+Icon={{ $kitty }}/share/icons/hicolor/256x256/apps/kitty.png
+Categories=System;TerminalEmulator;
+StartupNotify=true
+Terminal=false
+{{ end -}}

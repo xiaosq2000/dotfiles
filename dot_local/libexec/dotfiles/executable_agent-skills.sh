@@ -14,8 +14,7 @@ set -eu
 # clone of the dotfiles. Use --prune to also drop links whose canonical skill is
 # gone, and --dry-run to see what would change without touching anything.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
+UI_LIB="$HOME/.sh_utils/lib/ui.sh"
 
 if [ -f "$UI_LIB" ]; then
     # shellcheck disable=SC1090
@@ -31,7 +30,7 @@ PRUNE=false
 
 usage() {
     cat <<'EOF'
-usage: agent_skills.sh [--prune] [--dry-run] [--help]
+usage: agent-skills.sh [--prune] [--dry-run] [--help]
 
   --prune     remove links under an agent whose canonical skill no longer exists
   --dry-run   report what would change without writing anything

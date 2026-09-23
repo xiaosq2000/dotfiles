@@ -23,6 +23,12 @@
 # alongside the tool you wanted, so exposing everything would be actively
 # harmful. bash-language-server ships node, npm and openssl; cmake-language-
 # server ships python3.14, tclsh and wish; taplo ships openssl.
+#
+# A bundle may also name `downloads`, ids from .chezmoidata/downloads.toml for
+# software conda-forge does not package, and `config`, destination paths that
+# only a machine selecting the bundle should receive. .chezmoiignore skips the
+# config of every unselected bundle; a machine that drops a bundle keeps the
+# files it already has, the way an application keeps its profile.
 
 ################################################################################
 # Bundles
@@ -109,6 +115,39 @@ packages = ["age", "go-sops", "rbw", "libsecret"]
 [bundles.extras]
 description = "Convenience and diagnostics; nothing here is load-bearing"
 packages = ["fastfetch", "speedtest-cli", "git-filter-repo", "lazydocker"]
+downloads = ["tre"]
+
+[bundles.desktop]
+description = "Kitty, its terminal font, and the configuration of the GUI programs"
+packages = []
+downloads = ["kitty", "maple-mono"]
+# Alacritty, Zathura, Fcitx5 and kmonad come from the distribution; this bundle
+# only supplies their configuration.
+config = [
+    ".config/kitty",
+    ".config/alacritty",
+    ".config/zathura",
+    ".config/fcitx5",
+    ".config/kmonad",
+    ".config/environment.d/im.conf",
+    ".config/autostart/org.fcitx.Fcitx5.desktop",
+    ".local/bin/zathura",
+]
+
+[bundles.fonts]
+description = "Document, design, CJK and emoji fonts"
+packages = []
+downloads = [
+    "fira", "nerd-font-fira-code", "tex-gyre-pagella", "libertinus",
+    "source-sans", "source-serif", "source-han-sans-sc", "source-han-serif-cn",
+    "apple-color-emoji", "noto-color-emoji", "san-francisco-pro",
+    "san-francisco-mono", "new-york", "pingfang",
+]
+
+[bundles.research]
+description = "Zotero"
+packages = []
+downloads = ["zotero"]
 
 ################################################################################
 # Exposed binaries

@@ -19,12 +19,15 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 python3 - <<'PY'
 import sys
+import re
+from pathlib import PurePosixPath
 import tomllib
 
 machines = tomllib.load(open(".chezmoidata/machines.toml", "rb"))["machines"]
 tools = tomllib.load(open(".chezmoidata/tools.toml", "rb"))
 bundles = tools["bundles"]
 overrides = tools.get("packages", {})
+downloads = tomllib.load(open(".chezmoidata/downloads.toml", "rb"))["downloads"]
 
 errors = []
 warnings = []
@@ -82,10 +85,58 @@ for name, m in sorted(machines.items()):
             owner[binary] = pkg
     print(f"ok       {name}: {len(set(selected))} packages, {len(owner)} binaries")
 
+# 6. Downloads. dotfiles-fetch trusts this catalog, so a bad entry should fail
+#    here rather than on a machine halfway through a sync.
+platforms = {"linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64"}
+commands = {}
+for name, spec in sorted(downloads.items()):
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
+        errors.append(f"download {name!r}: ids are lowercase words joined by hyphens")
+    unknown = set(spec) - {"github", "asset", "file", "url", "strip", "bin", "fonts", "write", "copy"}
+    if unknown:
+        errors.append(f"download {name!r}: unknown fields {sorted(unknown)}")
+    kinds = [k for k in ("asset", "file", "url") if k in spec]
+    if len(kinds) != 1 or (kinds[0] == "url") == ("github" in spec):
+        errors.append(f"download {name!r}: needs url, or github with one of asset and file")
+    for kind in kinds:
+        value = spec[kind]
+        if isinstance(value, dict) and (not value or set(value) - platforms):
+            errors.append(f"download {name!r}: {kind} is keyed by {sorted(value)}, not by {sorted(platforms)}")
+    if not any(k in spec for k in ("bin", "fonts", "copy")):
+        errors.append(f"download {name!r}: installs nothing visible; give it bin, fonts or copy")
+    if "fonts" in spec and any(k in spec for k in ("bin", "write", "copy", "strip")):
+        errors.append(f"download {name!r}: a font download takes only fonts")
+    paths = list(spec.get("bin", [])) + list(spec.get("write", {})) + list(spec.get("copy", {}))
+    paths += list(spec.get("copy", {}).values())
+    for path in paths:
+        parts = PurePosixPath(path).parts
+        if not parts or PurePosixPath(path).is_absolute() or ".." in parts:
+            errors.append(f"download {name!r}: unsafe path {path!r}")
+    for command in spec.get("bin", []):
+        base = PurePosixPath(command).name
+        if base in commands:
+            errors.append(f"downloads {commands[base]!r} and {name!r} both provide {base!r}")
+        commands[base] = name
+for name, bundle in sorted(bundles.items()):
+    for download in bundle.get("downloads", []):
+        if download not in downloads:
+            errors.append(f"bundle {name!r} selects download {download!r}, which is not in downloads.toml")
+    for path in bundle.get("config", []):
+        parts = PurePosixPath(path).parts
+        if len(parts) < 2 or PurePosixPath(path).is_absolute() or ".." in parts:
+            errors.append(f"bundle {name!r}: config path {path!r} is not a specific file or directory")
+selected_downloads = {d for b in bundles.values() for d in b.get("downloads", [])}
+for name in sorted(set(downloads) - selected_downloads):
+    warnings.append(f"download {name!r} is selected by no bundle")
+for name, machine in sorted(machines.items()):
+    for obsolete in ["desktop", "typefaces", "rust"]:
+        if obsolete in machine:
+            errors.append(f"machine {name!r}: {obsolete} is a bundle now, not a machine field")
+
 for w in warnings:
     print(f"warning  {w}", file=sys.stderr)
-for e in errors:
-    print(f"ERROR    {e}", file=sys.stderr)
+for error in errors:
+    print(f"ERROR    {error}", file=sys.stderr)
 
 if errors:
     print("\nerror: bundle data is inconsistent", file=sys.stderr)

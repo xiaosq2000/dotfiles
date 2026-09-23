@@ -1,0 +1,14 @@
+{{- /* See dotfiles-kitty.desktop.tmpl. */ -}}
+{{- if has "kitty" (includeTemplate "software-selection" . | fromJson).downloads -}}
+{{- $kitty := joinPath .chezmoi.homeDir ".local/opt/dotfiles/kitty/current" -}}
+[Desktop Entry]
+Type=Application
+Name=kitty URL Launcher
+TryExec={{ $kitty }}/bin/kitty
+Exec="{{ $kitty }}/bin/kitty" +open %U
+Icon={{ $kitty }}/share/icons/hicolor/256x256/apps/kitty.png
+NoDisplay=true
+Categories=System;TerminalEmulator;
+MimeType=image/*;text/*;inode/directory;application/x-sh;application/x-shellscript;
+Terminal=false
+{{ end -}}

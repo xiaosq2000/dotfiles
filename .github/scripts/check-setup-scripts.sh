@@ -1,69 +1,58 @@
 #!/usr/bin/env bash
-# Assert that every setup script the chezmoi run scripts name actually exists.
-#
-# install.sh pointed at a nonexistent setup.d/node.sh for a long time without
-# anyone noticing, because a missing script only produced a warning and the run
-# still reported success. The orchestrator now treats that as an error, but the
-# error only surfaces on a machine that actually applies. This check is the
-# cheap guard: it compares the names in the run scripts against the source tree,
-# so a typo fails in CI in a second rather than silently skipping a tool.
+# Render what each machine's bundles decide, for every machine in
+# .chezmoidata/machines.toml, and check the result. CI bootstraps only the
+# container, which selects nothing, so this is where a desktop's lifecycle
+# scripts, download manifest, launchers and ignore list get rendered at all.
 set -euo pipefail
-
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
+python3 - <<'PYTHON'
+from pathlib import Path
+import json
+import subprocess
+import sys
+import tempfile
+import tomllib
 
-SETUP_DIR="dot_sh_utils/setup.d"
-status=0
+root = Path.cwd()
+machines = tomllib.loads((root / ".chezmoidata/machines.toml").read_text())["machines"]
+bundles = tomllib.loads((root / ".chezmoidata/tools.toml").read_text())["bundles"]
 
-shopt -s nullglob
-RUN_SCRIPTS=(run_onchange_after_*.sh.tmpl)
-shopt -u nullglob
 
-[ ${#RUN_SCRIPTS[@]} -gt 0 ] || {
-    echo "error: no run_onchange_after_*.sh.tmpl found; have they been renamed?" >&2
-    exit 1
-}
+def render(config, machine, source):
+    result = subprocess.run(["chezmoi", "--source", str(root), "--config", str(config),
+                             "--override-data", json.dumps({"machine": machine}),
+                             "execute-template", "--file", str(source)],
+                            text=True, capture_output=True)
+    if result.returncode:
+        sys.exit(f"{source.relative_to(root)} does not render for {machine}:\n{result.stderr}")
+    return result.stdout
 
-# Names appear in four shapes across the run scripts:
-#   the base list      {{ $setup := list "zsh" "nodejs" -}}
-#   a conditional add  {{ if $m.rust }}{{ $setup = append $setup "rust" }}{{ end }}
-#   a direct call      run_setup "typefaces"
-#   an exec'd path     exec "$HOME/.sh_utils/setup.d/pixi.sh"
-# The conditional shape matters: a name only reachable on some machines is
-# exactly the one a typo hides, because the machines that would notice are the
-# ones nobody applies to first.
-# Drop anything holding a shell expansion, which is the loop's own
-# run_setup "$name" line.
-names=$(
-    {
-        grep -h 'setup := list' "${RUN_SCRIPTS[@]}" | grep -o '"[^"]*"' | tr -d '"'
-        grep -ho 'append \$setup "[^"$]*"' "${RUN_SCRIPTS[@]}" |
-            sed 's/append \$setup "//; s/"$//'
-        grep -ho 'run_setup "[^"$]*"' "${RUN_SCRIPTS[@]}" | sed 's/run_setup "//; s/"$//'
-        grep -ho '\.sh_utils/setup\.d/[A-Za-z0-9_-]*\.sh' "${RUN_SCRIPTS[@]}" |
-            sed 's|.*/||; s|\.sh$||'
-    } | grep -v '\$' | sort -u
-)
 
-if [ -z "$names" ]; then
-    echo "error: no setup script names found in ${RUN_SCRIPTS[*]}" >&2
-    exit 1
-fi
+with tempfile.TemporaryDirectory(prefix="chezmoi-scripts-") as temp:
+    config = Path(temp) / "config.toml"
+    config.write_text('[data]\nmachine = "container"\ntheme = "rose-pine"\n')
+    for machine, entry in machines.items():
+        # The lifecycle scripts, as the shell will read them.
+        for source in sorted((root / ".chezmoiscripts").glob("*.tmpl")):
+            script = render(config, machine, source)
+            subprocess.run(["bash", "-n"], input=script, text=True, check=True)
+            subprocess.run(["shellcheck", "--severity=warning", "-"], input=script, text=True, check=True)
 
-while IFS= read -r name; do
-    [ -n "$name" ] || continue
-    # setup.d scripts are executable, so chezmoi stores them with that prefix.
-    script="$SETUP_DIR/executable_${name}.sh"
-    if [ -f "$script" ]; then
-        printf 'ok       %s\n' "$script"
-    else
-        printf 'MISSING  %s (referenced by a run_onchange script)\n' "$script" >&2
-        status=1
-    fi
-done <<<"$names"
+        # The download manifest names exactly what the bundles select.
+        selected = entry["bundles"]
+        wanted = {d for b in selected for d in bundles[b].get("downloads", [])}
+        manifest = json.loads(render(config, machine, root / "private_dot_config/dotfiles/downloads.json.tmpl"))
+        assert set(manifest["resources"]) == wanted, (machine, sorted(manifest["resources"]))
 
-if [ "$status" -ne 0 ]; then
-    echo >&2
-    echo "error: a run script references setup scripts that do not exist" >&2
-fi
+        # A launcher exists exactly where its download is selected.
+        for name, download in [("kitty", "kitty"), ("kitty-open", "kitty"), ("zotero", "zotero")]:
+            launcher = render(config, machine, root / f"dot_local/share/applications/dotfiles-{name}.desktop.tmpl")
+            assert bool(launcher.strip()) == (download in wanted), (machine, name)
 
-exit "$status"
+        # Unselected config is ignored, including externals fetched into it.
+        ignored = render(config, machine, root / ".chezmoiignore").splitlines()
+        for bundle, spec in bundles.items():
+            for path in spec.get("config", []):
+                assert (path in ignored and f"{path}/**" in ignored) == (bundle not in selected), (machine, path)
+        print(f"ok       {machine}: scripts, download manifest, launchers and ignores render")
+PYTHON

@@ -18,8 +18,9 @@ zsh is in the `core` bundle in `.chezmoidata/tools.toml`, so on a machine this
 repository knows about you do not need that command at all: `chezmoi apply`
 renders the pixi manifest and `pixi global sync` installs zsh along with
 everything else. The bootstrap order works out because chezmoi itself is
-installed standalone by `get.chezmoi.io`, and `setup.d/pixi.sh` installs pixi
-before the sync runs.
+installed standalone by `get.chezmoi.io`, and
+`.chezmoiscripts/run_onchange_after_05-pixi.sh.tmpl` installs pixi before the
+sync runs.
 
 Run the command by hand only to get a zsh before the first apply, on a machine
 with no root and no zsh at all.
@@ -106,8 +107,9 @@ zsh -o noglobalrcs -i -c 'echo "${_comps[pixi]:-missing}"'
 
 Typing `a` drew `aa`. The buffer was correct and commands ran correctly, so it
 was only the repaint that doubled, but there is no way to tell that while it is
-happening. Fixed by `run_onchange_after_07-terminfo.sh`, which is where the
-full reasoning lives. The short version, because the shape of it generalises:
+happening. Where kitty is installed, `dotfiles-fetch` copies kitty's compiled
+entry into `~/.terminfo` in both ncurses layouts; on a remote machine,
+`kitten ssh` writes the same two files. How it went wrong:
 
 kitty starts `/usr/bin/zsh`, the login shell from `/etc/passwd`. `exec zsh`
 picks the first zsh on `PATH` instead, which is `~/.pixi/envs/zsh/bin/zsh` from

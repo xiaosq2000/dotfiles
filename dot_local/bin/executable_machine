@@ -36,9 +36,6 @@ describe='{{- $m := index .machines .machine }}
   theme      {{ .theme }}
   bundles    {{ if $m.bundles }}{{ join " " $m.bundles }}{{ else }}(none; config files only){{ end }}
   sudo       {{ $m.sudo }}
-  desktop    {{ $m.desktop }}
-  typefaces  {{ $m.typefaces }}
-  rust       {{ $m.rust }}
 {{ if or $m.pixi.cacheDir $m.pixi.detachedEnvironments }}
   pixi cache        {{ if $m.pixi.cacheDir }}{{ $m.pixi.cacheDir }}{{ else }}(default){{ end }}
   pixi environments {{ if $m.pixi.detachedEnvironments }}{{ $m.pixi.detachedEnvironments }}{{ else }}(beside each workspace){{ end }}

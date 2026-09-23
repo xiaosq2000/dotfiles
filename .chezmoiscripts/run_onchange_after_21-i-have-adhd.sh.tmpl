@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Install the i-have-adhd skill for whichever agents this machine has.
+#
+# Next to 20-agent-skills, and like it not gated on the machine's bundles:
+# agent-plugins.sh checks for each agent itself and does nothing where neither
+# is installed. A login node without claude or codex pays two `command -v`
+# calls.
+#
+# Re-runs when agent-plugins.sh changes, so a new machine installs on its first
+# apply and an edit here reaches the others on `chezmoi update`. It never passes
+# --update, because that would make every apply refetch a marketplace nobody
+# asked it to; picking up an upstream change is
+# `~/.local/libexec/dotfiles/agent-plugins.sh --update`, by hand, on the machine
+# you are sitting at.
+# agent-plugins.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-plugins.sh" | sha256sum }}
+
+set -eu
+
+exec "$HOME/.local/libexec/dotfiles/agent-plugins.sh"

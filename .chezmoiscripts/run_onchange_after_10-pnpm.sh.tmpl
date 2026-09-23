@@ -1,27 +1,16 @@
 #!/usr/bin/env bash
 set -eu
 
-# Configure pnpm's global install location. That is all this does now.
-#
-# It used to be 123 lines: map `uname -m` to a pnpm release asset, download the
-# standalone binary into $PNPM_HOME/bin, then `pnpm env use --global lts` to
-# fetch a Node runtime. Both pnpm and nodejs are conda-forge packages, so they
-# are bundle entries in .chezmoidata/tools.toml and arrive with everything else.
-#
-# What is left cannot come from a package, because it is configuration of the
-# user's pnpm store rather than software: without it, `pnpm add --global` either
-# refuses to run for want of a global-bin-dir or installs into an isolated
-# layout that the CLIs it installs cannot cope with.
+# Global CLIs need a stable bin directory on PATH and a hoisted dependency
+# layout. These are pnpm store settings, separate from installing pnpm itself.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-UI_LIB="$SCRIPT_DIR/../lib/ui.sh"
-if [ -f "$UI_LIB" ]; then
-    # shellcheck disable=SC1090
-    source "$UI_LIB"
-else
-    echo "error: UI library not found at $UI_LIB"
-    exit 1
-fi
+{{ if not (has "dev-web" (index .machines .machine).bundles) -}}
+exit 0
+{{ end -}}
+# A fresh apply may have installed these without changing its inherited PATH.
+export PATH="$HOME/.pixi/bin:$PATH"
+# shellcheck source=/dev/null
+. "$HOME/.sh_utils/lib/ui.sh"
 
 header "pnpm global store"
 
