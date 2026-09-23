@@ -17,26 +17,33 @@ Machines still to do: workstation, imrl, sicc, vps. Drop a name once
 it is done, and delete this entry when none are left. The background is under
 "Keeping agents away from private keys" in [secrets.md](secrets.md).
 
-## Move the workstation and laptop onto dotfiles-fetch
+## Move the laptop onto dotfiles-fetch
 
-Both select `desktop`, `fonts` and `research`, so their next apply installs
-kitty, Zotero and the fonts under `~/.local/opt/dotfiles` and
+The laptop selects `desktop`, `fonts` and `research`, so its next apply
+installs kitty, Zotero and the fonts under `~/.local/opt/dotfiles` and
 `~/.local/share/fonts/dotfiles`, beside the copies installed earlier. The
-earlier ones are never touched automatically. On each machine, after that
-apply:
+earlier ones are never touched automatically.
 
-1. `dotfiles-fetch migrate`, then `dotfiles-fetch migrate --apply`, to delete
-   the font directories `typefaces.sh` wrote. Until then fontconfig sees every
-   family twice.
-2. Delete what `migrate` reports as left alone once the new copy works:
-   `~/.local/kitty.app` and its links in `~/.local/bin`, the old
-   `kitty.desktop`, `kitty-open.desktop` and `zotero.desktop`. On the
-   workstation, `zotero.desktop` points at a Zotero in `/opt/zotero` (9.0.6,
-   checked on 2026-09-23), which is older than the release dotfiles-fetch
-   installs. The newer one upgrades the library's database when it opens it,
-   and the older one may then refuse it, so keep only one.
-
-Machines still to do: workstation, laptop.
+1. Before the apply, run `chezmoi status`. A line starting with `MM` is a file
+   edited by hand that the apply would overwrite; the workstation had two.
+   Move each edit into the source first.
+2. After the apply, run `dotfiles-fetch migrate`, then
+   `dotfiles-fetch migrate --apply`, to delete the font directories
+   `typefaces.sh` wrote. Until then fontconfig sees every family twice.
+3. Point the dock and the default terminal at `dotfiles-kitty.desktop`: the
+   `org.gnome.shell favorite-apps` setting, `~/.config/xdg-terminals.list` and
+   `~/.config/ubuntu-xdg-terminals.list`. chezmoi manages none of them, and
+   on the workstation all three named the old `kitty.desktop`.
+4. Restart kitty from the new launcher, then delete what `migrate` reports as
+   left alone: `~/.local/kitty.app` and its links in `~/.local/bin`, the old
+   `kitty.desktop`, `kitty-open.desktop` and `zotero.desktop`, and a cargo
+   `tre` (`cargo uninstall tre-command`). Shells in a kitty started from the
+   old copy take `TERMINFO` and the shell integration from
+   `~/.local/kitty.app`, so restart first.
+5. If an older Zotero is installed elsewhere, as one was in `/opt/zotero` on
+   the workstation, keep only one. The release dotfiles-fetch installs upgrades
+   the library's database when it opens it, and an older Zotero may then
+   refuse it.
 
 ## Not bugs
 
