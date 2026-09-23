@@ -189,19 +189,20 @@ EOF
 
 		info "Converting $input to $output (${density} DPI, quality ${quality})..."
 
-		local format_opts=""
+		# Array, not string: zsh does not word-split unquoted variables
+		local -a format_opts=()
 		if [ "$format" = "png" ]; then
-			format_opts="-define png:compression-level=9"
+			format_opts=(-define png:compression-level=9)
 		fi
 
 		if [ "$concat" = true ]; then
 			convert -density "$density" "$input" \
 				-background white -alpha remove -alpha off \
-				-quality "$quality" $format_opts -append "$output"
+				-quality "$quality" "${format_opts[@]}" -append "$output"
 		else
 			convert -density "$density" "$input" \
 				-background white -alpha remove -alpha off \
-				-quality "$quality" $format_opts "$output"
+				-quality "$quality" "${format_opts[@]}" "$output"
 		fi
 
 		if [ $? -eq 0 ]; then
