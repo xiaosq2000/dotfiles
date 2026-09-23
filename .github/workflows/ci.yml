@@ -635,8 +635,19 @@ jobs:
           ln -sf /bin/cat /tmp/nopy/cat
           PATH=/tmp/nopy /bin/sh "$src/dot_claude/modify_settings.json" < "$HOME/.claude/settings.json" > /tmp/nopy-settings.json
           cmp "$HOME/.claude/settings.json" /tmp/nopy-settings.json
-          PATH=/tmp/nopy /bin/sh "$src/dot_codex/modify_private_config.toml" < "$HOME/.codex/config.toml" > /tmp/nopy-config.toml
+          PATH=/tmp/nopy PIXI_HOME=/tmp/nopy /bin/sh "$src/dot_codex/modify_private_config.toml" < "$HOME/.codex/config.toml" > /tmp/nopy-config.toml
           cmp "$HOME/.codex/config.toml" /tmp/nopy-config.toml
+
+          # A python3 that cannot read TOML, like Ubuntu 22.04's 3.10, gives way
+          # to the interpreter in a pixi global environment.
+          mkdir -p /tmp/oldpy /tmp/pixi-home/envs/tool/bin
+          ln -sf /bin/cat /tmp/oldpy/cat
+          printf '#!/bin/sh\nexit 1\n' > /tmp/oldpy/python3
+          chmod +x /tmp/oldpy/python3
+          ln -sf "$(command -v python3)" /tmp/pixi-home/envs/tool/bin/python3
+          printf 'model = "o3"\n' | PATH=/tmp/oldpy PIXI_HOME=/tmp/pixi-home /bin/sh "$src/dot_codex/modify_private_config.toml" > /tmp/oldpy-config.toml
+          grep -qx 'default_permissions = "key-guard"' /tmp/oldpy-config.toml
+          grep -qx 'model = "o3"' /tmp/oldpy-config.toml
 
       # A machine with no age identity has to apply everything that is not
       # encrypted, and it is not enough to check that the apply exits zero.

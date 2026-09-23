@@ -28,13 +28,33 @@
 # when the file uses sandbox_mode, which Codex says not to combine with
 # default_permissions.
 
-if ! command -v python3 >/dev/null 2>&1; then
-    echo "codex config: python3 not found, so ~/.codex/config.toml gets no key guard" >&2
+# The check needs tomllib, new in Python 3.11, or its backport tomli. imrl runs
+# Ubuntu 22.04, whose python3 is 3.10 with neither (checked on 2026-09-23), so
+# fall back to the interpreter inside a pixi global environment, which
+# conda-forge keeps current. The program below uses only the standard library,
+# so it does not matter which tool's environment lends the interpreter. On a
+# new machine the environments arrive after this runs, so the guard lands on
+# the second apply there.
+has_toml() {
+    "$1" -c 'import tomllib' </dev/null 2>/dev/null ||
+        "$1" -c 'import tomli' </dev/null 2>/dev/null
+}
+
+python=
+for candidate in python3 "${PIXI_HOME:-$HOME/.pixi}"/envs/*/bin/python3; do
+    if command -v "$candidate" >/dev/null 2>&1 && has_toml "$candidate"; then
+        python=$candidate
+        break
+    fi
+done
+
+if [ -z "$python" ]; then
+    echo "codex config: no python3 with tomllib or tomli, so ~/.codex/config.toml gets no key guard" >&2
     exec cat
 fi
 
 # The program comes in on fd 3, because stdin carries the config file.
-exec python3 /dev/fd/3 3<<'PY'
+exec "$python" /dev/fd/3 3<<'PY'
 import copy
 import json
 import re
