@@ -17,38 +17,25 @@ Machines still to do: workstation, imrl, sicc, vps. Drop a name once
 it is done, and delete this entry when none are left. The background is under
 "Keeping agents away from private keys" in [secrets.md](secrets.md).
 
-## Move the laptop onto dotfiles-fetch
+## Finish the laptop's move to dotfiles-fetch
 
-The laptop selects `desktop`, `fonts` and `research`, so its next apply
-installs kitty, Zotero and the fonts under `~/.local/opt/dotfiles` and
-`~/.local/share/fonts/dotfiles`, beside the copies installed earlier. The
-earlier ones are never touched automatically.
+The laptop runs the dotfiles-fetch copies of kitty, Zotero, `tre` and the
+fonts, and its dock, default terminal and `zotero://` handler name the
+`dotfiles-*.desktop` launchers. Three things are left:
 
-1. Before the apply, run `chezmoi status`. A line starting with `MM` is a file
-   edited by hand that the apply would overwrite; the workstation had two.
-   Move each edit into the source first.
-2. After the apply, run `dotfiles-fetch migrate`, then
-   `dotfiles-fetch migrate --apply`, to delete the font directories
-   `typefaces.sh` wrote. Until then fontconfig sees every family twice.
-3. Point the dock and the default terminal at `dotfiles-kitty.desktop`: the
-   `org.gnome.shell favorite-apps` setting, `~/.config/xdg-terminals.list` and
-   `~/.config/ubuntu-xdg-terminals.list`. chezmoi manages none of them, and
-   on the workstation all three named the old `kitty.desktop`.
-4. Restart kitty from the new launcher, then delete what `migrate` reports as
-   left alone: `~/.local/kitty.app` and its links in `~/.local/bin`, the old
-   `kitty.desktop`, `kitty-open.desktop` and `zotero.desktop`, and a cargo
-   `tre` (`cargo uninstall tre-command`). Shells in a kitty started from the
-   old copy take `TERMINFO` and the shell integration from
-   `~/.local/kitty.app`, so restart first.
-5. If an older Zotero is installed elsewhere, as one was in `/opt/zotero` on
-   the workstation, keep only one. The release dotfiles-fetch installs upgrades
-   the library's database when it opens it, and an older Zotero may then
-   refuse it.
-6. Check `git config --global --get-all credential.https://github.com.helper`.
-   If it still names `/usr/bin/gh`, run `gh auth setup-git` once the `gh` from
-   the `github` bundle is logged in. chezmoi does not manage `~/.gitconfig`, and
-   on the workstation, once `/usr/bin/gh` was gone, every HTTPS push and fetch
-   failed with "/usr/bin/gh: not found".
+1. Quit every window of the old kitty, start kitty from the dock, then delete
+   `~/.local/kitty.app`, its links `~/.local/bin/kitty` and
+   `~/.local/bin/kitten`, and `kitty.desktop` and `kitty-open.desktop` in
+   `~/.local/share/applications`. Run
+   `update-desktop-database ~/.local/share/applications` afterwards. Shells in
+   a kitty started from the old copy take `TERMINFO` and the shell integration
+   from `~/.local/kitty.app`, so restart before deleting it.
+2. Run `sudo rmdir /opt/zotero`. Zotero 9.0.6 was there; its files are gone,
+   but the empty directory needs root to remove.
+3. Once Zotero 10.0.3 has opened the library and works, delete
+   `~/Zotero/zotero.sqlite.before-zotero-10`. It is the database as 9.0.6 left
+   it, kept because opening the library upgrades the database and 9.0.6 may
+   not read it afterwards.
 
 ## Not bugs
 
