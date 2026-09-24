@@ -5,80 +5,53 @@ description: Facts about the user's own machines (workstation, laptop, imrl, sic
 
 # Machines
 
-The pages in `references/` describe each machine the user works on. They hold
-addresses, account names and network layout, so the dotfiles repository keeps
-them age-encrypted, and `chezmoi apply` decrypts them here. They exist only on
-machines that hold the age key. The vps never does.
-
-## Before you start
+`references/` has one page per machine plus `network.md`. The pages hold
+addresses and account names, so the dotfiles repository keeps them
+age-encrypted. They exist only on machines with the age key, never on the vps.
 
 1. Run `machine` to find out which machine you are on. Hostnames do not settle
    it, because sicc's login nodes answer as `login01`, `login02` and so on.
-2. For anything that crosses machines, read `references/network.md` first. It
-   covers who reaches whom, the reverse tunnel into the workstation, and how to
-   relay transfers.
+2. For anything that crosses machines, read `references/network.md`.
 3. Read the page for each machine involved.
 
 | Page | Covers |
 | --- | --- |
-| `references/network.md` | SSH aliases, reachability, the reverse tunnel, trusted keys, ssh from an agent, the metered proxy, moving data |
-| `references/workstation.md` | the user's desktop and network hub; storage, services, out-of-tree drivers |
-| `references/laptop.md` | the personal laptop, used off campus over the university VPN |
-| `references/imrl.md` | the shared lab GPU server; storage, GPU etiquette and health, Gitea |
-| `references/sicc.md` | the university HPC login node; shell, Slurm, proxy variables, storage and quota |
-| `references/vps.md` | the public VPS for network plumbing; what runs there, why nothing sensitive goes there, and why to leave it alone |
+| `network.md` | SSH aliases, reachability, the reverse tunnel, trusted keys, ssh from an agent, the proxy, moving data |
+| `workstation.md` | the desktop and network hub; storage, services, out-of-tree drivers |
+| `laptop.md` | the personal laptop, used off campus |
+| `imrl.md` | the shared lab GPU server; storage, GPU sharing and health, Gitea |
+| `sicc.md` | the university HPC login node; shell, Slurm, storage and quota |
+| `vps.md` | the public server that runs the proxy; leave it alone |
 
-## Running ssh
+## Rules on every machine
 
-On the workstation and the laptop, inside kitty, `ssh` is a shell function that
-falls back to plain ssh when there is no terminal, so it works from an agent's
-shell. If it fails with "The SSH kitten is meant for interactive use only", the
-shell predates that fallback; `command ssh` skips the function and works. On
-imrl and sicc, a command passed over ssh runs without `~/.pixi/bin` on `PATH`,
-so export it in the command. `network.md` has both in full.
+- Run downloads without the proxy. Every machine reaches AI services such as
+  Claude and ChatGPT through a proxy whose traffic is metered. Interactive
+  shells start with the proxy variables set, and git has a global proxy.
+  `network.md` shows how to clear both. If a download fails without the proxy,
+  ask the user instead of retrying through it.
+- If `ssh` fails with "The SSH kitten is meant for interactive use only", use
+  `command ssh`.
+- On imrl and sicc, a command passed over ssh runs without `~/.pixi/bin` on
+  `PATH`, so export it in the command.
 
-## Downloads go around the proxy
+## Trusting and editing a page
 
-Every machine reaches AI services such as Claude and ChatGPT through a proxy
-whose traffic is metered, and interactive shells start with the proxy
-variables set. Git also has a global proxy setting. Run dataset downloads, and
-anything else that moves much data, with the proxy cleared. imrl's own network
-is not metered, whatever older notes say. If a download fails without the
-proxy, ask the user rather than retrying through it. `network.md` has the
-commands.
+Facts carry the date they were checked. When a check is cheap, re-check an old
+fact before relying on it, and tell the user which facts you checked. Facts
+about one project belong in that project; for embodied-ai, see its
+`docs/shared/reference/compute-resources/`.
 
-## How far to trust a page
-
-Facts carry the date they were checked. Machines change, so re-check an old
-fact before relying on it when a check is cheap, and say which facts you
-checked and which you took from the page.
-
-These pages hold facts about the machines. Facts about one project, such as its
-datasets, environments and job records, belong in that project's own
-documentation. For embodied-ai that is its
-`docs/shared/reference/compute-resources/` directory.
-
-## Correcting or adding a page
-
-Edit the decrypted page in place, then hand it back to chezmoi, which encrypts
-it again. Use the path under `~/.agents/skills/machines`, not the links under
-`~/.claude/skills` or `~/.codex/skills`, because chezmoi only knows the first.
+To correct a page, edit the decrypted copy under `~/.agents/skills/machines`, not
+the links under `~/.claude` or `~/.codex`. Then re-encrypt it and commit in the
+source repository, following its `AGENTS.md`:
 
 ```sh
 chezmoi re-add ~/.agents/skills/machines/references/imrl.md
-git -C "$(chezmoi source-path)" diff     # plaintext diff where the key is
+chezmoi add --encrypt ~/.agents/skills/machines/references/<new>.md
 ```
 
-Then commit in the source repository, following its `AGENTS.md`. Other machines
-pick the change up on their next `chezmoi update`.
+The dotfiles repository is public. Never write a page into the source tree, and
+never `chezmoi add` one without `--encrypt`.
 
-A new page needs `--encrypt`:
-
-```sh
-chezmoi add --encrypt ~/.agents/skills/machines/references/<name>.md
-```
-
-The dotfiles repository is public. Never write a page into the source tree
-yourself, and never `chezmoi add` one without `--encrypt`. Either would publish
-the plaintext on the next push. A pre-commit hook refuses both, but only in a
-clone where the hooks are installed.
+Keep pages short. State the current fact and leave history to git.
