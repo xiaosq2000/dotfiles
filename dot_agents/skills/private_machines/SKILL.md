@@ -21,7 +21,7 @@ machines that hold the age key. The vps never does.
 
 | Page | Covers |
 | --- | --- |
-| `references/network.md` | SSH aliases, reachability, the reverse tunnel, trusted keys, ssh from an agent, moving data |
+| `references/network.md` | SSH aliases, reachability, the reverse tunnel, trusted keys, ssh from an agent, the metered proxy, moving data |
 | `references/workstation.md` | the user's desktop and network hub; storage, services, out-of-tree drivers |
 | `references/laptop.md` | the personal laptop, used off campus over the university VPN |
 | `references/imrl.md` | the shared lab GPU server; storage, GPU etiquette and health, Gitea |
@@ -36,6 +36,16 @@ shell. If it fails with "The SSH kitten is meant for interactive use only", the
 shell predates that fallback; `command ssh` skips the function and works. On
 imrl and sicc, a command passed over ssh runs without `~/.pixi/bin` on `PATH`,
 so export it in the command. `network.md` has both in full.
+
+## Downloads go around the proxy
+
+Every machine reaches AI services such as Claude and ChatGPT through a proxy
+whose traffic is metered, and interactive shells start with the proxy
+variables set. Git also has a global proxy setting. Run dataset downloads, and
+anything else that moves much data, with the proxy cleared. imrl's own network
+is not metered, whatever older notes say. If a download fails without the
+proxy, ask the user rather than retrying through it. `network.md` has the
+commands.
 
 ## How far to trust a page
 
