@@ -18,7 +18,7 @@ age-encrypted. They exist only on machines with the age key, never on the vps.
 | --- | --- |
 | `network.md` | SSH aliases, reachability, the reverse tunnel, trusted keys, ssh from an agent, the proxy, moving data |
 | `workstation.md` | the desktop and network hub; storage, services, out-of-tree drivers |
-| `laptop.md` | the personal laptop, used off campus |
+| `laptop.md` | the personal laptop, used off campus; VPN, power toggles |
 | `imrl.md` | the shared lab GPU server; storage, GPU sharing and health, Gitea |
 | `sicc.md` | the university HPC login node; shell, Slurm, storage and quota |
 | `vps.md` | the public server that runs the proxy; leave it alone |
@@ -32,8 +32,9 @@ age-encrypted. They exist only on machines with the age key, never on the vps.
   ask the user instead of retrying through it.
 - If `ssh` fails with "The SSH kitten is meant for interactive use only", use
   `command ssh`.
-- On imrl and sicc, a command passed over ssh runs without `~/.pixi/bin` on
-  `PATH`, so export it in the command.
+- On imrl and sicc, a command passed over ssh gets only the system `PATH`, so
+  export what it needs in the command: `~/.pixi/bin` for pixi and chezmoi,
+  `~/.local/bin` for claude, `~/.local/share/pnpm/bin` for codex.
 
 ## Trusting and editing a page
 
