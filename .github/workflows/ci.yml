@@ -684,3 +684,12 @@ jobs:
           test ! -e "$HOME/.agents/skills/machines"
           test -f "$HOME/.agents/skills/plain-writing/SKILL.md"
           test -f "$HOME/.agents/skills/translate-zh/SKILL.md"
+
+          # One file of instructions for every agent, and a link to it where
+          # each agent looks, rather than three copies that drift apart.
+          global="$(readlink -f "$HOME/.agents/AGENTS.md")"
+          test -f "$global"
+          for link in .claude/CLAUDE.md .codex/AGENTS.md .config/opencode/AGENTS.md; do
+            test -L "$HOME/$link"
+            test "$(readlink -f "$HOME/$link")" = "$global"
+          done

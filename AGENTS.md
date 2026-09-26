@@ -159,6 +159,19 @@ Documents under `docs/` say what to do next. History belongs in git: keep a past
 event only as a caveat that changes what someone would do, and delete a todo
 entry once it is done.
 
+## Instructions for every agent, in every project
+
+[dot_agents/AGENTS.md](dot_agents/AGENTS.md) holds the user's preferences that
+apply in every project. It deploys to `~/.agents/AGENTS.md`, and `symlink_`
+entries link it as `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` and
+`~/.config/opencode/AGENTS.md`, so each agent loads it at the start of every
+session. This file adds what is specific to this repository.
+
+A preference that holds everywhere goes there. A rule about this repository
+goes here, and a fact about a machine goes in the `machines` skill. None of
+these belongs in one agent's private memory, because the next agent to work
+here may be another agent, on another machine.
+
 ## Where things are written down
 
 | Topic | Place |
@@ -167,5 +180,6 @@ entry once it is done.
 | Encryption design and key handling | [docs/secrets.md](docs/secrets.md) |
 | Open work | [docs/todo.md](docs/todo.md) |
 | Shell setup constraints | [dot_sh_utils/CAVEATS.md](dot_sh_utils/CAVEATS.md) |
+| Preferences for every project | [dot_agents/AGENTS.md](dot_agents/AGENTS.md), deployed as `~/.agents/AGENTS.md` |
 | Shared agent skills | [dot_agents/skills/README.md](dot_agents/skills/README.md) |
 | Facts about each machine | the `machines` skill, at `~/.agents/skills/machines` where the key is |
