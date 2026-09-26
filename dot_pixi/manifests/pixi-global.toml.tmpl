@@ -18,11 +18,17 @@
 version = 1
 {{ range $pkg := $pkgs }}
 {{- $exposed := list $pkg -}}
+{{- $source := "\"*\"" -}}
 {{- if hasKey $.packages $pkg -}}
-{{-   $exposed = (index $.packages $pkg).exposed -}}
+{{-   $spec := index $.packages $pkg -}}
+{{-   $exposed = $spec.exposed -}}
+{{- /* A package conda-forge lacks is built from its git repository. */ -}}
+{{-   if hasKey $spec "git" -}}
+{{-     $source = printf "{ git = %s }" ($spec.git | quote) -}}
+{{-   end -}}
 {{- end }}
 [envs.{{ $pkg }}]
 channels = ["conda-forge"]
-dependencies = { {{ $pkg }} = "*" }
+dependencies = { {{ $pkg }} = {{ $source }} }
 exposed = { {{ range $i, $bin := $exposed }}{{ if $i }}, {{ end }}{{ $bin }} = {{ $bin | quote }}{{ end }} }
 {{ end -}}

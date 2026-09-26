@@ -172,6 +172,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | fourteen more document, design, CJK and emoji families |
 | `research` | Zotero |
+| `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
 
 To add software, add it to a bundle and run `chezmoi apply`.
 

@@ -155,13 +155,19 @@ description = "Zotero"
 packages = []
 downloads = ["zotero"]
 
+[bundles.vpn]
+description = "um-vpn, the University of Macau VPN client, for work off campus"
+packages = ["um-vpn"]
+
 ################################################################################
 # Exposed binaries
 #
 # A package with no entry here exposes exactly one binary, named after the
 # package. Only the exceptions are listed, which is most of the interesting
 # ones. Every list below was read off an installed environment rather than
-# guessed, because an inaccurate name fails the sync.
+# guessed, because an inaccurate name fails the sync. An entry can also name a
+# `git` repository, which pixi builds the package from instead of taking it
+# from conda-forge.
 ################################################################################
 
 [packages.ripgrep]
@@ -231,6 +237,12 @@ exposed = ["rbw", "rbw-agent"]
 
 [packages.libsecret]
 exposed = ["secret-tool"]
+
+[packages.um-vpn]
+# conda-forge does not package um-vpn, so pixi builds it from its repository.
+# The environment brings its own secret-tool for the stored UMPASS sign-in.
+git = "https://github.com/xiaosq2000/um-vpn"
+exposed = ["um-vpn"]
 
 [packages.fastfetch]
 exposed = ["fastfetch", "flashfetch"]

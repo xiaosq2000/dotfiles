@@ -279,6 +279,11 @@ jobs:
             tee /tmp/core-packages
           grep -q nvim /tmp/core-packages
           grep -q chezmoi /tmp/core-packages
+          # A package with a `git` repository in tools.toml renders as a source
+          # that pixi builds, not as a conda-forge name.
+          chezmoi execute-template --override-data '{"machine":"laptop"}' \
+            --file "$HOME/.local/share/chezmoi/dot_pixi/manifests/pixi-global.toml.tmpl" |
+            grep -qx 'dependencies = { um-vpn = { git = "https://github.com/xiaosq2000/um-vpn" } }'
 
       # The container machine selects no bundles, so sheldon is not installed
       # and its plugins are not cloned. What can be checked is that the config
