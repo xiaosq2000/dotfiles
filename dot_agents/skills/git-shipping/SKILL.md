@@ -30,8 +30,9 @@ the message.
 | Remove | `git worktree remove .worktrees/<topic>`, then `git branch -d <type>/<topic>` |
 
 - Check that `.gitignore` lists `.worktrees/` before creating one.
-- Before removing one, check for uncommitted and untracked files. Never force
-  the removal.
+- Before removing one, check for uncommitted and untracked files. Force the
+  removal only when git refuses because a submodule was initialized and
+  `git status` in the worktree is clean.
 - After a squash merge, `git branch -d` refuses. Check that the PR merged and
   the branch has no later commits, then use `git branch -D`.
 
