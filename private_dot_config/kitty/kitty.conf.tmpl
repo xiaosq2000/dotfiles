@@ -307,10 +307,10 @@ cursor_blink_interval -1
 #: Stop blinking cursor after the specified number of seconds of
 #: keyboard inactivity. Set to zero to never stop blinking.
 
-# These bundled shaders require kitty 0.49.0 or newer (checked on 2026-09-21).
+# This bundled shader requires kitty 0.49.0 or newer (checked on 2026-09-21).
 # https://sw.kovidgoyal.net/kitty/custom-shaders/
-# Blaze needs cursor trails enabled; focus highlighting marks navigation changes.
-custom_shaders cursor-trail-blaze focus-highlight-only
+# Blaze needs cursor trails enabled.
+custom_shaders cursor-trail-blaze
 cursor_trail 1
 
 #: Set this to a value larger than zero to enable a "cursor trail"
@@ -864,7 +864,10 @@ cursor_trail 1
 #: suffix of "c" on the width/height values to have them interpreted
 #: as number of cells instead of pixels.
 
-# enabled_layouts *
+# Splits keeps each window where it was opened, so kitty_mod+l only
+# toggles between the splits and a zoomed stack. kitty remembers the
+# split tree of each tab across that toggle (checked on 2026-09-27).
+enabled_layouts splits,stack
 
 #: The enabled window layouts. A comma separated list of layout names.
 #: The special value all means all layouts. The first listed layout
@@ -2225,7 +2228,12 @@ mouse_map ctrl+shift+right press ungrabbed combine : mouse_select_command_output
 
 #: Open a new window with the same working directory as current window.
 
-map ctrl+a new_window_with_cwd
+# vsplit places the new window beside the current one; hsplit would put
+# it below. The location only takes effect in the splits layout.
+map ctrl+a launch --location=vsplit --cwd=current
+map ctrl+shift+d launch --location=hsplit --cwd=current
+# rotate switches the current split between side by side and stacked.
+map ctrl+shift+y layout_action rotate
 
 #: First window
 

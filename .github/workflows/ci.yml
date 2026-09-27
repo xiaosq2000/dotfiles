@@ -262,15 +262,15 @@ jobs:
           grep -q "^exe_search_path $HOME/.local/bin$" "$conf"
           grep -q '^font_family      family="Maple Mono NF CN"$' "$conf"
           grep -qx 'cursor_trail 1' "$conf"
-          grep -qx 'custom_shaders cursor-trail-blaze focus-highlight-only' "$conf"
+          grep -qx 'custom_shaders cursor-trail-blaze' "$conf"
+          grep -qx 'enabled_layouts splits,stack' "$conf"
+          grep -qx 'map ctrl+a launch --location=vsplit --cwd=current' "$conf"
+          grep -qx 'map ctrl+shift+d launch --location=hsplit --cwd=current' "$conf"
+          grep -qx 'map ctrl+shift+y layout_action rotate' "$conf"
           grep -q '^hostname sicc$' "$src/private_dot_config/kitty/ssh.conf"
           grep -q '^login_shell \$HOME/.pixi/bin/zsh$' "$src/private_dot_config/kitty/ssh.conf"
           grep -q '^env SHELL=\$HOME/.pixi/bin/zsh$' "$src/private_dot_config/kitty/ssh.conf"
           ! grep -q '/home/' "$src/private_dot_config/kitty/ssh.conf" || exit 1
-          pipeline="$src/private_dot_config/kitty/shaders/focus-highlight-only.pipeline"
-          grep -qx '    var float INACTIVE_DIM = 1.0' "$pipeline"
-          grep -qx '    animation_start window-focus-in' "$pipeline"
-          grep -qx '    animation_stop 750' "$pipeline"
 
       # The manifest is rendered from the bundles a machine selects, so the
       # thing worth testing is that the selection reaches the file. The
