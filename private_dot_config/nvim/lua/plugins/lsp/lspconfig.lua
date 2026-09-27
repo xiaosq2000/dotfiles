@@ -1,57 +1,19 @@
--- Servers configured under after/lsp/<name>.lua and enabled here. Executable
--- and Mason package names are explicit because neither necessarily matches the
--- nvim-lspconfig config name.
+-- Servers configured under after/lsp/<name>.lua and enabled here, each with
+-- the Mason package that installs it on a machine without the lsp bundle.
+-- `:checkhealth vim.lsp` lists them and flags any whose binary is missing.
 local servers = {
-	{ name = "ruff", executables = { "ruff" }, mason = "ruff" },
-	{ name = "ty", executables = { "ty" }, mason = "ty" },
-	{
-		name = "lua_ls",
-		executables = { "lua-language-server" },
-		mason = "lua-language-server",
-	},
-	{
-		name = "bashls",
-		executables = { "bash-language-server" },
-		mason = "bash-language-server",
-	},
-	{ name = "marksman", executables = { "marksman" }, mason = "marksman" },
-	-- "texlab",
-	{
-		name = "cmake",
-		executables = { "cmake-language-server" },
-		mason = "cmake-language-server",
-	},
-	{
-		name = "dockerls",
-		executables = { "docker-langserver" },
-		mason = "dockerfile-language-server",
-	},
-	{
-		name = "docker_compose_language_service",
-		executables = { "docker-compose-langserver" },
-		mason = "docker-compose-language-service",
-	},
-	{
-		name = "yamlls",
-		executables = { "yaml-language-server" },
-		mason = "yaml-language-server",
-	},
-	{
-		name = "jsonls",
-		executables = { "vscode-json-language-server" },
-		mason = "json-lsp",
-	},
-	{ name = "taplo", executables = { "taplo" }, mason = "taplo" },
+	ruff = "ruff",
+	ty = "ty",
+	lua_ls = "lua-language-server",
+	bashls = "bash-language-server",
+	marksman = "marksman",
+	-- texlab = "texlab",
+	cmake = "cmake-language-server",
+	dockerls = "dockerfile-language-server",
+	yamlls = "yaml-language-server",
+	jsonls = "json-lsp",
+	taplo = "taplo",
 }
-
-local function executable_path(server)
-	for _, executable in ipairs(server.executables) do
-		local path = vim.fn.exepath(executable)
-		if path ~= "" then
-			return path
-		end
-	end
-end
 
 -- `cond`, not `enabled`: these are installed and managed as usual, just not
 -- loaded when nvim is standing in as kitty's scrollback pager.
@@ -71,38 +33,9 @@ return {
 		cond = cond,
 		lazy = false,
 		dependencies = { "mason-org/mason.nvim" },
-		keys = {
-			{
-				"<leader>qd",
-				vim.diagnostic.setloclist,
-				desc = "Diagnostics to location list",
-			},
-			{ "<leader>qo", "<cmd>copen<cr>", desc = "Open quickfix window" },
-			{ "<leader>qc", "<cmd>cclose<cr>", desc = "Close quickfix window" },
-		},
 		config = function()
-			vim.api.nvim_create_user_command("LspEnabled", function()
-				local lines = {}
-				for _, server in ipairs(servers) do
-					local config = vim.lsp.config[server.name]
-					local fts = config and config.filetypes or {}
-					local executable = executable_path(server)
-					local status = executable
-						or ("missing; :MasonInstall %s"):format(server.mason)
-					lines[#lines + 1] = ("%s [%s]\n  filetypes: %s"):format(
-						server.name,
-						status,
-						table.concat(fts, ", ")
-					)
-				end
-				vim.notify(
-					table.concat(lines, "\n"),
-					vim.log.levels.INFO,
-					{ title = "Enabled LSPs" }
-				)
-			end, { desc = "List explicitly enabled LSP servers" })
-
-			-- Hint once per session when a configured server's binary is missing.
+			-- vim.lsp.enable() skips a server whose binary is missing without a
+			-- word, so say so once per session, when a file that wants it opens.
 			local hinted = {}
 			vim.api.nvim_create_autocmd("FileType", {
 				group = vim.api.nvim_create_augroup(
@@ -111,21 +44,22 @@ return {
 				),
 				callback = function(args)
 					local ft = vim.bo[args.buf].filetype
-					for _, server in ipairs(servers) do
-						local config = not hinted[server.name]
-								and vim.lsp.config[server.name]
-							or nil
-						if config and vim.list_contains(config.filetypes or {}, ft) then
-							if executable_path(server) == nil then
-								hinted[server.name] = true
-								vim.notify(
-									("%s not found on PATH — install it externally or run :MasonInstall %s"):format(
-										server.executables[1],
-										server.mason
-									),
-									vim.log.levels.WARN
-								)
-							end
+					for name, mason in pairs(servers) do
+						local config = not hinted[name] and vim.lsp.config[name]
+						local bin = config and type(config.cmd) == "table" and config.cmd[1]
+						if
+							bin
+							and vim.list_contains(config.filetypes or {}, ft)
+							and vim.fn.executable(bin) == 0
+						then
+							hinted[name] = true
+							vim.notify(
+								("%s not found on PATH — install it externally or run :MasonInstall %s"):format(
+									bin,
+									mason
+								),
+								vim.log.levels.WARN
+							)
 						end
 					end
 				end,
@@ -184,7 +118,7 @@ return {
 					map("grr", function()
 						require("fzf-lua").lsp_references()
 					end, "LSP references")
-					map("gry", function()
+					map("grt", function()
 						require("fzf-lua").lsp_typedefs()
 					end, "LSP type definitions")
 					map("gri", function()
@@ -235,9 +169,7 @@ return {
 				desc = "LSP: buffer-local keymaps",
 			})
 
-			for _, server in ipairs(servers) do
-				vim.lsp.enable(server.name)
-			end
+			vim.lsp.enable(vim.tbl_keys(servers))
 		end,
 	},
 }

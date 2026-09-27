@@ -2,25 +2,8 @@ return {
 	"nvim-lualine/lualine.nvim",
 	dependencies = { "nvim-tree/nvim-web-devicons" },
 	config = function()
-		-- The colours come from the active colorscheme's highlight groups.
-		--
-		-- They used to come from `require("rose-pine.palette")`, which had three
-		-- consequences. The statusline stayed Rosé Pine whichever theme was
-		-- selected, so `theme catppuccin-mocha` recoloured the editor and left
-		-- the bar at the bottom of it alone. It pinned rose-pine/neovim as a
-		-- dependency of lualine, so the plugin could not be uninstalled even
-		-- when nothing was using it as a colorscheme. And it named that
-		-- dependency without a `name`, while plugins/ui/colorscheme.lua names
-		-- the same repository `rose-pine` — lazy.nvim keys plugins by name, so
-		-- it treated them as two plugins and kept a second clone of the
-		-- repository in lazy/neovim next to lazy/rose-pine.
-		--
-		-- These groups are ones every colorscheme sets, so this follows any
-		-- scheme including one added after this was written. Under Rosé Pine
-		-- they resolve to the exact palette entries this file used to name by
-		-- hand: Normal is base and text, CursorLine is overlay, Comment is
-		-- subtle, Function is rose, Keyword is pine, DiagnosticError is love,
-		-- DiagnosticWarn is gold and DiagnosticHint is iris.
+		-- The colours come from highlight groups every colorscheme sets, so the
+		-- bar follows whichever theme is active instead of naming one palette.
 		local function hl(group, attr, fallback)
 			local h = vim.api.nvim_get_hl(0, { name = group, link = false })
 			return h[attr] and string.format("#%06x", h[attr]) or fallback
@@ -48,48 +31,20 @@ return {
 
 		local function build()
 			local colors = palette()
-			local theme = {
-				normal = {
-					a = { fg = colors.normal, bg = colors.overlay, gui = "bold" },
+
+			-- Modes differ only in the colour of section a.
+			local theme = {}
+			local modes = { "normal", "insert", "visual", "command", "replace" }
+			for _, mode in ipairs(modes) do
+				theme[mode] = {
+					a = { fg = colors[mode], bg = colors.overlay, gui = "bold" },
 					b = { fg = colors.subtle, bg = colors.overlay, gui = "bold" },
-					c = { fg = colors.text, bg = colors.overlay },
-					x = { fg = colors.text, bg = colors.overlay },
-					y = { fg = colors.text, bg = colors.overlay },
-					z = { fg = colors.text, bg = colors.overlay },
-				},
-				insert = {
-					a = { fg = colors.insert, bg = colors.overlay, gui = "bold" },
-					b = { fg = colors.subtle, bg = colors.overlay, gui = "bold" },
-					c = { fg = colors.text, bg = colors.overlay },
-					x = { fg = colors.text, bg = colors.overlay },
-					y = { fg = colors.text, bg = colors.overlay },
-					z = { fg = colors.text, bg = colors.overlay },
-				},
-				visual = {
-					a = { fg = colors.visual, bg = colors.overlay, gui = "bold" },
-					b = { fg = colors.subtle, bg = colors.overlay, gui = "bold" },
-					c = { fg = colors.text, bg = colors.overlay },
-					x = { fg = colors.text, bg = colors.overlay },
-					y = { fg = colors.text, bg = colors.overlay },
-					z = { fg = colors.text, bg = colors.overlay },
-				},
-				command = {
-					a = { fg = colors.command, bg = colors.overlay, gui = "bold" },
-					b = { fg = colors.subtle, bg = colors.overlay, gui = "bold" },
-					c = { fg = colors.text, bg = colors.overlay },
-					x = { fg = colors.text, bg = colors.overlay },
-					y = { fg = colors.text, bg = colors.overlay },
-					z = { fg = colors.text, bg = colors.overlay },
-				},
-				replace = {
-					a = { fg = colors.replace, bg = colors.overlay, gui = "bold" },
-					b = { fg = colors.subtle, bg = colors.overlay, gui = "bold" },
-					c = { fg = colors.text, bg = colors.overlay },
-					x = { fg = colors.text, bg = colors.overlay },
-					y = { fg = colors.text, bg = colors.overlay },
-					z = { fg = colors.text, bg = colors.overlay },
-				},
-			}
+				}
+				for _, section in ipairs({ "c", "x", "y", "z" }) do
+					theme[mode][section] = { fg = colors.text, bg = colors.overlay }
+				end
+			end
+
 			local empty = require("lualine.component"):extend()
 			function empty:draw(default_highlight)
 				self.status = ""
@@ -121,23 +76,6 @@ return {
 				return sections
 			end
 
-			local function search_result()
-				if vim.v.hlsearch == 0 then
-					return ""
-				end
-				local last_search = vim.fn.getreg("/")
-				if not last_search or last_search == "" then
-					return ""
-				end
-				local searchcount = vim.fn.searchcount({ maxcount = 9999 })
-				return last_search
-					.. "("
-					.. searchcount.current
-					.. "/"
-					.. searchcount.total
-					.. ")"
-			end
-
 			local function modified()
 				if vim.bo.modified then
 					return "+"
@@ -145,29 +83,6 @@ return {
 					return "-"
 				end
 				return ""
-			end
-
-			local function macro_rec_status()
-				local reg = vim.fn.reg_recording()
-				if reg ~= "" then
-					return "Recording @" .. reg
-				else
-					local mode = vim.api.nvim_get_mode().mode
-					local mode_map = {
-						n = "NORMAL",
-						i = "INSERT",
-						v = "VISUAL",
-						V = "V-LINE",
-						["\22"] = "V-BLOCK",
-						c = "COMMAND",
-						R = "REPLACE",
-						s = "SELECT",
-						S = "S-LINE",
-						["\19"] = "S-BLOCK",
-						t = "TERMINAL",
-					}
-					return mode_map[mode] or mode:upper()
-				end
 			end
 
 			require("lualine").setup({
@@ -178,7 +93,15 @@ return {
 				},
 				sections = process_sections({
 					lualine_a = {
-						{ macro_rec_status },
+						{
+							"mode",
+							-- 'cmdheight' is 0, so this is the only place a
+							-- running macro shows.
+							fmt = function(mode)
+								local reg = vim.fn.reg_recording()
+								return reg ~= "" and "Recording @" .. reg or mode
+							end,
+						},
 						{ modified, color = { fg = colors.normal, bg = colors.overlay } },
 					},
 					lualine_b = {
@@ -200,8 +123,6 @@ return {
 						},
 					},
 					lualine_c = {
-						-- 'branch',
-						-- 'diff',
 						{
 							"%w",
 							cond = function()
@@ -223,7 +144,17 @@ return {
 					},
 					lualine_x = { "%p%%(%l/%L), %c" },
 					lualine_y = { { "filename", file_status = false, path = 1 } },
-					lualine_z = { search_result, "filetype" },
+					lualine_z = {
+						{
+							"searchcount",
+							maxcount = 9999,
+							-- Prefix the pattern: `foo[2/7]`.
+							fmt = function(count)
+								return count ~= "" and vim.fn.getreg("/") .. count or ""
+							end,
+						},
+						"filetype",
+					},
 				}),
 				inactive_sections = {
 					lualine_c = { "%f %y %m" },
@@ -234,11 +165,9 @@ return {
 
 		vim.schedule(build)
 
-		-- Reading the groups only once would leave the bar on the colours of
-		-- whichever scheme happened to load first, which is the bug this file
-		-- just stopped having. `theme` needs nvim restarted either way, but
-		-- `:colorscheme` typed at runtime is followed now.
+		-- Rebuild on :colorscheme so the bar follows a scheme switched at runtime.
 		vim.api.nvim_create_autocmd("ColorScheme", {
+			group = vim.api.nvim_create_augroup("user.lualine", { clear = true }),
 			desc = "Rebuild the statusline for the new colorscheme",
 			callback = function()
 				vim.schedule(build)

@@ -1,9 +1,7 @@
 return {
 	"ibhagwan/fzf-lua",
-	-- optional for icon support
 	dependencies = { "nvim-tree/nvim-web-devicons" },
-	-- or if using mini.icons/mini.nvim
-	-- dependencies = { "echasnovski/mini.icons" },
+	cmd = "FzfLua",
 	opts = {
 		-- hide the interface instead of aborting it
 		"hide",
@@ -19,108 +17,26 @@ return {
 		},
 		previewers = {
 			builtin = {
-				-- fzf-lua is very fast, but it really struggled to preview a couple files
-				-- in a repo. Those files were very big JavaScript files (1MB, minified, all on a single line).
-				-- It turns out it was Treesitter having trouble parsing the files.
-				-- With this change, the previewer will not add syntax highlighting to files larger than 100KB
-				-- (Yes, I know you shouldn't have 100KB minified files in source control.)
-				syntax_limit_b = 1024 * 100, -- 100KB
+				-- Treesitter stalls on large minified files, so preview those
+				-- without syntax highlighting.
+				syntax_limit_b = 1024 * 100,
 			},
 		},
 	},
 	keys = {
-		-- Use the new which-key spec format for lazy loading
-		{
-			"<leader>sf",
-			function()
-				require("fzf-lua").files()
-			end,
-			desc = "Files",
-		},
-		{
-			"<leader>sg",
-			function()
-				require("fzf-lua").live_grep()
-			end,
-			desc = "Grep",
-		},
-		{
-			"<leader>sb",
-			function()
-				require("fzf-lua").buffers()
-			end,
-			desc = "Buffers",
-		},
-		{
-			"<leader>sh",
-			function()
-				require("fzf-lua").help_tags()
-			end,
-			desc = "Help tags",
-		},
-		{
-			"<leader>sr",
-			function()
-				require("fzf-lua").oldfiles()
-			end,
-			desc = "Recent files",
-		},
-		{
-			"<leader>sm",
-			function()
-				require("fzf-lua").marks()
-			end,
-			desc = "Marks",
-		},
-		{
-			"<leader>sc",
-			function()
-				require("fzf-lua").commands()
-			end,
-			desc = "Commands",
-		},
-		{
-			"<leader>sk",
-			function()
-				require("fzf-lua").keymaps()
-			end,
-			desc = "Keymaps",
-		},
-		{
-			"<leader>st",
-			function()
-				require("fzf-lua").colorschemes()
-			end,
-			desc = "Themes",
-		},
-		{
-			"<leader>sd",
-			function()
-				require("fzf-lua").grep_cword()
-			end,
-			desc = "Word under cursor",
-		},
-		{
-			"<leader>sp",
-			function()
-				require("fzf-lua").git_files()
-			end,
-			desc = "Git files",
-		},
-		{
-			"<leader>ss",
-			function()
-				require("fzf-lua").git_status()
-			end,
-			desc = "Git status",
-		},
-		{
-			"<leader>sl",
-			function()
-				require("fzf-lua").resume()
-			end,
-			desc = "Resume last search",
-		},
+		{ "<leader>sf", "<cmd>FzfLua files<cr>", desc = "Files" },
+		{ "<leader>sg", "<cmd>FzfLua live_grep<cr>", desc = "Grep" },
+		{ "<leader>sb", "<cmd>FzfLua buffers<cr>", desc = "Buffers" },
+		{ "<leader>sh", "<cmd>FzfLua help_tags<cr>", desc = "Help tags" },
+		{ "<leader>sr", "<cmd>FzfLua oldfiles<cr>", desc = "Recent files" },
+		{ "<leader>sm", "<cmd>FzfLua marks<cr>", desc = "Marks" },
+		{ "<leader>sc", "<cmd>FzfLua commands<cr>", desc = "Commands" },
+		{ "<leader>sk", "<cmd>FzfLua keymaps<cr>", desc = "Keymaps" },
+		{ "<leader>st", "<cmd>FzfLua colorschemes<cr>", desc = "Themes" },
+		{ "<leader>sd", "<cmd>FzfLua grep_cword<cr>", desc = "Word under cursor" },
+		{ "<leader>sp", "<cmd>FzfLua git_files<cr>", desc = "Git files" },
+		{ "<leader>ss", "<cmd>FzfLua git_status<cr>", desc = "Git status" },
+		{ "<leader>sl", "<cmd>FzfLua resume<cr>", desc = "Resume last search" },
 		{
 			"<leader>se",
 			function()

@@ -2,7 +2,7 @@ return {
 	"folke/todo-comments.nvim",
 	dependencies = { "nvim-lua/plenary.nvim" },
 	event = { "BufReadPost", "BufNewFile" },
-	cmd = { "TodoQuickFix", "TodoLocList", "TodoTelescope" },
+	cmd = { "TodoQuickFix", "TodoLocList", "TodoFzfLua" },
 	opts = {
 		-- Supports doxygen tags. Reference: https://github.com/folke/todo-comments.nvim/issues/30
 		keywords = {

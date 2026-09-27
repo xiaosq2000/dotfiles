@@ -17,7 +17,6 @@ vim.o.winborder = "rounded"
 vim.o.number = true
 vim.o.relativenumber = true
 vim.o.termguicolors = true
-vim.o.wrap = true
 vim.o.updatetime = 300
 -- views can only be fully collapsed with the global statusline
 vim.o.laststatus = 3
@@ -29,20 +28,16 @@ vim.o.tabstop = 4
 vim.o.softtabstop = 4
 vim.o.shiftwidth = 4
 vim.o.expandtab = true
-vim.o.smarttab = true
 vim.o.smartindent = true
 
 --------------------------------------------------------------------------------
------------------------------ swap and backup file -----------------------------
+------------------------------------- undo -------------------------------------
 --------------------------------------------------------------------------------
-vim.o.swapfile = true
-vim.o.backup = false
 vim.o.undofile = true
 
 --------------------------------------------------------------------------------
 ------------------------------------ search ------------------------------------
 --------------------------------------------------------------------------------
-vim.o.incsearch = true
 vim.o.inccommand = "split"
 
 -- 'hlsearch' stays on because the ui2 message UI below stops :s///c from
