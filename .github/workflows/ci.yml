@@ -684,9 +684,10 @@ jobs:
 
           # The machines skill is left out whole, not just its encrypted pages,
           # since a SKILL.md pointing at pages that are not there would send an
-          # agent looking for them. The other skills sort after it, so their
-          # arrival shows the apply did not stop at it.
+          # agent looking for them. plain-writing and translate-zh sort after
+          # it, so their arrival shows the apply did not stop at it.
           test ! -e "$HOME/.agents/skills/machines"
+          test -f "$HOME/.agents/skills/git-shipping/SKILL.md"
           test -f "$HOME/.agents/skills/plain-writing/SKILL.md"
           test -f "$HOME/.agents/skills/translate-zh/SKILL.md"
 
