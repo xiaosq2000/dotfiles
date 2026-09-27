@@ -236,6 +236,17 @@ jobs:
           test ! -e "$HOME/CLAUDE.md"
           test ! -e "$HOME/.gitattributes"
 
+      # lazy.nvim loads every spec under plugins/, so a spec this repository
+      # stopped deploying has to be deleted from ~, not just left unmanaged.
+      - name: A dropped nvim plugin spec is removed on apply
+        run: |
+          set -eux
+          spec="$HOME/.config/nvim/lua/plugins/tools/floaterm.lua"
+          mkdir -p "$(dirname "$spec")"
+          echo 'return {}' >"$spec"
+          chezmoi apply --no-tty "$spec"
+          test ! -e "$spec"
+
       # This container selects no desktop bundle, so its GUI config is rendered
       # for the workstation instead. ssh.conf names the zsh on sicc through
       # $HOME, which the kitten's remote sh expands, so no account name has to

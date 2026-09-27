@@ -13,3 +13,7 @@
 .sh_utils/setup.d/typefaces.sh
 .sh_utils/setup.d/zotero.sh
 .sh_utils/lib/platform.sh
+
+# lazy.nvim imports every file under plugins/, so a spec this repository
+# stopped deploying would keep loading its plugin.
+.config/nvim/lua/plugins/tools/floaterm.lua
