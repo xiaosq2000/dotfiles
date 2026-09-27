@@ -57,10 +57,8 @@ vim.api.nvim_create_user_command("Undotree", toggle, {
 ----------------------------------- fold text ----------------------------------
 --------------------------------------------------------------------------------
 -- The package folds linear runs longer than three nodes, and the global
--- 'foldtext' then renders each one as `<first line> ... <last line>` with
--- treesitter colours -- in this buffer that means
--- `*  62  (2026/08/13 19:48:56) ... *  66`, well past WIDTH and cut off because
--- 'wrap' is off. A fold here only needs to say how much history it stands for.
+-- 'foldtext' would show only the first node of each run, with nothing to say
+-- that more are hidden. A fold here says how much history it stands for.
 --- Global because 'foldtext' can only reference a Vimscript-visible function.
 function _G.undotree_foldtext()
 	local first = vim.fn.getline(vim.v.foldstart)

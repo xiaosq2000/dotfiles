@@ -58,19 +58,11 @@ end, vim.api.nvim_create_namespace("user.auto_nohlsearch"))
 --------------------------------------------------------------------------------
 --------------------------------- diagnostics ----------------------------------
 --------------------------------------------------------------------------------
+-- Everything else is the default, and 'winborder' draws the float's border.
+-- Only the cursor line gets inline text, so the rest of the buffer stays quiet.
 vim.diagnostic.config({
-	underline = true,
-	signs = true,
-	virtual_text = false,
-	virtual_lines = false,
-	float = {
-		show_header = true,
-		source = "if_many",
-		border = "rounded",
-		focusable = true,
-	},
-	update_in_insert = false,
-	severity_sort = false,
+	virtual_text = { current_line = true },
+	float = { source = "if_many" },
 })
 
 --------------------------------------------------------------------------------
