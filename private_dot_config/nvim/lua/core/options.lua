@@ -42,9 +42,23 @@ vim.o.undofile = true
 --------------------------------------------------------------------------------
 ------------------------------------ search ------------------------------------
 --------------------------------------------------------------------------------
-vim.o.hlsearch = false
 vim.o.incsearch = true
 vim.o.inccommand = "split"
+
+-- 'hlsearch' stays on because the ui2 message UI below stops :s///c from
+-- drawing its current match with IncSearch, which leaves CurSearch as the only
+-- highlight (nvim 0.12.5, checked on 2026-09-27). So that matches do not
+-- linger, any normal-mode key other than a search motion clears them.
+vim.o.hlsearch = true
+local search_keys = { n = true, N = true, ["*"] = true, ["#"] = true }
+vim.on_key(function(_, typed)
+	if typed == "" or vim.v.hlsearch == 0 or vim.fn.mode() ~= "n" then
+		return
+	end
+	if not search_keys[vim.fn.keytrans(typed)] then
+		vim.schedule(vim.cmd.nohlsearch)
+	end
+end, vim.api.nvim_create_namespace("user.auto_nohlsearch"))
 
 --------------------------------------------------------------------------------
 --------------------------------- diagnostics ----------------------------------
@@ -72,14 +86,13 @@ local ok, ui2 = pcall(require, "vim._core.ui2")
 if ok then
 	ui2.enable({
 		msg = {
+			-- Every kind not listed in `targets` goes to the message window.
+			-- With 'cmdheight' 0, a message left in the cmdline hides the next
+			-- :s///c prompt; plugin errors sent through vim.notify, such as
+			-- dooing's "items due", did that (nvim 0.12.5, checked on
+			-- 2026-09-27).
+			target = "msg",
 			targets = {
-				echo = "msg",
-				echomsg = "msg",
-				lua_print = "msg",
-				bufwrite = "msg",
-				quickfix = "msg",
-				undo = "msg",
-
 				list_cmd = "pager",
 				shell_out = "pager",
 				shell_err = "pager",
