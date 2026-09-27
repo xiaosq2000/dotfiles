@@ -32,6 +32,19 @@ Prefer the change that is easiest to undo. To replace a package or service,
 disable it rather than uninstall it. Check that removal is really needed before
 proposing it, and offer it only as optional cleanup at the end.
 
+Keep machines, repositories and memory tidy, and offer to clean up leftovers.
+Delete datasets, run directories, checkpoints and worktrees only when the user
+says so; until then, move superseded outputs aside, for example to
+`runs/aside-<date>/`. Keep a run's worktree and environment while an evaluation
+of it may still run.
+
+## Continuing work
+
+Before building more on a long branch or research line, propose what you would
+build from scratch and a concrete cut list, then stop for the user's decision.
+A clean break from earlier exploration is fine when its useful results carry
+over.
+
 ## Commits
 
 Before committing, check for an unpushed commit on the same subject. If there is
