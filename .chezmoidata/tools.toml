@@ -86,6 +86,7 @@ description = "Language servers and the external binaries Neovim's plugins call"
 # That file falls back to :MasonInstall when a binary is missing, so a machine
 # without this bundle still gets working LSP, just installed per machine and
 # unmanaged. luarocks is not a server; it is what the Lua plugins shell out to.
+# codespell is not one either; nvim-lint runs it on prose filetypes.
 # tree-sitter-cli was here and moved to core, because nvim is in core and its
 # treesitter config cannot build a parser without it.
 packages = [
@@ -96,8 +97,10 @@ packages = [
     "texlab",
     "marksman",
     "cmake-language-server",
+    "dockerfile-language-server-nodejs",
     "taplo",
     "luarocks",
+    "codespell",
 ]
 
 [bundles.media]
@@ -216,6 +219,11 @@ exposed = ["pn", "pnpm", "pnpx", "pnx"]
 # one is wired up in nvim, and exposing the others would put five more binaries
 # on PATH for nothing.
 exposed = ["vscode-json-language-server"]
+
+[packages.dockerfile-language-server-nodejs]
+# The package names the npm project; the binary it ships is docker-langserver,
+# and its nodejs dependency stays inside the environment.
+exposed = ["docker-langserver"]
 
 [packages.tree-sitter-cli]
 exposed = ["tree-sitter"]
