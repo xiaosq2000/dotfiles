@@ -42,8 +42,9 @@ vim.o.inccommand = "split"
 
 -- 'hlsearch' stays on because the ui2 message UI below stops :s///c from
 -- drawing its current match with IncSearch, which leaves CurSearch as the only
--- highlight (nvim 0.12.5, checked on 2026-09-27). So that matches do not
--- linger, any normal-mode key other than a search motion clears them.
+-- highlight. That is so on 0.12.5 and fixed on 0.13 nightly (checked on
+-- 2026-09-27). So that matches do not linger, any normal-mode key other than a
+-- search motion clears them.
 vim.o.hlsearch = true
 local search_keys = { n = true, N = true, ["*"] = true, ["#"] = true }
 vim.on_key(function(_, typed)
@@ -76,8 +77,9 @@ if ok then
 			-- Every kind not listed in `targets` goes to the message window.
 			-- With 'cmdheight' 0, a message left in the cmdline hides the next
 			-- :s///c prompt; plugin errors sent through vim.notify, such as
-			-- dooing's "items due", did that (nvim 0.12.5, checked on
-			-- 2026-09-27).
+			-- dooing's "items due", did that. It is open upstream as
+			-- neovim/neovim#42116 and still happens on 0.13 nightly (checked
+			-- on 2026-09-27).
 			target = "msg",
 			targets = {
 				list_cmd = "pager",
