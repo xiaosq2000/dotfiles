@@ -78,6 +78,7 @@ bundles = [
     "fonts",
     "research",
     "vpn",
+    "laptop",
 ]
 sudo = true
 docs = ".agents/skills/machines/references/laptop.md"

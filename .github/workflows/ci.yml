@@ -210,6 +210,8 @@ jobs:
           test ! -e "$HOME/.config/alacritty"
           test ! -e "$HOME/.config/zathura"
           test ! -e "$HOME/.config/fcitx5"
+          test ! -e "$HOME/.local/bin/refresh-rate-on-power"
+          test ! -e "$HOME/.config/systemd/user/refresh-rate-on-power.service"
           # No bundle selects a download here, so dotfiles-fetch installs
           # nothing and no launcher renders.
           test -x "$HOME/.local/bin/dotfiles-fetch"

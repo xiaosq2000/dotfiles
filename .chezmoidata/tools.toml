@@ -162,6 +162,18 @@ downloads = ["zotero"]
 description = "um-vpn, the University of Macau VPN client, for work off campus"
 packages = ["um-vpn"]
 
+[bundles.laptop]
+description = "Laptop power: the panel refresh rate follows the power source"
+packages = []
+# The service watches UPower over the system bus and changes the mode through
+# mutter over the session bus, which is why it is a user service. It runs on
+# the system python3, which has the gi bindings.
+config = [
+    ".local/bin/refresh-rate-on-power",
+    ".config/systemd/user/refresh-rate-on-power.service",
+    ".config/systemd/user/graphical-session.target.wants/refresh-rate-on-power.service",
+]
+
 ################################################################################
 # Exposed binaries
 #

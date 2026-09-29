@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Drop the panel to 60 Hz on battery, restore the full rate on AC.
+
+GNOME has no built-in rate-follows-power-source behaviour, so this watches
+UPower's OnBattery property and reapplies the monitor config via mutter.
+Runs as a user service; needs the session bus, so it cannot be a system unit.
+"""
+import sys
+from gi.repository import Gio, GLib
+
+BATTERY_MAX_HZ = 60.5          # highest rate considered "60 Hz" after rounding
+APPLY_TEMPORARY = 1            # 1 = apply without writing monitors.xml
+
+def proxy(bus, name, path, iface):
+    return Gio.DBusProxy.new_for_bus_sync(
+        bus, Gio.DBusProxyFlags.NONE, None, name, path, iface, None)
+
+display = proxy(Gio.BusType.SESSION, "org.gnome.Mutter.DisplayConfig",
+                "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig")
+upower = proxy(Gio.BusType.SYSTEM, "org.freedesktop.UPower",
+               "/org/freedesktop/UPower", "org.freedesktop.UPower")
+
+
+def choose_mode(modes, scale, on_battery):
+    """Pick the target mode: same resolution and scale, different refresh."""
+    current = next((m for m in modes if m[6].get("is-current")), None)
+    if current is None:
+        return None, None
+    w, h = current[1], current[2]
+    # Only modes at the current resolution that still support the current scale.
+    same = [m for m in modes if m[1] == w and m[2] == h
+            and any(abs(s - scale) < 0.01 for s in m[5])]
+    if not same:
+        return None, current
+    if on_battery:
+        low = [m for m in same if m[3] <= BATTERY_MAX_HZ]
+        target = max(low, key=lambda m: m[3]) if low else current
+    else:
+        target = max(same, key=lambda m: m[3])
+    return target, current
+
+
+def apply(on_battery, dry_run=False):
+    serial, monitors, logical_monitors, _ = display.call_sync(
+        "GetCurrentState", None, Gio.DBusCallFlags.NONE, -1, None).unpack()
+
+    modes_by_connector = {m[0][0]: m[1] for m in monitors}
+
+    new_logical, changed = [], []
+    for x, y, scale, transform, primary, mons, _props in logical_monitors:
+        entries = []
+        for connector, *_rest in mons:
+            modes = modes_by_connector.get(connector, [])
+            target, current = choose_mode(modes, scale, on_battery)
+            if target is None:
+                # Leave this output exactly as it is.
+                cur = next((m for m in modes if m[6].get("is-current")), None)
+                if cur is None:
+                    return  # nothing sane to do; bail rather than guess
+                entries.append((connector, cur[0], {}))
+                continue
+            entries.append((connector, target[0], {}))
+            if target[0] != current[0]:
+                changed.append(f"{connector}: {current[3]:.0f} -> {target[3]:.0f} Hz")
+        new_logical.append((x, y, scale, transform, primary, entries))
+
+    state = "battery" if on_battery else "AC"
+    if not changed:
+        print(f"on {state}: already correct", flush=True)
+        return
+    if dry_run:
+        print(f"on {state}: would set {', '.join(changed)}", flush=True)
+        return
+
+    display.call_sync(
+        "ApplyMonitorsConfig",
+        GLib.Variant("(uua(iiduba(ssa{sv}))a{sv})",
+                     (serial, APPLY_TEMPORARY, new_logical, {})),
+        Gio.DBusCallFlags.NONE, -1, None)
+    print(f"on {state}: set {', '.join(changed)}", flush=True)
+
+
+def on_upower_signal(_p, _sender, _signal, params):
+    changed = params.unpack()[1]
+    if "OnBattery" in changed:
+        apply(changed["OnBattery"])
+
+
+if __name__ == "__main__":
+    dry = "--dry-run" in sys.argv
+    apply(upower.get_cached_property("OnBattery").unpack(), dry_run=dry)
+    if dry or "--once" in sys.argv:
+        sys.exit(0)
+    upower.connect("g-signal", on_upower_signal)
+    GLib.MainLoop().run()

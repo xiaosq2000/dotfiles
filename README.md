@@ -173,6 +173,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `fonts` | fourteen more document, design, CJK and emoji families |
 | `research` | Zotero |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
+| `laptop` | a user service that drops the panel to 60 Hz on battery |
 
 To add software, add it to a bundle and run `chezmoi apply`.
 
