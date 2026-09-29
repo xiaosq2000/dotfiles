@@ -35,6 +35,10 @@ with tempfile.TemporaryDirectory(prefix="chezmoi-scripts-") as temp:
         # The lifecycle scripts, as the shell will read them.
         for source in sorted((root / ".chezmoiscripts").glob("*.tmpl")):
             script = render(config, machine, source)
+            # chezmoi does not run a script that renders to whitespace, and
+            # run_after_80-system-files does so wherever nothing is to install.
+            if not script.strip():
+                continue
             subprocess.run(["bash", "-n"], input=script, text=True, check=True)
             subprocess.run(["shellcheck", "--severity=warning", "-"], input=script, text=True, check=True)
 
