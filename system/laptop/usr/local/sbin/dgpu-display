@@ -1,0 +1,282 @@
+#!/bin/sh
+# Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
+#
+# Choose whether GNOME may drive displays from the NVIDIA dGPU.
+#
+#   dgpu-display       show the setting and whether GNOME follows it
+#   dgpu-display off   GNOME ignores the dGPU, which can then sleep in D3cold
+#                      and save about 10 W. HDMI and DisplayPort go dark,
+#                      because they are wired to the dGPU.
+#   dgpu-display on    GNOME drives the dGPU's outputs again.
+#
+# CUDA and PRIME offload work in both states: the driver stays loaded, and only
+# mutter leaves the card alone. off and on re-run themselves with sudo.
+#
+# The setting is whether $RULE exists. The rule tags the dGPU's DRM card with
+# mutter-device-ignore, which mutter reads when it starts, so off takes effect
+# at the next login.
+#
+# Going back is harder, because udev tags are sticky: deleting the rule clears
+# CURRENT_TAGS, but TAGS keeps the tag until the device goes away, and mutter 50
+# reads TAGS (checked in libmutter-18 on 2026-09-29). So on replays a remove and
+# an add event for the card. The remove drops the tag, and the add lets the
+# running mutter pick the card up as a hot-plugged GPU. on replays only while no
+# gnome-shell uses the card, since a remove event for a card that mutter drives
+# could take the session down.
+set -eu
+
+RULE=/etc/udev/rules.d/61-dgpu-display-off.rules
+TAG=mutter-device-ignore
+
+usage() {
+	cat <<'EOF'
+usage: dgpu-display [status|off|on]
+  status  show the setting and whether GNOME follows it (the default)
+  off     let the dGPU sleep; HDMI and DisplayPort stop working
+  on      let GNOME drive HDMI and DisplayPort through the dGPU again
+EOF
+}
+
+die() {
+	echo "dgpu-display: $*" >&2
+	exit 1
+}
+
+# Sets pci to the dGPU's PCI address, boot_vga to 1 when the BIOS runs the dGPU
+# alone, and card to its DRM card, such as card1, or to nothing when the driver
+# is not loaded. Card numbers follow driver load order, so they change between
+# boots. Only sysfs attributes that leave the GPU asleep are read; lspci would
+# wake it.
+find_dgpu() {
+	pci=
+	for dev in /sys/bus/pci/devices/*; do
+		[ "$(cat "$dev/vendor")" = 0x10de ] || continue
+		case $(cat "$dev/class") in
+		0x03*)
+			pci=${dev##*/}
+			break
+			;;
+		esac
+	done
+	[ -n "$pci" ] || die "no NVIDIA display controller on the PCI bus"
+	boot_vga=$(cat "/sys/bus/pci/devices/$pci/boot_vga" 2>/dev/null || echo 0)
+	card=
+	for dev in "/sys/bus/pci/devices/$pci/drm/card"*; do
+		if [ -e "$dev" ]; then card=${dev##*/}; fi
+	done
+}
+
+# Sends a synthetic uevent to the card alone, not to its connectors, and waits
+# until udev has processed it.
+trigger() {
+	udevadm trigger --action="$1" --settle --subsystem-match=drm --sysname-match="$card"
+}
+
+# True if the card's sticky udev tags, the ones mutter reads, include $TAG.
+tagged() {
+	case $(udevadm info --query=property --property=TAGS --value "/dev/dri/$card" 2>/dev/null) in
+	*":$TAG:"*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+# Prints what the running gnome-shells last logged about the card: "uses" if
+# any added it, else "failed" if one could not hot-add it, else "unknown" if one
+# logged nothing about it, else "ignores"; and "none" if no gnome-shell runs. A
+# user sees other users' sessions only if allowed to read the system journal.
+gnome_state() {
+	seen=
+	for pid in $(pgrep -x gnome-shell || :); do
+		last=$(journalctl -b -q -o cat "_PID=$pid" 2>/dev/null |
+			grep -E "^(Added device|Ignoring DRM device|Failed to hotplug secondary gpu) '/dev/dri/$card'" |
+			tail -n 1)
+		case $last in
+		Added* | *'device already present') seen="$seen uses" ;;
+		Ignoring*) seen="$seen ignores" ;;
+		Failed*) seen="$seen failed" ;;
+		*) seen="$seen unknown" ;;
+		esac
+	done
+	case $seen in
+	'') echo none ;;
+	*uses*) echo uses ;;
+	*failed*) echo failed ;;
+	*unknown*) echo unknown ;;
+	*) echo ignores ;;
+	esac
+}
+
+# Names the processes that hold the dGPU's device files open. Without root,
+# only the caller's own processes show.
+openers() {
+	render=none
+	for dev in "/sys/bus/pci/devices/$pci/drm/renderD"*; do
+		if [ -e "$dev" ]; then render=/dev/dri/${dev##*/}; fi
+	done
+	find /proc/[0-9]*/fd \( -lname "/dev/dri/${card:-none}" -o -lname "$render" \
+		-o -lname '/dev/nvidia*' \) 2>/dev/null |
+		cut -d/ -f3 | sort -u |
+		while read -r pid; do cat "/proc/$pid/comm" 2>/dev/null || :; done |
+		sort -u | paste -sd, - | sed 's/,/, /g'
+}
+
+# Says what to do while the running GNOME does not follow the setting.
+advice() {
+	if [ "$boot_vga" != 0 ]; then
+		if [ "$1" = off ]; then
+			echo "The BIOS runs the dGPU alone, so the rule does nothing."
+		fi
+		return 0
+	fi
+	case $1 in
+	off)
+		if ! tagged; then
+			echo "udev has not applied the rule yet. Run: dgpu-display off"
+		elif [ "$2" = uses ]; then
+			echo "Log out and back in to apply."
+		fi
+		;;
+	on)
+		if tagged && [ "$2" = uses ]; then
+			echo "udev keeps the tag, so the next login would ignore the dGPU."
+			echo "After logging out and back in, run: dgpu-display on"
+		elif tagged; then
+			echo "udev keeps the tag. Run: dgpu-display on"
+		elif [ "$2" = ignores ] || [ "$2" = failed ]; then
+			echo "Log out and back in to apply."
+		fi
+		;;
+	esac
+}
+
+cmd_status() {
+	setting=on
+	if [ -e "$RULE" ]; then setting=off; fi
+	echo "dGPU      $pci${card:+, /dev/dri/$card}"
+	echo "setting   $setting"
+	state=
+	if [ -z "$card" ]; then
+		echo "GNOME     cannot use it: the NVIDIA driver is not loaded"
+	else
+		state=$(gnome_state)
+		case $state in
+		uses) echo "GNOME     uses it" ;;
+		ignores) echo "GNOME     ignores it" ;;
+		failed) echo "GNOME     tried to hot-add it and failed" ;;
+		none) echo "GNOME     not running" ;;
+		*) echo "GNOME     unknown: the journal has nothing about $card" ;;
+		esac
+	fi
+	dev=/sys/bus/pci/devices/$pci
+	awake=$(cat "$dev/power/runtime_active_time")
+	asleep=$(cat "$dev/power/runtime_suspended_time")
+	echo "power     $(cat "$dev/power_state"), $(cat "$dev/power/runtime_status");" \
+		"awake $((awake * 100 / (awake + asleep + 1)))% since boot"
+	who=$(openers)
+	if [ "$(id -u)" -ne 0 ]; then who="${who:-nothing} (your processes only)"; fi
+	echo "open by   ${who:-nothing}"
+	if [ -n "$card" ]; then advice "$setting" "$state"; fi
+}
+
+cmd_off() {
+	if [ "$boot_vga" != 0 ]; then
+		die "off: the BIOS runs the dGPU alone, so ignoring it would leave GNOME without a GPU"
+	fi
+	cat >"$RULE.tmp" <<'EOF'
+# Written by dgpu-display, which reads this file's existence as its "off"
+# setting. Remove it with "dgpu-display on", which also clears the udev tag;
+# deleting the file by hand leaves the tag, and GNOME ignoring the dGPU, until
+# the next boot.
+#
+# boot_vga=0 keeps the rule inert if the BIOS is set to run the dGPU alone,
+# where ignoring it would leave GNOME without a GPU.
+ACTION=="add|change", SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ENV{DEVTYPE}=="drm_minor", \
+  SUBSYSTEMS=="pci", ATTRS{vendor}=="0x10de", ATTRS{boot_vga}=="0", \
+  TAG+="mutter-device-ignore"
+EOF
+	mv "$RULE.tmp" "$RULE"
+	udevadm control --reload
+	if [ -z "$card" ]; then
+		echo "off: takes effect once the NVIDIA driver loads"
+		return 0
+	fi
+	trigger change
+	case $(gnome_state) in
+	ignores | failed) echo "off: in effect" ;;
+	none) echo "off: takes effect at the next login" ;;
+	*) echo "off: log out and back in to apply" ;;
+	esac
+}
+
+cmd_on() {
+	rm -f "$RULE"
+	udevadm control --reload
+	if [ -z "$card" ]; then
+		echo "on: takes effect once the NVIDIA driver loads"
+		return 0
+	fi
+	if ! tagged; then
+		case $(gnome_state) in
+		ignores | failed) echo "on: log out and back in to apply" ;;
+		none) echo "on: takes effect at the next login" ;;
+		*) echo "on: in effect" ;;
+		esac
+		return 0
+	fi
+	case $(gnome_state) in
+	uses)
+		echo "on: GNOME still uses the dGPU, but udev keeps the tag, so the next login would ignore it."
+		echo "on: after logging out and back in, run: dgpu-display on"
+		return 0
+		;;
+	unknown)
+		die "on: the journal does not say whether GNOME uses the dGPU, so clearing the tag is unsafe; reboot to apply"
+		;;
+	esac
+	echo "on: clearing the udev tag with a remove and an add event for $card"
+	trigger remove
+	trigger add
+	if tagged; then
+		die "on: the tag survived the events; reboot to apply"
+	fi
+	tries=0
+	while [ "$tries" -lt 10 ] && [ "$(gnome_state)" = ignores ]; do
+		sleep 1
+		tries=$((tries + 1))
+	done
+	case $(gnome_state) in
+	uses) echo "on: in effect; GNOME picked up the dGPU" ;;
+	none) echo "on: takes effect at the next login" ;;
+	*)
+		journalctl -b -q -o cat _COMM=gnome-shell 2>/dev/null |
+			grep -F "Failed to hotplug secondary gpu '/dev/dri/$card'" | tail -n 1 >&2
+		echo "on: GNOME did not pick up the dGPU; log out and back in to apply"
+		;;
+	esac
+}
+
+[ "$#" -le 1 ] || {
+	usage >&2
+	exit 2
+}
+cmd=${1:-status}
+case $cmd in
+status | off | on) ;;
+-h | --help)
+	usage
+	exit 0
+	;;
+*)
+	usage >&2
+	exit 2
+	;;
+esac
+if [ "$cmd" != status ] && [ "$(id -u)" -ne 0 ]; then
+	exec sudo -- "$0" "$cmd"
+fi
+find_dgpu
+case $cmd in
+status) cmd_status ;;
+off) cmd_off ;;
+on) cmd_on ;;
+esac

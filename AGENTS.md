@@ -145,6 +145,22 @@ A run script must not fail the apply over a missing optional tool. It warns and
 exits 0. This matters most for `before` scripts, where a non-zero exit stops the
 apply before any file is written.
 
+## Files outside ~
+
+`system/<machine>/` holds root-owned files at their paths under `/`.
+`.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs the ones that
+differ from the installed copy, using `sudo -n`. An agent's apply has no sudo,
+so it only lists them. Ask the user to run `sudo -v && chezmoi apply`.
+
+- chezmoi's name prefixes do not apply there. Files install verbatim, owned by
+  root, with mode 0755 if executable in git and 0644 otherwise.
+- Keep every file world-readable. The comparison runs as the user.
+- Deleting a file there does not remove it from the machine; tell the user to
+  move the installed copy aside.
+- Never track a file that a program rewrites there. For example,
+  dgpu-display's udev rule is its on/off setting, so only the script is
+  tracked.
+
 ## Commits and writing
 
 Commit messages follow Conventional Commits, and the commit-msg hook enforces

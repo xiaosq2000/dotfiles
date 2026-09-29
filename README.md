@@ -230,6 +230,27 @@ in seconds. With `--live` it installs the whole catalog from the real upstreams
 into a disposable home, which takes a few gigabytes; CI runs that only when
 started by hand.
 
+## System files
+
+Some machines need files outside `~`: scripts in `/usr/local/sbin`, systemd
+units, udev rules and module options. They live in `system/<machine>/` at their
+paths under `/`, so `system/laptop/usr/local/sbin/dgpu-display` is
+`/usr/local/sbin/dgpu-display` on the laptop.
+
+chezmoi writes only into `~`, so
+`.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs these files as
+root. It never asks for a password. When a file differs and sudo has no cached
+credentials, `chezmoi apply` lists the file and carries on, and the next apply
+tries again. To install:
+
+```sh
+sudo -v && chezmoi apply
+```
+
+When the script installs a unit file, it reloads systemd and enables the unit.
+When it installs a udev rule, it reloads udev. It never restarts a service.
+Deleting a file from `system/` leaves the installed copy in place.
+
 ## Secrets
 
 This repository is public, so anything secret in it is age ciphertext:

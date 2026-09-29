@@ -1,0 +1,8 @@
+# Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
+#
+# Restart logid when a Logitech HID++ device (MX Master 3 etc.) appears.
+# logid enumerates HID devices only at startup, so a mouse that reconnects
+# after boot -- e.g. over Bluetooth, once the adapter is powered on -- is
+# never picked up until the daemon is restarted.
+ACTION=="add", SUBSYSTEM=="hidraw", DRIVERS=="logitech-hidpp-device", \
+    RUN+="/usr/bin/systemctl restart --no-block logid.service"

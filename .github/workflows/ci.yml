@@ -235,6 +235,7 @@ jobs:
           test ! -e "$HOME/AGENTS.md"
           test ! -e "$HOME/CLAUDE.md"
           test ! -e "$HOME/.gitattributes"
+          test ! -e "$HOME/system"
 
       # lazy.nvim loads every spec under plugins/, so a spec this repository
       # stopped deploying has to be deleted from ~, not just left unmanaged.

@@ -1,0 +1,84 @@
+{{- /*
+Install this machine's root-owned files: everything under system/<machine>/
+goes to the same path under /. chezmoi writes only into ~, so this script
+copies them with sudo. It never asks for a password: without cached sudo
+credentials it lists what differs and exits 0.
+
+The template compares each file with its installed copy, and renders to
+nothing when all of them match; chezmoi does not run an empty script. So
+`chezmoi diff` stays quiet, and a file that could not be installed is tried
+again at the next apply. A run_onchange_ script would record the failed
+attempt as done and never retry it.
+
+A file installs as root, mode 0755 if it is executable in git and 0644
+otherwise. The comparison runs as the user, so every installed file must be
+world-readable. Deleting a file from system/ leaves the installed copy.
+
+This runs before 90-downloads, which has to run last.
+*/ -}}
+{{- $root := joinPath .chezmoi.sourceDir "system" .machine -}}
+{{- $files := list -}}
+{{- $units := list -}}
+{{- $systemd := false -}}
+{{- $udev := false -}}
+{{- $modprobe := false -}}
+{{- if stat $root -}}
+{{-   range $src := glob (joinPath $root "**") -}}
+{{-     $info := stat $src -}}
+{{-     if not $info.isDir -}}
+{{-       $perm := 420 -}}
+{{-       if eq (mod (div $info.perm 64) 2) 1 -}}
+{{-         $perm = 493 -}}
+{{-       end -}}
+{{-       $dst := trimPrefix $root $src -}}
+{{-       $cur := stat $dst -}}
+{{-       if or (not $cur) (ne $cur.perm $perm) (ne (include $dst) (include $src)) -}}
+{{-         $files = append $files (dict "src" $src "dst" $dst "mode" (printf "%o" $perm)) -}}
+{{-         if hasPrefix "/etc/systemd/" $dst -}}
+{{-           $systemd = true -}}
+{{-         end -}}
+{{-         if regexMatch "^/etc/systemd/system/[^/]+\\.(service|socket|timer|path)$" $dst -}}
+{{-           $units = append $units (base $dst) -}}
+{{-         end -}}
+{{-         if hasPrefix "/etc/udev/rules.d/" $dst -}}
+{{-           $udev = true -}}
+{{-         end -}}
+{{-         if hasPrefix "/etc/modprobe.d/" $dst -}}
+{{-           $modprobe = true -}}
+{{-         end -}}
+{{-       end -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+{{- if $files -}}
+#!/bin/sh
+# Install the files under system/{{ .machine }}/ that differ from their installed
+# copies. Rendered from .chezmoiscripts/run_after_80-system-files.sh.tmpl.
+set -eu
+
+if ! sudo -n true 2>/dev/null; then
+    echo "system-files: these differ from {{ $root }}:" >&2
+{{- range $files }}
+    echo "system-files:   {{ .dst }}" >&2
+{{- end }}
+    echo "system-files: run 'sudo -v && chezmoi apply' to install them" >&2
+    exit 0
+fi
+{{ range $files }}
+sudo -n install -D -o root -g root -m {{ .mode }} {{ .src | squote }} {{ .dst | squote }}
+echo "system-files: installed {{ .dst }}"
+{{- end }}
+{{- if $systemd }}
+
+sudo -n systemctl daemon-reload
+{{- end }}
+{{- range $units }}
+sudo -n systemctl enable {{ . | squote }}
+{{- end }}
+{{- if $udev }}
+sudo -n udevadm control --reload
+{{- end }}
+{{- if $modprobe }}
+echo "system-files: module options take effect when the module next loads"
+{{- end }}
+{{ end -}}

@@ -13,6 +13,11 @@
 README.md
 docs
 
+# Root-owned files for one machine, at their paths under /. They never go into
+# ~: run_after_80-system-files.sh.tmpl installs them with sudo. Without this
+# line chezmoi would also deploy them to ~/system.
+system
+
 # Instructions for agents working on this repository, at the root where agents
 # look for them. Deployed, they would land in ~, and ~/CLAUDE.md in particular
 # would load into every Claude Code session started in the home directory.

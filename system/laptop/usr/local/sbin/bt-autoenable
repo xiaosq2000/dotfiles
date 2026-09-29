@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
+#
+# Power on the Bluetooth adapter at boot.
+#
+# On about half of boots a Bluetooth rfkill switch starts blocked, and every
+# power-on fails with "Failed to set mode: Failed (0x03)" until something
+# unblocks it. GNOME's Bluetooth toggle does that, which is why switching it on
+# by hand always worked. Log the switches first so the journal shows which one
+# was blocked, then unblock and power on.
+
+for d in /sys/class/rfkill/rfkill*; do
+	[ "$(cat "$d/type")" = bluetooth ] || continue
+	echo "$(cat "$d/name"): soft=$(cat "$d/soft") hard=$(cat "$d/hard")"
+done
+
+/usr/sbin/rfkill unblock bluetooth
+
+for i in $(seq 1 30); do
+	/usr/bin/bluetoothctl power on >/dev/null 2>&1
+	if /usr/bin/bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; then
+		echo "powered on after $i attempt(s)"
+		exit 0
+	fi
+	sleep 1
+done
+
+echo 'adapter did not power on after 30 attempts' >&2
+/usr/sbin/rfkill list bluetooth >&2
+exit 1

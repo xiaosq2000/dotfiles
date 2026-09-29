@@ -1,0 +1,14 @@
+# Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
+
+[Unit]
+Description=Power on Bluetooth adapter once bluetoothd settles
+After=bluetooth.service
+Requires=bluetooth.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/bt-autoenable
+
+[Install]
+WantedBy=bluetooth.target
