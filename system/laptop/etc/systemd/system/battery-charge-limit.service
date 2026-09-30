@@ -1,9 +1,8 @@
 # Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
 #
-# Caps charging near 80% at boot and again after every resume. The sleep
-# targets pull the unit in when the machine suspends, and the After= ordering
-# holds it back until the machine has resumed. It is a oneshot with no
-# RemainAfterExit, so it goes inactive after each run and can run again.
+# Caps charging near 80% at boot and after every resume. The sleep targets pull
+# the unit in at suspend, and After= holds it until resume. Without
+# RemainAfterExit it goes inactive after each run, so it can run again.
 [Unit]
 Description=Cap battery charge at Long_Life (about 80%)
 After=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

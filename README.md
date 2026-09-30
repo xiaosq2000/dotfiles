@@ -233,23 +233,17 @@ started by hand.
 
 ## System files
 
-Some machines need files outside `~`: scripts in `/usr/local/sbin`, systemd
-units, udev rules and module options. They live in `system/<machine>/` at their
-paths under `/`, so `system/laptop/usr/local/sbin/dgpu-display` is
-`/usr/local/sbin/dgpu-display` on the laptop.
-
-chezmoi writes only into `~`, so
-`.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs these files as
-root. It never asks for a password. When a file differs and sudo has no cached
-credentials, `chezmoi apply` lists the file and carries on, and the next apply
-tries again. To install:
+Files outside `~`, such as scripts in `/usr/local/sbin`, systemd units and udev
+rules, live in `system/<machine>/` at their paths under `/`.
+`.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs the ones that
+differ, as root, and never asks for a password: without cached sudo it lists
+them and the next apply tries again. To install:
 
 ```sh
 sudo -v && chezmoi apply
 ```
 
-When the script installs a unit file, it reloads systemd and enables the unit.
-When it installs a udev rule, it reloads udev. It never restarts a service.
+It reloads systemd and udev and enables installed units, but restarts nothing.
 Deleting a file from `system/` leaves the installed copy in place.
 
 ## Secrets

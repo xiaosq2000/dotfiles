@@ -147,19 +147,17 @@ apply before any file is written.
 
 ## Files outside ~
 
-`system/<machine>/` holds root-owned files at their paths under `/`.
+`system/<machine>/` holds root-owned files at their paths under `/`, and
 `.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs the ones that
-differ from the installed copy, using `sudo -n`. An agent's apply has no sudo,
-so it only lists them. Ask the user to run `sudo -v && chezmoi apply`.
+differ with `sudo -n`. An agent's apply has no sudo and only lists them, so ask
+the user to run `sudo -v && chezmoi apply`.
 
-- chezmoi's name prefixes do not apply there. Files install verbatim, owned by
-  root, with mode 0755 if executable in git and 0644 otherwise.
-- Keep every file world-readable. The comparison runs as the user.
-- Deleting a file there does not remove it from the machine; tell the user to
-  move the installed copy aside.
-- Never track a file that a program rewrites there. For example,
-  dgpu-display's udev rule is its on/off setting, so only the script is
-  tracked.
+- chezmoi's name prefixes do not apply there. Files install verbatim as root,
+  0755 if executable in git, else 0644.
+- Keep every file world-readable, because the comparison runs as the user.
+- Deleting a file there leaves the installed copy; remove it by hand.
+- Do not track a file a program rewrites. dgpu-display's udev rule is its
+  on/off setting, so only the script is tracked.
 
 ## Commits and writing
 

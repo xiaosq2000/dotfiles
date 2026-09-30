@@ -4,25 +4,22 @@
 # Choose whether GNOME may drive displays from the NVIDIA dGPU.
 #
 #   dgpu-display       show the setting and whether GNOME follows it
-#   dgpu-display off   GNOME ignores the dGPU, which can then sleep in D3cold
-#                      and save about 10 W. HDMI and DisplayPort go dark,
-#                      because they are wired to the dGPU.
-#   dgpu-display on    GNOME drives the dGPU's outputs again.
+#   dgpu-display off   GNOME ignores the dGPU, which sleeps in D3cold and saves
+#                      about 8 W; HDMI and DisplayPort, wired to it, go dark
+#   dgpu-display on    GNOME drives the dGPU's outputs again
 #
-# CUDA and PRIME offload work in both states: the driver stays loaded, and only
-# mutter leaves the card alone. off and on re-run themselves with sudo.
+# The driver stays loaded, so CUDA and PRIME offload work in both states. off
+# and on re-run themselves with sudo.
 #
 # The setting is whether $RULE exists. The rule tags the dGPU's DRM card with
-# mutter-device-ignore, which mutter reads when it starts, so off takes effect
-# at the next login.
+# mutter-device-ignore, which mutter reads when it starts, so off applies at the
+# next login.
 #
-# Going back is harder, because udev tags are sticky: deleting the rule clears
-# CURRENT_TAGS, but TAGS keeps the tag until the device goes away, and mutter 50
-# reads TAGS (checked in libmutter-18 on 2026-09-29). So on replays a remove and
-# an add event for the card. The remove drops the tag, and the add lets the
-# running mutter pick the card up as a hot-plugged GPU. on replays only while no
-# gnome-shell uses the card, since a remove event for a card that mutter drives
-# could take the session down.
+# udev tags are sticky: deleting the rule clears CURRENT_TAGS, but TAGS keeps the
+# tag until the device goes away, and mutter 50 reads TAGS. So on replays a
+# remove and an add event for the card, which drops the tag and makes the
+# running mutter hot-add the card. It replays only while no gnome-shell uses the
+# card, since a remove event for a card in use could end the session.
 set -eu
 
 RULE=/etc/udev/rules.d/61-dgpu-display-off.rules
