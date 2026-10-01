@@ -80,10 +80,22 @@ def apply(on_battery, dry_run=False):
     print(f"on {state}: set {', '.join(changed)}", flush=True)
 
 
-def on_upower_signal(_p, _sender, _signal, params):
-    changed = params.unpack()[1]
+def on_properties_changed(_proxy, changed, invalidated):
+    """Handle org.freedesktop.UPower's PropertiesChanged.
+
+    GDBusProxy re-emits that standard signal as "g-properties-changed", not
+    "g-signal"; "g-signal" is for the interface's own signals, such as
+    UPower's DeviceAdded/DeviceRemoved when a Bluetooth peripheral's battery
+    appears or disappears. Watching "g-signal" here never saw OnBattery
+    change at all, and crashed on the first DeviceAdded or DeviceRemoved,
+    whose single object-path argument isn't a (name, changed, invalidated)
+    tuple.
+    """
+    changed = changed.unpack()
     if "OnBattery" in changed:
         apply(changed["OnBattery"])
+    elif "OnBattery" in invalidated:
+        apply(upower.get_cached_property("OnBattery").unpack())
 
 
 if __name__ == "__main__":
@@ -91,5 +103,5 @@ if __name__ == "__main__":
     apply(upower.get_cached_property("OnBattery").unpack(), dry_run=dry)
     if dry or "--once" in sys.argv:
         sys.exit(0)
-    upower.connect("g-signal", on_upower_signal)
+    upower.connect("g-properties-changed", on_properties_changed)
     GLib.MainLoop().run()
