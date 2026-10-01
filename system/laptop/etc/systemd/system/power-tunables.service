@@ -1,0 +1,13 @@
+# Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
+
+[Unit]
+Description=Apply powertop's measured-safe power tunables
+After=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/power-tunables
+
+[Install]
+WantedBy=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

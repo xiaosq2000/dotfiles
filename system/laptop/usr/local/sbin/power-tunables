@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
+#
+# Settings powertop's calibration measured as real idle-power savings on this
+# laptop (checked 2026-10-01): a longer disk writeback delay, the NMI
+# watchdog off, and runtime power management for the PCI devices powertop
+# flagged safe to autosuspend (both NVMe controllers, the Realtek Ethernet
+# chip, the host bridge, and the platform monitoring device). Skips the USB
+# autosuspend settings powertop also suggests: an A/B test the same day found
+# they saved nothing and risk input lag on the 2.4G mouse dongle.
+set -u
+
+echo 0 >/proc/sys/kernel/nmi_watchdog
+echo 1500 >/proc/sys/vm/dirty_writeback_centisecs
+
+for pci in 0000:00:00.0 0000:00:0a.0 0000:05:00.0 0000:06:00.0 0000:34:00.0; do
+	f=/sys/bus/pci/devices/$pci/power/control
+	[ -e "$f" ] && echo auto >"$f"
+done
