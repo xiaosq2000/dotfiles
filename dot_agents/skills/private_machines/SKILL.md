@@ -27,9 +27,10 @@ age-encrypted. They exist only on machines with the age key, never on the vps.
 
 - Run downloads without the proxy. Every machine reaches AI services such as
   Claude and ChatGPT through a proxy whose traffic is metered. Interactive
-  shells start with the proxy variables set, and git has a global proxy.
-  `network.md` shows how to clear both. If a download fails without the proxy,
-  ask the user instead of retrying through it.
+  shells start with the proxy variables set, and a machine still on the bash
+  client may also have a global git proxy. `network.md` shows how to clear
+  both. If a download fails without the proxy, ask the user instead of retrying
+  through it.
 - If `ssh` fails with "The SSH kitten is meant for interactive use only", use
   `command ssh`.
 - On imrl and sicc, a command passed over ssh gets only the system `PATH`, so
