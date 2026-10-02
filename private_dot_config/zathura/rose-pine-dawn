@@ -1,41 +1,51 @@
-# https://github.com/rose-pine/rose-pine-theme
-# Soho vibes for Zathura: Rosé Pine
+# Rosé Pine Dawn for zathura. Checked on 2026-10-02.
 #
-# Usage:
-# Copy contents of this file to ~/.config/zathura/zathurarc
+# The rose-pine organisation has no zathura repository, and the `rose-pine` file
+# next to this one is laid out for a dark page. This keeps its elements, with the
+# colours of the Dawn palette (https://github.com/rose-pine/rose-pine-palette),
+# and picks roles that read on a light page: the status bar is a step darker
+# than the page, the input bar is the lightest strip, and accent text is love,
+# because rose is under 3:1 on every light background in the palette.
+# Notifications are a dark, a love and a gold chip. zathura's own index and
+# completion-group colours are dark, so they are set here too.
 #
-# Change 'recolor' and 'recolor-keephue' to true to change
-# the document colors for a more uniform viewing experience.
+# recolor and recolor-keephue are left to zathurarc, which sets them after the
+# include for every variant alike.
 
-set default-bg                  "#191724"
-set default-fg                  "#e0def4"
+set default-bg                  "#faf4ed"
+set default-fg                  "#575279"
 
-set statusbar-fg                "#e0def4"
-set statusbar-bg                "#555169"
+set statusbar-fg                "#575279"
+set statusbar-bg                "#dfdad9"
 
-set inputbar-bg                 "#6e6a86"
-set inputbar-fg                 "#ebbcba"
+set inputbar-bg                 "#fffaf3"
+set inputbar-fg                 "#b4637a"
 
-set notification-bg             "#e0def4"
-set notification-fg             "#555169"
+set notification-bg             "#575279"
+set notification-fg             "#fffaf3"
 
-set notification-error-bg       "#f6c177"
-set notification-error-fg       "#555169"
+set notification-error-bg       "#b4637a"
+set notification-error-fg       "#fffaf3"
 
-set notification-warning-bg     "#ebbcba"
-set notification-warning-fg     "#555169"
+set notification-warning-bg     "#ea9d34"
+set notification-warning-fg     "#575279"
 
-set highlight-color             "rgba(0xeb, 0xbc, 0xba, 0.5)"
-set highlight-active-color      "rgba(0xeb, 0x6f, 0x92, 0.5)"
+set highlight-color             "rgba(0xd7, 0x82, 0x7e, 0.5)"
+set highlight-active-color      "rgba(0xb4, 0x63, 0x7a, 0.5)"
 
-set completion-bg               "#6e6a86"
-set completion-fg               "#ebbcba"
+set completion-bg               "#fffaf3"
+set completion-fg               "#b4637a"
 
-set completion-highlight-fg     "#26233a"
-set completion-highlight-bg     "#ebbcba"
+set completion-highlight-fg     "#fffaf3"
+set completion-highlight-bg     "#b4637a"
 
-set recolor-lightcolor          "#191724"
-set recolor-darkcolor           "#e0def4"
+set completion-group-bg         "#fffaf3"
+set completion-group-fg         "#286983"
 
-set recolor                     "false"
-set recolor-keephue             "false"
+set index-fg                    "#575279"
+set index-bg                    "#faf4ed"
+set index-active-fg             "#575279"
+set index-active-bg             "#dfdad9"
+
+set recolor-lightcolor          "#faf4ed"
+set recolor-darkcolor           "#575279"

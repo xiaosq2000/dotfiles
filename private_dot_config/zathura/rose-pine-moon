@@ -1,41 +1,41 @@
-# https://github.com/rose-pine/rose-pine-theme
-# Soho vibes for Zathura: Rosé Pine
+# Rosé Pine Moon for zathura. Checked on 2026-10-02.
 #
-# Usage:
-# Copy contents of this file to ~/.config/zathura/zathurarc
+# The rose-pine organisation has no zathura repository, so the layout follows the
+# `rose-pine` file next to this one, with the colours of the Moon palette
+# (https://github.com/rose-pine/rose-pine-palette), and three things change. Its
+# grey #555169 is not in the current palette, so the status bar uses highlight
+# med and the notification text uses overlay. Rose on muted would be 2.4:1 on
+# Moon, so the input bar and the completion list use highlight high.
 #
-# Change 'recolor' and 'recolor-keephue' to true to change
-# the document colors for a more uniform viewing experience.
+# recolor and recolor-keephue are left to zathurarc, which sets them after the
+# include for every variant alike.
 
-set default-bg                  "#191724"
+set default-bg                  "#232136"
 set default-fg                  "#e0def4"
 
 set statusbar-fg                "#e0def4"
-set statusbar-bg                "#555169"
+set statusbar-bg                "#44415a"
 
-set inputbar-bg                 "#6e6a86"
-set inputbar-fg                 "#ebbcba"
+set inputbar-bg                 "#56526e"
+set inputbar-fg                 "#ea9a97"
 
 set notification-bg             "#e0def4"
-set notification-fg             "#555169"
+set notification-fg             "#393552"
 
 set notification-error-bg       "#f6c177"
-set notification-error-fg       "#555169"
+set notification-error-fg       "#393552"
 
-set notification-warning-bg     "#ebbcba"
-set notification-warning-fg     "#555169"
+set notification-warning-bg     "#ea9a97"
+set notification-warning-fg     "#393552"
 
-set highlight-color             "rgba(0xeb, 0xbc, 0xba, 0.5)"
+set highlight-color             "rgba(0xea, 0x9a, 0x97, 0.5)"
 set highlight-active-color      "rgba(0xeb, 0x6f, 0x92, 0.5)"
 
-set completion-bg               "#6e6a86"
-set completion-fg               "#ebbcba"
+set completion-bg               "#56526e"
+set completion-fg               "#ea9a97"
 
-set completion-highlight-fg     "#26233a"
-set completion-highlight-bg     "#ebbcba"
+set completion-highlight-fg     "#393552"
+set completion-highlight-bg     "#ea9a97"
 
-set recolor-lightcolor          "#191724"
+set recolor-lightcolor          "#232136"
 set recolor-darkcolor           "#e0def4"
-
-set recolor                     "false"
-set recolor-keephue             "false"
