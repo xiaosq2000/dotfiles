@@ -336,10 +336,14 @@ check_x11_wayland() {
 }
 check_x11_wayland
 
-# Network proxy helpers
-type safely_source >/dev/null 2>&1 && safely_source "$HOME/.sh_utils/network_management.sh"
-if [ -n "${VPN_PROTOCOL:-}" ] && has systemctl && systemctl is-active --quiet "sing-box-${VPN_PROTOCOL}.service" 2>/dev/null; then
-    if has set_local_proxy; then set_local_proxy; else echo "error: command set_local_proxy not found"; fi
+# The proxy client. `sbc init` puts sbc on PATH and adds a prompt hook that
+# applies `sbc on` and `sbc off`. Bash never loaded the bash client, so a
+# machine without sbc gets nothing here.
+case $OSTYPE in
+darwin*) _sbc="$HOME/Library/Application Support/sbc/cli/sbc" ;;
+*) _sbc="${XDG_DATA_HOME:-$HOME/.local/share}/sbc/cli/sbc" ;;
+esac
+if [ -x "$_sbc" ]; then
+    eval "$("$_sbc" init bash)"
 fi
-
-if has proxy; then proxy shell on; fi
+unset _sbc

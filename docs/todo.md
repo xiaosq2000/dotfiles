@@ -12,14 +12,12 @@ On each machine:
 1. Run `chezmoi update`, which brings that block.
 2. Run `proxy upgrade`. It installs sbc beside the bash client, removes the
    bash client once a page loads through sbc, and keeps the port, route and
-   protocol. On the laptop, first remove the test install from 2026-09-29 with
-   `~/.local/share/sbc/bin/sbc uninstall --yes`.
+   protocol.
 3. Open a new shell and check `sbc status`.
 
-Machines still to do: laptop, workstation, imrl, sicc. Drop a name once it is
-done. When none are left, delete the bash client branch from `dot_zshrc.tmpl`,
-change `network.md` in the `machines` skill from `proxy` to `sbc`, and delete
-this entry.
+Machines still to do: imrl, sicc. Drop a name once it is done. When none are
+left, delete the bash client branch from `dot_zshrc.tmpl`, drop the bash client
+notes from `network.md` in the `machines` skill, and delete this entry.
 
 ## Trust the key-guard hook in Codex on each machine
 
