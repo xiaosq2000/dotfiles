@@ -1,9 +1,6 @@
 set selection-clipboard clipboard
 set sandbox none
 
-set recolor true
-set recolor-keephue true
-
 # Copy the current file path into the clipboard: wl-copy under Wayland, xclip otherwise.
 # Zathura's parser cannot nest double quotes, so [ -n "$WAYLAND_DISPLAY" ] is not
 # expressible here; ${WAYLAND_DISPLAY:+1} gives [ 1 ] when set and [ ] when unset.
@@ -15,3 +12,12 @@ map y feedkeys ":exec zsh -c \"printf %s '$FILE' | if [ ${WAYLAND_DISPLAY:+1} ];
 # the repository already carried four Catppuccin files that nothing could
 # select.
 include {{ (index .themes .theme).zathura }}
+
+# Recolouring repaints the document itself in the theme's colours. On a dark
+# variant that inverts the page, and on any variant it changes how figures
+# look, so it starts off and Ctrl+R turns it on in the window it is pressed in.
+# keephue keeps each colour's original hue while it is on. Both settings come
+# after the include on purpose: the theme files are vendored, and one that set
+# them would win, so Ctrl+R would behave differently from scheme to scheme.
+set recolor false
+set recolor-keephue true

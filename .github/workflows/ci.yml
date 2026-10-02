@@ -457,6 +457,20 @@ jobs:
               grep "^include $variant$" >/dev/null
           done
 
+          # Recolouring starts off on every variant, with the hue kept for when
+          # Ctrl+R turns it on. Both settings have to come after the include,
+          # because a vendored theme file that set them would otherwise win, so
+          # this checks the order as well as the values. It reads the rendered
+          # zathurarc, not the theme files: the Rosé Pine ones set them
+          # themselves and would hide a wrong default.
+          variants=$(chezmoi execute-template '{{ keys .themes | sortAlpha | join " " }}')
+          test -n "$variants"
+          for variant in $variants; do
+            chezmoi execute-template --override-data "{\"machine\":\"workstation\",\"theme\":\"$variant\"}" \
+              --file "$HOME/.local/share/chezmoi/private_dot_config/zathura/zathurarc.tmpl" |
+              awk '/^include /{i=NR} /^set recolor false$/{r=NR} /^set recolor-keephue true$/{k=NR} END{exit !(i && r > i && k > i)}'
+          done
+
           # A variant switch within the scheme.
           "$HOME/.local/bin/theme" rose-pine-dawn
           grep -q 'rose-pine-dawn' "$nvim_theme"

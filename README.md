@@ -77,6 +77,9 @@ theme --dry-run catppuccin-mocha
 One switch covers btop, kitty, alacritty, Neovim, zathura, fzf and starship.
 Variants use the slug upstream uses.
 
+Zathura starts with recolouring off on every variant, so documents keep their
+own colours; `Ctrl+R` turns it on in the open window.
+
 Each colour scheme is one file —
 [themes-rose-pine.toml](.chezmoidata/themes-rose-pine.toml),
 [themes-catppuccin.toml](.chezmoidata/themes-catppuccin.toml) — and chezmoi
