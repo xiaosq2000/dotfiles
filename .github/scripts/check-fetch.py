@@ -127,6 +127,18 @@ def zip_(path, files):
             archive.writestr(name, content)
 
 
+# Font archives whose layout the catalog's globs depend on. The first member of
+# each is the only one the catalog installs; the rest are upstream's other
+# formats, which must stay out.
+FONT_ARCHIVES = {
+    "inter": ["extras/otf/Inter-Regular.otf", "extras/ttf/Inter-Regular.ttf", "InterVariable.ttf"],
+    "jetbrains-mono": ["fonts/ttf/JetBrainsMono-Regular.ttf", "fonts/ttf/JetBrainsMonoNL-Regular.ttf",
+                       "fonts/variable/JetBrainsMono[wght].ttf"],
+    "newsreader": ["Newsreader-master/fonts/static/ttf/Newsreader72pt-Regular.ttf",
+                   "Newsreader-master/fonts/variable/ttf/Newsreader[opsz,wght].ttf"],
+}
+
+
 def payload(identifier, spec, version, directory):
     """Write a download shaped like identifier's upstream, named the way the
     catalog's asset pattern expects, and return its path. A URL download gets
@@ -148,6 +160,8 @@ def payload(identifier, spec, version, directory):
         tar(path, {"tre": script(f"tre {version}")}, "gz")
     elif path.suffix == ".ttf":
         path.write_bytes(f"{identifier} {version}".encode())
+    elif identifier in FONT_ARCHIVES:
+        zip_(path, {name: f"{identifier} {version}".encode() for name in FONT_ARCHIVES[identifier]})
     else:
         zip_(path, {"Family/otf/Fixture.otf": f"{identifier} {version}".encode(),
                     "Family/ttf/Fixture.ttf": f"{identifier} {version}".encode(),
@@ -245,6 +259,10 @@ def fixtures(box, catalog):
     assert (fonts / "maple-mono/Fixture.ttf").exists() and (fonts / "maple-mono/README.md").exists()
     shutil.move(box.base / "api-offline", box.base / "api")
     box.fetch("sync", manifest=everything)
+
+    # The slide typefaces install their static files and nothing else.
+    for identifier, members in FONT_ARCHIVES.items():
+        assert sorted(p.name for p in (fonts / identifier).iterdir()) == [Path(members[0]).name], identifier
 
     # Update moves kitty to a new release and keeps one previous version. The
     # terminfo copy follows it into 78, which it wrote, but not into x, which

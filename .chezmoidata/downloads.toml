@@ -92,6 +92,13 @@ fonts = ["*.otf"]
 url = "https://codeload.github.com/jimmyctk/PingFang-OTF-Fonts/zip/refs/heads/main"
 fonts = ["*.otf"]
 
+# Static cuts at 6, 16 and 72 pt, which show up as three families. Slides use
+# "Newsreader 72pt" for titles. The variable files are left out because
+# presentation programs handle static ones better.
+[downloads.newsreader]
+url = "https://codeload.github.com/productiontype/Newsreader/zip/refs/heads/master"
+fonts = ["*/static/ttf/*.ttf"]
+
 [downloads.nerd-font-fira-code]
 github = "ryanoasis/nerd-fonts"
 asset = "FiraCode.zip"
@@ -116,6 +123,18 @@ fonts = ["*.otf"]
 github = "adobe-fonts/source-serif"
 asset = "source-serif-*_Desktop.zip"
 fonts = ["*.otf"]
+
+# Inter and Inter Display (for titles above 32 pt) as static OpenType files.
+[downloads.inter]
+github = "rsms/inter"
+asset = "Inter-*.zip"
+fonts = ["extras/otf/*.otf"]
+
+# The NL variants without ligatures are left out.
+[downloads.jetbrains-mono]
+github = "JetBrains/JetBrainsMono"
+asset = "JetBrainsMono-*.zip"
+fonts = ["fonts/ttf/JetBrainsMono-*.ttf"]
 
 [downloads.source-han-sans-sc]
 github = "adobe-fonts/source-han-sans"

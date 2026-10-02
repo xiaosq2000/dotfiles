@@ -151,6 +151,7 @@ downloads = [
     "source-sans", "source-serif", "source-han-sans-sc", "source-han-serif-cn",
     "apple-color-emoji", "noto-color-emoji", "san-francisco-pro",
     "san-francisco-mono", "new-york", "pingfang",
+    "newsreader", "inter", "jetbrains-mono",
 ]
 
 [bundles.research]
