@@ -321,6 +321,22 @@ jobs:
           # A real zsh parses it.
           zsh -n "$HOME/.zshrc"
 
+      # The proxy client: sbc where it is installed, and the bash client on a
+      # machine that has not moved yet. The container has neither, so a stub
+      # sbc checks that an installed one is set up through `sbc init zsh`.
+      - name: The shell sets up sbc where it is installed
+        run: |
+          set -eux
+          # `has proxy` also matches /usr/bin/proxy from libproxy-tools, so once
+          # the bash client is gone it would run that at every shell start.
+          ! grep -q 'has proxy' "$HOME/.zshrc" || exit 1
+          sbc="${XDG_DATA_HOME:-$HOME/.local/share}/sbc/cli/sbc"
+          mkdir -p "$(dirname "$sbc")"
+          printf '#!/bin/sh\necho "export SBC_STUB_INIT=$1-$2"\n' > "$sbc"
+          chmod +x "$sbc"
+          timeout 60 zsh -ic 'print -r -- "stub: $SBC_STUB_INIT"' 2>/dev/null | grep -qx 'stub: init-zsh'
+          rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/sbc"
+
       # A pipe skips UI styles, so it cannot catch regressions in the terminal
       # startup path. Check the deployed library through a PTY in both shells.
       - name: UI styles respect the terminal without spawning tput

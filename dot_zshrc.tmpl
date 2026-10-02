@@ -729,12 +729,24 @@ setup_ros2() {
     fi
 }
 
-[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh"
-# `proxy shell on` costs ~130 ms: it probes systemctl, reads the tun state and
-# forks a subshell to resolve the host and port. Everything it sets is exported,
-# so a nested shell or a tmux pane already has it and paying again changes
-# nothing. Only the first shell under a terminal does the work.
-if has proxy && [[ -z "${http_proxy:-}" ]]; then proxy shell on; fi
+# The proxy client. `sbc init` puts sbc on PATH and adds a prompt hook that
+# applies `sbc on` and `sbc off`. A machine that has not moved from the bash
+# client yet loads that client instead.
+case $OSTYPE in
+darwin*) _sbc="$HOME/Library/Application Support/sbc/cli/sbc" ;;
+*) _sbc="${XDG_DATA_HOME:-$HOME/.local/share}/sbc/cli/sbc" ;;
+esac
+if [[ -x "$_sbc" ]]; then
+    eval "$("$_sbc" init zsh)"
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh" ]]; then
+    source "${XDG_DATA_HOME:-$HOME/.local/share}/sing-box/setup.sh"
+    # `proxy shell on` costs ~130 ms: it probes systemctl, reads the tun state and
+    # forks a subshell to resolve the host and port. Everything it sets is
+    # exported, so a nested shell or a tmux pane already has it and paying again
+    # changes nothing. Only the first shell under a terminal does the work.
+    if [[ -z "${http_proxy:-}" ]]; then proxy shell on; fi
+fi
+unset _sbc
 
 zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(((zshrc_end_time - zshrc_start_time) / 1000000))
