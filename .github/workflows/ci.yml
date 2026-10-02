@@ -321,9 +321,8 @@ jobs:
           # A real zsh parses it.
           zsh -n "$HOME/.zshrc"
 
-      # The proxy client: sbc where it is installed, and in zsh the bash client
-      # on a machine that has not moved yet. The container has neither, so a
-      # stub sbc checks that an installed one is set up through `sbc init`.
+      # The proxy client, sbc. The container has none, so a stub sbc checks
+      # that an installed one is set up through `sbc init`.
       - name: The shells set up sbc where it is installed
         run: |
           set -eux
@@ -331,6 +330,8 @@ jobs:
           # .bashrc ran at every start, printing "direct://" twice.
           ! grep -q 'has proxy' "$HOME/.zshrc" || exit 1
           ! grep -q 'has proxy' "$HOME/.bashrc" || exit 1
+          # Every machine has moved off the bash client, so nothing loads it.
+          ! grep -q 'sing-box/setup.sh' "$HOME/.zshrc" || exit 1
           test ! -e "$HOME/.sh_utils/network_management.sh"
           sbc="${XDG_DATA_HOME:-$HOME/.local/share}/sbc/cli/sbc"
           mkdir -p "$(dirname "$sbc")"
