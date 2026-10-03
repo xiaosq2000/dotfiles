@@ -1,0 +1,26 @@
+# GitHub CLI pull request rules for Codex execpolicy.
+# Managed by chezmoi from dot_codex/rules/gh.rules.
+# See docs/secrets.md.
+
+prefix_rule(
+    pattern = ["gh", "pr", ["view", "list", "diff", "checks", "status", "create", "edit", "comment", "review", "ready"]],
+    decision = "allow",
+    justification = "Routine pull request work through the GitHub CLI",
+    match = [["gh", "pr", "create", "--fill"], ["gh", "pr", "view", "12"]],
+    not_match = [["gh", "pr", "merge", "12"]],
+)
+prefix_rule(
+    pattern = ["gh", ["run", "issue", "repo", "search"], ["view", "list", "watch"]],
+    decision = "allow",
+    justification = "Read-only GitHub queries",
+)
+prefix_rule(
+    pattern = ["gh", "pr", ["merge", "close"]],
+    decision = "prompt",
+    justification = "Merging or closing a pull request affects remote state and peers; ask first",
+)
+prefix_rule(
+    pattern = ["gh", ["repo", "secret", "variable", "ssh-key", "gpg-key", "auth"], ["delete", "set", "add", "token", "logout", "edit", "rename", "archive"]],
+    decision = "forbidden",
+    justification = "Destructive or credential-touching GitHub commands; the user runs these",
+)

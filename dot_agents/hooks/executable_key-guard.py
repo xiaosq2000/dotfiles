@@ -8,12 +8,14 @@ tool_input. Exit 2 with the reason on stderr refuses the call, and exit 0 lets
 it through.
 
 It matches text, not files. A call that names a key is refused, which covers
-the Read tool, cat, cp, grep, find -name and the like. The one exception is a
-shell command that names an ssh key only to use it, or to look at its name and
-mode: ssh -i, ssh-add, ssh-keygen -y, ls, stat, chmod and a few more. To find
-those, the command is split into words the way a shell splits it, and a command
-sent over ssh is checked the same way. A command whose effect the split cannot
-follow, such as one with $(...), is refused if it names a key at all.
+the Read tool, cat, cp, find -name and the like. The exceptions are shell
+commands that name an ssh key only to use it or to look at its name and mode
+(ssh -i, ssh-add, ssh-keygen -y, ls, stat, chmod and a few more), or inline
+text that never opens a file: git commit -m messages, gh title and body text,
+and grep or rg search patterns. To find those, the command is split into words
+the way a shell splits it, and a command sent over ssh is checked the same
+way. A command whose effect the split cannot follow, such as one with $(...),
+is refused if it names a key at all.
 
 Text matching cannot stop a command that builds the path at run time.
 docs/secrets.md lists the other layers each agent gets and what none of them
@@ -309,6 +311,10 @@ def command_offence(words, depth):
         return rsync_offence(args, depth), False
     if name == "git":
         return git_offence(args, depth), False
+    if name == "gh":
+        return gh_offence(args, depth), False
+    if name in ("rg", "grep", "egrep", "fgrep"):
+        return search_offence(args), False
     if name in DECLARATIONS:
         return first(lambda a: assignment_offence(a, depth) if ASSIGNMENT.match(a) else offence(a), args), False
     return first(offence, words), False
@@ -438,7 +444,7 @@ def rsync_offence(args, depth):
 
 
 def git_offence(args, depth):
-    """Check git, whose -c core.sshCommand value is an ssh command line."""
+    """Check git: options with shell commands, inline messages, and file operands."""
     i = 0
     while i < len(args):
         word = args[i]
@@ -448,8 +454,156 @@ def git_offence(args, depth):
             i += 1
             m = re.fullmatch(r"core\.sshcommand=(.*)", value, re.S | re.I)
             found = shell_offence(m.group(1), depth + 1) if m else offence(value)
-        else:
-            found = offence(word)
+            if found:
+                return found
+            continue
+        if word.startswith("-c") and len(word) > 2:
+            value = word[2:]
+            m = re.fullmatch(r"core\.sshcommand=(.*)", value, re.S | re.I)
+            found = shell_offence(m.group(1), depth + 1) if m else offence(value)
+            if found:
+                return found
+            continue
+        # Inline message options: the text is message data, not a file to read
+        if word in ("-m", "--message"):
+            if i < len(args):
+                i += 1
+            continue
+        if word.startswith("--message=") or (word.startswith("-m") and len(word) > 2):
+            continue
+        if word.startswith("--grep="):
+            continue
+        if word == "--grep" and i < len(args):
+            i += 1
+            continue
+        # Files that git opens to read commit message or template
+        if word in ("-F", "--file"):
+            if i < len(args):
+                found = offence(args[i])
+                if found:
+                    return found
+                i += 1
+            continue
+        if word.startswith("--file="):
+            found = offence(word.partition("=")[2])
+            if found:
+                return found
+            continue
+        if word in ("-t", "--template"):
+            if i < len(args):
+                found = offence(args[i])
+                if found:
+                    return found
+                i += 1
+            continue
+        if word.startswith("--template="):
+            found = offence(word.partition("=")[2])
+            if found:
+                return found
+            continue
+        found = offence(word)
+        if found:
+            return found
+    return None
+
+
+def gh_offence(args, depth):
+    """Check gh: inline message and title flags vs file flags and operands."""
+    i = 0
+    while i < len(args):
+        word = args[i]
+        i += 1
+        # Inline title, body, message and comment text
+        if word in ("-t", "--title", "-b", "--body", "-m", "--message", "--comment"):
+            if i < len(args):
+                i += 1
+            continue
+        if any(word.startswith(opt + "=") for opt in ("--title", "--body", "--message", "--comment")):
+            continue
+        if word.startswith(("-t", "-b", "-m")) and len(word) > 2 and not word.startswith("--"):
+            continue
+        # Files that gh opens to read message or template contents
+        if word in ("-F", "--body-file", "--template"):
+            if i < len(args):
+                found = offence(args[i])
+                if found:
+                    return found
+                i += 1
+            continue
+        if any(word.startswith(opt + "=") for opt in ("--body-file", "--template")):
+            found = offence(word.partition("=")[2])
+            if found:
+                return found
+            continue
+        found = offence(word)
+        if found:
+            return found
+    return None
+
+
+SEARCH_FILE_OPTIONS = {"-f", "--file"}
+SEARCH_PATTERN_OPTIONS = {"-e", "--regexp"}
+SEARCH_VALUED_OPTIONS = {
+    "-m", "-A", "-B", "-C", "-D", "-d", "-t", "-g", "--type", "--glob",
+    "--max-count", "--after-context", "--before-context", "--context",
+    "--exclude", "--include", "--exclude-dir", "--include-dir",
+}
+
+
+def search_offence(args):
+    """Check grep and rg: search patterns do not open files, but paths and -f do."""
+    has_pattern = False
+    options = True
+    i = 0
+    while i < len(args):
+        word = args[i]
+        i += 1
+        if options and word == "--":
+            options = False
+            continue
+        if options and word.startswith("-") and len(word) > 1:
+            if word in SEARCH_FILE_OPTIONS:
+                if i < len(args):
+                    found = offence(args[i])
+                    if found:
+                        return found
+                    i += 1
+                has_pattern = True
+                continue
+            if any(word.startswith(opt + "=") for opt in SEARCH_FILE_OPTIONS):
+                found = offence(word.partition("=")[2])
+                if found:
+                    return found
+                has_pattern = True
+                continue
+            if word in SEARCH_PATTERN_OPTIONS:
+                if i < len(args):
+                    i += 1
+                has_pattern = True
+                continue
+            if any(word.startswith(opt + "=") for opt in SEARCH_PATTERN_OPTIONS):
+                has_pattern = True
+                continue
+            if word.startswith("-e") and len(word) > 2:
+                has_pattern = True
+                continue
+            if word in SEARCH_VALUED_OPTIONS:
+                if i < len(args):
+                    found = offence(args[i])
+                    if found:
+                        return found
+                    i += 1
+                continue
+            if any(word.startswith(opt + "=") for opt in SEARCH_VALUED_OPTIONS):
+                found = offence(word.partition("=")[2])
+                if found:
+                    return found
+                continue
+            continue
+        if not has_pattern:
+            has_pattern = True
+            continue
+        found = offence(word)
         if found:
             return found
     return None

@@ -635,6 +635,7 @@ jobs:
           # Each agent is wired to it.
           test -f "$HOME/.config/opencode/plugins/key-guard.js"
           test "$(stat -c %a "$HOME/.codex/config.toml")" = 600
+          test -f "$HOME/.codex/rules/gh.rules"
           python3 - <<'EOF'
           import json, os, tomllib
           home = os.environ["HOME"]
@@ -651,7 +652,12 @@ jobs:
           # that does not exist, and can leave it behind. The ssh drop-in
           # directory is hidden so that ssh runs in the sandbox.
           deny = {p: "deny" for p in ["~/.ssh/id_*[!b]", "~/.ssh/id_*[!u]b", "~/.ssh/id_*[!p]ub", "~/.ssh/id_*[!.]pub"]}
-          assert codex["permissions"]["key-guard"]["filesystem"] == {**deny, "/etc/ssh/ssh_config.d": "deny"}, codex
+          ws_roots = {".git": "write", ".git/hooks": "read", ".git/config": "read"}
+          assert codex["permissions"]["key-guard"]["filesystem"] == {
+              **deny,
+              "/etc/ssh/ssh_config.d": "deny",
+              ":workspace_roots": ws_roots,
+          }, codex
           assert codex["permissions"]["key-guard"]["network"]["enabled"] is True, codex
           # The globs select every id_* name except a .pub file, as Python's
           # fnmatch reads them. That Codex reads them the same way was checked
@@ -679,6 +685,11 @@ jobs:
           assert codex["model"] == "o3" and codex["projects"]["/tmp"]["trust_level"] == "trusted", codex
           assert codex["default_permissions"] == "key-guard", codex
           assert codex["permissions"]["key-guard"]["network"]["enabled"] is True, codex
+          assert codex["permissions"]["key-guard"]["filesystem"][":workspace_roots"] == {
+              ".git": "write",
+              ".git/hooks": "read",
+              ".git/config": "read",
+          }, codex
           EOF
           # A second pass finds nothing left to change.
           chezmoi verify

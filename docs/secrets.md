@@ -136,12 +136,16 @@ The guarded files:
 | opencode | `read` rules in `opencode.json`, and a plugin that runs the key-guard hook | `private_dot_config/opencode/` |
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
-guarded file, and tells the agent to ask you instead. The one exception is a
-shell command that names an ssh key only to use it or to look at its name and
-mode: `ssh`, `scp` or `sftp -i`, `ssh -o IdentityFile=`, `ssh-add`,
-`ssh-keygen -y` or `-l`, and `ls`, `stat`, `test`, `chmod` or `mkdir`. The hook
-splits the command into words to find those places. A command sent over ssh is
-checked the same way, so `ssh sicc 'mkdir -p ~/.ssh'` passes and
+guarded file, and tells the agent to ask you instead. The exceptions are
+commands that name an ssh key only to use it or to inspect its metadata:
+`ssh`, `scp` or `sftp -i`, `ssh -o IdentityFile=`, `ssh-add`,
+`ssh-keygen -y` or `-l`, and `ls`, `stat`, `test`, `chmod` or `mkdir`, as well
+as inline text that never opens a file: `git commit -m` messages, `gh` PR and
+issue `--title` and `--body` text, and `grep` or `rg` search patterns. Flags
+that open a file to read message or pattern data (`git commit -F`,
+`gh --body-file`, `grep -f`) remain strictly refused. The hook splits the
+command into words to find those places. A command sent over ssh is checked the
+same way, so `ssh sicc 'mkdir -p ~/.ssh'` passes and
 `ssh sicc 'cat ~/.ssh/id_ed25519'` does not. A command the split cannot follow,
 such as one with `$(...)`, is refused if it names a key at all, and no command
 may name the age identity. The calls it must refuse and the ones it must let
@@ -179,6 +183,23 @@ and `scp` in Codex with `Bad owner or permissions`. Hidden, the directory
 matches nothing, and ssh runs without its drop-ins. Checked with codex-cli
 0.155.1 and OpenSSH 10.2 on 2026-09-22. Where no ssh agent holds the key, ssh
 in Codex's sandbox cannot log in with it.
+
+Codex's base `:workspace` profile marks `.git` read-only, which stops in-sandbox
+`git commit`, staging (`index.lock`), and branch operations without prompting
+for approval. The `key-guard` profile carves out write access for `.git` under
+`:workspace_roots`, while keeping `.git/hooks` and `.git/config` read-only.
+That lets git operate smoothly in the sandbox while preventing any script or
+process from tampering with git hooks or repository configuration (such as
+`core.fsmonitor` or `core.hooksPath`).
+
+Routine GitHub CLI operations are managed by Codex execpolicy rules in
+`~/.codex/rules/gh.rules` (deployed from `dot_codex/rules/gh.rules`). It allows
+read-only queries and routine PR work (`gh pr view`, `list`, `diff`, `checks`,
+`status`, `create`, `edit`, `comment`, `review`, `ready`), prompts before
+destructive or shared PR state changes (`gh pr merge`, `gh pr close`), and
+forbids credential-touching or destructive commands (`gh auth`, `gh repo delete`,
+`gh secret`, `gh ssh-key`). Commands not covered by the rules fall back to
+Codex's normal approval policy. Checked with codex-cli 0.160.0 on 2026-10-03.
 
 What none of this stops:
 

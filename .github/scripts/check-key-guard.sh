@@ -74,6 +74,13 @@ done <<'EOF'
 # The age identity may not be named even by ls or ssh-add
 2 {"tool_name":"Bash","tool_input":{"command":"ls -l ~/.config/chezmoi/key.txt"}}
 2 {"tool_name":"Bash","tool_input":{"command":"ssh-add ~/.config/chezmoi/key.txt"}}
+# File-reading flags in git, gh and search tools
+2 {"tool_name":"Bash","tool_input":{"command":"git commit -F ~/.ssh/id_ed25519"}}
+2 {"tool_name":"Bash","tool_input":{"command":"git commit --file=~/.ssh/id_rsa"}}
+2 {"tool_name":"Bash","tool_input":{"command":"gh pr create --body-file ~/.ssh/id_ed25519"}}
+2 {"tool_name":"Bash","tool_input":{"command":"gh pr create --body-file=~/.ssh/id_rsa"}}
+2 {"tool_name":"Bash","tool_input":{"command":"rg foo ~/.ssh/id_ed25519"}}
+2 {"tool_name":"Bash","tool_input":{"command":"grep -f ~/.ssh/id_rsa docs/"}}
 
 # Files in ~/.ssh with nothing secret in them
 0 {"tool_name":"Bash","tool_input":{"command":"cat ~/.ssh/config"}}
@@ -115,6 +122,12 @@ done <<'EOF'
 0 {"tool_name":"Bash","tool_input":{"command":"chmod 600 ~/.ssh/id_ed25519"}}
 0 {"tool_name":"Bash","tool_input":{"command":"ssh sicc 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'"}}
 0 {"tool_name":"bash","tool_input":{"command":"ls ~/.ssh"}}
+# Inline message text and search patterns that never open a key file
+0 {"tool_name":"Bash","tool_input":{"command":"git commit -m \"docs: keys live in ~/.ssh/id_*\""}}
+0 {"tool_name":"Bash","tool_input":{"command":"git commit --message \"fix: ~/.ssh/id_ed25519\""}}
+0 {"tool_name":"Bash","tool_input":{"command":"gh pr create --title \"docs(secrets): note id_ed25519 naming\" --body \"refer to ~/.ssh/id_*\""}}
+0 {"tool_name":"Bash","tool_input":{"command":"rg -n \"id_ed25519\" docs/"}}
+0 {"tool_name":"Bash","tool_input":{"command":"grep -rn \"id_rsa\" docs/secrets.md"}}
 # A caller that sends no JSON is let through with a warning
 0 not json
 EOF

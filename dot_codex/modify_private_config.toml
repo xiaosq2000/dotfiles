@@ -10,10 +10,15 @@
 # What this adds:
 #   default_permissions = "key-guard"   at the top of the file
 #   [permissions.key-guard]             at the end: Codex's :workspace profile,
-#                                       with networking, key read denies, and
-#                                       /etc/ssh/ssh_config.d hidden so ssh runs
-# The inherited profile disables networking. Enable it so Git and the GitHub
-# CLI can reach their remotes while the file restrictions still apply.
+#                                       with networking, key read denies,
+#                                       /etc/ssh/ssh_config.d hidden so ssh runs,
+#                                       and .git write allowed while keeping
+#                                       .git/hooks and .git/config read-only
+# The inherited profile disables networking and makes .git read-only. Enable
+# networking so Git and the GitHub CLI can reach their remotes while the file
+# restrictions still apply, and allow write to .git so commits and staging
+# work within workspace roots. Keeping .git/hooks and .git/config read-only
+# guards against tampering with git hooks or fsmonitor commands.
 # Codex enforces the deny with bubblewrap, so it holds for every sandboxed
 # command, however the command names the file. It does not cover a command Codex
 # runs outside the sandbox after approval; the key-guard hook in
@@ -87,10 +92,19 @@ KEYS = ["~/.ssh/id_*[!b]", "~/.ssh/id_*[!u]b", "~/.ssh/id_*[!p]ub", "~/.ssh/id_*
 # directory is missing, Codex cannot create a stand-in in /etc. All checked
 # with codex-cli 0.155.1 and OpenSSH 10.2 on 2026-09-22.
 SSH_DROP_INS = "/etc/ssh/ssh_config.d"
+WORKSPACE_ROOTS = {
+    ".git": "write",
+    ".git/hooks": "read",
+    ".git/config": "read",
+}
 WANT = {
     "description": "Workspace and network access without ssh private keys. Set by chezmoi.",
     "extends": ":workspace",
-    "filesystem": {**{k: "deny" for k in KEYS}, SSH_DROP_INS: "deny"},
+    "filesystem": {
+        **{k: "deny" for k in KEYS},
+        SSH_DROP_INS: "deny",
+        ":workspace_roots": WORKSPACE_ROOTS,
+    },
     "network": {"enabled": True},
 }
 COMMENT = [
@@ -117,7 +131,16 @@ def block():
     lines = COMMENT + ["[permissions.%s]" % PROFILE]
     lines += ["description = " + q(WANT["description"]), "extends = " + q(WANT["extends"]), ""]
     lines += ["[permissions.%s.filesystem]" % PROFILE]
-    lines += ["%s = %s" % (q(path), q(access)) for path, access in WANT["filesystem"].items()]
+    lines += [
+        "%s = %s" % (q(path), q(access))
+        for path, access in WANT["filesystem"].items()
+        if isinstance(access, str)
+    ]
+    lines += ["", "[permissions.%s.filesystem.\":workspace_roots\"]" % PROFILE]
+    lines += [
+        "%s = %s" % (q(path), q(access))
+        for path, access in WANT["filesystem"][":workspace_roots"].items()
+    ]
     lines += ["", "[permissions.%s.network]" % PROFILE, "enabled = " + q(WANT["network"]["enabled"])]
     return "\n".join(lines) + "\n"
 
