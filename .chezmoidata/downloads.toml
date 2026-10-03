@@ -151,8 +151,10 @@ github = "samuelngs/apple-emoji-ttf"
 asset = "AppleColorEmoji-Linux.ttf"
 fonts = ["*.ttf"]
 
-# The main branch no longer carries the binary font; the release tag does.
+# The font is a file in the repository at the latest release tag, not a release
+# asset (the only asset is an 820 MB 3D zip). The tag v2026-09-24-unicode18_0
+# moved it from fonts/ to 2D/fonts/ (checked on 2026-10-03).
 [downloads.noto-color-emoji]
 github = "googlefonts/noto-emoji"
-file = "fonts/NotoColorEmoji.ttf"
+file = "2D/fonts/NotoColorEmoji.ttf"
 fonts = ["*.ttf"]
