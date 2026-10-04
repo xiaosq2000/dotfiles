@@ -177,9 +177,10 @@ entry once it is done.
 
 [dot_agents/AGENTS.md](dot_agents/AGENTS.md) holds the user's preferences that
 apply in every project. It deploys to `~/.agents/AGENTS.md`, and `symlink_`
-entries link it as `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` and
-`~/.config/opencode/AGENTS.md`, so each agent loads it at the start of every
-session. This file adds what is specific to this repository.
+entries link it as `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`,
+`~/.config/opencode/AGENTS.md` and `~/.gemini/AGENTS.md`, so each agent loads it
+at the start of every session. This file adds what is specific to this
+repository.
 
 A preference that holds everywhere goes there. A rule about this repository
 goes here, and a fact about a machine goes in the `machines` skill. None of

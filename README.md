@@ -140,8 +140,12 @@ file still works by hand: `touch ~/.claude/.i-have-adhd-always`.
 every project, such as where knowledge is written down, keeping downloads off
 the metered proxy, and how documents state facts. It deploys to
 `~/.agents/AGENTS.md` and is linked as `~/.claude/CLAUDE.md`,
-`~/.codex/AGENTS.md` and `~/.config/opencode/AGENTS.md`, so Claude Code, Codex
-and OpenCode all load the same file.
+`~/.codex/AGENTS.md`, `~/.config/opencode/AGENTS.md` and `~/.gemini/AGENTS.md`,
+so Claude Code, Codex, OpenCode and Antigravity CLI all load the same file.
+
+Antigravity CLI (`agy`) also reads the shared skills through
+`~/.gemini/config/skills.json`, which points to `~/.agents/skills`. See
+[Shared agent skills](dot_agents/skills/README.md) for discovery and setup.
 
 [AGENTS.md](AGENTS.md), which `CLAUDE.md` imports, is for an agent changing this
 repository. It covers the source-versus-target model, the naming attributes, and

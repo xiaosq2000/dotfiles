@@ -751,10 +751,23 @@ jobs:
           test -f "$HOME/.agents/skills/translate-zh/SKILL.md"
 
           # One file of instructions for every agent, and a link to it where
-          # each agent looks, rather than three copies that drift apart.
+          # each agent looks.
           global="$(readlink -f "$HOME/.agents/AGENTS.md")"
           test -f "$global"
-          for link in .claude/CLAUDE.md .codex/AGENTS.md .config/opencode/AGENTS.md; do
+          for link in .claude/CLAUDE.md .codex/AGENTS.md .config/opencode/AGENTS.md .gemini/AGENTS.md; do
             test -L "$HOME/$link"
             test "$(readlink -f "$HOME/$link")" = "$global"
           done
+
+          # Antigravity discovers the deployed skills directly, including on
+          # machines where the encrypted machines skill is left out.
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          config = json.loads((Path.home() / ".gemini/config/skills.json").read_text())
+          assert config == {"entries": [{"path": "~/.agents/skills"}]}, config
+          root = Path(config["entries"][0]["path"]).expanduser()
+          skills = sorted(path.parent.name for path in root.glob("*/SKILL.md"))
+          assert skills == ["git-shipping", "plain-writing", "translate-zh"], skills
+          PY

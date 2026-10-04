@@ -1,8 +1,8 @@
 # Shared agent skills
 
-This directory holds the only real copy of every user level skill. Claude Code,
-Codex and OpenCode all read the same files, so a skill is written once and
-edited in one place.
+This directory holds the personal skills managed by these dotfiles. Claude Code,
+Codex, OpenCode and Antigravity CLI all read the same files, so a skill is
+written once and edited in one place.
 
 Each skill is a directory with a `SKILL.md` inside it, plus any supporting files
 the skill needs.
@@ -14,6 +14,7 @@ the skill needs.
 | Claude Code | `~/.claude/skills/<name>` | symlink into this directory |
 | Codex | `~/.codex/skills/<name>` | symlink into this directory |
 | OpenCode | `~/.agents/skills/<name>` | read directly, no symlink needed |
+| Antigravity CLI (`agy`) | `~/.agents/skills/<name>` | registered in `~/.gemini/config/skills.json` |
 
 OpenCode looks in `~/.agents/skills` and `~/.claude/skills` on its own, which is
 why it needs nothing. Codex only looks in `$CODEX_HOME/skills`, and Claude Code
@@ -22,9 +23,17 @@ only looks in `$CLAUDE_CONFIG_DIR/skills`, so both get a symlink.
 Codex keeps its own bundled skills in `~/.codex/skills/.system`. The setup
 script never touches that directory.
 
+Antigravity's `skills.json` registers `~/.agents/skills` directly and scans one
+level deep. It finds each deployed skill without extra links and does not scan
+the nested `synced/` directory. Skills are also available as slash commands,
+such as `/plain-writing`. Configuration checked against Antigravity CLI 1.2.16's
+bundled documentation on 2026-10-04.
+
 ## Adding a skill
 
-Create the directory and its `SKILL.md` here, then run the setup script:
+Create the directory and its `SKILL.md` here, then run `chezmoi apply` to deploy
+it and update the Claude Code and Codex links. To repair those links separately,
+run the setup script:
 
 ```sh
 ~/.local/libexec/dotfiles/agent-skills.sh
@@ -55,6 +64,6 @@ it; the skill's own `SKILL.md` says the same.
 
 ## Keeping skills portable
 
-Only the `name` and `description` keys in the frontmatter are understood by all
-three agents. Anything else is agent specific, so keep it out of a shared skill
-unless the other agents can safely ignore it.
+Use `name` and `description` as the shared frontmatter fields. Anything else
+needs a compatibility check, so keep it out of a shared skill unless the other
+agents can safely ignore it.
