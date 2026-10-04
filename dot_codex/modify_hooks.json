@@ -1,0 +1,59 @@
+#!/bin/sh
+# Codex and Herdr write hooks.json, so preserve their entries while adding the
+# key guard. A plain managed file would remove Herdr's session restore hook.
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "codex hooks: python3 not found, so ~/.codex/hooks.json gets no key guard" >&2
+    exec cat
+fi
+
+exec python3 /dev/fd/3 3<<'PY'
+import copy
+import json
+import sys
+
+HOOK = "~/.agents/hooks/key-guard.py"
+MATCHER = "Bash|mcp__.*"
+
+raw = sys.stdin.read()
+try:
+    before = json.loads(raw) if raw.strip() else {}
+    if not isinstance(before, dict):
+        raise ValueError("the top level is not a JSON object")
+    after = copy.deepcopy(before)
+    groups = after.setdefault("hooks", {}).setdefault("PreToolUse", [])
+    merged = []
+    found = False
+    for group in groups:
+        ours = [h for h in group.get("hooks", []) if h.get("command") == HOOK]
+        if not ours:
+            merged.append(group)
+            continue
+        found = True
+        guard_group = copy.deepcopy(group)
+        guard_group["matcher"] = MATCHER
+        guard_group["hooks"] = ours
+        others = [h for h in group["hooks"] if h.get("command") != HOOK]
+        if others:
+            # The original matcher still belongs to the unrelated hooks.
+            group["hooks"] = others
+            merged.append(group)
+        merged.append(guard_group)
+    if not found:
+        merged.append({"matcher": MATCHER, "hooks": [{
+            "type": "command",
+            "command": HOOK,
+            "statusMessage": "Checking for private key paths",
+            "timeout": 10,
+        }]})
+    after["hooks"]["PreToolUse"] = merged
+except Exception as error:
+    sys.stderr.write("codex hooks: left ~/.codex/hooks.json unchanged: %s\n" % error)
+    sys.stdout.write(raw)
+    sys.exit(0)
+
+if after == before and raw.strip():
+    sys.stdout.write(raw)
+else:
+    sys.stdout.write(json.dumps(after, indent=2, ensure_ascii=False) + "\n")
+PY

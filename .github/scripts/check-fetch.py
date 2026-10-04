@@ -158,6 +158,8 @@ def payload(identifier, spec, version, directory):
                    "Zotero_linux-x86_64/icons/icon128.png": b"icon"}, "xz")
     elif identifier == "tre":
         tar(path, {"tre": script(f"tre {version}")}, "gz")
+    elif identifier == "herdr":
+        path.write_bytes(script(f"herdr {version}"))
     elif path.suffix == ".ttf":
         path.write_bytes(f"{identifier} {version}".encode())
     elif identifier in FONT_ARCHIVES:
@@ -230,7 +232,7 @@ def fixtures(box, catalog):
     box.fetch("sync", manifest=everything)
     lock = box.lock()
     assert set(lock) == set(catalog), set(catalog) ^ set(lock)
-    for command in ["kitty", "kitten", "tre", "zotero"]:
+    for command in ["kitty", "kitten", "tre", "zotero", "herdr"]:
         output = subprocess.run([str(store / "bin" / command)], capture_output=True, text=True, check=True).stdout
         assert output == f"{command} 1\n", (command, output)
     assert json.loads((store / "zotero/current/distribution/policies.json").read_text()) == {"policies": {"DisableAppUpdate": True}}
@@ -318,7 +320,7 @@ def live(box, catalog):
     store, fonts = box.home / ".local/opt/dotfiles", box.home / ".local/share/fonts/dotfiles"
     box.fetch("sync", manifest={"platform": "linux-amd64", "resources": catalog})
     box.fetch("status")
-    for command in ["kitty", "kitten", "tre", "zotero"]:
+    for command in ["kitty", "kitten", "tre", "zotero", "herdr"]:
         result = subprocess.run([str(store / "bin" / command), "--version"], env=dict(box.env, MOZ_HEADLESS="1"),
                                 capture_output=True, text=True, check=True)
         print(result.stdout.strip())

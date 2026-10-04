@@ -33,7 +33,7 @@ FZF_ROLES = ["fg", "bg", "hl", "fgPlus", "bgPlus", "hlPlus", "border",
              "header", "gutter", "spinner", "info", "pointer", "marker", "prompt"]
 # Per-tool tokens every variant needs, plus the two structural fields.
 TOKENS = ["scheme", "description", "appearance", "btop", "kitty", "kittyName",
-          "alacritty", "nvim", "zathura"]
+          "alacritty", "nvim", "zathura", "herdr"]
 SCHEME_KEYS = ["description", "btopURL", "kittyURL", "alacrittyURL",
                "nvimRepo", "nvimName"]
 # The colours a zathura theme file must state for Ctrl+R to paint a page in the

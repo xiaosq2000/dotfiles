@@ -92,7 +92,7 @@ commands = {}
 for name, spec in sorted(downloads.items()):
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
         errors.append(f"download {name!r}: ids are lowercase words joined by hyphens")
-    unknown = set(spec) - {"github", "asset", "file", "url", "strip", "bin", "fonts", "write", "copy"}
+    unknown = set(spec) - {"github", "asset", "file", "url", "strip", "filename", "bin", "fonts", "write", "copy"}
     if unknown:
         errors.append(f"download {name!r}: unknown fields {sorted(unknown)}")
     kinds = [k for k in ("asset", "file", "url") if k in spec]
@@ -108,6 +108,8 @@ for name, spec in sorted(downloads.items()):
         errors.append(f"download {name!r}: a font download takes only fonts")
     paths = list(spec.get("bin", [])) + list(spec.get("write", {})) + list(spec.get("copy", {}))
     paths += list(spec.get("copy", {}).values())
+    if "filename" in spec:
+        paths.append(spec["filename"])
     for path in paths:
         parts = PurePosixPath(path).parts
         if not parts or PurePosixPath(path).is_absolute() or ".." in parts:

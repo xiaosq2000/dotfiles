@@ -40,6 +40,7 @@ jobs:
           sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - run: bash .github/scripts/check-setup-scripts.sh
+      - run: python3 .github/scripts/check-herdr-theme.py
 
   # dotfiles-fetch against local fixtures shaped like each upstream: install,
   # offline sync, update, deselect, failure and migration, in seconds.
@@ -298,6 +299,21 @@ jobs:
           chezmoi execute-template --override-data '{"machine":"laptop"}' \
             --file "$HOME/.local/share/chezmoi/dot_pixi/manifests/pixi-global.toml.tmpl" |
             grep -qx 'dependencies = { um-vpn = { git = "https://github.com/xiaosq2000/um-vpn" } }'
+
+      - name: Herdr is selected on every agent machine
+        run: |
+          set -eux
+          template="$HOME/.local/share/chezmoi/private_dot_config/dotfiles/downloads.json.tmpl"
+          for machine in workstation laptop imrl sicc; do
+            chezmoi execute-template --override-data "{\"machine\":\"$machine\"}" \
+              --file "$template" > /tmp/agent-downloads.json
+            python3 -c 'import json; d=json.load(open("/tmp/agent-downloads.json")); h=d["resources"]["herdr"]; assert h["filename"] == "herdr"; assert h["bin"] == ["herdr"]'
+          done
+          for machine in vps container generic; do
+            chezmoi execute-template --override-data "{\"machine\":\"$machine\"}" \
+              --file "$template" > /tmp/other-downloads.json
+            python3 -c 'import json; d=json.load(open("/tmp/other-downloads.json")); assert "herdr" not in d["resources"]'
+          done
 
       # The container machine selects no bundles, so sheldon is not installed
       # and its plugins are not cloned. What can be checked is that the config
@@ -671,6 +687,36 @@ jobs:
               assert not denied(name), name
           EOF
 
+          # Herdr's restore hook and other user hooks survive an apply too.
+          python3 - <<'EOF'
+          import json, os
+          path = os.environ["HOME"] + "/.codex/hooks.json"
+          hooks = {"hooks": {
+              "SessionStart": [{"hooks": [{"type": "command", "command": "herdr-session-fixture"}]}],
+              "PreToolUse": [{"matcher": "Read", "hooks": [
+                  {"type": "command", "command": "user-fixture", "timeout": 5},
+                  {"type": "command", "command": "~/.agents/hooks/key-guard.py", "timeout": 10},
+              ]}],
+          }, "user_preference": True}
+          with open(path, "w") as stream:
+              json.dump(hooks, stream)
+          EOF
+          chezmoi apply --force "$HOME/.codex/hooks.json"
+          python3 - <<'EOF'
+          import json, os
+          hooks = json.load(open(os.environ["HOME"] + "/.codex/hooks.json"))
+          assert hooks["user_preference"] is True
+          assert hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"] == "herdr-session-fixture"
+          groups = hooks["hooks"]["PreToolUse"]
+          assert groups[0] == {"matcher": "Read", "hooks": [{"type": "command", "command": "user-fixture", "timeout": 5}]}
+          assert groups[1] == {"matcher": "Bash|mcp__.*", "hooks": [{"type": "command", "command": "~/.agents/hooks/key-guard.py", "timeout": 10}]}
+          commands = [h["command"] for group in groups for h in group["hooks"]]
+          assert commands.count("~/.agents/hooks/key-guard.py") == 1
+          EOF
+          cp "$HOME/.codex/hooks.json" /tmp/codex-hooks-first.json
+          chezmoi apply --force "$HOME/.codex/hooks.json"
+          cmp "$HOME/.codex/hooks.json" /tmp/codex-hooks-first.json
+
           # What the agents wrote survives an apply, and the guard joins it.
           printf '{"theme": "dark", "permissions": {"allow": ["Bash(ls)"]}}\n' > "$HOME/.claude/settings.json"
           printf 'model = "o3"\n\n[projects."/tmp"]\ntrust_level = "trusted"\n' > "$HOME/.codex/config.toml"
@@ -747,6 +793,7 @@ jobs:
           # it, so their arrival shows the apply did not stop at it.
           test ! -e "$HOME/.agents/skills/machines"
           test -f "$HOME/.agents/skills/git-shipping/SKILL.md"
+          test -f "$HOME/.agents/skills/herdr/SKILL.md"
           test -f "$HOME/.agents/skills/plain-writing/SKILL.md"
           test -f "$HOME/.agents/skills/translate-zh/SKILL.md"
 
@@ -769,5 +816,5 @@ jobs:
           assert config == {"entries": [{"path": "~/.agents/skills"}]}, config
           root = Path(config["entries"][0]["path"]).expanduser()
           skills = sorted(path.parent.name for path in root.glob("*/SKILL.md"))
-          assert skills == ["git-shipping", "plain-writing", "translate-zh"], skills
+          assert skills == ["git-shipping", "herdr", "plain-writing", "translate-zh"], skills
           PY

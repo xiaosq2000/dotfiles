@@ -41,6 +41,7 @@ kittyName = "Catppuccin Mocha"
 alacritty = "catppuccin-mocha"
 nvim = "catppuccin-mocha"
 zathura = "catppuccin-mocha"
+herdr = "catppuccin"
 
 [themes.catppuccin-mocha.starship]
 surface = "#313244"   # the chip background every module sits on
@@ -77,6 +78,7 @@ kittyName = "Catppuccin Macchiato"
 alacritty = "catppuccin-macchiato"
 nvim = "catppuccin-macchiato"
 zathura = "catppuccin-macchiato"
+herdr = "catppuccin"
 
 [themes.catppuccin-macchiato.starship]
 surface = "#363a4f"   # the chip background every module sits on
@@ -113,6 +115,7 @@ kittyName = "Catppuccin Frappé"
 alacritty = "catppuccin-frappe"
 nvim = "catppuccin-frappe"
 zathura = "catppuccin-frappe"
+herdr = "catppuccin"
 
 [themes.catppuccin-frappe.starship]
 surface = "#414559"   # the chip background every module sits on
@@ -149,6 +152,7 @@ kittyName = "Catppuccin Latte"
 alacritty = "catppuccin-latte"
 nvim = "catppuccin-latte"
 zathura = "catppuccin-latte"
+herdr = "catppuccin-latte"
 
 [themes.catppuccin-latte.starship]
 surface = "#ccd0da"   # the chip background every module sits on

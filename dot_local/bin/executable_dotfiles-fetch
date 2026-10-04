@@ -219,7 +219,7 @@ def stripped(name, strip):
     return "/".join(parts[strip:]) if len(parts) > strip else None
 
 
-def unpack(archive, basename, destination, strip):
+def unpack(archive, basename, destination, strip, filename=None):
     """Unpack a zip or tar of any compression, or place a lone file, into
     destination. The format comes from the bytes, not the name."""
     destination.mkdir(parents=True)
@@ -261,7 +261,7 @@ def unpack(archive, basename, destination, strip):
                     raise Failure(f"archive member {relative} is not a file")
                 bundle.extract(member, destination)
     else:
-        shutil.copyfile(archive, inside(destination, basename))
+        shutil.copyfile(archive, inside(destination, filename or basename))
 
 
 # --------------------------------------------------------------------------
@@ -295,7 +295,7 @@ def install(identifier, spec, entry, target, scratch):
     version = target.get("version") or f"sha256-{sha256[:12]}"
     staging = Path(tempfile.mkdtemp(dir=scratch, prefix=identifier + "-"))
     unpacked = staging / "payload"
-    unpack(archive, basename, unpacked, spec.get("strip", 0))
+    unpack(archive, basename, unpacked, spec.get("strip", 0), spec.get("filename"))
     archive.unlink()
 
     for relative, contents in spec.get("write", {}).items():
@@ -303,6 +303,9 @@ def install(identifier, spec, entry, target, scratch):
     for relative in list(spec.get("bin", [])) + list(spec.get("copy", {}).values()):
         if not inside(unpacked, relative).is_file():
             raise Failure(f"{relative} is not in the download")
+    # A lone executable has no archive mode bits; declared commands must run.
+    for relative in spec.get("bin", []):
+        inside(unpacked, relative).chmod(0o755)
 
     if "fonts" in spec:
         install_fonts(identifier, spec["fonts"], unpacked)

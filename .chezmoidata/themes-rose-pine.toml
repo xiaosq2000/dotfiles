@@ -47,6 +47,7 @@ alacritty = "rose-pine"
 # dark original. Spelling it out keeps every variant's value the same shape.
 nvim = "rose-pine-main"
 zathura = "rose-pine"
+herdr = "rose-pine"
 
 [themes.rose-pine.starship]
 surface = "#26233a"   # the chip background every module sits on
@@ -83,6 +84,7 @@ kittyName = "Rosé Pine Moon"
 alacritty = "rose-pine-moon"
 nvim = "rose-pine-moon"
 zathura = "rose-pine-moon"
+herdr = "rose-pine"
 
 [themes.rose-pine-moon.starship]
 surface = "#393552"   # the chip background every module sits on
@@ -119,6 +121,7 @@ kittyName = "Rosé Pine Dawn"
 alacritty = "rose-pine-dawn"
 nvim = "rose-pine-dawn"
 zathura = "rose-pine-dawn"
+herdr = "rose-pine-dawn"
 
 [themes.rose-pine-dawn.starship]
 surface = "#f2e9e1"   # the chip background every module sits on

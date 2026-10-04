@@ -1,0 +1,61 @@
+{{- $t := index .themes .theme -}}
+#!/bin/sh
+# Herdr writes this file from Settings. Own only its theme section so keys,
+# onboarding, integrations and other preferences survive a theme switch.
+
+has_toml() {
+    "$1" -c 'import tomllib' </dev/null 2>/dev/null ||
+        "$1" -c 'import tomli' </dev/null 2>/dev/null
+}
+
+# imrl's system Python lacks tomllib; borrow a pixi interpreter when available.
+python=
+for candidate in python3 "${PIXI_HOME:-$HOME/.pixi}"/envs/*/bin/python3; do
+    if command -v "$candidate" >/dev/null 2>&1 && has_toml "$candidate"; then
+        python=$candidate
+        break
+    fi
+done
+if [ -z "$python" ]; then
+    echo "herdr theme: no TOML-capable python3; config left unchanged" >&2
+    exec cat
+fi
+
+exec "$python" /dev/fd/3 3<<'PY'
+import json
+import re
+import sys
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+WANT = {"name": {{ $t.herdr | quote }}, "auto_switch": False}
+HEADER = re.compile(r"^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*(#.*)?$")
+raw = sys.stdin.read()
+try:
+    before = tomllib.loads(raw)
+    if before.get("theme") == WANT:
+        sys.stdout.write(raw)
+        sys.exit(0)
+
+    kept = []
+    in_theme = False
+    for line in raw.splitlines():
+        header = HEADER.match(line)
+        if header:
+            table = re.sub(r"[\s\"']", "", header.group(1))
+            in_theme = table == "theme" or table.startswith("theme.")
+        if not in_theme:
+            kept.append(line)
+    body = "\n".join(kept).rstrip()
+    out = (body + "\n\n" if body else "") + '[theme]\nname = ' + json.dumps(WANT["name"]) + '\nauto_switch = false\n'
+    after = tomllib.loads(out)
+    if after.get("theme") != WANT or {k: v for k, v in before.items() if k != "theme"} != {k: v for k, v in after.items() if k != "theme"}:
+        raise ValueError("the edit would change more than the theme section")
+except Exception as error:
+    sys.stderr.write("herdr theme: config left unchanged: %s\n" % error)
+    out = raw
+sys.stdout.write(out)
+PY

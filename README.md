@@ -74,7 +74,7 @@ theme rose-pine-dawn           # switch everywhere and apply
 theme --dry-run catppuccin-mocha
 ```
 
-One switch covers btop, kitty, alacritty, Neovim, zathura, fzf and starship.
+One switch covers btop, kitty, alacritty, Neovim, zathura, fzf, starship and Herdr.
 Variants use the slug upstream uses.
 
 Zathura starts with recolouring off on every variant, so documents keep their
@@ -158,6 +158,30 @@ quirks) plus a page on the network between them. The pages are age-encrypted in
 decrypted to `~/.agents/skills/machines` on apply, so they exist only where the
 key is. `machine` prints the path of the current machine's page.
 
+## Herdr
+
+The workstation, laptop, imrl and sicc select the `herdr` bundle for coding agents.
+Start `herdr` in a project directory. The shared `herdr` skill teaches agents to
+control panes when asked.
+
+`theme` selects a supported Herdr palette, preserving light or dark appearance,
+and reloads the running session when available. It owns the `[theme]` section of
+Herdr's config; other settings are preserved.
+
+| Dotfiles variants | Herdr palette |
+| --- | --- |
+| `rose-pine`, `rose-pine-moon` | `rose-pine` |
+| `rose-pine-dawn` | `rose-pine-dawn` |
+| `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha` | `catppuccin` |
+| `catppuccin-latte` | `catppuccin-latte` |
+
+Herdr may add more built-in variants. When it does, update each variant's
+`herdr` token in `.chezmoidata/themes-*.toml`.
+
+Checked on 2026-10-04 with Herdr 0.9.3 and Codex 0.160.0. Codex commands can lose
+the pane's inherited `HERDR_*` variables, preventing agents from using the skill.
+The cause is unresolved.
+
 ## Installed software
 
 A machine's `bundles` in [machines.toml](.chezmoidata/machines.toml) decide
@@ -179,6 +203,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | seventeen more document, slide, design, CJK and emoji families |
 | `research` | Zotero |
+| `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
 | `laptop` | a user service that drops the panel to 60 Hz on battery |
 

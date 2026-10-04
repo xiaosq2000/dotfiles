@@ -89,7 +89,7 @@ usage() {
     data '{{ range $scheme, $s := .schemes }}
   {{ $scheme }} — {{ $s.description }}
 {{ range $name, $t := $.themes }}{{ if eq $t.scheme $scheme }}    {{ if eq $name $.theme }}*{{ else }} {{ end }} {{ printf "%-22s" $name }} {{ printf "%-5s" $t.appearance }}  {{ $t.description }}
-      covers: btop kitty alacritty nvim zathura fzf starship
+      covers: btop kitty alacritty nvim zathura fzf starship herdr
 {{ end }}{{ end }}{{ end }}'
 }
 
@@ -295,6 +295,11 @@ chezmoi apply
 if [ -n "${KITTY_WINDOW_ID:-}" ] && command -v kitten >/dev/null 2>&1; then
     kitten @ set-colors --all --configured "$HOME/.config/kitty/current-theme.conf" 2>/dev/null &&
         printf 'theme: reloaded kitty\n' || true
+fi
+
+if command -v herdr >/dev/null 2>&1; then
+    herdr server reload-config >/dev/null 2>&1 &&
+        printf 'theme: reloaded herdr\n' || true
 fi
 
 # What is left needing a restart, which is less than this used to claim.

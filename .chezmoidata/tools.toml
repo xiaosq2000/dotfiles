@@ -159,6 +159,12 @@ description = "Zotero"
 packages = []
 downloads = ["zotero"]
 
+[bundles.herdr]
+description = "Terminal workspaces for coding agents"
+packages = []
+downloads = ["herdr"]
+config = [".config/herdr/config.toml"]
+
 [bundles.vpn]
 description = "um-vpn, the University of Macau VPN client, for work off campus"
 packages = ["um-vpn"]
