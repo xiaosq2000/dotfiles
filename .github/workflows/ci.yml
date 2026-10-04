@@ -814,15 +814,18 @@ jobs:
             test "$(readlink -f "$HOME/$link")" = "$global"
           done
 
-          # Antigravity discovers the deployed skills directly, including on
-          # machines where the encrypted machines skill is left out.
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
+          # No non-functional skills.json configuration is deployed.
+          test ! -e "$HOME/.gemini/config/skills.json"
 
-          config = json.loads((Path.home() / ".gemini/config/skills.json").read_text())
-          assert config == {"entries": [{"path": "~/.agents/skills"}]}, config
-          root = Path(config["entries"][0]["path"]).expanduser()
-          skills = sorted(path.parent.name for path in root.glob("*/SKILL.md"))
-          assert skills == ["asd-ste100", "git-shipping", "herdr", "translate-zh"], skills
-          PY
+          # agent-skills.sh points installed agents at canonical skills.
+          # Simulate agy being installed to verify the links land under ~/.gemini/config/skills.
+          dummy_bin="$(mktemp -d)"
+          touch "$dummy_bin/agy"
+          chmod +x "$dummy_bin/agy"
+          PATH="$dummy_bin:$PATH" "$HOME/.local/libexec/dotfiles/agent-skills.sh"
+          rm -rf "$dummy_bin"
+          for skill in asd-ste100 git-shipping herdr translate-zh; do
+            test -L "$HOME/.gemini/config/skills/$skill"
+            test "$(readlink -f "$HOME/.gemini/config/skills/$skill")" = "$HOME/.agents/skills/$skill"
+          done
+          test ! -e "$HOME/.gemini/config/skills/machines"

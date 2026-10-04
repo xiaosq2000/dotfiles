@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -eu
 
-# Share one set of user-level agent skills across Claude Code, Codex and OpenCode.
+# Share one set of user-level agent skills across Claude Code, Codex, OpenCode
+# and Antigravity CLI.
 #
 # The canonical copies live in ~/.agents/skills/<name>/SKILL.md and are the only
 # ones tracked in this dotfiles repo. This script points each agent at them:
 #
-#   Claude Code  ~/.claude/skills/<name>      symlink
-#   Codex        ~/.codex/skills/<name>       symlink (respects $CODEX_HOME)
+#   Claude Code  ~/.claude/skills/<name>        symlink
+#   Codex        ~/.codex/skills/<name>         symlink (respects $CODEX_HOME)
 #   OpenCode     reads ~/.agents/skills natively, nothing to do
+#   Antigravity  ~/.gemini/config/skills/<name> symlink (respects $GEMINI_CONFIG_DIR)
 #
 # The script is idempotent. Run it again after adding a skill, or after a fresh
 # clone of the dotfiles. Use --prune to also drop links whose canonical skill is
@@ -39,6 +41,7 @@ usage: agent-skills.sh [--prune] [--dry-run] [--help]
 environment:
   AGENT_SKILLS_ROOT   canonical skills directory (default ~/.agents/skills)
   CODEX_HOME          Codex config directory (default ~/.codex)
+  GEMINI_CONFIG_DIR   Gemini/Antigravity config directory (default ~/.gemini/config)
 EOF
 }
 
@@ -52,7 +55,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-header "agent skills - shared across Claude Code, Codex and OpenCode"
+header "agent skills - shared across Claude Code, Codex, OpenCode and Antigravity CLI"
 
 if [ ! -d "$SKILLS_ROOT" ]; then
     error "canonical skills directory not found at $SKILLS_ROOT"
@@ -209,6 +212,13 @@ if command -v opencode >/dev/null 2>&1; then
     info "opencode reads $SKILLS_ROOT natively, no links needed"
 else
     info "opencode not installed, skipping"
+fi
+
+# Antigravity CLI (agy) reads global skills from ~/.gemini/config/skills.
+if command -v agy >/dev/null 2>&1 || command -v antigravity >/dev/null 2>&1; then
+    install_for_agent "agy" "${GEMINI_CONFIG_DIR:-$HOME/.gemini/config}/skills"
+else
+    info "agy not installed, skipping"
 fi
 
 msg ""

@@ -160,8 +160,8 @@ the metered proxy, and how documents state facts. It deploys to
 `~/.codex/AGENTS.md`, `~/.config/opencode/AGENTS.md` and `~/.gemini/AGENTS.md`,
 so Claude Code, Codex, OpenCode and Antigravity CLI all load the same file.
 
-Antigravity CLI (`agy`) also reads the shared skills through
-`~/.gemini/config/skills.json`, which points to `~/.agents/skills`. See
+Antigravity CLI (`agy`) also reads the shared skills through symlinks in
+`~/.gemini/config/skills/`. See
 [Shared agent skills](dot_agents/skills/README.md) for discovery and setup.
 
 [AGENTS.md](AGENTS.md), which `CLAUDE.md` imports, is for an agent changing this

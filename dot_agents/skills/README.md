@@ -14,26 +14,23 @@ the skill needs.
 | Claude Code | `~/.claude/skills/<name>` | symlink into this directory |
 | Codex | `~/.codex/skills/<name>` | symlink into this directory |
 | OpenCode | `~/.agents/skills/<name>` | read directly, no symlink needed |
-| Antigravity CLI (`agy`) | `~/.agents/skills/<name>` | registered in `~/.gemini/config/skills.json` |
+| Antigravity CLI (`agy`) | `~/.gemini/config/skills/<name>` | symlink into this directory |
 
 OpenCode looks in `~/.agents/skills` and `~/.claude/skills` on its own, which is
-why it needs nothing. Codex only looks in `$CODEX_HOME/skills`, and Claude Code
-only looks in `$CLAUDE_CONFIG_DIR/skills`, so both get a symlink.
+why it needs nothing. Codex looks in `$CODEX_HOME/skills`, Claude Code looks in
+`$CLAUDE_CONFIG_DIR/skills`, and Antigravity CLI looks in
+`${GEMINI_CONFIG_DIR:-$HOME/.gemini/config}/skills`, so all three get symlinks.
 
 Codex keeps its own bundled skills in `~/.codex/skills/.system`. The setup
 script never touches that directory.
 
-Antigravity's `skills.json` registers `~/.agents/skills` directly and scans one
-level deep. It finds each deployed skill without extra links and does not scan
-the nested `synced/` directory. Skills are also available as slash commands,
-such as `/asd-ste100`. Configuration checked against Antigravity CLI 1.2.16's
-bundled documentation on 2026-10-04.
+Antigravity CLI discovers skills under `~/.gemini/config/skills/` and provides
+them as slash commands, such as `/asd-ste100`. Checked on 2026-10-05.
 
 ## Adding a skill
 
 Create the directory and its `SKILL.md` here, then run `chezmoi apply` to deploy
-it and update the Claude Code and Codex links. To repair those links separately,
-run the setup script:
+it and update the links. To repair those links separately, run the setup script:
 
 ```sh
 ~/.local/libexec/dotfiles/agent-skills.sh
