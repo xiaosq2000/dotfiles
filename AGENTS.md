@@ -79,9 +79,10 @@ explains. A shell command may still use an ssh key by name, as in `ssh -i`, or
 list it with `ls`. If a call is refused, the guard is working, not broken: ask
 the user instead of finding another route to the file.
 
-In a clone where the key is present, `git diff` shows `.age` files decrypted,
-through the `age` diff driver in `.gitattributes`. On GitHub they stay
-ciphertext. The vps has no key and never will.
+In a clone where the key is present, `git diff --no-ext-diff` shows `.age`
+files decrypted through the `age` diff driver in `.gitattributes`.
+Difftastic bypasses that text-conversion driver (checked on 2026-10-04).
+On GitHub the files stay ciphertext. The vps has no key and never will.
 
 ## Checking a change
 

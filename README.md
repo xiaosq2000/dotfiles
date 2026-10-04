@@ -66,6 +66,23 @@ $EDITOR "$(chezmoi source-path)/.chezmoidata/machines.toml"
 chezmoi edit-config-template                            # the config template
 ```
 
+## Git diffs
+
+The Git setup script sets `diff.external = difft` when Difftastic is available.
+It runs after pixi setup and repeats when tool availability changes.
+If `difft` is absent, the script removes that setting but preserves any other diff tool.
+Difftastic renders diffs, not pager input, so Git's pager stays unchanged.
+
+```sh
+git diff                     # Difftastic when configured
+git show --ext-diff           # use Difftastic for a commit
+git log -p --ext-diff         # use Difftastic in patch history
+git diff --no-ext-diff        # standard patches and text-conversion drivers
+```
+
+Use `--no-ext-diff` for patches that tools must parse or apply.
+It also enables this repository's `.age` text-conversion driver, which Difftastic bypasses.
+
 ## Themes
 
 ```sh

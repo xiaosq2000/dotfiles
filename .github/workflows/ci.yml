@@ -40,6 +40,7 @@ jobs:
           sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - run: bash .github/scripts/check-setup-scripts.sh
+      - run: python3 .github/scripts/check-git-difftastic.py
       - run: python3 .github/scripts/check-herdr-theme.py
 
   # dotfiles-fetch against local fixtures shaped like each upstream: install,

@@ -43,8 +43,9 @@ An agent cannot drive `chezmoi edit`, which waits for an interactive editor. It
 edits the decrypted file in `~` and hands it back with
 `chezmoi re-add <path>`, which keeps the file encrypted.
 
-On a machine with the key, `git diff` in this repository shows `.age` files
-decrypted. GitHub always shows ciphertext.
+On a machine with the key, `git diff --no-ext-diff` in this repository shows
+`.age` files decrypted. Difftastic bypasses Git's text-conversion driver.
+GitHub always shows ciphertext. Checked on 2026-10-04.
 
 ## Adding an encrypted file
 

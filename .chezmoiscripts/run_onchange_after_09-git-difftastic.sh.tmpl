@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Difftastic renders diffs, not pager input. Keep Git's normal pager.
+# Run after pixi setup and repeat when tool availability changes. An ordinary
+# run_after script would make chezmoi verify fail on every check.
+# Preserve the user's identity, credentials and pager configuration.
+#
+# git on PATH: {{ lookPath "git" | quote }}
+# difft on PATH: {{ lookPath "difft" | quote }}
+# pixi difft: {{ if stat (joinPath (env "PIXI_HOME" | default (joinPath .chezmoi.homeDir ".pixi")) "bin/difft") }}present{{ else }}absent{{ end }}
+
+set -u
+
+export PATH="${PIXI_HOME:-$HOME/.pixi}/bin:$PATH"
+warn() { printf 'git-difftastic: %s\n' "$*" >&2; }
+
+if ! command -v git >/dev/null 2>&1; then
+    warn "git not found; skipping diff setup"
+    exit 0
+fi
+
+if command -v difft >/dev/null 2>&1; then
+    git config --global --replace-all diff.external difft || warn "could not enable difft"
+elif git config --global --get-all diff.external '^difft$' >/dev/null 2>&1; then
+    # Remove only the setting this script owns. Keep any other diff tool.
+    git config --global --unset-all diff.external '^difft$' || warn "could not disable missing difft"
+fi
+
+exit 0

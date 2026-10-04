@@ -44,11 +44,11 @@ fi
 
 # Readable diffs. .gitattributes routes *.age through a diff driver named age,
 # and this defines it as `chezmoi decrypt`, which prints the plaintext of the
-# file git hands it. Only where the key is: without it every `git diff` touching
-# an .age file would fail outright instead of showing ciphertext.
+# file git hands it. Use `git diff --no-ext-diff`: Difftastic bypasses textconv.
+# Only where the key is: without it a native diff of an .age file would fail.
 if [ -f "$IDENTITY" ]; then
     if git -C "$SRC" config diff.age.textconv "$CHEZMOI decrypt"; then
-        note "git diff shows .age files decrypted in this clone"
+        note "git diff --no-ext-diff shows .age files decrypted in this clone"
     else
         warn "could not set diff.age.textconv in $SRC"
     fi
