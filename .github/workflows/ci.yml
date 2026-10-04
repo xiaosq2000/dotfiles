@@ -789,12 +789,19 @@ jobs:
 
           # The machines skill is left out whole, not just its encrypted pages,
           # since a SKILL.md pointing at pages that are not there would send an
-          # agent looking for them. plain-writing and translate-zh sort after
-          # it, so their arrival shows the apply did not stop at it.
+          # agent looking for them. translate-zh sorts after it, so its
+          # arrival shows the apply did not stop at it.
           test ! -e "$HOME/.agents/skills/machines"
           test -f "$HOME/.agents/skills/git-shipping/SKILL.md"
           test -f "$HOME/.agents/skills/herdr/SKILL.md"
-          test -f "$HOME/.agents/skills/plain-writing/SKILL.md"
+          test ! -e "$HOME/.agents/skills/plain-writing"
+          test ! -L "$HOME/.claude/skills/plain-writing"
+          test ! -L "$HOME/.codex/skills/plain-writing"
+          test -f "$HOME/.agents/skills/asd-ste100/SKILL.md"
+          test -f "$HOME/.agents/skills/asd-ste100/LICENSE"
+          test -f "$HOME/.agents/skills/asd-ste100/references/writing-rules.md"
+          test -f "$HOME/.agents/skills/asd-ste100/examples/before-after.md"
+          python3 "$HOME/.agents/skills/asd-ste100/scripts/ste-lint.py" --selftest
           test -f "$HOME/.agents/skills/translate-zh/SKILL.md"
 
           # One file of instructions for every agent, and a link to it where
@@ -816,5 +823,5 @@ jobs:
           assert config == {"entries": [{"path": "~/.agents/skills"}]}, config
           root = Path(config["entries"][0]["path"]).expanduser()
           skills = sorted(path.parent.name for path in root.glob("*/SKILL.md"))
-          assert skills == ["git-shipping", "herdr", "plain-writing", "translate-zh"], skills
+          assert skills == ["asd-ste100", "git-shipping", "herdr", "translate-zh"], skills
           PY

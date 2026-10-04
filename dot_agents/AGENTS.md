@@ -63,4 +63,4 @@ rewrite a commit that has been pushed.
   on each line whose check differs.
 - Keep documents that agents read, such as skills and project references,
   short: tables and short sentences, not narrative.
-- For prose style, use the `plain-writing` skill.
+- For English technical prose and agent instructions, use the `asd-ste100` skill.

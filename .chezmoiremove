@@ -21,3 +21,9 @@
 # lazy.nvim imports every file under plugins/, so a spec this repository
 # stopped deploying would keep loading its plugin.
 .config/nvim/lua/plugins/tools/floaterm.lua
+
+# Remove the retired writing skill and its shared-agent links so agents cannot
+# discover both writing policies after an update.
+.agents/skills/plain-writing
+.claude/skills/plain-writing
+.codex/skills/plain-writing

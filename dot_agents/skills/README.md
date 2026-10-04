@@ -26,7 +26,7 @@ script never touches that directory.
 Antigravity's `skills.json` registers `~/.agents/skills` directly and scans one
 level deep. It finds each deployed skill without extra links and does not scan
 the nested `synced/` directory. Skills are also available as slash commands,
-such as `/plain-writing`. Configuration checked against Antigravity CLI 1.2.16's
+such as `/asd-ste100`. Configuration checked against Antigravity CLI 1.2.16's
 bundled documentation on 2026-10-04.
 
 ## Adding a skill
@@ -47,6 +47,23 @@ deleted.
 If a real file or directory is sitting where a link belongs, the script reports
 it and stops rather than deleting it. Move or delete that path by hand, then run
 the script again.
+
+## ASD-STE100
+
+`asd-ste100` simplifies English technical prose and agent instructions. It includes
+examples, rule references, and a Python linter. It does not certify compliance
+with the official ASD-STE100 dictionary.
+
+The files are vendored from [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill)
+at commit `32511c6992ecb5f1971e46a2943f2e6adceedafe` (version 0.4.0), checked on
+2026-10-04. Keep the MIT license and supporting files when updating the skill.
+Use `/asd-ste100` or ask the agent to apply STE100.
+
+To test the linter:
+
+```sh
+python3 dot_agents/skills/asd-ste100/scripts/ste-lint.py --selftest
+```
 
 ## A skill with encrypted files
 
