@@ -338,6 +338,26 @@ jobs:
           # A real zsh parses it.
           zsh -n "$HOME/.zshrc"
 
+      - name: Zsh startup timing prints only above 100 ms
+        run: |
+          zsh -f <<'ZSH'
+          set -eu
+          NO_COLOR=1 source "$HOME/.sh_utils/lib/ui.sh"
+          DEBUG=0
+          zshrc_start_time=1000000000
+          timing=$(awk '/^zshrc_end_time=/{printing=1} printing' "$HOME/.zshrc")
+          [[ -n "$timing" ]]
+          date() { print -r -- "$((zshrc_start_time + duration * 1000000))"; }
+          for duration in 0 99 100 101 250; do
+            output=$(eval "$timing")
+            if (( duration > 100 )); then
+              [[ "$output" == *"debug: $duration ms" ]]
+            else
+              [[ -z "$output" ]]
+            fi
+          done
+          ZSH
+
       # The proxy client, sbc. The container has none, so a stub sbc checks
       # that an installed one is set up through `sbc init`.
       - name: The shells set up sbc where it is installed
@@ -394,7 +414,7 @@ jobs:
           # The directory joins fpath even with none of the three tools present.
           timeout 60 zsh -ic 'print -l $fpath' | grep -q '/zsh/completions$'
           # Startup raises nothing zsh itself would call an error. Not a silence
-          # check: .zshrc prints its own timing line, and on a machine with no
+          # check: .zshrc can print its timing line, and on a machine with no
           # bundles it also says that yazi and sheldon are missing, which is
           # true and is the point of saying it. The target is the failure the
           # old arrangement produced, `command not found: compdef`, which was a

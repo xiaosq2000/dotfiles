@@ -742,4 +742,6 @@ unset _sbc
 
 zshrc_end_time=$(date +%s%N)
 zshrc_duration=$(((zshrc_end_time - zshrc_start_time) / 1000000))
-DEBUG=1 debug "$DIM$zshrc_duration ms$RESET"
+if (( zshrc_duration > 100 )); then
+    DEBUG=1 debug "$DIM$zshrc_duration ms$RESET"
+fi
