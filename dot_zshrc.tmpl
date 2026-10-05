@@ -373,10 +373,65 @@ setup_fzf_tab() {
 }
 setup_fzf_tab
 
-# Type 'wt' to see a list of worktrees and cd into the selected one
+# Show paths relative to the main worktree only for worktrees inside it.
 wt() {
-    local dir=$(git worktree list | fzf --height=40% | awk '{print $1}')
-    [[ -n "$dir" ]] && cd "$dir"
+    local listing record main dir label head branch selected
+    local -a dirs labels heads branches rows opts
+    local -i i path_width=0
+    listing=$(git worktree list --porcelain -z) || return
+
+    while IFS= read -r -d '' record; do
+        case "$record" in
+            'worktree '*)
+                dir=${record#worktree }
+                [[ -n "$main" ]] || main=$dir
+                label=$dir
+                if [[ "$dir" == "$main" ]]; then
+                    label=.
+                elif [[ "$dir" == "$main"/* ]]; then
+                    label=${dir#"$main"/}
+                fi
+                head= branch=
+                ;;
+            'HEAD '*) head=${${record#HEAD }[1,7]} ;;
+            'branch '*) branch="[${record#branch refs/heads/}]" ;;
+            detached) branch='(detached HEAD)' ;;
+            bare) branch='(bare)' ;;
+            locked|'locked '*) branch+=' locked' ;;
+            prunable|'prunable '*) branch+=' prunable' ;;
+            '')
+                dirs+=("$dir")
+                labels+=("${(V)label}")
+                heads+=("$head")
+                branches+=("$branch")
+                if (( ${(m)#labels[-1]} > path_width )); then
+                    path_width=${(m)#labels[-1]}
+                fi
+                ;;
+        esac
+    done < <(printf '%s' "$listing")
+
+    # Pad paths by terminal width, including wide characters, to align columns.
+    for (( i = 1; i <= $#dirs; i++ )); do
+        rows+=("$i"$'\t'"${(mr:$path_width:)labels[i]}  ${(r:7:)heads[i]}  ${branches[i]}")
+    done
+
+    # Match the theme picker layout. FZF_DEFAULT_OPTS supplies the colors.
+    opts=(
+        --delimiter=$'\t'
+        --with-nth=2..
+        --layout=reverse
+        --height='~60%'
+        --border=rounded
+        --border-label=" worktrees: ${main:t} "
+        --info=inline
+        --prompt='switch to> '
+        --header='enter: cd    esc: cancel'
+        --header-first
+    )
+    # Keep the absolute paths separate from the labels shown by fzf.
+    selected=$(printf '%s\n' "${rows[@]}" | fzf "${opts[@]}") || return
+    [[ -n "$selected" ]] && cd -- "${dirs[${selected%%$'\t'*}]}"
 }
 
 ################################################################################

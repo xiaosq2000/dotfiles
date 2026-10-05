@@ -338,6 +338,9 @@ jobs:
           # A real zsh parses it.
           zsh -n "$HOME/.zshrc"
 
+      - name: wt shows relative paths inside the main worktree
+        run: python3 "$HOME/.local/share/chezmoi/.github/scripts/check-wt.py" "$HOME/.zshrc"
+
       - name: Zsh startup timing prints only above 100 ms
         run: |
           zsh -f <<'ZSH'
