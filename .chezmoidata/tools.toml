@@ -53,6 +53,7 @@ packages = [
     "jq",
     "yazi",
     "tmux",
+    "mosh",
     "btop",
     "dust",
     "p7zip",
@@ -206,6 +207,10 @@ exposed = ["sqlite3"]
 
 [packages.yazi]
 exposed = ["ya", "yazi"]
+
+[packages.mosh]
+# The launcher calls mosh-client, and remote sessions need mosh-server.
+exposed = ["mosh", "mosh-client", "mosh-server"]
 
 [packages.difftastic]
 exposed = ["difft"]

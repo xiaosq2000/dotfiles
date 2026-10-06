@@ -301,6 +301,18 @@ jobs:
             --file "$HOME/.local/share/chezmoi/dot_pixi/manifests/pixi-global.toml.tmpl" |
             grep -qx 'dependencies = { um-vpn = { git = "https://github.com/xiaosq2000/um-vpn" } }'
 
+      - name: Mosh client and server are selected on every machine
+        run: |
+          set -eux
+          template="$HOME/.local/share/chezmoi/dot_pixi/manifests/pixi-global.toml.tmpl"
+          for machine in workstation laptop imrl sicc vps generic; do
+            chezmoi execute-template --override-data "{\"machine\":\"$machine\"}" \
+              --file "$template" > /tmp/mosh-manifest.toml
+            grep -qx '\[envs\.mosh\]' /tmp/mosh-manifest.toml
+            grep -qx 'dependencies = { mosh = "\*" }' /tmp/mosh-manifest.toml
+            grep -qx 'exposed = { mosh = "mosh", mosh-client = "mosh-client", mosh-server = "mosh-server" }' /tmp/mosh-manifest.toml
+          done
+
       - name: Herdr is selected on every agent machine
         run: |
           set -eux
