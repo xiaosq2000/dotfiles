@@ -10,6 +10,7 @@ set -eu
 #   Claude Code  ~/.claude/skills/<name>        symlink
 #   Codex        ~/.codex/skills/<name>         symlink (respects $CODEX_HOME)
 #   OpenCode     reads ~/.agents/skills natively, nothing to do
+#   Pi           reads ~/.agents/skills natively, nothing to do
 #   Antigravity  ~/.gemini/config/skills/<name> symlink (respects $GEMINI_CONFIG_DIR)
 #
 # The script is idempotent. Run it again after adding a skill, or after a fresh
@@ -212,6 +213,13 @@ if command -v opencode >/dev/null 2>&1; then
     info "opencode reads $SKILLS_ROOT natively, no links needed"
 else
     info "opencode not installed, skipping"
+fi
+
+# Pi also discovers the canonical Agent Skills directory without links.
+if command -v pi >/dev/null 2>&1; then
+    info "pi reads $SKILLS_ROOT natively, no links needed"
+else
+    info "pi not installed, skipping"
 fi
 
 # Antigravity CLI (agy) reads global skills from ~/.gemini/config/skills.

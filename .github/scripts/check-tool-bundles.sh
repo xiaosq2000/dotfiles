@@ -92,12 +92,14 @@ commands = {}
 for name, spec in sorted(downloads.items()):
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
         errors.append(f"download {name!r}: ids are lowercase words joined by hyphens")
-    unknown = set(spec) - {"github", "asset", "file", "url", "strip", "filename", "bin", "fonts", "write", "copy"}
+    unknown = set(spec) - {"github", "tag", "asset", "file", "url", "strip", "filename", "bin", "fonts", "write", "copy"}
     if unknown:
         errors.append(f"download {name!r}: unknown fields {sorted(unknown)}")
     kinds = [k for k in ("asset", "file", "url") if k in spec]
     if len(kinds) != 1 or (kinds[0] == "url") == ("github" in spec):
         errors.append(f"download {name!r}: needs url, or github with one of asset and file")
+    if "tag" in spec and ("github" not in spec or not isinstance(spec["tag"], str) or not spec["tag"].strip()):
+        errors.append(f"download {name!r}: tag needs github and a nonempty release tag")
     for kind in kinds:
         value = spec[kind]
         if isinstance(value, dict) and (not value or set(value) - platforms):

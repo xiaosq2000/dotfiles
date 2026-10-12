@@ -156,8 +156,10 @@ def payload(identifier, spec, version, directory):
     elif identifier == "zotero":
         tar(path, {"Zotero_linux-x86_64/zotero": script(f"zotero {version}"),
                    "Zotero_linux-x86_64/icons/icon128.png": b"icon"}, "xz")
-    elif identifier == "tre":
-        tar(path, {"tre": script(f"tre {version}")}, "gz")
+    elif identifier in ("tre", "rtk"):
+        tar(path, {identifier: script(f"{identifier} {version}")}, "gz")
+    elif identifier == "pi":
+        tar(path, {"pi/pi": script(f"pi {version}"), "pi/README.md": b"Pi docs"}, "gz")
     elif identifier == "herdr":
         path.write_bytes(script(f"herdr {version}"))
     elif path.suffix == ".ttf":
@@ -193,7 +195,11 @@ def publish(box, identifier, spec, version):
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         url = f"{box.releases}/{path.relative_to(base).as_posix()}"
         assets.append({"name": path.name, "browser_download_url": url, "digest": f"sha256:{digest}"})
-    release.write_text(json.dumps({"tag_name": tag, "assets": assets}))
+    data = json.dumps({"tag_name": tag, "assets": assets})
+    release.write_text(data)
+    tagged = release.parent / "tags" / tag
+    tagged.parent.mkdir(parents=True, exist_ok=True)
+    tagged.write_text(data)
     return spec
 
 
@@ -204,12 +210,22 @@ def publish(box, identifier, spec, version):
 def fixtures(box, catalog):
     home = box.home
     store, fonts = home / ".local/opt/dotfiles", home / ".local/share/fonts/dotfiles"
-    resources = {i: publish(box, i, s, "1") for i, s in catalog.items()}
+    resources = {i: publish(box, i, dict(s, tag="v1") if "tag" in s else s, "1")
+                 for i, s in catalog.items()}
+    # An inherited proxy must not receive downloads, even without NO_PROXY.
+    box.env.pop("NO_PROXY", None)
+    box.env.pop("no_proxy", None)
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+        box.env[key] = "http://127.0.0.1:1"
     everything = {"platform": "linux-amd64", "resources": resources}
 
     # Installations made some other way, which must never be touched.
     manual = {
         home / ".local/bin/kitty": "manual kitty\n",
+        home / ".local/bin/pi": "manual pi\n",
+        home / ".local/bin/rtk": "manual rtk\n",
+        home / ".pi/agent/settings.json": '{"theme":"custom"}\n',
+        home / ".pi/agent/sessions/fixture.jsonl": "local session\n",
         home / ".local/share/fonts/fira/Fira.otf": "manual font\n",
         home / ".local/share/applications/kitty.desktop": "manual launcher\n",
         home / ".terminfo/x/xterm-kitty": "terminfo written by kitten ssh\n",
@@ -232,7 +248,13 @@ def fixtures(box, catalog):
     box.fetch("sync", manifest=everything)
     lock = box.lock()
     assert set(lock) == set(catalog), set(catalog) ^ set(lock)
-    for command in ["kitty", "kitten", "tre", "zotero", "herdr"]:
+    # Existing unpinned locks retain their source fingerprints after this change.
+    for identifier, spec in resources.items():
+        if "tag" not in spec:
+            legacy = hashlib.sha256(json.dumps([spec.get(k) for k in ("github", "asset", "file", "url")],
+                                               sort_keys=True).encode()).hexdigest()
+            assert lock[identifier]["source"] == legacy, identifier
+    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk"]:
         output = subprocess.run([str(store / "bin" / command)], capture_output=True, text=True, check=True).stdout
         assert output == f"{command} 1\n", (command, output)
     assert json.loads((store / "zotero/current/distribution/policies.json").read_text()) == {"policies": {"DisableAppUpdate": True}}
@@ -287,6 +309,38 @@ def fixtures(box, catalog):
     box.fetch("update", "fira")
     assert sorted(p.name for p in (fonts / "fira").iterdir()) == ["New.otf"]
 
+    # Catalog pins win over the latest release, including explicit update.
+    for identifier in ("pi", "rtk"):
+        publish(box, identifier, resources[identifier], "2")
+    newer = box.fetch("outdated").stdout
+    assert "catalog pin: v1" in newer
+    box.fetch("update", "pi", "rtk")
+    assert all(box.lock()[i]["version"] == "v1" for i in ("pi", "rtk"))
+    (store / "bin/pi").unlink()
+    box.fetch("sync")
+    assert (store / "bin/pi").exists() and box.lock()["pi"]["version"] == "v1"
+
+    # Changing a catalog pin upgrades on sync. Restoring it rolls back.
+    for tag in ("v2", "v1"):
+        pinned = dict(everything, resources=dict(resources))
+        for identifier in ("pi", "rtk"):
+            pinned["resources"][identifier] = dict(resources[identifier], tag=tag)
+        assert "catalog changed" in box.fetch("status", manifest=pinned).stdout
+        box.fetch("sync")
+        assert all(box.lock()[i]["version"] == tag for i in ("pi", "rtk"))
+        assert (store / "pi/v1").exists() and (store / "pi/v2").exists()
+
+    # A nonexistent pin fails without moving or deleting the installed version.
+    missing = dict(everything, resources=dict(resources, pi=dict(resources["pi"], tag="v404")))
+    assert box.fetch("sync", manifest=missing, check=False).returncode == 1
+    assert box.lock()["pi"]["version"] == "v1" and (store / "bin/pi").exists()
+
+    # A tag endpoint that answers with another release is refused.
+    tagged = box.base / "api/repos" / resources["pi"]["github"] / "releases/tags/v404"
+    tagged.write_text((tagged.parent / "v2").read_text())
+    assert "requested tag" in box.fetch("sync", check=False).stderr
+    assert box.lock()["pi"]["version"] == "v1"
+
     # Deselecting removes everything a download installed, and nothing else.
     core = dict(everything, resources={"tre": resources["tre"]})
     box.fetch("sync", manifest=core)
@@ -320,7 +374,7 @@ def live(box, catalog):
     store, fonts = box.home / ".local/opt/dotfiles", box.home / ".local/share/fonts/dotfiles"
     box.fetch("sync", manifest={"platform": "linux-amd64", "resources": catalog})
     box.fetch("status")
-    for command in ["kitty", "kitten", "tre", "zotero", "herdr"]:
+    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk"]:
         result = subprocess.run([str(store / "bin" / command), "--version"], env=dict(box.env, MOZ_HEADLESS="1"),
                                 capture_output=True, text=True, check=True)
         print(result.stdout.strip())

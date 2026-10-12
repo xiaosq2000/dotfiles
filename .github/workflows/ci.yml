@@ -220,6 +220,7 @@ jobs:
           python3 -c 'import json, sys; sys.exit(bool(json.load(open(sys.argv[1]))["resources"]))' \
             "$HOME/.config/dotfiles/downloads.json"
           test ! -e "$HOME/.local/opt/dotfiles"
+          test ! -e "$HOME/.pi/agent/AGENTS.md"
           test ! -e "$HOME/.local/share/applications/dotfiles-kitty.desktop"
           test -x "$HOME/.local/bin/theme"
           test -x "$HOME/.local/bin/machine"
@@ -326,6 +327,34 @@ jobs:
             chezmoi execute-template --override-data "{\"machine\":\"$machine\"}" \
               --file "$template" > /tmp/other-downloads.json
             python3 -c 'import json; d=json.load(open("/tmp/other-downloads.json")); assert "herdr" not in d["resources"]'
+          done
+
+      - name: Pi and RTK are pinned only on the four computing machines
+        run: |
+          set -eux
+          src="$HOME/.local/share/chezmoi"
+          template="$src/private_dot_config/dotfiles/downloads.json.tmpl"
+          for machine in workstation laptop imrl sicc; do
+            chezmoi execute-template --override-data "{\"machine\":\"$machine\"}" \
+              --file "$template" > /tmp/agent-downloads.json
+            python3 - <<'EOF'
+          import json
+          resources = json.load(open("/tmp/agent-downloads.json"))["resources"]
+          assert resources["pi"]["tag"] == "v1.1.0"
+          assert resources["pi"]["strip"] == 1
+          assert resources["pi"]["bin"] == ["pi"]
+          assert resources["rtk"]["tag"] == "v0.51.0"
+          assert resources["rtk"]["bin"] == ["rtk"]
+          EOF
+            chezmoi managed --override-data "{\"machine\":\"$machine\"}" |
+              grep -qx '.pi/agent/AGENTS.md'
+          done
+          test "$(cat "$src/dot_pi/agent/symlink_AGENTS.md")" = '../../.agents/AGENTS.md'
+          for machine in vps container generic; do
+            chezmoi execute-template --override-data "{\"machine\":\"$machine\"}" \
+              --file "$template" > /tmp/other-downloads.json
+            python3 -c 'import json; r=json.load(open("/tmp/other-downloads.json"))["resources"]; assert "pi" not in r and "rtk" not in r'
+            ! chezmoi managed --override-data "{\"machine\":\"$machine\"}" | grep -qx '.pi/agent/AGENTS.md' || exit 1
           done
 
       # The container machine selects no bundles, so sheldon is not installed
@@ -436,6 +465,28 @@ jobs:
           # warning on every new shell rather than anything that stopped it.
           # Hence zsh's own wording rather than a bare "not found".
           ! timeout 60 zsh -ic 'true' 2>&1 | grep -qE 'command not found|parse error|bad pattern' || exit 1
+
+      - name: Managed Pi and RTK precede manual copies in both shells
+        run: |
+          set -eux
+          managed="$HOME/.local/opt/dotfiles/bin"
+          manual="$HOME/.local/bin"
+          old_pi="$HOME/.pi/agent/bin"
+          mkdir -p "$managed" "$old_pi"
+          for tool in pi rtk; do
+            printf '#!/bin/sh\necho managed\n' > "$managed/$tool"
+            printf '#!/bin/sh\necho manual\n' > "$manual/$tool"
+            chmod +x "$managed/$tool" "$manual/$tool"
+          done
+          cp "$manual/pi" "$old_pi/pi"
+          # Keep managed behind the manual copies in the inherited PATH.
+          export PATH="$old_pi:$manual:$managed:$PATH"
+          for shell in bash zsh; do
+            timeout 60 "$shell" -ic 'command -v pi; command -v rtk' > /tmp/agent-paths
+            grep -Fxq "$managed/pi" /tmp/agent-paths
+            grep -Fxq "$managed/rtk" /tmp/agent-paths
+          done
+          rm "$managed/pi" "$managed/rtk" "$manual/pi" "$manual/rtk" "$old_pi/pi"
 
       # Inside kitty, `ssh` is a function that runs `kitten ssh`, and the kitten
       # refuses to run without a terminal, which broke ssh in every AI agent's

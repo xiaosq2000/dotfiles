@@ -159,6 +159,8 @@ the metered proxy, and how documents state facts. It deploys to
 `~/.agents/AGENTS.md` and is linked as `~/.claude/CLAUDE.md`,
 `~/.codex/AGENTS.md`, `~/.config/opencode/AGENTS.md` and `~/.gemini/AGENTS.md`,
 so Claude Code, Codex, OpenCode and Antigravity CLI all load the same file.
+The `agent-tools` bundle also links it as `~/.pi/agent/AGENTS.md` for Pi.
+Pi reads `~/.agents/skills` directly.
 
 Antigravity CLI (`agy`) also reads the shared skills through symlinks in
 `~/.gemini/config/skills/`. See
@@ -174,6 +176,42 @@ quirks) plus a page on the network between them. The pages are age-encrypted in
 [dot_agents/skills/private_machines](dot_agents/skills/private_machines) and
 decrypted to `~/.agents/skills/machines` on apply, so they exist only where the
 key is. `machine` prints the path of the current machine's page.
+
+## Pi and RTK
+
+Workstation, laptop, imrl and sicc select `agent-tools`. The vps, container and
+generic profiles do not. The bundle installs the Pi coding agent and RTK from
+upstream release archives. Pi includes its runtime, so its core executable does
+not require Node or npm. Installing npm-based Pi extensions can still require a
+package manager.
+
+Checked on 2026-10-12. Pi is pinned to `v1.1.0`, and RTK to `v0.51.0`, in
+[downloads.toml](.chezmoidata/downloads.toml). To upgrade or roll back, change
+those `tag` values and run `chezmoi apply` on each target. The CI assertions in
+[ci.yml](.github/workflows/ci.yml) must match the selected tags.
+`dotfiles-fetch update pi rtk` respects the pins. Do not use `pi update` to
+update the dotfiles-managed executable. `pi update --extensions` remains
+separate from the executable pin.
+
+```sh
+command -v pi rtk              # ~/.local/opt/dotfiles/bin on a new shell
+pi --version
+rtk --version
+dotfiles-fetch status
+```
+
+Pi loads the shared instructions through `~/.pi/agent/AGENTS.md` and discovers
+`~/.agents/skills` natively. Local settings, extensions, credentials and sessions
+remain unmanaged. Authenticate separately on each machine with Pi's `/login`.
+RTK is available for explicit commands, such as `rtk git status`. This bundle
+does not install hooks, change telemetry consent, or enable automatic filtering.
+Existing integrations stay unchanged.
+
+Manual installations remain in place as fallbacks. New bash and zsh shells put
+the managed downloads before those copies. Downloads bypass the metered AI
+proxy. If a target cannot reach an upstream directly, transfer the verified
+archives or resolve network access before deployment. Do not use the proxy
+without explicit approval.
 
 ## Herdr
 
@@ -220,6 +258,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | seventeen more document, slide, design, CJK and emoji families |
 | `research` | Zotero |
+| `agent-tools` | pinned Pi and RTK binaries, plus Pi's shared instructions, on every computing machine except the vps |
 | `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
 | `laptop` | a user service that drops the panel to 60 Hz on battery |
@@ -251,13 +290,14 @@ nothing to adopt or back up. The one shared path is `~/.terminfo`, where kitty's
 entry is written only if missing, the same files `kitten ssh` writes on a
 remote machine. Removing a download from a bundle removes what it installed.
 
-Versions stay where they were installed until you move them. Updating is a
-decision, as with `sheldon lock --update`:
+Unpinned downloads keep their installed version until you request an update.
+A GitHub download with a catalog `tag` follows that pin on every sync, including
+upgrades and rollbacks. Updating is a decision, as with `sheldon lock --update`:
 
 ```sh
 dotfiles-fetch status          # what is selected and installed; offline
 dotfiles-fetch outdated        # GitHub releases newer than what is installed
-dotfiles-fetch update [id...]  # move to the latest release and reinstall
+dotfiles-fetch update [id...]  # latest release, or the catalog tag when pinned
 ```
 
 GitHub releases are verified against the digest GitHub publishes. Zotero's

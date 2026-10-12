@@ -13,6 +13,7 @@
 #
 # Fields:
 #   github    owner/repo; resolves the latest release. Needs asset or file.
+#   tag       exact GitHub release tag. sync and update enforce this pin.
 #   asset     release asset name, a glob
 #   file      path in the repository at the latest release tag
 #   url       a direct download, instead of github
@@ -68,6 +69,21 @@ github = "herdrdev/herdr"
 asset = { linux-amd64 = "herdr-linux-x86_64", linux-arm64 = "herdr-linux-aarch64" }
 filename = "herdr"
 bin = ["herdr"]
+
+# Agent releases checked on 2026-10-12. Pi's standalone archive includes its
+# runtime, so a login node needs neither Node nor npm to run the core agent.
+[downloads.pi]
+github = "earendil-works/pi"
+tag = "v1.1.0"
+asset = { linux-amd64 = "pi-linux-x64.tar.gz", linux-arm64 = "pi-linux-arm64.tar.gz" }
+strip = 1
+bin = ["pi"]
+
+[downloads.rtk]
+github = "rtk-ai/rtk"
+tag = "v0.51.0"
+asset = { linux-amd64 = "rtk-x86_64-unknown-linux-musl.tar.gz", linux-arm64 = "rtk-aarch64-unknown-linux-gnu.tar.gz" }
+bin = ["rtk"]
 
 ################################################################################
 # Fonts

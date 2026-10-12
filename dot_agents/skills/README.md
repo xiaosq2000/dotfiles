@@ -1,7 +1,7 @@
 # Shared agent skills
 
 This directory holds the personal skills managed by these dotfiles. Claude Code,
-Codex, OpenCode and Antigravity CLI all read the same files, so a skill is
+Codex, OpenCode, Pi and Antigravity CLI all read the same files, so a skill is
 written once and edited in one place.
 
 Each skill is a directory with a `SKILL.md` inside it, plus any supporting files
@@ -14,12 +14,16 @@ the skill needs.
 | Claude Code | `~/.claude/skills/<name>` | symlink into this directory |
 | Codex | `~/.codex/skills/<name>` | symlink into this directory |
 | OpenCode | `~/.agents/skills/<name>` | read directly, no symlink needed |
+| Pi | `~/.agents/skills/<name>` | read directly, no symlink needed |
 | Antigravity CLI (`agy`) | `~/.gemini/config/skills/<name>` | symlink into this directory |
 
 OpenCode looks in `~/.agents/skills` and `~/.claude/skills` on its own, which is
 why it needs nothing. Codex looks in `$CODEX_HOME/skills`, Claude Code looks in
 `$CLAUDE_CONFIG_DIR/skills`, and Antigravity CLI looks in
 `${GEMINI_CONFIG_DIR:-$HOME/.gemini/config}/skills`, so all three get symlinks.
+
+Pi 1.1.0 discovers `~/.agents/skills` natively. No Pi settings change or duplicate
+skill links are needed. Checked on 2026-10-12.
 
 Codex keeps its own bundled skills in `~/.codex/skills/.system`. The setup
 script never touches that directory.

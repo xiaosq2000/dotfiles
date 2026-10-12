@@ -18,8 +18,8 @@ what was installed; removal follows the lock, not the current catalog.
 Commands:
     sync            install what is selected at the locked version, and
                     remove what is no longer selected. Offline once installed.
-    update [ID...]  move the named downloads, or all of them, to the latest
-                    upstream release and reinstall what changed.
+    update [ID...]  move unpinned downloads to the latest upstream release.
+                    Pinned downloads stay at their catalog tag.
     outdated        list GitHub releases newer than the locked version.
     status          list what is selected, installed and pending, offline.
     migrate         list font directories left by the retired typefaces.sh;
@@ -57,6 +57,8 @@ LOCK = HOME / ".local/state/dotfiles/downloads.lock.json"
 # releases from local files.
 API = os.environ.get("DOTFILES_FETCH_GITHUB_API", "https://api.github.com")
 RAW = os.environ.get("DOTFILES_FETCH_GITHUB_RAW", "https://raw.githubusercontent.com")
+# Downloads must not use the metered AI proxy inherited from an agent or shell.
+HTTP = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 SOURCE_KEYS = ("github", "asset", "file", "url")
 
 
@@ -82,6 +84,15 @@ def digest(path):
 
 def fingerprint(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def source_fingerprint(spec):
+    # Preserve existing locks for unpinned downloads. Adding an absent tag to
+    # their fingerprint would resolve them again and could upgrade them.
+    values = [spec.get(k) for k in SOURCE_KEYS]
+    if "tag" in spec:
+        values.append(spec["tag"])
+    return fingerprint(values)
 
 
 def rmtree(path):
@@ -151,7 +162,7 @@ def fetch(url):
         if github_token():
             request.add_header("Authorization", f"Bearer {github_token()}")
     try:
-        return urllib.request.urlopen(request, timeout=60)
+        return HTTP.open(request, timeout=60)
     except urllib.error.HTTPError as error:
         hint = ""
         if error.code in (403, 429) and url.startswith(API + "/"):
@@ -172,16 +183,20 @@ def source(spec, platform):
     raise Failure("no asset, file or url")
 
 
-def resolve(spec, platform):
-    """Where the latest version lives: url, version (None if unknown until
-    downloaded) and the sha256 GitHub publishes, when it does."""
+def resolve(spec, platform, latest=False):
+    """Resolve the catalog tag, or latest release for an unpinned download.
+    `latest` ignores the pin only to report newer upstream releases."""
     kind, value = source(spec, platform)
     if kind == "url":
         return {"url": value, "version": None, "sha256": None}
     repo = spec["github"]
-    with fetch(f"{API}/repos/{repo}/releases/latest") as response:
+    pin = spec.get("tag") if not latest else None
+    endpoint = f"tags/{urllib.parse.quote(pin, safe='')}" if pin else "latest"
+    with fetch(f"{API}/repos/{repo}/releases/{endpoint}") as response:
         release = json.load(response)
     tag = release["tag_name"]
+    if pin and tag != pin:
+        raise Failure(f"{repo}: requested tag {pin!r}, received {tag!r}")
     if kind == "file":
         return {"url": f"{RAW}/{repo}/{tag}/{value}", "version": tag, "sha256": None}
     assets = [a for a in release.get("assets", []) if fnmatch.fnmatchcase(a["name"], value)]
@@ -312,7 +327,7 @@ def install(identifier, spec, entry, target, scratch):
     else:
         install_payload(identifier, spec, unpacked, version, entry)
 
-    new = {"source": fingerprint([spec.get(k) for k in SOURCE_KEYS]),
+    new = {"source": source_fingerprint(spec),
            "spec": fingerprint(spec), "url": target["url"], "version": version,
            "sha256": sha256, "bin": [PurePosixPath(p).name for p in spec.get("bin", [])]}
     new["copies"] = sync_copies(identifier, spec, (entry or {}).get("copies", {}))
@@ -462,8 +477,8 @@ def tidy():
 
 
 def sync(manifest, lock, update=()):
-    """Bring the machine to the manifest. `update` names the downloads to move
-    to their latest release; every other one keeps its locked version."""
+    """Bring the machine to the manifest. Catalog tags always take priority.
+    `update` moves unpinned downloads to latest; others keep their lock."""
     tidy()
     wanted = selected(manifest)
     resources = lock.setdefault("resources", {})
@@ -480,7 +495,7 @@ def sync(manifest, lock, update=()):
         for identifier, spec in wanted.items():
             entry = resources.get(identifier)
             try:
-                same_source = entry and entry["source"] == fingerprint([spec.get(k) for k in SOURCE_KEYS])
+                same_source = entry and entry["source"] == source_fingerprint(spec)
                 if identifier in update or not same_source:
                     target = resolve(spec, manifest["platform"])
                     if (same_source and target["version"] and target["url"] == entry["url"]
@@ -538,12 +553,13 @@ def outdated(manifest, lock):
                   "follows a URL; `dotfiles-fetch update` downloads it to check")
             continue
         try:
-            target = resolve(spec, manifest["platform"])
+            target = resolve(spec, manifest["platform"], latest=True)
         except Failure as error:
             warn(f"{identifier}: {error}")
             continue
         if not entry or target["url"] != entry["url"]:
-            print(f"{identifier:24} {entry['version'] if entry else '-':20} -> {target['version']}")
+            pin = f" (catalog pin: {spec['tag']}; change it to upgrade)" if spec.get("tag") else ""
+            print(f"{identifier:24} {entry['version'] if entry else '-':20} -> {target['version']}{pin}")
     return 0
 
 
@@ -554,6 +570,8 @@ def status(manifest, lock):
         entry = resources.get(identifier)
         if not entry:
             state = "not installed"
+        elif entry["spec"] != fingerprint(spec):
+            state = f"{entry['version']}, catalog changed; sync pending"
         elif not installed(identifier, spec, entry):
             state = f"{entry['version']}, missing files"
         else:

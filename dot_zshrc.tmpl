@@ -153,10 +153,9 @@ prepend_env PATH "/usr/local/cuda/bin"
 ##################################### pixi #####################################
 ################################################################################
 # https://github.com/prefix-dev/pixi/
-# pixi first, then the commands dotfiles-fetch installs from
-# .chezmoidata/downloads.toml, such as kitty and tre. Both come before
-# ~/.local/bin, so what a machine's bundles select wins over a copy installed
-# by hand.
+# Add pixi and the commands selected in .chezmoidata/downloads.toml.
+# The coding-agent section restores the managed downloads' priority after
+# other installers add their own bin directories.
 prepend_env PATH "${HOME}/.pixi/bin" "${HOME}/.local/opt/dotfiles/bin"
 # Completion is cached to a file on fpath by the completion section further
 # down, not loaded here. See ~/.sh_utils/CAVEATS.md
@@ -644,6 +643,11 @@ fi
 
 # opencode
 prepend_env PATH "${HOME}/.opencode/bin"
+
+# Managed downloads must precede manual Pi and RTK installations, including
+# an inherited PATH that already lists this directory after another copy.
+remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
+prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
 
 check_git_config() {
     if has "git"; then

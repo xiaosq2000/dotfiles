@@ -160,6 +160,12 @@ description = "Zotero"
 packages = []
 downloads = ["zotero"]
 
+[bundles.agent-tools]
+description = "Pinned Pi coding agent and RTK binaries, without automatic RTK integrations"
+packages = []
+downloads = ["pi", "rtk"]
+config = [".pi/agent/AGENTS.md"]
+
 [bundles.herdr]
 description = "Terminal workspaces for coding agents"
 packages = []
