@@ -1,0 +1,11 @@
+title = "Dotfiles secret rules"
+
+[extend]
+useDefault = true
+
+# Match the broad no-age-identity guard, including malformed identities.
+[[rules]]
+id = "age-identity"
+description = "An age identity can decrypt the private dotfiles."
+regex = '''AGE-SECRET-KEY-1[0-9A-Z]{58}'''
+keywords = ["AGE-SECRET-KEY-1"]

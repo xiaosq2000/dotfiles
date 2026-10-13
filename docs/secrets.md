@@ -1,5 +1,7 @@
 # Secrets
 
+Checked on 2026-10-13.
+
 This repository is public, so every secret in it is age ciphertext in a file
 named `encrypted_*`. chezmoi decrypts those files on apply with the private key
 at `~/.config/chezmoi/key.txt`, which is never committed. Bitwarden holds a
@@ -18,6 +20,54 @@ are not secret. Its pixi cache paths do name university filesystems, and they
 could move behind encryption at a cost. A machine's first apply runs before its
 key arrives, so without the paths it would put the pixi cache in home, which on
 sicc is an NFS quota.
+
+## Checks before publication
+
+| Check | Scope |
+| --- | --- |
+| Gitleaks pre-commit hook | Changed files from the Git index |
+| Gitleaks pre-push hook | Every outgoing commit, including merge changes and commit or annotated-tag messages |
+| GitHub secret scanning and push protection | GitHub-supported secret patterns |
+
+GitHub secret scanning and push protection are enabled. Enabling secret scanning
+also starts GitHub's automatic history scan. There is no separate local history
+audit or Gitleaks CI scan. CI still runs the existing encryption and key guards.
+
+The `core` bundle installs Gitleaks `v8.30.1` through `dotfiles-fetch`. The pin
+in `.chezmoidata/downloads.toml` must match `VERSION` in
+`.github/scripts/check-secrets.py` and the provisioning assertion in
+`.github/workflows/ci.yml`. `.gitleaks.toml` adds the broad age-identity pattern
+from the existing guard. The hook checks account paths separately.
+
+The local scanner reads raw Git blobs. It does not run the age diff driver or
+decrypt private files. It skips ciphertext only under an `encrypted_*.age`
+name with an age header. Plaintext in protected directories fails the check.
+Findings show the file, line, and rule, but not the matched value.
+
+The pre-push hook queries the destination's refs and checks commits that the
+destination does not already contain. It checks new branches and every ref in
+a multi-ref push. Missing tools, scan errors, shallow history, and refs that
+do not resolve to commits stop the operation.
+
+`.chezmoiscripts/run_onchange_after_08-source-repo.sh.tmpl` installs both local
+hooks during apply. An unrelated pre-push hook stays unchanged, with a warning.
+For a clone outside the chezmoi source path, install them explicitly:
+
+```sh
+pre-commit install
+ln -s "$PWD/.github/scripts/check-secrets.py" "$(git rev-parse --git-path hooks/pre-push)"
+```
+
+Do not replace an existing pre-push hook without checking its purpose.
+Local hooks can be bypassed. GitHub protection covers supported patterns only.
+Gitleaks does not reliably recognize private addresses, domains, or account
+names without a targeted rule. Keep private machine facts encrypted.
+
+Run local regression tests without scanning this repository's history:
+
+```sh
+python3 .github/scripts/check-secrets-tests.py
+```
 
 ## Which machines have the key
 
@@ -245,16 +295,12 @@ the file on disk is only a handle to the device.
   rbw-present marker line. As `run_once_` it never retries after the first
   apply fails for lack of rbw, and as a plain `run_` it makes `chezmoi verify`
   fail for good.
-- **The plaintext guards work only where the hooks are installed.** Three
-  pre-commit hooks refuse a commit:
-  - `check-encrypted` refuses plaintext under the protected directories;
-  - `detect-private-key` refuses an ssh or TLS private key under any name;
-  - `no-age-identity` refuses an age identity.
-
-  `.chezmoiscripts/run_onchange_after_08-source-repo.sh.tmpl` installs the
-  hooks on every machine that has pre-commit. In a clone without them, nothing stops such a commit
-  before the push, and CI runs only after the push has published it.
-  `.gitignore` names the usual key files too, but it stops only `git add .`;
+- **Local guards work only where the hooks are installed.** Gitleaks checks
+  staged files and outgoing commits. The existing `check-encrypted`,
+  `detect-private-key`, `no-age-identity`, and `no-home-paths` commit hooks
+  remain active. GitHub push protection rejects supported secret patterns even
+  without local hooks. CI runs after publication and cannot prevent a leak.
+  `.gitignore` names the usual key files too, but it stops only `git add .`.
   `git add -f` gets past it.
 - **`chezmoi add` writes into whichever source tree its config names.** With
   an unexpected `HOME` or `XDG_CONFIG_HOME`, a new encrypted file can land in

@@ -58,6 +58,13 @@ bin = ["zotero"]
 # would only fight it.
 write = { "distribution/policies.json" = '{"policies": {"DisableAppUpdate": true}}' }
 
+# The secret hooks require this version. Checked on 2026-10-13.
+[downloads.gitleaks]
+github = "gitleaks/gitleaks"
+tag = "v8.30.1"
+asset = { linux-amd64 = "gitleaks_*_linux_x64.tar.gz", linux-arm64 = "gitleaks_*_linux_arm64.tar.gz" }
+bin = ["gitleaks"]
+
 [downloads.tre]
 github = "dduan/tre"
 asset = { linux-amd64 = "tre-*-x86_64-unknown-linux-musl.tar.gz" }

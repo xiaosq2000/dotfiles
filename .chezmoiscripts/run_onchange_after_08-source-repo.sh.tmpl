@@ -15,6 +15,7 @@
 #   age identity at apply time: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
 #   chezmoi binary: {{ .chezmoi.executable }}
 #   hook config sha256: {{ include ".pre-commit-config.yaml" | sha256sum }}
+#   secret hook sha256: {{ include ".github/scripts/check-secrets.py" | sha256sum }}
 #
 # pre-commit arrives with the core bundle in run_onchange_after_05-pixi.sh, so
 # on a new machine the first apply renders `absent` and gives up, and the next
@@ -71,6 +72,25 @@ elif (cd "$SRC" && "$PRE_COMMIT" install >/dev/null); then
     note "pre-commit hooks installed in $SRC"
 else
     warn "pre-commit install failed; run it by hand in $SRC"
+fi
+
+# Git supplies the complete ref update list only to its pre-push hook. Keep
+# this separate from pre-commit's range handling so new branches and multiple
+# refs receive the same check. Do not overwrite an unrelated existing hook.
+HOOK=$(git -C "$SRC" rev-parse --git-path hooks/pre-push)
+case "$HOOK" in
+    /*) ;;
+    *) HOOK="$SRC/$HOOK" ;;
+esac
+TARGET="$SRC/.github/scripts/check-secrets.py"
+if [ -L "$HOOK" ] && [ "$(readlink "$HOOK")" = "$TARGET" ]; then
+    note "pre-push secret hook installed in $SRC"
+elif [ -e "$HOOK" ] || [ -L "$HOOK" ]; then
+    warn "an unrelated pre-push hook exists; leaving it unchanged"
+elif mkdir -p "$(dirname "$HOOK")" && ln -s "$TARGET" "$HOOK"; then
+    note "pre-push secret hook installed in $SRC"
+else
+    warn "could not install the pre-push secret hook in $SRC"
 fi
 
 exit 0

@@ -27,6 +27,9 @@ jobs:
       # Running the hooks rather than a separate lint command keeps CI and a
       # local `pre-commit run --all-files` checking exactly the same files.
       - uses: pre-commit/action@v3.0.1
+        env:
+          # Gitleaks runs locally before commit and push, not in CI.
+          SKIP: gitleaks
 
   setup-scripts:
     name: every machine's scripts, manifest and ignores render
@@ -302,7 +305,7 @@ jobs:
             --file "$HOME/.local/share/chezmoi/dot_pixi/manifests/pixi-global.toml.tmpl" |
             grep -qx 'dependencies = { um-vpn = { git = "https://github.com/xiaosq2000/um-vpn" } }'
 
-      - name: Mosh client and server are selected on every machine
+      - name: Mosh and Gitleaks are selected on core machines
         run: |
           set -eux
           template="$HOME/.local/share/chezmoi/dot_pixi/manifests/pixi-global.toml.tmpl"
@@ -312,6 +315,11 @@ jobs:
             grep -qx '\[envs\.mosh\]' /tmp/mosh-manifest.toml
             grep -qx 'dependencies = { mosh = "\*" }' /tmp/mosh-manifest.toml
             grep -qx 'exposed = { mosh = "mosh", mosh-client = "mosh-client", mosh-server = "mosh-server" }' /tmp/mosh-manifest.toml
+            # Check provisioning only. Do not run a Gitleaks scan in CI.
+            chezmoi execute-template --override-data "{\"machine\":\"$machine\"}" \
+              --file "$HOME/.local/share/chezmoi/private_dot_config/dotfiles/downloads.json.tmpl" \
+              > /tmp/core-downloads.json
+            python3 -c 'import json; g=json.load(open("/tmp/core-downloads.json"))["resources"]["gitleaks"]; assert g["tag"] == "v8.30.1"; assert g["bin"] == ["gitleaks"]'
           done
 
       - name: Herdr is selected on every agent machine

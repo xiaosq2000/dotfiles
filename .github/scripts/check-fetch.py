@@ -156,7 +156,7 @@ def payload(identifier, spec, version, directory):
     elif identifier == "zotero":
         tar(path, {"Zotero_linux-x86_64/zotero": script(f"zotero {version}"),
                    "Zotero_linux-x86_64/icons/icon128.png": b"icon"}, "xz")
-    elif identifier in ("tre", "rtk"):
+    elif identifier in ("tre", "rtk", "gitleaks"):
         tar(path, {identifier: script(f"{identifier} {version}")}, "gz")
     elif identifier == "pi":
         tar(path, {"pi/pi": script(f"pi {version}"), "pi/README.md": b"Pi docs"}, "gz")
@@ -254,7 +254,7 @@ def fixtures(box, catalog):
             legacy = hashlib.sha256(json.dumps([spec.get(k) for k in ("github", "asset", "file", "url")],
                                                sort_keys=True).encode()).hexdigest()
             assert lock[identifier]["source"] == legacy, identifier
-    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk"]:
+    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk", "gitleaks"]:
         output = subprocess.run([str(store / "bin" / command)], capture_output=True, text=True, check=True).stdout
         assert output == f"{command} 1\n", (command, output)
     assert json.loads((store / "zotero/current/distribution/policies.json").read_text()) == {"policies": {"DisableAppUpdate": True}}

@@ -64,6 +64,8 @@ packages = [
     "pre-commit",
     "shellcheck",
 ]
+# Use one pinned scanner version on every machine that can commit dotfiles.
+downloads = ["gitleaks"]
 
 [bundles.dev-c]
 description = "C and C++ build and format tooling"

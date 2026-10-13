@@ -50,6 +50,15 @@ repos:
   # are not shell syntax.
   - repo: local
     hooks:
+      # Read changed files from the index. Git's age textconv driver must not
+      # decrypt private files for the scanner.
+      - id: gitleaks
+        name: staged files contain no secrets
+        entry: python3 .github/scripts/check-secrets.py staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
       - id: shellcheck
         name: shellcheck
         entry: shellcheck --severity=warning
