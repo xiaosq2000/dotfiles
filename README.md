@@ -185,7 +185,7 @@ upstream release archives. Pi includes its runtime, so its core executable does
 not require Node or npm. Installing npm-based Pi extensions can still require a
 package manager.
 
-Checked on 2026-10-12. Pi is pinned to `v1.1.0`, and RTK to `v0.51.0`, in
+Checked on 2026-10-14. Pi is pinned to `v1.2.0`, and RTK to `v1.0.0`, in
 [downloads.toml](.chezmoidata/downloads.toml). To upgrade or roll back, change
 those `tag` values and run `chezmoi apply` on each target. The CI assertions in
 [ci.yml](.github/workflows/ci.yml) must match the selected tags.
