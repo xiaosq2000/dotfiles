@@ -390,6 +390,37 @@ jobs:
       - name: wt shows relative paths inside the main worktree
         run: python3 "$HOME/.local/share/chezmoi/.github/scripts/check-wt.py" "$HOME/.zshrc"
 
+      - name: Optional TeX Live keeps scripts and interpreters in one tree
+        run: |
+          set -eu
+          python3 "$HOME/.local/share/chezmoi/.github/scripts/check-texlive-path.py" \
+            "$HOME/.zshrc" "$HOME/.sh_utils/basics.sh"
+          raw_texbin="${XDG_DATA_HOME:-$HOME/.local/share}/../texlive/2026/bin/x86_64-linux"
+          fallback=$(mktemp -d)
+          mkdir -p "$raw_texbin"
+          texbin=$(realpath "$raw_texbin")
+          printf '#!/usr/bin/env texlua\n' > "$texbin/l3build"
+          for tool in texlua kpsewhich; do
+            printf '#!/bin/sh\necho "TeX fixture"\n' > "$texbin/$tool"
+            printf '#!/bin/sh\necho "system interpreter"\n' > "$fallback/$tool"
+          done
+          chmod +x "$texbin/l3build" "$texbin/texlua" "$texbin/kpsewhich" "$fallback/"*
+          # Check both clean and stale inherited PATHs through full startup.
+          for initial_path in "$fallback:/usr/bin:/bin" \
+              "$fallback:/usr/bin:/bin:$raw_texbin" "$fallback:/usr/bin:/bin:$texbin"; do
+            for flags in -ic -lic; do
+              env -i HOME="$HOME" TERM=xterm-256color LC_ALL=C.UTF-8 PATH="$initial_path" \
+                timeout 60 /usr/bin/zsh "$flags" \
+                ': "${commands[texlua]}" "${commands[kpsewhich]}"; command -v l3build texlua kpsewhich; l3build --version' > /tmp/tex-paths
+              for tool in l3build texlua kpsewhich; do
+                grep -Fxq "$texbin/$tool" /tmp/tex-paths
+              done
+              grep -Fxq 'TeX fixture' /tmp/tex-paths
+            done
+          done
+          rm "$texbin/l3build" "$texbin/texlua" "$texbin/kpsewhich" "$fallback/texlua" "$fallback/kpsewhich"
+          rmdir "$fallback"
+
       - name: Zsh startup timing prints only above 100 ms
         run: |
           zsh -f <<'ZSH'

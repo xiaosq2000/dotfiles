@@ -675,7 +675,7 @@ check_x11_wayland() {
 check_x11_wayland
 
 setup_texlive() {
-    local texlive_root texlive_dir texlive_version
+    local texlive_root texlive_dir texlive_version texlive_bin
     local latest_root=""
     local latest_version=0
 
@@ -699,7 +699,14 @@ setup_texlive() {
         append_env PATH "${latest_root}/${latest_version}/texmf-dist/doc/man"
     fi
 
-    append_env PATH "${latest_root}/${latest_version}/bin/x86_64-linux"
+    # Keep scripts and their env-selected interpreters in the same TeX tree.
+    # Zsh's command hash skips PATH entries with /../. Normalize this entry.
+    # Remove both forms first: prepend_env does not move inherited entries.
+    texlive_bin="${latest_root}/${latest_version}/bin/x86_64-linux"
+    remove_from_env PATH "$texlive_bin"
+    texlive_bin="${texlive_bin:A}"
+    remove_from_env PATH "$texlive_bin"
+    prepend_env PATH "$texlive_bin"
     debug "using texlive $latest_version"
 }
 setup_texlive
