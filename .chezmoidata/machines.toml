@@ -94,7 +94,8 @@ detachedEnvironments = ""
 repodataDir = ""
 
 [machines.imrl]
-description = "Shared IMRL lab server, six RTX 4090s, hosts the lab Gitea"
+# GPU count checked on 2026-10-16.
+description = "Shared IMRL lab server, eight RTX 4090s, hosts the lab Gitea"
 hostnamePattern = "^capios-SYS-420GP-TNR$"
 bundles = [
     "core",
