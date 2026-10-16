@@ -32,6 +32,7 @@ set index-active-bg		        "#CCD0DA"
 set render-loading-bg		      "#EFF1F5"
 set render-loading-fg		      "#4C4F69"
 
-set highlight-color		        "#575268"
+# Selection and search overlays need alpha to keep document text visible.
+set highlight-color		        "rgba(0x57, 0x52, 0x68, 0.5)"
 set highlight-fg              "#EA76CB"
-set highlight-active-color	  "#EA76CB"
+set highlight-active-color	  "rgba(0xea, 0x76, 0xcb, 0.5)"

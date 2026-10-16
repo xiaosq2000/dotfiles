@@ -631,6 +631,13 @@ jobs:
             chezmoi execute-template --override-data "{\"machine\":\"workstation\",\"theme\":\"$variant\"}" \
               --file "$HOME/.local/share/chezmoi/private_dot_config/zathura/zathurarc.tmpl" |
               awk '/^include /{i=NR} /^set recolor false$/{r=NR} /^set recolor-keephue true$/{k=NR} END{exit !(i && r > i && k > i)}'
+
+            # Opaque selection and search overlays hide the document text.
+            # Every variant must use the same half-opacity as Zathura's defaults.
+            for setting in highlight-color highlight-active-color; do
+              grep -Eq "^set[[:space:]]+$setting[[:space:]]+\"rgba\([^)]*,[[:space:]]*0[.]5\)\"$" \
+                "$HOME/.local/share/chezmoi/private_dot_config/zathura/$variant"
+            done
           done
 
           # A variant switch within the scheme.
