@@ -354,7 +354,7 @@ jobs:
             python3 - <<'EOF'
           import json
           resources = json.load(open("/tmp/agent-downloads.json"))["resources"]
-          assert resources["pi"]["tag"] == "v1.2.0"
+          assert resources["pi"]["tag"] == "v1.3.0"
           assert resources["pi"]["strip"] == 1
           assert resources["pi"]["bin"] == ["pi"]
           assert resources["rtk"]["tag"] == "v1.0.0"

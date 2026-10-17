@@ -81,7 +81,7 @@ bin = ["herdr"]
 # runtime, so a login node needs neither Node nor npm to run the core agent.
 [downloads.pi]
 github = "earendil-works/pi"
-tag = "v1.2.0"
+tag = "v1.3.0"
 asset = { linux-amd64 = "pi-linux-x64.tar.gz", linux-arm64 = "pi-linux-arm64.tar.gz" }
 strip = 1
 bin = ["pi"]
