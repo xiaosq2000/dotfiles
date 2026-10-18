@@ -227,11 +227,9 @@ jobs:
           test ! -e "$HOME/.local/share/applications/dotfiles-kitty.desktop"
           test -x "$HOME/.local/bin/theme"
           test -x "$HOME/.local/bin/machine"
-          # The headless profile keeps tpm and the btop theme. These checkouts must
-          # stay dropped: the starship fork, replaced on 2026-09-19 by a prompt
-          # rendered from the palette in .chezmoidata, and the gnome-terminal
-          # theme, removed entirely because gnome-terminal is no longer used.
-          test -f "$HOME/.local/share/tmux/plugins/tpm/tpm"
+          # TPM is unmanaged. A clean apply must not install it.
+          test ! -e "$HOME/.local/share/tmux/plugins/tpm"
+          # Starship uses the palette template. Theme checkouts are not deployed.
           test -f "$HOME/.config/starship.toml"
           test ! -e "$HOME/.config/themes/rose-pine/starship"
           test ! -e "$HOME/.config/themes/rose-pine/gnome-terminal"
