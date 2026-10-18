@@ -35,9 +35,9 @@ audit or Gitleaks CI scan. CI still runs the existing encryption and key guards.
 
 The `core` bundle installs Gitleaks `v8.30.1` through `dotfiles-fetch`. The pin
 in `.chezmoidata/downloads.toml` must match `VERSION` in
-`.github/scripts/check-secrets.py` and the provisioning assertion in
-`.github/workflows/ci.yml`. `.gitleaks.toml` adds the broad age-identity pattern
-from the existing guard. The hook checks account paths separately.
+`.github/scripts/check-secrets.py`. `.gitleaks.toml` adds the broad age-identity
+pattern from the existing guard. The hook checks account paths separately.
+CI does not assert the version (checked on 2026-10-18).
 
 The local scanner reads raw Git blobs. It does not run the age diff driver or
 decrypt private files. It skips ciphertext only under an `encrypted_*.age`
@@ -287,7 +287,7 @@ the file on disk is only a handle to the device.
   message.
 - **`encryption = "age"` has to sit above `[data]` in `.chezmoi.toml.tmpl`.**
   Below it, TOML makes it `data.encryption`, and chezmoi carries on unencrypted
-  with only a warning. CI checks the order.
+  with only a warning. CI does not check this order separately (checked on 2026-10-18).
 - **The key fetcher,
   `.chezmoiscripts/run_onchange_before_00-age-identity.sh.tmpl`, must never
   exit non-zero.** It runs before any file is written, so a failure there would

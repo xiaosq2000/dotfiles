@@ -86,6 +86,8 @@ On GitHub the files stay ciphertext. The vps has no key and never will.
 
 ## Checking a change
 
+Checked on 2026-10-18.
+
 ```sh
 chezmoi diff                          # what apply would change in ~
 chezmoi apply && chezmoi verify       # verify exits 0 once ~ matches
@@ -137,10 +139,17 @@ program also writes: `kitten ssh` rewrites `~/.terminfo` on every connection,
 and chezmoi would then stop a non-interactive apply to ask about the change.
 `python3 .github/scripts/check-fetch.py` tests `dotfiles-fetch` in seconds.
 
-CI in `.github/workflows/ci.yml` bootstraps a clean container with no key and
-asserts on the result. When a change alters what lands in `~`, add an
-assertion there. Write a negated one as `! grep -q x file || exit 1`, because
-`set -e` ignores a command negated with `!`; a pre-commit hook enforces it.
+CI in `.github/workflows/ci.yml` has two jobs:
+
+- `checks`: pre-commit hooks, excluding the local Gitleaks scan, plus offline
+  downloader tests.
+- `smoke`: render every machine, check shell syntax, then apply and verify in
+  a clean container with no key or software bundles. Skip external theme downloads.
+
+Keep CI focused on installation failures and secret protection. Configuration
+changes do not require new tests. Do not repeat package versions, key bindings,
+colours, descriptions, or migration history in assertions. Add a behavioral test
+only when it protects logic that the existing checks do not cover.
 
 A run script must not fail the apply over a missing optional tool. It warns and
 exits 0. This matters most for `before` scripts, where a non-zero exit stops the

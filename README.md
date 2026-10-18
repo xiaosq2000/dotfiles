@@ -187,8 +187,7 @@ package manager.
 
 Checked on 2026-10-17. Pi is pinned to `v1.3.0`, and RTK to `v1.0.0`, in
 [downloads.toml](.chezmoidata/downloads.toml). To upgrade or roll back, change
-those `tag` values and run `chezmoi apply` on each target. The CI assertions in
-[ci.yml](.github/workflows/ci.yml) must match the selected tags.
+those `tag` values and run `chezmoi apply` on each target.
 `dotfiles-fetch update pi rtk` respects the pins. Do not use `pi update` to
 update the dotfiles-managed executable. `pi update --extensions` remains
 separate from the executable pin.
@@ -315,10 +314,33 @@ distribution; `desktop` supplies only their configuration. A machine that drops
 a bundle keeps the files it already has, the way an application keeps its
 profile.
 
-`.github/scripts/check-fetch.py` tests `dotfiles-fetch` against local fixtures
-in seconds. With `--live` it installs the whole catalog from the real upstreams
-into a disposable home, which takes a few gigabytes; CI runs that only when
-started by hand.
+## Checks
+
+Checked on 2026-10-18. [CI](.github/workflows/ci.yml) has two jobs:
+
+| Job | Scope |
+| --- | --- |
+| `checks` | Pre-commit hooks, except the local Gitleaks scan, and offline downloader tests |
+| `smoke` | Render every machine, check shell syntax, then apply and verify in a clean no-key container without software bundles |
+
+CI skips external theme downloads. It does not enforce specific package versions,
+key bindings, colours, or other configuration choices.
+
+Run the portable checks locally:
+
+```sh
+pre-commit run --all-files
+python3 .github/scripts/check-render.py
+python3 .github/scripts/check-fetch.py
+```
+
+The render check requires chezmoi, Python 3.11+, bash, zsh, and ShellCheck.
+It uses a temporary home and does not install software.
+Other behavioral tests in `.github/scripts/` remain available for targeted local checks.
+
+`check-fetch.py --live` installs the real catalog in a temporary home.
+It downloads a few gigabytes. Run it manually without the proxy when testing
+upstream downloads. CI uses local fixtures only.
 
 ## System files
 
