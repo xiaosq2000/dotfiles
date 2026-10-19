@@ -136,6 +136,9 @@ FONT_ARCHIVES = {
                        "fonts/variable/JetBrainsMono[wght].ttf"],
     "newsreader": ["Newsreader-master/fonts/static/ttf/Newsreader72pt-Regular.ttf",
                    "Newsreader-master/fonts/variable/ttf/Newsreader[opsz,wght].ttf"],
+    "noto-sans-math": ["NotoSansMath/hinted/ttf/NotoSansMath-Regular.ttf",
+                       "NotoSansMath/unhinted/ttf/NotoSansMath-Regular.ttf",
+                       "NotoSansMath/full/otf/NotoSansMath-Regular.otf"],
 }
 
 

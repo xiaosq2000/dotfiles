@@ -147,14 +147,14 @@ config = [
 ]
 
 [bundles.fonts]
-description = "Document, design, CJK and emoji fonts"
+description = "Document, design, math, CJK and emoji fonts"
 packages = []
 downloads = [
     "fira", "nerd-font-fira-code", "tex-gyre-pagella", "libertinus",
     "source-sans", "source-serif", "source-han-sans-sc", "source-han-serif-cn",
     "apple-color-emoji", "noto-color-emoji", "san-francisco-pro",
     "san-francisco-mono", "new-york", "pingfang",
-    "newsreader", "inter", "jetbrains-mono",
+    "newsreader", "inter", "jetbrains-mono", "noto-sans-math",
 ]
 
 [bundles.research]

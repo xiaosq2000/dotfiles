@@ -130,6 +130,12 @@ fonts = ["*.otf"]
 url = "https://codeload.github.com/productiontype/Newsreader/zip/refs/heads/master"
 fonts = ["*/static/ttf/*.ttf"]
 
+# Use only the hinted TrueType build. Release layout checked on 2026-10-19.
+[downloads.noto-sans-math]
+github = "notofonts/math"
+asset = "NotoSansMath-*.zip"
+fonts = ["*/hinted/ttf/*.ttf"]
+
 [downloads.nerd-font-fira-code]
 github = "ryanoasis/nerd-fonts"
 asset = "FiraCode.zip"

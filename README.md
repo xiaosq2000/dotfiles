@@ -255,7 +255,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `github` | the GitHub CLI; every machine except the vps |
 | `extras` | convenience and diagnostics, including `tre`; nothing load-bearing |
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
-| `fonts` | seventeen more document, slide, design, CJK and emoji families |
+| `fonts` | eighteen more document, slide, design, math, CJK and emoji families |
 | `research` | Zotero |
 | `agent-tools` | pinned Pi and RTK binaries, plus Pi's shared instructions, on every computing machine except the vps |
 | `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
