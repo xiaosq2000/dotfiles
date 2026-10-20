@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Run after the managed Pi download. Check locally on every apply so failed
+# installations retry without refreshing packages that already match their pins.
+set -eu
+{{ if not (has "agent-tools" (index .machines .machine).bundles) -}}
+exit 0
+{{ end -}}
+export PATH="$HOME/.local/opt/dotfiles/bin:$HOME/.pixi/bin:$PATH"
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "pi packages: python3 not found; run chezmoi apply after installation" >&2
+    exit 0
+fi
+
+exec python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+
+WANTED = json.loads({{ .pi.packages | toJson | quote }})
+home = Path.home()
+agent = home / ".pi/agent"
+pi = home / ".local/opt/dotfiles/bin/pi"
+
+
+def warn(message):
+    print(f"pi packages: {message}; retry with chezmoi apply", flush=True)
+
+
+try:
+    settings = json.loads((agent / "settings.json").read_text())
+    configured = settings["packages"]
+    if not isinstance(configured, list):
+        raise ValueError("packages must be an array")
+except (OSError, ValueError, KeyError, TypeError):
+    warn("settings unavailable or invalid, installation skipped")
+    raise SystemExit(0)
+
+pending = []
+for name, version in WANTED.items():
+    source = f"npm:{name}@{version}"
+    if source not in configured:
+        warn(f"shared declaration absent for {name}, installation skipped")
+        continue
+    manifest = agent / "npm/node_modules" / name / "package.json"
+    try:
+        installed = json.loads(manifest.read_text())
+        if installed.get("name") == name and installed.get("version") == version:
+            continue
+    except (OSError, ValueError, AttributeError):
+        pass
+    pending.append(source)
+
+if not pending:
+    raise SystemExit(0)
+if not os.access(pi, os.X_OK) or not all(shutil.which(tool) for tool in ("node", "npm")):
+    warn("managed Pi or Node/npm missing, installation skipped")
+    raise SystemExit(0)
+
+environment = os.environ.copy()
+for scheme in ("http", "https", "ftp", "socks", "all"):
+    for key in (f"{scheme}_proxy", f"{scheme}_proxy".upper()):
+        environment.pop(key, None)
+environment["PI_CODING_AGENT_DIR"] = str(agent)
+environment["PI_TELEMETRY"] = "0"
+# A project package must not affect a personal installation.
+for source in pending:
+    print(f"pi packages: installing {source}", flush=True)
+    try:
+        subprocess.run([str(pi), "install", source], cwd=home, env=environment,
+                       check=True, timeout=180)
+    except (OSError, subprocess.SubprocessError):
+        warn(f"installation failed for {source}, no proxy retry attempted")
+PY

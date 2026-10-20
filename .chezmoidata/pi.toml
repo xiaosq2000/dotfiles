@@ -1,0 +1,19 @@
+# Shared Pi settings and direct extension versions. Credentials stay local.
+[pi.settings]
+defaultProvider = "openai-codex"
+defaultModel = "gpt-6.1-sol"
+defaultThinkingLevel = "xhigh"
+# Package downloads must not use the metered AI proxy, including startup repairs.
+npmCommand = [
+    "env",
+    "-u", "http_proxy", "-u", "HTTP_PROXY",
+    "-u", "https_proxy", "-u", "HTTPS_PROXY",
+    "-u", "ftp_proxy", "-u", "FTP_PROXY",
+    "-u", "socks_proxy", "-u", "SOCKS_PROXY",
+    "-u", "all_proxy", "-u", "ALL_PROXY",
+    "npm",
+]
+
+[pi.packages]
+pi-openai-toolkit = "0.22.3"
+pi-ask-user = "0.17.0"

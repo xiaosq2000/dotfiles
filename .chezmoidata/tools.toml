@@ -163,10 +163,14 @@ packages = []
 downloads = ["zotero"]
 
 [bundles.agent-tools]
-description = "Pinned Pi coding agent and RTK binaries, without automatic RTK integrations"
-packages = []
+description = "Pinned Pi, shared extensions and RTK, without automatic RTK integrations"
+packages = ["nodejs"]
 downloads = ["pi", "rtk"]
-config = [".pi/agent/AGENTS.md"]
+config = [
+    ".pi/agent/AGENTS.md",
+    ".pi/agent/settings.json",
+    ".pi/agent/extensions/pi-openai-toolkit/config.json",
+]
 
 [bundles.herdr]
 description = "Terminal workspaces for coding agents"

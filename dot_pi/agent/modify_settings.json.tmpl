@@ -1,0 +1,47 @@
+#!/bin/sh
+# Pi also writes this file. Own only the shared defaults and selected npm packages.
+# Leave malformed input unchanged so an optional integration cannot stop apply.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "pi settings: python3 not found; settings left unchanged" >&2
+    exec cat
+fi
+
+exec python3 /dev/fd/3 3<<'PY'
+import copy
+import json
+import sys
+
+BASELINE = json.loads({{ .pi | toJson | quote }})
+raw = sys.stdin.read()
+try:
+    before = json.loads(raw) if raw.strip() else {}
+    if not isinstance(before, dict):
+        raise ValueError("settings must be a JSON object")
+    packages = before.get("packages", [])
+    if not isinstance(packages, list):
+        raise ValueError("packages must be an array")
+    after = copy.deepcopy(before)
+    after.update(BASELINE["settings"])
+    wanted = {name: f"npm:{name}@{version}" for name, version in BASELINE["packages"].items()}
+    merged = []
+    seen = set()
+    for entry in packages:
+        source = entry.get("source") if isinstance(entry, dict) else entry
+        name = next((name for name in wanted if isinstance(source, str) and
+                     (source == f"npm:{name}" or source.startswith(f"npm:{name}@"))), None)
+        if name is None:
+            merged.append(entry)
+        elif name not in seen:
+            merged.append(wanted[name])
+            seen.add(name)
+    merged.extend(source for name, source in wanted.items() if name not in seen)
+    after["packages"] = merged
+except Exception as error:
+    sys.stderr.write(f"pi settings: settings left unchanged: {error}\n")
+    sys.stdout.write(raw)
+    sys.exit(0)
+
+# Preserve Pi's formatting when no managed value changes.
+sys.stdout.write(raw if after == before and raw.strip() else
+                 json.dumps(after, indent=2, ensure_ascii=False) + "\n")
+PY

@@ -1,0 +1,13 @@
+{
+  "defaults": {
+    "context": {
+      "mode": "remote-compaction",
+      "remoteCompaction": {
+        "apis": [
+          "openai-codex-responses"
+        ]
+      }
+    }
+  },
+  "schemaVersion": 2
+}

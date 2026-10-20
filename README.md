@@ -180,17 +180,15 @@ key is. `machine` prints the path of the current machine's page.
 ## Pi and RTK
 
 Workstation, laptop, imrl and sicc select `agent-tools`. The vps, container and
-generic profiles do not. The bundle installs the Pi coding agent and RTK from
-upstream release archives. Pi includes its runtime, so its core executable does
-not require Node or npm. Installing npm-based Pi extensions can still require a
-package manager.
+generic profiles do not. The bundle installs Pi and RTK from upstream release
+archives. Pi includes its runtime. The bundle also installs Node/npm for Pi
+extensions.
 
-Checked on 2026-10-17. Pi is pinned to `v1.3.0`, and RTK to `v1.0.0`, in
+Checked on 2026-10-20. Pi is pinned to `v1.3.0`, and RTK to `v1.0.0`, in
 [downloads.toml](.chezmoidata/downloads.toml). To upgrade or roll back, change
 those `tag` values and run `chezmoi apply` on each target.
 `dotfiles-fetch update pi rtk` respects the pins. Do not use `pi update` to
-update the dotfiles-managed executable. `pi update --extensions` remains
-separate from the executable pin.
+update the dotfiles-managed executable.
 
 ```sh
 command -v pi rtk              # ~/.local/opt/dotfiles/bin on a new shell
@@ -199,12 +197,35 @@ rtk --version
 dotfiles-fetch status
 ```
 
-Pi loads the shared instructions through `~/.pi/agent/AGENTS.md` and discovers
-`~/.agents/skills` natively. Local settings, extensions, credentials and sessions
-remain unmanaged. Authenticate separately on each machine with Pi's `/login`.
+Pi loads `~/.pi/agent/AGENTS.md` and discovers `~/.agents/skills` natively.
+[pi.toml](.chezmoidata/pi.toml) defines the shared startup settings and pins
+`pi-openai-toolkit` and `pi-ask-user`. A modify script merges those values into
+`~/.pi/agent/settings.json`. It preserves other settings and unrelated packages.
+The selected package declarations, including their resource filters, belong to
+the shared baseline. Changing them locally does not persist across an apply.
+
+Each apply checks installed package versions after the Pi download. Matching
+versions need no network request. Missing or mismatched packages install through
+the managed Pi. Failed installations warn and retry on the next apply. Change
+shared package versions in `pi.toml`, not through `pi update --extensions`.
+Package installation and startup repairs clear the proxy variables.
+
+New sessions default to `openai-codex/gpt-6.1-sol` with `xhigh` thinking.
+[Toolkit configuration](dot_pi/agent/extensions/pi-openai-toolkit/config.json)
+enables remote compaction for the `openai-codex-responses` API, including new
+Codex model IDs. Other APIs use Pi's native compaction. Remote failure can fall
+back to a text summary, so a completed `/compact` is not proof of a checkpoint.
+Search remains unmanaged. Image generation and Toolkit WebSocket transport stay
+off.
+
+Authenticate separately on each machine with `/login openai-codex`. Credentials,
+sessions, device IDs, caches and unrelated extensions remain local. Existing
+sessions keep their model selection. To check a new session, run
+`/toolkit-config validate`, then test `/compact` after a few turns.
+
 RTK is available for explicit commands, such as `rtk git status`. This bundle
-does not install hooks, change telemetry consent, or enable automatic filtering.
-Existing integrations stay unchanged.
+does not install RTK hooks, change telemetry consent, or enable automatic
+filtering. Existing RTK integrations stay unchanged.
 
 Manual installations remain in place as fallbacks. New bash and zsh shells put
 the managed downloads before those copies. Downloads bypass the metered AI
@@ -257,7 +278,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | eighteen more document, slide, design, math, CJK and emoji families |
 | `research` | Zotero |
-| `agent-tools` | pinned Pi and RTK binaries, plus Pi's shared instructions, on every computing machine except the vps |
+| `agent-tools` | pinned Pi and RTK binaries, Node/npm, shared Pi settings and extensions, on every computing machine except the vps |
 | `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
 | `laptop` | a user service that drops the panel to 60 Hz on battery |
@@ -332,6 +353,7 @@ Run the portable checks locally:
 pre-commit run --all-files
 python3 .github/scripts/check-render.py
 python3 .github/scripts/check-fetch.py
+python3 .github/scripts/check-pi.py
 ```
 
 The render check requires chezmoi, Python 3.11+, bash, zsh, and ShellCheck.

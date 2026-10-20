@@ -37,6 +37,8 @@ jobs:
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
       - name: Render each machine and check shell syntax
         run: python3 .github/scripts/check-render.py
+      - name: Test Pi settings and package repair offline
+        run: python3 .github/scripts/check-pi.py
       - name: Apply in a clean home without a key or software bundles
         run: |
           set -eu
