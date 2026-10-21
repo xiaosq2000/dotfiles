@@ -32,9 +32,9 @@ age-encrypted. They exist only on machines with the age key, never on the vps.
   retrying through it.
 - If `ssh` fails with "The SSH kitten is meant for interactive use only", use
   `command ssh`.
-- On imrl and sicc, a command passed over ssh gets only the system `PATH`, so
-  export what it needs in the command: `~/.pixi/bin` for pixi and chezmoi,
-  `~/.local/bin` for claude, `~/.local/share/pnpm/bin` for codex.
+- SSH commands do not read interactive shell configuration. zsh reads the
+  base user `PATH` from `~/.zshenv`, but bash does not. Check command lookup
+  before use. See `network.md` for each machine's requirements.
 
 ## Trusting and editing a page
 

@@ -1,0 +1,13 @@
+# SSH commands do not read .zshrc. Add user tools without interactive setup.
+# Keep inherited PATH entries in place so activated environments retain priority.
+for _dotfiles_bin in \
+    "$HOME/.local/bin" \
+    "$HOME/.pixi/bin" \
+    "$HOME/.local/opt/dotfiles/bin"
+do
+    if (( ${path[(Ie)$_dotfiles_bin]} == 0 )); then
+        path=("$_dotfiles_bin" "${path[@]}")
+    fi
+done
+unset _dotfiles_bin
+export PATH

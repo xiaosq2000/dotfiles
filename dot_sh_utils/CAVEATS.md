@@ -4,6 +4,28 @@ The notes here explain a few parts of this repository that look wrong until you
 know why they are written the way they are. Each section names the file it
 applies to.
 
+## Non-interactive zsh needs the base PATH in .zshenv
+
+Checked on 2026-10-21.
+
+`~/.zshenv` adds `~/.local/opt/dotfiles/bin`, `~/.pixi/bin` and `~/.local/bin`
+when they are absent from PATH. New entries precede the inherited PATH. Existing
+entries keep their order so a nested zsh preserves an activated environment.
+The file uses only builtins and produces no output.
+
+SSH commands do not read `.zshrc`. This includes the command that starts
+`mosh-server`. Without `.zshenv`, that command can select an older system copy,
+even when an interactive shell selects the managed copy.
+
+Keep prompts, completions, aliases and tool initialization in `.zshrc`. Do not
+source `.zshrc` from `.zshenv`: output can break scp, rsync and other SSH tools.
+Bash does not read `.zshenv`, so remote commands that use bash can still need
+an explicit PATH.
+
+```sh
+ssh host 'command -v mosh-server; mosh-server --version'
+```
+
 ## zsh does not have to come from the system package manager
 
 On a shared machine such as a university cluster you often have no root account,

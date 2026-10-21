@@ -152,13 +152,10 @@ prepend_env PATH "/usr/local/cuda/bin"
 ################################################################################
 ##################################### pixi #####################################
 ################################################################################
-# https://github.com/prefix-dev/pixi/
-# Add pixi and the commands selected in .chezmoidata/downloads.toml.
+# ~/.zshenv adds pixi and managed downloads for every zsh session.
 # The coding-agent section restores the managed downloads' priority after
 # other installers add their own bin directories.
-prepend_env PATH "${HOME}/.pixi/bin" "${HOME}/.local/opt/dotfiles/bin"
-# Completion is cached to a file on fpath by the completion section further
-# down, not loaded here. See ~/.sh_utils/CAVEATS.md
+# Completion is cached on fpath, not loaded here. See ~/.sh_utils/CAVEATS.md
 
 # pnpm (also manages node.js; replaces nvm)
 #

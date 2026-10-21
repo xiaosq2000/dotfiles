@@ -34,8 +34,8 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-render-") as temporary:
                 subprocess.run(["bash", "-n"], input=entry["contents"], text=True, check=True)
                 subprocess.run(["shellcheck", "--severity=warning", "-"],
                                input=entry["contents"], text=True, check=True)
-        for shell in ("bash", "zsh"):
-            subprocess.run([shell, "-n"], input=entries[f".{shell}rc"]["contents"],
+        for name, shell in ((".bashrc", "bash"), (".zshenv", "zsh"), (".zshrc", "zsh")):
+            subprocess.run([shell, "-n"], input=entries[name]["contents"],
                            text=True, check=True)
 
 print("All machine configurations render and shell syntax checks pass.")
