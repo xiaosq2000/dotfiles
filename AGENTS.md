@@ -86,13 +86,16 @@ On GitHub the files stay ciphertext. The vps has no key and never will.
 
 ## Checking a change
 
-Checked on 2026-10-18.
+Checked on 2026-10-22.
 
 ```sh
 chezmoi diff                          # what apply would change in ~
-chezmoi apply && chezmoi verify       # verify exits 0 once ~ matches
+chezmoi apply && chezmoi verify --exclude scripts
 pre-commit run --all-files
 ```
+
+Always-run scripts remain pending after apply. Exclude scripts from verification
+so that only managed files must match. Apply still checks script exit codes.
 
 To check a change without touching `~`, for example from a git worktree, point
 chezmoi at the other source tree:

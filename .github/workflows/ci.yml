@@ -48,6 +48,7 @@ jobs:
           chezmoi init --apply --no-tty --exclude externals \
             --promptString machine=container \
             --promptString theme=rose-pine
-          chezmoi verify --exclude externals
+          # Always-run scripts remain pending after apply. Verify files only.
+          chezmoi verify --exclude externals,scripts
           bash -n "$HOME/.bashrc"
           zsh -n "$HOME/.zshrc"
