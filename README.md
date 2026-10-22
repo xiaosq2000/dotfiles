@@ -184,7 +184,7 @@ generic profiles do not. The bundle installs Pi and RTK from upstream release
 archives. Pi includes its runtime. The bundle also installs Node/npm for Pi
 extensions.
 
-Checked on 2026-10-20. Pi is pinned to `v1.3.0`, and RTK to `v1.0.0`, in
+Checked on 2026-10-21. Pi is pinned to `v1.4.0`, and RTK to `v1.0.0`, in
 [downloads.toml](.chezmoidata/downloads.toml). To upgrade or roll back, change
 those `tag` values and run `chezmoi apply` on each target.
 `dotfiles-fetch update pi rtk` respects the pins. Do not use `pi update` to
