@@ -184,7 +184,7 @@ generic profiles do not. The bundle installs Pi and RTK from upstream release
 archives. Pi includes its runtime. The bundle also installs Node/npm for Pi
 extensions.
 
-Checked on 2026-10-21. Pi is pinned to `v1.4.0`, and RTK to `v1.0.0`, in
+Checked on 2026-10-22. Pi is pinned to `v1.4.0`, and RTK to `v1.0.0`, in
 [downloads.toml](.chezmoidata/downloads.toml). To upgrade or roll back, change
 those `tag` values and run `chezmoi apply` on each target.
 `dotfiles-fetch update pi rtk` respects the pins. Do not use `pi update` to
@@ -199,8 +199,9 @@ dotfiles-fetch status
 
 Pi loads `~/.pi/agent/AGENTS.md` and discovers `~/.agents/skills` natively.
 [pi.toml](.chezmoidata/pi.toml) defines the shared startup settings and pins
-`pi-openai-toolkit` and `pi-ask-user`. A modify script merges those values into
-`~/.pi/agent/settings.json`. It preserves other settings and unrelated packages.
+`pi-openai-toolkit`, `pi-ask-user` and `pi-subagents`. A modify script merges those
+values into `~/.pi/agent/settings.json`. It preserves other settings and unrelated
+packages.
 The selected package declarations, including their resource filters, belong to
 the shared baseline. Changing them locally does not persist across an apply.
 
@@ -209,6 +210,12 @@ versions need no network request. Missing or mismatched packages install through
 the managed Pi. Failed installations warn and retry on the next apply. Change
 shared package versions in `pi.toml`, not through `pi update --extensions`.
 Package installation and startup repairs clear the proxy variables.
+
+`pi-subagents` enables delegated tasks when you request them. Installation does
+not start a reviewer or authorize automatic delegation. Run `/subagents-doctor`
+to check setup and `/subagents-fleet` to inspect active work. Fresh children do
+not inherit the shared global `AGENTS.md` unless their agent configuration sets
+`inheritProjectContext: true` and `inheritGlobalContext: true`.
 
 New sessions default to `openai-codex/gpt-6.1-sol` with `xhigh` thinking.
 [Toolkit configuration](dot_pi/agent/extensions/pi-openai-toolkit/config.json)

@@ -17,3 +17,4 @@ npmCommand = [
 [pi.packages]
 pi-openai-toolkit = "0.22.3"
 pi-ask-user = "0.17.0"
+pi-subagents = "0.80.0"
