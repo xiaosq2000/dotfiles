@@ -1,13 +1,16 @@
 ---
 name: machines
-description: Facts about the user's own machines (workstation, laptop, imrl, sicc, vps), covering what each is for, how to reach it over ssh, accounts, hardware, storage, job and sharing rules, and known quirks. Use before running anything over ssh, moving files between machines, choosing where to run a job, or answering what a machine has or can reach.
+description: "Facts about the user's machines: workstation, laptop, imrl, sicc, vps, and vps-sg. Covers roles, SSH access, accounts, resources, storage, network links, and work rules. Use before SSH, transfers, job placement, or machine capability questions."
 ---
 
 # Machines
 
-`references/` has one page per machine plus `network.md`. The pages hold
+Checked on 2026-10-27.
+
+`references/` has one page per machine plus `network.md`. The pages contain
 addresses and account names, so the dotfiles repository keeps them
-age-encrypted. They exist only on machines with the age key, never on the vps.
+age-encrypted. They exist only on machines with the age key.
+Do not copy these pages or the age key to a public VPS.
 
 1. Run `machine` to find out which machine you are on. Hostnames do not settle
    it, because sicc's login nodes answer as `login01`, `login02` and so on.
@@ -22,6 +25,7 @@ age-encrypted. They exist only on machines with the age key, never on the vps.
 | `imrl.md` | the shared lab GPU server; storage, GPU sharing and health, Gitea |
 | `sicc.md` | the university HPC login node; shell, Slurm, storage and quota |
 | `vps.md` | the public server that runs the proxy; leave it alone |
+| `vps-sg.md` | the Singapore VPS for an additional proxy node, with resources and SSH access |
 
 ## Rules on every machine
 
