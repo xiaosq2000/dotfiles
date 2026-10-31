@@ -1,62 +1,42 @@
 ---
 name: machines
-description: "Facts about the user's machines: workstation, laptop, imrl, sicc, vps, and vps-sg. Covers roles, SSH access, accounts, resources, storage, network links, and work rules. Use before SSH, transfers, job placement, or machine capability questions."
+description: "Look up host-specific access, compute, storage, or service facts for the user's machines. Load only the target host and task. Use for remote access, transfers, job placement, or machine questions."
 ---
 
 # Machines
 
-Checked on 2026-10-27.
+Checked on 2026-10-31.
 
-`references/` has one page per machine plus `network.md`. The pages contain
-addresses and account names, so the dotfiles repository keeps them
-age-encrypted. They exist only on machines with the age key.
-Do not copy these pages or the age key to a public VPS.
+Run `machine` only if the current host is unknown. Do not infer it from the hostname.
+Read `references/<host>.md` for access, resources, or host-wide boundaries.
+For a public VPS, read its boundary page before acting.
 
-1. Run `machine` to find out which machine you are on. Hostnames do not settle
-   it, because sicc's login nodes answer as `login01`, `login02` and so on.
-2. For anything that crosses machines, read `references/network.md`.
-3. Read the page for each machine involved.
+Choose task references directly. Links are lookup choices, not required reading.
 
-| Page | Covers |
+| Host | Task references |
 | --- | --- |
-| `network.md` | SSH aliases, reachability, the reverse tunnel, trusted keys, ssh from an agent, the proxy, moving data |
-| `workstation.md` | the desktop and network hub; storage, services, out-of-tree drivers |
-| `laptop.md` | the personal laptop, used off campus; VPN, power toggles |
-| `imrl.md` | the shared lab GPU server; storage, GPU sharing and health, Gitea |
-| `sicc.md` | the university HPC login node; shell, Slurm, storage and quota |
-| `vps.md` | the public server that runs the proxy; leave it alone |
-| `vps-sg.md` | the Singapore VPS for an additional proxy node, with resources and SSH access |
+| workstation | [storage](references/workstation-storage.md), [drivers and boot](references/workstation-drivers.md) |
+| laptop | [network and browsers](references/laptop-network.md), [hardware](references/laptop-hardware.md), [power and displays](references/laptop-power.md) |
+| imrl | [storage](references/imrl-storage.md), [compute](references/imrl-compute.md), [services](references/imrl-services.md) |
+| sicc | [compute](references/sicc-compute.md), [storage and quota](references/sicc-storage.md) |
+| vps | [services](references/vps-services.md), [manager](references/vps-manager.md), [recovery](references/vps-recovery.md) |
+| vps-sg | [network evidence](references/vps-sg-network.md) |
 
-## Rules on every machine
+| Shared task | Reference |
+| --- | --- |
+| SSH routes, tunnels, transfers | [network.md](references/network.md) |
+| AI proxy or direct downloads | [network-proxy.md](references/network-proxy.md) |
+| Off-campus university VPN | [network-vpn.md](references/network-vpn.md) |
 
-- Run downloads without the proxy. Every machine reaches AI services such as
-  Claude and ChatGPT through a proxy whose traffic is metered. Interactive
-  shells start with the proxy variables set; `network.md` shows how to clear
-  them. If a download fails without the proxy, ask the user instead of
-  retrying through it.
-- If `ssh` fails with "The SSH kitten is meant for interactive use only", use
-  `command ssh`.
-- SSH commands do not read interactive shell configuration. zsh reads the
-  base user `PATH` from `~/.zshenv`, but bash does not. Check command lookup
-  before use. See `network.md` for each machine's requirements.
+If no topic fits, use that host's page. Do not load another host's references.
+Cross-machine work needs only facts that affect the route or operation, not every source and destination page.
+Use `command ssh` for noninteractive calls. Check remote PATH before running user-installed tools.
+Run downloads without proxy variables. Ask the user if direct access fails.
+Recheck changing facts before acting. Keep project procedures in their project.
 
-## Trusting and editing a page
+## Editing references
 
-Facts carry the date they were checked. When a check is cheap, re-check an old
-fact before relying on it, and tell the user which facts you checked. Facts
-about one project belong in that project; for embodied-ai, see its
-`docs/shared/reference/compute-resources/`.
-
-To correct a page, edit the decrypted copy under `~/.agents/skills/machines`, not
-the links under `~/.claude` or `~/.codex`. Then re-encrypt it and commit in the
-source repository, following its `AGENTS.md`:
-
-```sh
-chezmoi re-add ~/.agents/skills/machines/references/imrl.md
-chezmoi add --encrypt ~/.agents/skills/machines/references/<new>.md
-```
-
-The dotfiles repository is public. Never write a page into the source tree, and
-never `chezmoi add` one without `--encrypt`.
-
-Keep pages short. State the current fact and leave history to git.
+Keep private references and identities off public VPS machines.
+Edit decrypted pages under `~/.agents/skills/machines/references`, not plaintext files in the source repository.
+Use `chezmoi re-add <path>` for existing pages. Use `chezmoi add --encrypt <path>` for new pages with mode 0600.
+Read the source repository's `AGENTS.md` before editing. Date facts and keep only information that changes an action.
