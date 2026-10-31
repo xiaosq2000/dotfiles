@@ -21,7 +21,8 @@
 #   ("linux-amd64", "linux-arm64"). A platform missing from the table is
 #   skipped with a warning. A plain string applies to every platform.
 #   strip     leading path components to drop from an archive
-#   filename  destination name for a lone file download; archives ignore it
+#   extract   false keeps an archive as a file, for example a Zotero plugin
+#   filename  destination name for a lone file; required if extract is false
 #   bin       payload paths to link into ~/.local/opt/dotfiles/bin
 #   fonts     globs matched against archive paths; `*` also matches `/`.
 #             Matching files are installed flat, and nothing else is kept.
@@ -57,6 +58,14 @@ bin = ["zotero"]
 # The payload is replaced by `dotfiles-fetch update`, so Zotero's own updater
 # would only fight it.
 write = { "distribution/policies.json" = '{"policies": {"DisableAppUpdate": true}}' }
+
+# Plugin version and release digest checked on 2026-10-31.
+[downloads.better-bibtex]
+github = "retorquere/zotero-better-bibtex"
+tag = "v9.0.71"
+asset = "zotero-better-bibtex-*.xpi"
+extract = false
+filename = "better-bibtex.xpi"
 
 # The secret hooks require this version. Checked on 2026-10-13.
 [downloads.gitleaks]

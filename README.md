@@ -284,7 +284,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `extras` | convenience and diagnostics, including `tre`; nothing load-bearing |
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | eighteen more document, slide, design, math, CJK and emoji families |
-| `research` | Zotero |
+| `research` | Zotero and pinned Better BibTeX |
 | `agent-tools` | pinned Pi and RTK binaries, Node/npm, shared Pi settings and extensions, on every computing machine except the vps |
 | `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
@@ -341,6 +341,40 @@ script wrote, and `--apply` deletes them; it only reports the rest.
 distribution; `desktop` supplies only their configuration. A machine that drops
 a bundle keeps the files it already has, the way an application keeps its
 profile.
+
+### Zotero and Better BibTeX
+
+Checked on 2026-10-31 with Zotero 10 and Better BibTeX 9.0.71. The `research`
+bundle pins the Better BibTeX release in `.chezmoidata/downloads.toml`.
+`dotfiles-fetch` downloads the release and checks the published digest. An
+apply installs the plugin in the default Zotero profile. It leaves an identical
+installation unchanged. If Zotero is running, an upgrade waits until you close
+Zotero and run `chezmoi apply` again. It saves a copy of the replaced plugin in
+`~/.local/state/dotfiles/zotero-plugins/`. It will not downgrade a newer
+installation or replace an existing plugin symlink.
+
+On a new profile, open Zotero and enable Better BibTeX in the plugin manager.
+In the plugin's settings, set automatic updates to Off. Do this on each machine
+so Zotero does not change the pinned version. To upgrade, update the catalog
+pin, check plugin compatibility and apply on each machine.
+
+The bundle shares Better BibTeX preferences through
+`~/.config/dotfiles/zotero-user.js`. An apply links the profile's `user.js` to
+that file. Zotero reads it at startup. If a `user.js` already exists, apply
+leaves it unchanged and warns. Open Zotero once and apply again if the profile
+does not exist yet.
+
+Edit the dotfiles source, apply it, and restart Zotero to change a shared
+preference. A change made in Zotero to a shared preference lasts only until
+Zotero restarts. Machine paths, auto-export jobs, migration state, generated
+character maps and debug settings stay local. Check new preferences when
+upgrading Better BibTeX.
+
+Zotero syncs the native Citation Key field with each item. Changing the shared
+key formula does not refresh existing keys. Do not refresh keys used by papers
+without updating their citations. To stop applying the shared settings, remove
+the profile's `user.js` link. Zotero retains the last loaded values in its own
+preferences, so change them in Zotero if needed.
 
 ## Checks
 

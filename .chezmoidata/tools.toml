@@ -158,9 +158,10 @@ downloads = [
 ]
 
 [bundles.research]
-description = "Zotero"
+description = "Zotero and Better BibTeX"
 packages = []
-downloads = ["zotero"]
+downloads = ["zotero", "better-bibtex"]
+config = [".config/dotfiles/zotero-user.js"]
 
 [bundles.agent-tools]
 description = "Pinned Pi, shared extensions and RTK, without automatic RTK integrations"

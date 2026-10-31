@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+# Zotero owns its profile. Do not overwrite an existing user.js or edit prefs.js.
+set -eu
+{{ if not (has "research" (index .machines .machine).bundles) -}}
+exit 0
+{{ end -}}
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "zotero setup: python3 not found; retry with chezmoi apply" >&2
+    exit 0
+fi
+
+exec python3 - <<'PY'
+from configparser import ConfigParser, Error
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import sys
+import tempfile
+from zipfile import BadZipFile, ZipFile
+
+home = Path.home()
+zotero = home / ".zotero/zotero"
+shared = home / ".config/dotfiles/zotero-user.js"
+plugin = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
+plugin_id = "better-bibtex@iris-advies.com"
+tag = {{ (index .downloads "better-bibtex").tag | quote }}
+version = tag.removeprefix("v")
+
+
+def warn(message):
+    print(f"zotero setup: {message}", file=sys.stderr)
+
+
+def digest(path):
+    h = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def metadata(path):
+    with ZipFile(path) as package:
+        manifest = json.loads(package.read("manifest.json"))
+    if manifest["applications"]["zotero"]["id"] != plugin_id:
+        raise ValueError("unexpected plugin ID")
+    value = manifest["version"]
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", value):
+        raise ValueError("invalid plugin version")
+    return tuple(map(int, value.split(".")))
+
+
+def preferences(profile):
+    if not shared.is_file():
+        warn("shared preferences missing; retry with chezmoi apply")
+        return
+    user_js = profile / "user.js"
+    try:
+        if user_js.is_symlink() and user_js.resolve() == shared.resolve():
+            return
+        if user_js.exists() or user_js.is_symlink():
+            warn(f"{user_js} already exists; left it unchanged")
+            return
+        user_js.symlink_to(shared)
+        print(f"zotero setup: linked {user_js}; restart Zotero to load it")
+    except OSError as error:
+        warn(f"cannot link {user_js} ({error}); retry with chezmoi apply")
+
+
+def addon_status(profile):
+    try:
+        addons = json.loads((profile / "extensions.json").read_text())["addons"]
+        addon = next((entry for entry in addons if entry.get("id") == plugin_id), None)
+        if addon and not addon.get("active"):
+            warn("enable Better BibTeX in Zotero if the plugin is disabled")
+        if addon and str(addon.get("applyBackgroundUpdates")) != "0":
+            warn("set automatic updates to Off for Better BibTeX in Zotero")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+
+
+def install_plugin(profile):
+    if not plugin.is_file():
+        warn("Better BibTeX package missing; run dotfiles-fetch sync and chezmoi apply")
+        return
+    try:
+        expected = tuple(map(int, version.split(".")))
+        if metadata(plugin) != expected:
+            raise ValueError("package version does not match the catalog pin")
+        wanted = digest(plugin)
+        target = profile / "extensions" / f"{plugin_id}.xpi"
+        if target.is_symlink():
+            warn(f"{target} is a symlink; left it unchanged")
+            return
+        if target.exists() and digest(target) == wanted:
+            addon_status(profile)
+            return
+        # Firefox holds a POSIX lock on this file for the life of the profile.
+        # Hold the same lock until the copy is complete, including backup.
+        with (profile / ".parentlock").open("a") as lock:
+            try:
+                fcntl.lockf(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                warn("close Zotero and run chezmoi apply to install Better BibTeX")
+                return
+            if target.is_symlink():
+                warn(f"{target} is a symlink; left it unchanged")
+                return
+            if target.exists():
+                if metadata(target) > expected:
+                    warn("installed Better BibTeX is newer than the pin; downgrade skipped")
+                    return
+                old_hash = digest(target)
+                backup = home / ".local/state/dotfiles/zotero-plugins" / f"{old_hash}.xpi"
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                if backup.exists() and digest(backup) != old_hash:
+                    raise ValueError("existing plugin backup has an unexpected hash")
+                if not backup.exists():
+                    shutil.copy2(target, backup)
+                if digest(backup) != old_hash:
+                    raise ValueError("plugin backup verification failed")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            fd, temporary = tempfile.mkstemp(prefix=".better-bibtex-", dir=target.parent)
+            os.close(fd)
+            try:
+                shutil.copy2(plugin, temporary)
+                if digest(Path(temporary)) != wanted:
+                    raise ValueError("plugin copy verification failed")
+                os.replace(temporary, target)
+            finally:
+                Path(temporary).unlink(missing_ok=True)
+        print(f"zotero setup: installed Better BibTeX {version}; start Zotero to load it")
+        print("zotero setup: enable a new plugin and set its automatic updates to Off")
+    except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
+        warn(f"Better BibTeX installation skipped ({error})")
+
+
+profiles = ConfigParser(interpolation=None)
+try:
+    with (zotero / "profiles.ini").open(encoding="utf-8") as source:
+        profiles.read_file(source)
+    sections = [section for section in profiles.sections() if section.startswith("Profile")]
+    defaults = [section for section in sections if profiles.getboolean(section, "Default", fallback=False)]
+    if len(defaults) == 1:
+        section = defaults[0]
+    elif not defaults and len(sections) == 1:
+        section = sections[0]
+    else:
+        raise ValueError("cannot identify the default profile")
+    profile = Path(profiles.get(section, "Path"))
+    if profiles.getboolean(section, "IsRelative", fallback=True):
+        profile = zotero / profile
+    if not profile.is_dir():
+        raise ValueError("default profile directory does not exist")
+except (OSError, Error, ValueError) as error:
+    warn(f"profile unavailable ({error}); open Zotero and retry with chezmoi apply")
+    raise SystemExit(0)
+
+preferences(profile)
+install_plugin(profile)
+PY

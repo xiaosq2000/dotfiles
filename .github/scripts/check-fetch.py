@@ -165,6 +165,8 @@ def payload(identifier, spec, version, directory):
         tar(path, {"pi/pi": script(f"pi {version}"), "pi/README.md": b"Pi docs"}, "gz")
     elif identifier == "herdr":
         path.write_bytes(script(f"herdr {version}"))
+    elif identifier == "better-bibtex":
+        zip_(path, {"manifest.json": json.dumps({"version": version}).encode()})
     elif path.suffix == ".ttf":
         path.write_bytes(f"{identifier} {version}".encode())
     elif identifier in FONT_ARCHIVES:
@@ -261,6 +263,11 @@ def fixtures(box, catalog):
         output = subprocess.run([str(store / "bin" / command)], capture_output=True, text=True, check=True).stdout
         assert output == f"{command} 1\n", (command, output)
     assert json.loads((store / "zotero/current/distribution/policies.json").read_text()) == {"policies": {"DisableAppUpdate": True}}
+    # XPI is a zip package, but Zotero needs the archive itself.
+    plugin = store / "better-bibtex/current/better-bibtex.xpi"
+    with zipfile.ZipFile(plugin) as package:
+        assert json.loads(package.read("manifest.json"))["version"] == "1"
+    assert sorted(path.name for path in plugin.parent.iterdir()) == ["better-bibtex.xpi"]
     for identifier, spec in catalog.items():
         if "fonts" in spec:
             installed = sorted(p.name for p in (fonts / identifier).iterdir())
@@ -281,6 +288,12 @@ def fixtures(box, catalog):
     # A catalog change reinstalls from the locked download, still offline for
     # the API: a release asset is immutable, so the lock is enough.
     shutil.move(box.base / "assets-offline", box.base / "assets")
+    # A corrupted raw package is detected and restored from the locked asset.
+    plugin.write_bytes(b"damaged")
+    assert "missing files" in box.fetch("status").stdout
+    box.fetch("sync")
+    with zipfile.ZipFile(plugin) as package:
+        assert json.loads(package.read("manifest.json"))["version"] == "1"
     changed = dict(everything, resources=dict(resources, **{"maple-mono": dict(resources["maple-mono"], fonts=["*"])}))
     box.fetch("sync", manifest=changed)
     assert (fonts / "maple-mono/Fixture.ttf").exists() and (fonts / "maple-mono/README.md").exists()

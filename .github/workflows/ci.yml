@@ -39,6 +39,8 @@ jobs:
         run: python3 .github/scripts/check-render.py
       - name: Test Pi settings and package repair offline
         run: python3 .github/scripts/check-pi.py
+      - name: Test Zotero profile setup offline
+        run: python3 .github/scripts/check-zotero-profile.py
       - name: Apply in a clean home without a key or software bundles
         run: |
           set -eu
