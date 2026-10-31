@@ -1,3 +1,4 @@
+{{- $citekey := `auth + shortyear + ShortTitle.alphanum + "_" + extra("tex.venueabbr").alphanum` -}}
 // Shared Better BibTeX preferences. Zotero reads this file at startup.
 // Edit this file in the dotfiles source, not in Zotero's profile.
 // This snapshot uses the workstation settings and Better BibTeX 9.0.71 defaults.
@@ -15,8 +16,8 @@ user_pref("extensions.zotero.translators.better-bibtex.quickCopyPandocBrackets",
 user_pref("extensions.zotero.translators.better-bibtex.quickCopyEta", "");
 user_pref("extensions.zotero.translators.better-bibtex.quickCopyOrgMode", "zotero");
 user_pref("extensions.zotero.translators.better-bibtex.quickCopySelectLink", "zotero");
-user_pref("extensions.zotero.translators.better-bibtex.citekeyFormat", "auth + shortyear + ShortTitle.alphanum + \"_\" + extra(\"tex.venueabbr\").alphanum");
-user_pref("extensions.zotero.translators.better-bibtex.citekeyFormatEditing", "auth + shortyear + ShortTitle.alphanum + '_' + extra('tex.venueabbr').alphanum");
+user_pref("extensions.zotero.translators.better-bibtex.citekeyFormat", {{ $citekey | toJson }});
+user_pref("extensions.zotero.translators.better-bibtex.citekeyFormatEditing", {{ $citekey | toJson }});
 user_pref("extensions.zotero.translators.better-bibtex.citekeyUnsafeChars", "\\\"#%'(),={}~");
 user_pref("extensions.zotero.translators.better-bibtex.citekeyCaseInsensitive", true);
 user_pref("extensions.zotero.translators.better-bibtex.citekeyFold", true);

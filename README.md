@@ -364,11 +364,12 @@ that file. Zotero reads it at startup. If a `user.js` already exists, apply
 leaves it unchanged and warns. Open Zotero once and apply again if the profile
 does not exist yet.
 
-Edit the dotfiles source, apply it, and restart Zotero to change a shared
-preference. A change made in Zotero to a shared preference lasts only until
-Zotero restarts. Machine paths, auto-export jobs, migration state, generated
-character maps and debug settings stay local. Check new preferences when
-upgrading Better BibTeX.
+Edit `private_dot_config/dotfiles/zotero-user.js.tmpl`, apply it, and restart
+Zotero to change a shared preference. The template sets the key formula once
+for both the active and editable fields. A change made in Zotero to a shared
+preference lasts only until Zotero restarts. Machine paths, auto-export jobs,
+migration state, generated character maps and debug settings stay local. Check
+new preferences when upgrading Better BibTeX.
 
 Zotero syncs the native Citation Key field with each item. Changing the shared
 key formula does not refresh existing keys. Do not refresh keys used by papers
