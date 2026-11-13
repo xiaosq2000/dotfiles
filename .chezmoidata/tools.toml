@@ -82,6 +82,7 @@ packages = ["nodejs", "pnpm", "deno", "prettier"]
 [bundles.dev-tex]
 description = "LaTeX tooling"
 packages = ["tex-fmt"]
+config = [".config/tex-fmt"]
 
 [bundles.lsp]
 description = "Language servers and the external binaries Neovim's plugins call"

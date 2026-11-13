@@ -79,3 +79,18 @@ vim.api.nvim_create_autocmd("FileType", {
 		vim.opt_local.expandtab = true
 	end,
 })
+
+-- Keep sentence breaks in source. Wrap TeX text only on screen.
+vim.api.nvim_create_autocmd("FileType", {
+	group = augroup("tex_prose"),
+	pattern = { "tex", "plaintex", "latex" },
+	callback = function()
+		vim.opt_local.wrap = true
+		vim.opt_local.linebreak = true
+		vim.opt_local.breakindent = true
+		vim.opt_local.textwidth = 0
+		vim.opt_local.wrapmargin = 0
+		vim.opt_local.formatoptions:remove({ "t", "a" })
+	end,
+	desc = "Preserve TeX sentence lines",
+})
