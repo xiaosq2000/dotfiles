@@ -63,7 +63,7 @@ repos:
         name: shellcheck
         entry: shellcheck --severity=warning
         language: system
-        files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_(theme|machine|ai-privacy|zathura)$|^dot_(claude|codex)/modify_|^system/[^/]+/usr/local/s?bin/)
+        files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_(theme|machine|ai-privacy|zathura)$|^dot_(claude|codex)/modify_|^private_dot_config/btop/modify_|^system/[^/]+/usr/local/s?bin/)
         exclude: (^dot_sh_utils/tools(\.sh|/)|\.tmpl$)
       # The repository is public, so plaintext must never reach a commit under
       # a directory that holds secrets. The script reads the whole index itself,
@@ -93,7 +93,7 @@ repos:
         name: no plaintext home paths
         entry: /home/[A-Za-z0-9._-]+/
         language: pygrep
-        exclude: ^(private_dot_config/btop/btop\.conf\.tmpl|\.github/scripts/check-key-guard\.sh)$
+        exclude: ^(private_dot_config/btop/modify_btop\.conf|\.github/scripts/check-key-guard\.sh)$
       # The guard that keeps agents from reading private keys, against the calls
       # it must refuse and the ones it must let through.
       - id: key-guard

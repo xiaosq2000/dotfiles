@@ -139,7 +139,7 @@ class SecretHooks(unittest.TestCase):
         self.assert_blocked(self.run_staged(), "home-path")
 
     def test_home_path_exception_is_narrow(self):
-        path = "private_dot_config/btop/btop.conf.tmpl"
+        path = "private_dot_config/btop/modify_btop.conf"
         self.write(path, "/" + "home/" + "placeholder/" + "project\n")
         self.git("add", path)
         self.assertEqual(self.run_staged().returncode, 0)

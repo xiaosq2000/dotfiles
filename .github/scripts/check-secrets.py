@@ -16,7 +16,7 @@ AGE_HEADERS = (b"-----BEGIN AGE ENCRYPTED FILE-----\n", b"age-encryption.org/v1\
 OID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 HOME_PATH = re.compile(rb"/home/[A-Za-z0-9._-]+/")
 HOME_EXCEPTIONS = {
-    "private_dot_config/btop/btop.conf.tmpl",
+    "private_dot_config/btop/modify_btop.conf",
     ".github/scripts/check-key-guard.sh",
 }
 
