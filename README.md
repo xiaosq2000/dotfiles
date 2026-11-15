@@ -153,7 +153,7 @@ file still works by hand: `touch ~/.claude/.i-have-adhd-always`.
 
 ## Context for agents
 
-[dot_agents/AGENTS.md](dot_agents/AGENTS.md) holds the user's preferences for
+[dot_agents/AGENTS.md.tmpl](dot_agents/AGENTS.md.tmpl) holds the user's preferences for
 every project, such as where knowledge is written down, keeping downloads off
 the metered proxy, and how documents state facts. It deploys to
 `~/.agents/AGENTS.md` and is linked as `~/.claude/CLAUDE.md`,

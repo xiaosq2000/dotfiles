@@ -188,7 +188,7 @@ entry once it is done.
 
 ## Instructions for every agent, in every project
 
-[dot_agents/AGENTS.md](dot_agents/AGENTS.md) holds the user's preferences that
+[dot_agents/AGENTS.md.tmpl](dot_agents/AGENTS.md.tmpl) holds the user's preferences that
 apply in every project. It deploys to `~/.agents/AGENTS.md`, and `symlink_`
 entries link it as `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`,
 `~/.config/opencode/AGENTS.md` and `~/.gemini/AGENTS.md`. The `agent-tools` bundle
@@ -208,6 +208,6 @@ here may be another agent, on another machine.
 | Encryption design and key handling | [docs/secrets.md](docs/secrets.md) |
 | Open work | [docs/todo.md](docs/todo.md) |
 | Shell setup constraints | [dot_sh_utils/CAVEATS.md](dot_sh_utils/CAVEATS.md) |
-| Preferences for every project | [dot_agents/AGENTS.md](dot_agents/AGENTS.md), deployed as `~/.agents/AGENTS.md` |
+| Preferences for every project | [dot_agents/AGENTS.md.tmpl](dot_agents/AGENTS.md.tmpl), deployed as `~/.agents/AGENTS.md` |
 | Shared agent skills | [dot_agents/skills/README.md](dot_agents/skills/README.md) |
 | Facts about each machine | the `machines` skill, at `~/.agents/skills/machines` where the key is |
