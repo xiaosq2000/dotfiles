@@ -57,8 +57,14 @@ with the official ASD-STE100 dictionary.
 
 The files are vendored from [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill)
 at commit `32511c6992ecb5f1971e46a2943f2e6adceedafe` (version 0.4.0), checked on
-2026-10-04. Keep the MIT license and supporting files when updating the skill.
-Use `/asd-ste100` or ask the agent to apply STE100.
+2026-10-04. Keep the MIT license and supporting files when updating the skill,
+and keep the local explicit-only configuration (`disable-model-invocation: true`
+and the explicit-only `description` in `SKILL.md`, plus `agents/openai.yaml`
+with `allow_implicit_invocation: false`, checked on 2026-11-15).
+
+Invoke explicitly via `/asd-ste100` (Claude Code, Antigravity CLI),
+`$asd-ste100` (Codex), `/skill:asd-ste100` (Pi), or an explicit request to
+apply STE100.
 
 To test the linter:
 
@@ -84,4 +90,7 @@ it; the skill's own `SKILL.md` says the same.
 
 Use `name` and `description` as the shared frontmatter fields. Anything else
 needs a compatibility check, so keep it out of a shared skill unless the other
-agents can safely ignore it.
+agents can safely ignore it. Checked on 2026-11-15: `disable-model-invocation: true`
+in `SKILL.md` (used by Claude Code, Pi, and Antigravity CLI) and Codex's
+`agents/openai.yaml` are safely ignored by OpenCode, while OpenCode relies on
+tight `description` scoping.
