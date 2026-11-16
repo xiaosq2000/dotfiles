@@ -163,6 +163,8 @@ def payload(identifier, spec, version, directory):
         tar(path, {identifier: script(f"{identifier} {version}")}, "gz")
     elif identifier == "pi":
         tar(path, {"pi/pi": script(f"pi {version}"), "pi/README.md": b"Pi docs"}, "gz")
+    elif identifier == "agy":
+        tar(path, {"antigravity": script(f"agy {version}")}, "gz")
     elif identifier == "herdr":
         path.write_bytes(script(f"herdr {version}"))
     elif identifier == "better-bibtex":
@@ -185,6 +187,14 @@ def publish(box, identifier, spec, version):
     base = box.base
     spec = dict(spec)
     path = payload(identifier, spec, version, base / "assets" / identifier / version)
+    if "manifest" in spec:
+        sha512 = hashlib.sha512(path.read_bytes()).hexdigest()
+        url = f"{box.releases}/{path.relative_to(base).as_posix()}"
+        manifest = base / "manifests" / identifier / "latest.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text(json.dumps({"version": version, "url": url, "sha512": sha512}))
+        spec["manifest"] = {platform: manifest.as_uri() for platform in spec["manifest"]}
+        return spec
     if "github" not in spec:
         spec["url"] = path.as_uri()
         return spec
@@ -229,6 +239,7 @@ def fixtures(box, catalog):
         home / ".local/bin/kitty": "manual kitty\n",
         home / ".local/bin/pi": "manual pi\n",
         home / ".local/bin/rtk": "manual rtk\n",
+        home / ".local/bin/agy": "manual agy\n",
         home / ".pi/agent/settings.json": '{"theme":"custom"}\n',
         home / ".pi/agent/sessions/fixture.jsonl": "local session\n",
         home / ".local/share/fonts/fira/Fira.otf": "manual font\n",
@@ -255,11 +266,11 @@ def fixtures(box, catalog):
     assert set(lock) == set(catalog), set(catalog) ^ set(lock)
     # Existing unpinned locks retain their source fingerprints after this change.
     for identifier, spec in resources.items():
-        if "tag" not in spec:
+        if "tag" not in spec and "manifest" not in spec:
             legacy = hashlib.sha256(json.dumps([spec.get(k) for k in ("github", "asset", "file", "url")],
                                                sort_keys=True).encode()).hexdigest()
             assert lock[identifier]["source"] == legacy, identifier
-    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk", "gitleaks"]:
+    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk", "agy", "gitleaks"]:
         output = subprocess.run([str(store / "bin" / command)], capture_output=True, text=True, check=True).stdout
         assert output == f"{command} 1\n", (command, output)
     assert json.loads((store / "zotero/current/distribution/policies.json").read_text()) == {"policies": {"DisableAppUpdate": True}}
@@ -325,6 +336,13 @@ def fixtures(box, catalog):
     box.fetch("update", "fira")
     assert sorted(p.name for p in (fonts / "fira").iterdir()) == ["New.otf"]
 
+    # A manifest-backed release follows outdated/update and verifies sha512.
+    resources["agy"] = publish(box, "agy", catalog["agy"], "2")
+    assert "agy" in box.fetch("outdated").stdout
+    box.fetch("update", "agy", manifest=everything)
+    assert box.lock()["agy"]["version"] == "2"
+    assert subprocess.run([str(store / "bin/agy")], capture_output=True, text=True, check=True).stdout == "agy 2\n"
+
     # Catalog pins win over the latest release, including explicit update.
     for identifier in ("pi", "rtk"):
         publish(box, identifier, resources[identifier], "2")
@@ -377,6 +395,11 @@ def fixtures(box, catalog):
     (box.base / "assets/tre/4/tre-4-x86_64-unknown-linux-musl.tar.gz").write_bytes(b"tampered")
     assert box.fetch("sync", manifest=dict(core, resources={"tre": tampered}), check=False).returncode == 1
 
+    # A manifest release whose sha512 differs from the downloaded archive is refused.
+    bad_manifest = publish(box, "agy", catalog["agy"], "3")
+    (box.base / "assets/agy/3/agy-3").write_bytes(b"tampered")
+    assert box.fetch("sync", manifest=dict(core, resources={"agy": bad_manifest}), check=False).returncode == 1
+
     # migrate removes only what typefaces.sh provably wrote.
     legacy = home / ".local/share/fonts/source-sans"
     legacy.mkdir(parents=True)
@@ -390,7 +413,7 @@ def live(box, catalog):
     store, fonts = box.home / ".local/opt/dotfiles", box.home / ".local/share/fonts/dotfiles"
     box.fetch("sync", manifest={"platform": "linux-amd64", "resources": catalog})
     box.fetch("status")
-    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk"]:
+    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk", "agy"]:
         result = subprocess.run([str(store / "bin" / command), "--version"], env=dict(box.env, MOZ_HEADLESS="1"),
                                 capture_output=True, text=True, check=True)
         print(result.stdout.strip())

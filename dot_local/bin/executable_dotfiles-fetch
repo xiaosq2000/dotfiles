@@ -20,7 +20,7 @@ Commands:
                     remove what is no longer selected. Offline once installed.
     update [ID...]  move unpinned downloads to the latest upstream release.
                     Pinned downloads stay at their catalog tag.
-    outdated        list GitHub releases newer than the locked version.
+    outdated        list upstream releases newer than the locked version.
     status          list what is selected, installed and pending, offline.
     migrate         list font directories left by the retired typefaces.sh;
                     --apply removes them.
@@ -74,8 +74,8 @@ def warn(message):
     print(f"dotfiles-fetch: warning: {message}", file=sys.stderr, flush=True)
 
 
-def digest(path):
-    hasher = hashlib.sha256()
+def digest(path, algorithm="sha256"):
+    hasher = hashlib.new(algorithm)
     with open(path, "rb") as stream:
         for chunk in iter(lambda: stream.read(1 << 20), b""):
             hasher.update(chunk)
@@ -87,12 +87,22 @@ def fingerprint(value):
 
 
 def source_fingerprint(spec):
-    # Preserve existing locks for unpinned downloads. Adding an absent tag to
-    # their fingerprint would resolve them again and could upgrade them.
+    # Preserve existing locks for unpinned downloads. Adding an absent tag or
+    # manifest key would resolve them again and could upgrade them.
     values = [spec.get(k) for k in SOURCE_KEYS]
     if "tag" in spec:
         values.append(spec["tag"])
+    if "manifest" in spec:
+        values.append(spec["manifest"])
     return fingerprint(values)
+
+
+def bin_entries(spec):
+    """Return [(command_name, payload_relative_path), ...] for spec."""
+    raw = spec.get("bin") or []
+    if isinstance(raw, dict):
+        return list(raw.items())
+    return [(PurePosixPath(path).name, path) for path in raw]
 
 
 def rmtree(path):
@@ -174,13 +184,13 @@ def fetch(url):
 
 def source(spec, platform):
     """The one source field, resolved for this platform, or None."""
-    for key in ("asset", "file", "url"):
+    for key in ("asset", "file", "url", "manifest"):
         if key in spec:
             value = spec[key]
             if isinstance(value, dict):
                 value = value.get(platform)
             return (key, value) if value else None
-    raise Failure("no asset, file or url")
+    raise Failure("no asset, file, url or manifest")
 
 
 def resolve(spec, platform, latest=False):
@@ -189,6 +199,14 @@ def resolve(spec, platform, latest=False):
     kind, value = source(spec, platform)
     if kind == "url":
         return {"url": value, "version": None, "sha256": None}
+    if kind == "manifest":
+        with fetch(value) as response:
+            manifest = json.load(response)
+        url = manifest.get("url")
+        if not isinstance(url, str) or not url:
+            raise Failure(f"{value}: manifest has no url")
+        return {"url": url, "version": manifest.get("version"),
+                "sha256": manifest.get("sha256"), "sha512": manifest.get("sha512")}
     repo = spec["github"]
     pin = spec.get("tag") if not latest else None
     endpoint = f"tags/{urllib.parse.quote(pin, safe='')}" if pin else "latest"
@@ -304,7 +322,7 @@ def installed(identifier, spec, entry):
                 return False
         except (Failure, KeyError, OSError):
             return False
-    return all((BIN / PurePosixPath(p).name).exists() for p in spec.get("bin", []))
+    return all((BIN / name).exists() for name, _ in bin_entries(spec))
 
 
 def install(identifier, spec, entry, target, scratch):
@@ -317,6 +335,11 @@ def install(identifier, spec, entry, target, scratch):
     expected = target.get("sha256")
     if expected and sha256 != expected:
         raise Failure(f"{target['url']}: sha256 {sha256}, expected {expected}")
+    expected_sha512 = target.get("sha512")
+    if expected_sha512:
+        actual_sha512 = digest(archive, "sha512")
+        if actual_sha512 != expected_sha512:
+            raise Failure(f"{target['url']}: sha512 {actual_sha512}, expected {expected_sha512}")
     if (entry and sha256 == entry["sha256"] and entry["spec"] == fingerprint(spec)
             and installed(identifier, spec, entry)):
         archive.unlink()
@@ -328,13 +351,14 @@ def install(identifier, spec, entry, target, scratch):
            spec.get("extract", True))
     archive.unlink()
 
+    bins = bin_entries(spec)
     for relative, contents in spec.get("write", {}).items():
         replace_file(inside(unpacked, relative), lambda p, c=contents: p.write_text(c + "\n"))
-    for relative in list(spec.get("bin", [])) + list(spec.get("copy", {}).values()):
+    for relative in [rel for _, rel in bins] + list(spec.get("copy", {}).values()):
         if not inside(unpacked, relative).is_file():
             raise Failure(f"{relative} is not in the download")
     # A lone executable has no archive mode bits; declared commands must run.
-    for relative in spec.get("bin", []):
+    for _, relative in bins:
         inside(unpacked, relative).chmod(0o755)
 
     if "fonts" in spec:
@@ -344,7 +368,7 @@ def install(identifier, spec, entry, target, scratch):
 
     new = {"source": source_fingerprint(spec),
            "spec": fingerprint(spec), "url": target["url"], "version": version,
-           "sha256": sha256, "bin": [PurePosixPath(p).name for p in spec.get("bin", [])]}
+           "sha256": sha256, "bin": [name for name, _ in bins]}
     new["copies"] = sync_copies(identifier, spec, (entry or {}).get("copies", {}))
     shutil.rmtree(staging)
     return new
@@ -370,8 +394,9 @@ def install_fonts(identifier, globs, unpacked):
 def install_payload(identifier, spec, unpacked, version, entry):
     """Move the payload to <id>/<version>, point `current` at it, link its
     commands, and keep the previous version for a manual rollback."""
-    for relative in spec.get("bin", []):
-        link = BIN / PurePosixPath(relative).name
+    bins = bin_entries(spec)
+    for name, _ in bins:
+        link = BIN / name
         if link.is_symlink() and not os.readlink(link).startswith(f"../{identifier}/"):
             raise Failure(f"{link} already belongs to another download")
     home = STORE / identifier
@@ -382,10 +407,11 @@ def install_payload(identifier, spec, unpacked, version, entry):
     shutil.move(str(unpacked), str(new))
     swap(new, directory)
     replace_link(home / "current", directory.name)
-    for relative in spec.get("bin", []):
-        replace_link(BIN / PurePosixPath(relative).name, os.path.join("..", identifier, "current", relative))
+    for name, relative in bins:
+        replace_link(BIN / name, os.path.join("..", identifier, "current", relative))
+    wanted_names = {name for name, _ in bins}
     for name in (entry or {}).get("bin", []):
-        if name not in {PurePosixPath(p).name for p in spec.get("bin", [])}:
+        if name not in wanted_names:
             unlink_command(identifier, name)
     keep = {"current", directory.name, (entry or {}).get("version", "").replace("/", "_")}
     for child in home.iterdir():
@@ -528,7 +554,7 @@ def sync(manifest, lock, update=()):
                     # A release asset is immutable, so a re-download must
                     # match. A branch or rolling URL may have moved on.
                     target = {"url": entry["url"], "version": None, "sha256": None}
-                    if spec.get("github"):
+                    if spec.get("github") or spec.get("manifest"):
                         target.update(version=entry["version"], sha256=entry["sha256"])
                 if scratch is None:
                     STORE.mkdir(parents=True, exist_ok=True)
@@ -563,7 +589,7 @@ def outdated(manifest, lock):
     resources = lock.get("resources", {})
     for identifier, spec in selected(manifest).items():
         entry = resources.get(identifier)
-        if not spec.get("github"):
+        if not spec.get("github") and not spec.get("manifest"):
             print(f"{identifier:24} {entry['version'] if entry else '-':20} "
                   "follows a URL; `dotfiles-fetch update` downloads it to check")
             continue
@@ -574,7 +600,7 @@ def outdated(manifest, lock):
             continue
         if not entry or target["url"] != entry["url"]:
             pin = f" (catalog pin: {spec['tag']}; change it to upgrade)" if spec.get("tag") else ""
-            print(f"{identifier:24} {entry['version'] if entry else '-':20} -> {target['version']}{pin}")
+            print(f"{identifier:24} {entry['version'] if entry else '-':20} -> {target['version'] or '-'}{pin}")
     return 0
 
 

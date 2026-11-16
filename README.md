@@ -240,6 +240,17 @@ proxy. If a target cannot reach an upstream directly, transfer the verified
 archives or resolve network access before deployment. Do not use the proxy
 without explicit approval.
 
+## Antigravity CLI
+
+Checked on 2026-11-16. `agent-tools` also installs Antigravity CLI (`agy`) from
+its per-platform release `manifest` in
+[downloads.toml](.chezmoidata/downloads.toml), linking `~/.local/opt/dotfiles/bin/agy`
+to the downloaded `antigravity` binary. When that symlink is present, bash and
+zsh export `AGY_CLI_DISABLE_AUTO_UPDATE=true` so background self-updates do not
+replace the managed payload; upgrade through `dotfiles-fetch update agy`.
+Shared context comes from `~/.gemini/AGENTS.md` and
+`~/.gemini/config/skills/`, linked by `agent-skills.sh`.
+
 ## Herdr
 
 The workstation, laptop, imrl and sicc select the `herdr` bundle for coding agents.
@@ -285,7 +296,7 @@ package, and `config` paths that only a machine selecting it receives.
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | eighteen more document, slide, design, math, CJK and emoji families |
 | `research` | Zotero and pinned Better BibTeX |
-| `agent-tools` | pinned Pi and RTK binaries, Node/npm, shared Pi settings and extensions, on every computing machine except the vps |
+| `agent-tools` | pinned Pi and RTK binaries, Antigravity CLI (`agy`), Node/npm, shared Pi settings and extensions, on every computing machine except the vps |
 | `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
 | `laptop` | a user service that drops the panel to 60 Hz on battery |

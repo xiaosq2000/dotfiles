@@ -165,9 +165,9 @@ downloads = ["zotero", "better-bibtex"]
 config = [".config/dotfiles/zotero-user.js"]
 
 [bundles.agent-tools]
-description = "Pinned Pi, shared extensions and RTK, without automatic RTK integrations"
+description = "Pinned Pi with shared extensions, RTK, and Antigravity CLI, without automatic RTK integrations"
 packages = ["nodejs"]
-downloads = ["pi", "rtk"]
+downloads = ["pi", "rtk", "agy"]
 config = [
     ".pi/agent/AGENTS.md",
     ".pi/agent/settings.json",

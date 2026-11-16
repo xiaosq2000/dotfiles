@@ -641,10 +641,12 @@ fi
 # opencode
 prepend_env PATH "${HOME}/.opencode/bin"
 
-# Managed downloads must precede manual Pi and RTK installations, including
-# an inherited PATH that already lists this directory after another copy.
+# Managed downloads must precede manual Pi, RTK and agy installations,
+# including an inherited PATH that already lists this directory after another copy.
 remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
 prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
+# Keep agy's background updater from replacing the dotfiles-fetch payload.
+[[ -L "${HOME}/.local/opt/dotfiles/bin/agy" ]] && export AGY_CLI_DISABLE_AUTO_UPDATE=true
 
 check_git_config() {
     if has "git"; then

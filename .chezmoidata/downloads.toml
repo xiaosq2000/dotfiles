@@ -17,13 +17,15 @@
 #   asset     release asset name, a glob
 #   file      path in the repository at the latest release tag
 #   url       a direct download, instead of github
-#   asset, file and url take a string, or a table keyed by platform
+#   manifest  a JSON release manifest ({version, url, sha256/sha512})
+#   asset, file, url and manifest take a string, or a table keyed by platform
 #   ("linux-amd64", "linux-arm64"). A platform missing from the table is
 #   skipped with a warning. A plain string applies to every platform.
 #   strip     leading path components to drop from an archive
 #   extract   false keeps an archive as a file, for example a Zotero plugin
 #   filename  destination name for a lone file; required if extract is false
-#   bin       payload paths to link into ~/.local/opt/dotfiles/bin
+#   bin       payload paths to link into ~/.local/opt/dotfiles/bin, or a table
+#             mapping command link names to payload paths
 #   fonts     globs matched against archive paths; `*` also matches `/`.
 #             Matching files are installed flat, and nothing else is kept.
 #   write     payload-relative path = contents, written after extraction
@@ -100,6 +102,13 @@ github = "rtk-ai/rtk"
 tag = "v1.0.0"
 asset = { linux-amd64 = "rtk-x86_64-unknown-linux-musl.tar.gz", linux-arm64 = "rtk-aarch64-unknown-linux-gnu.tar.gz" }
 bin = ["rtk"]
+
+# Antigravity CLI publishes per-platform release manifests instead of GitHub
+# Releases, and names the binary `antigravity` inside its archive.
+# Checked on 2026-11-16.
+[downloads.agy]
+manifest = { linux-amd64 = "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json", linux-arm64 = "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_arm64.json" }
+bin = { agy = "antigravity" }
 
 ################################################################################
 # Fonts

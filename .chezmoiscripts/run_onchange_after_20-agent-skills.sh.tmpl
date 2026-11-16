@@ -14,7 +14,9 @@
 # This line changes with it, so the links follow on that apply rather than
 # waiting for some unrelated skill edit.
 # age identity: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
+# agy at apply time: {{ if or (lookPath "agy") (stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/bin/agy")) (stat (joinPath .chezmoi.homeDir ".local/bin/agy")) }}present{{ else }}absent{{ end }}
 
 set -eu
 
+export PATH="$HOME/.local/opt/dotfiles/bin:$PATH"
 exec "$HOME/.local/libexec/dotfiles/agent-skills.sh"

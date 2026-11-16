@@ -217,6 +217,8 @@ if type remove_from_env >/dev/null 2>&1 && type prepend_env >/dev/null 2>&1; the
     remove_from_env PATH "$HOME/.local/opt/dotfiles/bin"
     prepend_env PATH "$HOME/.local/opt/dotfiles/bin"
 fi
+# Keep agy's background updater from replacing the dotfiles-fetch payload.
+[ -L "$HOME/.local/opt/dotfiles/bin/agy" ] && export AGY_CLI_DISABLE_AUTO_UPDATE=true
 
 # yazi integration (cd to last dir on exit)
 setup_yazi() {

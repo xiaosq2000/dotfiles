@@ -11,3 +11,4 @@ do
 done
 unset _dotfiles_bin
 export PATH
+[[ -L "$HOME/.local/opt/dotfiles/bin/agy" ]] && export AGY_CLI_DISABLE_AUTO_UPDATE=true
