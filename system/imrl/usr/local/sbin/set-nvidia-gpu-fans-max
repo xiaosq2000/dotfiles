@@ -1,0 +1,3 @@
+#!/bin/sh
+# Use the system Python interpreter. NVML does not need a display server.
+exec /usr/bin/python3 /usr/local/libexec/nvidia-gpu-fans-max.py "$@"

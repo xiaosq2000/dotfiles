@@ -23,6 +23,8 @@ jobs:
           SKIP: gitleaks
       - name: Test downloads with offline fixtures
         run: python3 .github/scripts/check-fetch.py
+      - name: Test GPU fan control without hardware
+        run: python3 .github/scripts/check-gpu-fans.py
 
   smoke:
     runs-on: ubuntu-latest

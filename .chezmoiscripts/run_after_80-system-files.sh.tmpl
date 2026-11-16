@@ -26,25 +26,27 @@ This runs before 90-downloads, which has to run last.
 {{-   range $src := glob (joinPath $root "**") -}}
 {{-     $info := stat $src -}}
 {{-     if not $info.isDir -}}
-{{-       $perm := 420 -}}
-{{-       if eq (mod (div $info.perm 64) 2) 1 -}}
-{{-         $perm = 493 -}}
-{{-       end -}}
 {{-       $dst := trimPrefix $root $src -}}
-{{-       $cur := stat $dst -}}
-{{-       if or (not $cur) (ne $cur.perm $perm) (ne (include $dst) (include $src)) -}}
-{{-         $files = append $files (dict "src" $src "dst" $dst "mode" (printf "%o" $perm)) -}}
-{{-         if hasPrefix "/etc/systemd/" $dst -}}
-{{-           $systemd = true -}}
+{{-       if and (not (contains "/__pycache__/" $dst)) (not (hasSuffix ".pyc" $dst)) (not (hasSuffix ".pyo" $dst)) -}}
+{{-         $perm := 420 -}}
+{{-         if eq (mod (div $info.perm 64) 2) 1 -}}
+{{-           $perm = 493 -}}
 {{-         end -}}
-{{-         if regexMatch "^/etc/systemd/system/[^/]+\\.(service|socket|timer|path)$" $dst -}}
-{{-           $units = append $units (base $dst) -}}
-{{-         end -}}
-{{-         if hasPrefix "/etc/udev/rules.d/" $dst -}}
-{{-           $udev = true -}}
-{{-         end -}}
-{{-         if hasPrefix "/etc/modprobe.d/" $dst -}}
-{{-           $modprobe = true -}}
+{{-         $cur := stat $dst -}}
+{{-         if or (not $cur) (ne $cur.perm $perm) (ne (include $dst) (include $src)) -}}
+{{-           $files = append $files (dict "src" $src "dst" $dst "mode" (printf "%o" $perm)) -}}
+{{-           if hasPrefix "/etc/systemd/" $dst -}}
+{{-             $systemd = true -}}
+{{-           end -}}
+{{-           if regexMatch "^/etc/systemd/system/[^/]+\\.(service|socket|timer|path)$" $dst -}}
+{{-             $units = append $units (base $dst) -}}
+{{-           end -}}
+{{-           if hasPrefix "/etc/udev/rules.d/" $dst -}}
+{{-             $udev = true -}}
+{{-           end -}}
+{{-           if hasPrefix "/etc/modprobe.d/" $dst -}}
+{{-             $modprobe = true -}}
+{{-           end -}}
 {{-         end -}}
 {{-       end -}}
 {{-     end -}}

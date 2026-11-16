@@ -1,0 +1,16 @@
+[Unit]
+Description=Set all NVIDIA GPU fans to maximum speed through NVML
+After=systemd-modules-load.service
+StartLimitIntervalSec=180
+StartLimitBurst=6
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/set-nvidia-gpu-fans-max
+RemainAfterExit=yes
+TimeoutStartSec=30
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
