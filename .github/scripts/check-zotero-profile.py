@@ -134,7 +134,7 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
                                              "applyBackgroundUpdates": 0}]}))
     assert not setup().stderr
 
-    # Extra Meta warns only if disabled (it has no remote update_url).
+    # Extra Meta warns only if disabled (update_url points to .invalid; updates are managed locally).
     state.write_text(json.dumps({"addons": [
         {"id": plugin_id, "active": True, "applyBackgroundUpdates": 0},
         {"id": "extra-meta@dotfiles.local", "active": False, "applyBackgroundUpdates": 1},
@@ -147,5 +147,21 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
         {"id": "extra-meta@dotfiles.local", "active": True, "applyBackgroundUpdates": 1},
     ]}))
     assert not setup().stderr
+
+    # Extra Meta packaging only includes allowlisted files and rejects symlinks.
+    assert (extra_target.stat().st_mode & 0o777) == 0o644
+    with ZipFile(extra_target) as extra_pkg:
+        for entry in extra_pkg.namelist():
+            assert entry in {"manifest.json", "bootstrap.js"} or entry.startswith(("content/", "locale/")), entry
+    bad_source = home / "source-copy"
+    shutil.copytree(root / "zotero/extra-meta", bad_source)
+    (bad_source / "README.md").write_text("ignored\n")
+    (bad_source / "content/extra-link.js").symlink_to(shared)
+    bad_script = script.read_text().replace(str(root / "zotero/extra-meta"), str(bad_source))
+    bad_script_path = home / "bad-setup.sh"
+    bad_script_path.write_text(bad_script)
+    bad_result = subprocess.run([bash, str(bad_script_path)], env=dict(os.environ, HOME=str(home)),
+                                check=True, text=True, capture_output=True)
+    assert "symlink not allowed in plugin source" in bad_result.stderr
 
 print("ok       Zotero profile: linking, locked installs, backup, no downgrade and addon status")

@@ -25,6 +25,8 @@ jobs:
         run: python3 .github/scripts/check-fetch.py
       - name: Test GPU fan control without hardware
         run: python3 .github/scripts/check-gpu-fans.py
+      - name: Test Extra Meta plugin helpers and handlers
+        run: node .github/scripts/check-extra-meta.js
 
   smoke:
     runs-on: ubuntu-latest

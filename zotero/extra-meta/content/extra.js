@@ -7,9 +7,10 @@ var ExtraMetaExtra = (function () {
 	"use strict";
 
 	const LINE_PATTERN = /^([A-Za-z][A-Za-z0-9 ._-]*):([\s\S]*)$/;
-	const ARXIV_MODERN_RE = /^(?:arXiv:\s*)?(\d{4}\.\d{4,5}(?:v\d+)?)(?:\s+\[([^\]]+)\])?/i;
-	const ARXIV_LEGACY_RE = /^(?:arXiv:\s*)?([a-z-]+(?:\.[a-z-]+)?\/\d{7}(?:v\d+)?)(?:\s+\[([^\]]+)\])?/i;
-	const ARXIV_URL_RE = /^(?:https?:\/\/)?arxiv\.org\/(?:abs|pdf|html)\/([^\s?#]+?)(?:\.pdf)?(?:[?#].*)?$/i;
+	const ARXIV_ID_CORE = "(?:\\d{4}\\.\\d{4,5}|[a-z-]+(?:\\.[a-z-]+)?\\/\\d{7})(?:v\\d+)?";
+	const ARXIV_ID_RE = new RegExp(`^(?:arXiv:\\s*)?(${ARXIV_ID_CORE})(?:\\s+\\[([^\\]]+)\\])?$`, "i");
+	const ARXIV_ID_EXACT_RE = new RegExp(`^${ARXIV_ID_CORE}$`, "i");
+	const ARXIV_URL_RE = /^(?:https?:\/\/)?(?:export\.)?arxiv\.org\/(?:abs|pdf|html)\/([^\s?#]+?)(?:\.pdf)?\/?(?:[?#].*)?$/i;
 	const OPENREVIEW_ID_RE = /^[A-Za-z0-9_-]{6,32}$/;
 
 	function normalizeKey(key) {
@@ -18,6 +19,10 @@ var ExtraMetaExtra = (function () {
 
 	function sanitizeValue(value) {
 		return String(value ?? "").replace(/[\r\n]+/g, " ").trim();
+	}
+
+	function splitLines(extra) {
+		return extra ? String(extra).split(/\r?\n/) : [];
 	}
 
 	function parseLine(line) {
@@ -33,33 +38,38 @@ var ExtraMetaExtra = (function () {
 		};
 	}
 
+	function parseFields(extra) {
+		const fields = new Map();
+		for (const line of splitLines(extra)) {
+			const parsed = parseLine(line);
+			if (parsed && parsed.value !== "" && !fields.has(parsed.normalizedKey)) {
+				fields.set(parsed.normalizedKey, parsed.value);
+			}
+		}
+		return fields;
+	}
+
 	function getValue(extra, key) {
 		if (!extra) {
 			return "";
 		}
-		const target = normalizeKey(key);
-		for (const line of String(extra).split("\n")) {
-			const parsed = parseLine(line);
-			if (parsed && parsed.normalizedKey === target && parsed.value !== "") {
-				return parsed.value;
-			}
-		}
-		return "";
+		return parseFields(extra).get(normalizeKey(key)) ?? "";
 	}
 
 	/**
-	 * Return Extra with `key` set to `value`. Existing line(s) for `key` are
-	 * replaced at the first occurrence; an empty value removes the key.
+	 * Return Extra with `key` set to `value`. Existing line(s) for `key` (and
+	 * any alias lines matched by `isAliasLine`) are replaced at the first
+	 * occurrence; an empty value removes them.
 	 */
-	function setValue(extra, key, value) {
+	function setValue(extra, key, value, isAliasLine = null) {
 		const target = normalizeKey(key);
-		const lines = extra ? String(extra).split("\n") : [];
+		const lines = splitLines(extra);
 		const kept = [];
 		let insertAt = -1;
 
 		for (const line of lines) {
 			const parsed = parseLine(line);
-			if (parsed && parsed.normalizedKey === target) {
+			if (parsed && (parsed.normalizedKey === target || (isAliasLine && isAliasLine(parsed)))) {
 				if (insertAt === -1) {
 					insertAt = kept.length;
 				}
@@ -82,35 +92,35 @@ var ExtraMetaExtra = (function () {
 	}
 
 	/** Only allow http/https URLs to be launched externally. */
-	function sanitizeUrl(raw) {
+	function parseHttpUrl(raw) {
 		const text = sanitizeValue(raw);
 		if (!text) {
-			return "";
+			return null;
 		}
 		try {
 			const parsed = new URL(text);
 			if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-				return parsed.href;
+				return parsed;
 			}
 		}
 		catch {
-			return "";
+			return null;
 		}
-		return "";
+		return null;
+	}
+
+	function sanitizeUrl(raw) {
+		return parseHttpUrl(raw)?.href ?? "";
+	}
+
+	function isOpenReviewHost(hostname) {
+		const host = hostname.toLowerCase();
+		return host === "openreview.net" || host.endsWith(".openreview.net");
 	}
 
 	function isOpenReviewUrl(raw) {
-		const url = sanitizeUrl(raw);
-		if (!url) {
-			return false;
-		}
-		try {
-			const host = new URL(url).hostname.toLowerCase();
-			return host === "openreview.net" || host.endsWith(".openreview.net");
-		}
-		catch {
-			return false;
-		}
+		const parsed = parseHttpUrl(raw);
+		return Boolean(parsed && isOpenReviewHost(parsed.hostname));
 	}
 
 	function normalizeOpenReviewInput(raw) {
@@ -122,28 +132,22 @@ var ExtraMetaExtra = (function () {
 			return `https://openreview.net/forum?id=${text}`;
 		}
 		const candidate = /^openreview\.net\//i.test(text) ? `https://${text}` : text;
-		const url = sanitizeUrl(candidate);
-		if (!url || !isOpenReviewUrl(url)) {
+		const parsed = parseHttpUrl(candidate);
+		if (!parsed || !isOpenReviewHost(parsed.hostname)) {
 			return "";
 		}
-		try {
-			const parsed = new URL(url);
-			parsed.protocol = "https:";
-			const forumId = parsed.searchParams.get("id");
-			if ((parsed.pathname === "/pdf" || parsed.pathname === "/forum") && forumId) {
-				const normalized = new URL("https://openreview.net/forum");
-				normalized.searchParams.set("id", forumId);
-				const noteId = parsed.searchParams.get("noteId");
-				if (noteId) {
-					normalized.searchParams.set("noteId", noteId);
-				}
-				return normalized.href;
+		parsed.protocol = "https:";
+		const forumId = parsed.searchParams.get("id");
+		if ((parsed.pathname === "/pdf" || parsed.pathname === "/forum") && forumId) {
+			const normalized = new URL("https://openreview.net/forum");
+			normalized.searchParams.set("id", forumId);
+			const noteId = parsed.searchParams.get("noteId");
+			if (noteId) {
+				normalized.searchParams.set("noteId", noteId);
 			}
-			return parsed.href;
+			return normalized.href;
 		}
-		catch {
-			return "";
-		}
+		return parsed.href;
 	}
 
 	function classifyLink(rawUrl, kind) {
@@ -155,17 +159,12 @@ var ExtraMetaExtra = (function () {
 			return { kind: "review", label: "OpenReview", icon: "review", url, tooltip: `OpenReview: ${url}` };
 		}
 
-		const url = sanitizeUrl(rawUrl);
-		if (!url) {
+		const parsed = parseHttpUrl(rawUrl);
+		if (!parsed) {
 			return null;
 		}
-		let hostname = "";
-		try {
-			hostname = new URL(url).hostname.toLowerCase();
-		}
-		catch {
-			hostname = "";
-		}
+		const url = parsed.href;
+		const hostname = parsed.hostname.toLowerCase();
 
 		if (kind === "code") {
 			let label = "Code";
@@ -187,10 +186,11 @@ var ExtraMetaExtra = (function () {
 	}
 
 	function getLinks(extra, itemUrl = "") {
-		const codeLink = classifyLink(getValue(extra, "tex.sourcecode"), "code");
-		const pageLink = classifyLink(getValue(extra, "tex.projecturl"), "page");
-		const reviewSource = getValue(extra, "OpenReview")
-			|| getValue(extra, "tex.openreview")
+		const fields = parseFields(extra);
+		const codeLink = classifyLink(fields.get("tex.sourcecode") ?? "", "code");
+		const pageLink = classifyLink(fields.get("tex.projecturl") ?? "", "page");
+		const reviewSource = fields.get("openreview")
+			|| fields.get("tex.openreview")
 			|| (isOpenReviewUrl(itemUrl) ? itemUrl : "");
 		const reviewLink = classifyLink(reviewSource, "review");
 		const links = [];
@@ -207,32 +207,30 @@ var ExtraMetaExtra = (function () {
 	}
 
 	function encodeLinks(extra, itemUrl = "") {
-		return getLinks(extra, itemUrl)
-			.map((link) => `${link.kind}:${link.url}`)
-			.join(" | ");
+		const links = getLinks(extra, itemUrl);
+		return links.length ? JSON.stringify(links) : "";
 	}
 
 	function decodeLinks(data) {
 		if (!data) {
 			return [];
 		}
-		const links = [];
-		for (const part of String(data).split(" | ")) {
-			const sep = part.indexOf(":");
-			if (sep <= 0) {
-				continue;
+		try {
+			const parsed = JSON.parse(String(data));
+			if (!Array.isArray(parsed)) {
+				return [];
 			}
-			const kind = part.slice(0, sep);
-			const url = part.slice(sep + 1);
-			if (kind !== "code" && kind !== "page" && kind !== "review") {
-				continue;
-			}
-			const classified = classifyLink(url, kind);
-			if (classified) {
-				links.push(classified);
-			}
+			return parsed.filter((link) => (
+				link
+				&& (link.kind === "code" || link.kind === "page" || link.kind === "review")
+				&& typeof link.url === "string"
+				&& typeof link.icon === "string"
+				&& typeof link.tooltip === "string"
+			));
 		}
-		return links;
+		catch {
+			return [];
+		}
 	}
 
 	function parseArxiv(raw) {
@@ -241,25 +239,17 @@ var ExtraMetaExtra = (function () {
 			return null;
 		}
 		const urlMatch = ARXIV_URL_RE.exec(text);
-		if (urlMatch) {
+		if (urlMatch && ARXIV_ID_EXACT_RE.test(urlMatch[1])) {
 			const id = urlMatch[1];
 			return { id, category: "", url: `https://arxiv.org/abs/${id}`, raw: text };
 		}
-		const modern = ARXIV_MODERN_RE.exec(text);
-		if (modern) {
+		const idMatch = ARXIV_ID_RE.exec(text);
+		if (idMatch) {
+			const id = idMatch[1];
 			return {
-				id: modern[1],
-				category: modern[2] ? modern[2].trim() : "",
-				url: `https://arxiv.org/abs/${modern[1]}`,
-				raw: text,
-			};
-		}
-		const legacy = ARXIV_LEGACY_RE.exec(text);
-		if (legacy) {
-			return {
-				id: legacy[1],
-				category: legacy[2] ? legacy[2].trim() : "",
-				url: `https://arxiv.org/abs/${legacy[1]}`,
+				id,
+				category: idMatch[2] ? idMatch[2].trim() : "",
+				url: `https://arxiv.org/abs/${id}`,
 				raw: text,
 			};
 		}
@@ -267,35 +257,31 @@ var ExtraMetaExtra = (function () {
 	}
 
 	function getArxiv(extra) {
-		const direct = getValue(extra, "arXiv");
+		const fields = parseFields(extra);
+		const direct = fields.get("arxiv");
 		if (direct) {
 			return parseArxiv(direct);
 		}
-		const num = getValue(extra, "Number");
+		const num = fields.get("number") ?? "";
 		if (/^arXiv:/i.test(num)) {
 			return parseArxiv(num);
 		}
 		return null;
 	}
 
-	function formatArxivData(extra) {
-		const parsed = getArxiv(extra);
+	function formatParsedArxiv(parsed) {
 		if (!parsed) {
 			return "";
 		}
 		return parsed.category ? `${parsed.id} [${parsed.category}]` : parsed.id;
 	}
 
+	function formatArxivData(extra) {
+		return formatParsedArxiv(getArxiv(extra));
+	}
+
 	function normalizeArxivInput(raw) {
-		const text = sanitizeValue(raw);
-		if (!text) {
-			return "";
-		}
-		const parsed = parseArxiv(text);
-		if (!parsed) {
-			return text;
-		}
-		return parsed.category ? `${parsed.id} [${parsed.category}]` : parsed.id;
+		return formatParsedArxiv(parseArxiv(raw));
 	}
 
 	return {

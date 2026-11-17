@@ -52,9 +52,6 @@ function shutdown(data, reason) {
 	if (reason === APP_SHUTDOWN_REASON) {
 		return;
 	}
-	if (ExtraMetaMain) {
-		ExtraMetaMain.shutdown();
-	}
 	for (const win of Zotero.getMainWindows()) {
 		ExtraMetaMain?.removeFromWindow(win);
 	}

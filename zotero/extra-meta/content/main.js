@@ -2,7 +2,7 @@
  * Registers Extra Meta columns in the item list and editable rows in Info.
  */
 
-/* global Zotero, ExtraMetaExtra, ExtraMetaVenues */
+/* global Zotero, Localization, ExtraMetaExtra, ExtraMetaVenues */
 
 var ExtraMetaMain = (function () {
 	"use strict";
@@ -13,16 +13,63 @@ var ExtraMetaMain = (function () {
 	const STYLE_URI = "chrome://extra-meta/content/styles.css";
 	const FTL_FILE = "extra-meta.ftl";
 
+	const SVG_ICONS = {
+		github: [
+			["path", {
+				fill: "currentColor",
+				"fill-rule": "evenodd",
+				"clip-rule": "evenodd",
+				d: "M8 1.5a6.5 6.5 0 0 0-2.055 12.667c.325.06.444-.141.444-.313 0-.154-.006-.563-.009-1.105-1.805.392-2.186-.87-2.186-.87-.295-.75-.72-.95-.72-.95-.589-.402.045-.394.045-.394.651.046.994.668.994.668.579.992 1.519.705 1.889.539.059-.419.227-.705.412-.867-1.441-.164-2.957-.72-2.957-3.208 0-.709.253-1.288.668-1.742-.067-.164-.29-.824.063-1.718 0 0 .545-.175 1.787.665a6.22 6.22 0 0 1 3.254 0c1.241-.84 1.785-.665 1.785-.665.354.894.131 1.554.064 1.718.416.454.667 1.033.667 1.742 0 2.494-1.518 3.042-2.964 3.203.233.2.441.596.441 1.201 0 .867-.008 1.566-.008 1.779 0 .173.117.376.447.312A6.5 6.5 0 0 0 8 1.5Z",
+			}],
+		],
+		code: [
+			["path", {
+				d: "M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5",
+				stroke: "currentColor",
+				"stroke-width": "1.5",
+				"stroke-linecap": "round",
+				"stroke-linejoin": "round",
+			}],
+			["path", {
+				d: "M9 3.5 7 12.5",
+				stroke: "currentColor",
+				"stroke-width": "1.4",
+				"stroke-linecap": "round",
+			}],
+		],
+		review: [
+			["path", {
+				d: "M3 2.5h10A1.5 1.5 0 0 1 14.5 4v6a1.5 1.5 0 0 1-1.5 1.5H6.8L3.5 14v-2.5H3A1.5 1.5 0 0 1 1.5 10V4A1.5 1.5 0 0 1 3 2.5Z",
+				stroke: "currentColor",
+				"stroke-width": "1.35",
+				"stroke-linejoin": "round",
+			}],
+			["path", {
+				d: "M5 5.8h6M5 8.3h4",
+				stroke: "currentColor",
+				"stroke-width": "1.35",
+				"stroke-linecap": "round",
+			}],
+		],
+		globe: [
+			["circle", { cx: "8", cy: "8", r: "5.75", stroke: "currentColor", "stroke-width": "1.35" }],
+			["ellipse", { cx: "8", cy: "8", rx: "2.6", ry: "5.75", stroke: "currentColor", "stroke-width": "1.2" }],
+			["path", { d: "M2.5 8h11", stroke: "currentColor", "stroke-width": "1.2" }],
+		],
+	};
+
 	const INFO_FIELDS = [
-		{ id: "venue", key: "tex.venueabbr", l10nID: "extra-meta-row-venue" },
-		{ id: "affiliation", key: "tex.affiliation", l10nID: "extra-meta-row-affiliation" },
-		{ id: "sourcecode", key: "tex.sourcecode", l10nID: "extra-meta-row-sourcecode" },
-		{ id: "projecturl", key: "tex.projecturl", l10nID: "extra-meta-row-projecturl" },
+		{ id: "venue", key: "tex.venueabbr", l10nID: "extra-meta-row-venue", fallbackLabel: "Venue" },
+		{ id: "affiliation", key: "tex.affiliation", l10nID: "extra-meta-row-affiliation", fallbackLabel: "Affiliation" },
+		{ id: "sourcecode", key: "tex.sourcecode", l10nID: "extra-meta-row-sourcecode", fallbackLabel: "Source Code" },
+		{ id: "projecturl", key: "tex.projecturl", l10nID: "extra-meta-row-projecturl", fallbackLabel: "Project URL" },
 		{
 			id: "openreview",
 			key: "OpenReview",
 			l10nID: "extra-meta-row-openreview",
+			fallbackLabel: "OpenReview",
 			getValue: (extra) => ExtraMetaExtra.getValue(extra, "OpenReview") || ExtraMetaExtra.getValue(extra, "tex.openreview"),
+			isAliasLine: (parsed) => parsed.normalizedKey === "tex.openreview",
 			normalize: (val) => {
 				if (!val) {
 					return "";
@@ -34,14 +81,43 @@ var ExtraMetaMain = (function () {
 			id: "arxiv",
 			key: "arXiv",
 			l10nID: "extra-meta-row-arxiv",
+			fallbackLabel: "arXiv",
 			getValue: (extra) => ExtraMetaExtra.formatArxivData(extra),
+			isAliasLine: (parsed) => parsed.normalizedKey === "number" && /^arXiv:/i.test(parsed.value),
 			normalize: (val) => ExtraMetaExtra.normalizeArxivInput(val),
 		},
 	];
 
 	let pluginID = null;
-	let registeredColumns = [];
-	let registeredRows = [];
+	let strings = null;
+	const boundValueElements = new WeakSet();
+	const dirtyValueElements = new WeakSet();
+
+	function getL10nString(id, fallback) {
+		if (!strings && typeof Localization === "function") {
+			try {
+				strings = new Localization([FTL_FILE], true);
+			}
+			catch {
+				strings = null;
+			}
+		}
+		try {
+			return strings?.formatValueSync(id) || fallback;
+		}
+		catch {
+			return fallback;
+		}
+	}
+
+	function getMixedPlaceholder() {
+		try {
+			return Zotero.getString("item-pane-batch-editing-multiple-values-placeholder") || "Multiple";
+		}
+		catch {
+			return "Multiple";
+		}
+	}
 
 	function isEligibleItem(item) {
 		return Boolean(
@@ -87,6 +163,19 @@ var ExtraMetaMain = (function () {
 		return el;
 	}
 
+	function createCell(doc, column, extraClass, isFirstColumn) {
+		if (!isFirstColumn) {
+			const cell = createHtml(doc, "span", `cell ${column.className || ""} em-cell ${extraClass}`);
+			return { cell, container: cell };
+		}
+		// Zotero wraps first-column cells lacking .cell-text via innerHTML, which
+		// would drop button listeners and replace flex centering on the cell.
+		const cell = createHtml(doc, "span", `cell ${column.className || ""} em-cell`);
+		const container = createHtml(doc, "span", `cell-text em-cell-content ${extraClass}`);
+		cell.appendChild(container);
+		return { cell, container };
+	}
+
 	function createSvgIcon(doc, kind) {
 		const svg = doc.createElementNS(SVG_NS, "svg");
 		svg.setAttribute("viewBox", "0 0 16 16");
@@ -94,94 +183,62 @@ var ExtraMetaMain = (function () {
 		svg.setAttribute("aria-hidden", "true");
 		svg.setAttribute("class", "em-link-icon");
 
-		if (kind === "github") {
-			const path = doc.createElementNS(SVG_NS, "path");
-			path.setAttribute("fill", "currentColor");
-			path.setAttribute("fill-rule", "evenodd");
-			path.setAttribute("clip-rule", "evenodd");
-			path.setAttribute(
-				"d",
-				"M8 1.5a6.5 6.5 0 0 0-2.055 12.667c.325.06.444-.141.444-.313 0-.154-.006-.563-.009-1.105-1.805.392-2.186-.87-2.186-.87-.295-.75-.72-.95-.72-.95-.589-.402.045-.394.045-.394.651.046.994.668.994.668.579.992 1.519.705 1.889.539.059-.419.227-.705.412-.867-1.441-.164-2.957-.72-2.957-3.208 0-.709.253-1.288.668-1.742-.067-.164-.29-.824.063-1.718 0 0 .545-.175 1.787.665a6.22 6.22 0 0 1 3.254 0c1.241-.84 1.785-.665 1.785-.665.354.894.131 1.554.064 1.718.416.454.667 1.033.667 1.742 0 2.494-1.518 3.042-2.964 3.203.233.2.441.596.441 1.201 0 .867-.008 1.566-.008 1.779 0 .173.117.376.447.312A6.5 6.5 0 0 0 8 1.5Z"
-			);
-			svg.appendChild(path);
-			return svg;
+		for (const [tag, attrs] of SVG_ICONS[kind] || SVG_ICONS.globe) {
+			const child = doc.createElementNS(SVG_NS, tag);
+			for (const [name, value] of Object.entries(attrs)) {
+				child.setAttribute(name, value);
+			}
+			svg.appendChild(child);
 		}
-
-		if (kind === "code") {
-			const p1 = doc.createElementNS(SVG_NS, "path");
-			p1.setAttribute("d", "M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5");
-			p1.setAttribute("stroke", "currentColor");
-			p1.setAttribute("stroke-width", "1.5");
-			p1.setAttribute("stroke-linecap", "round");
-			p1.setAttribute("stroke-linejoin", "round");
-			const p2 = doc.createElementNS(SVG_NS, "path");
-			p2.setAttribute("d", "M9 3.5 7 12.5");
-			p2.setAttribute("stroke", "currentColor");
-			p2.setAttribute("stroke-width", "1.4");
-			p2.setAttribute("stroke-linecap", "round");
-			svg.append(p1, p2);
-			return svg;
-		}
-
-		if (kind === "review") {
-			const bubble = doc.createElementNS(SVG_NS, "path");
-			bubble.setAttribute(
-				"d",
-				"M3 2.5h10A1.5 1.5 0 0 1 14.5 4v6a1.5 1.5 0 0 1-1.5 1.5H6.8L3.5 14v-2.5H3A1.5 1.5 0 0 1 1.5 10V4A1.5 1.5 0 0 1 3 2.5Z"
-			);
-			bubble.setAttribute("stroke", "currentColor");
-			bubble.setAttribute("stroke-width", "1.35");
-			bubble.setAttribute("stroke-linejoin", "round");
-			const lines = doc.createElementNS(SVG_NS, "path");
-			lines.setAttribute("d", "M5 5.8h6M5 8.3h4");
-			lines.setAttribute("stroke", "currentColor");
-			lines.setAttribute("stroke-width", "1.35");
-			lines.setAttribute("stroke-linecap", "round");
-			svg.append(bubble, lines);
-			return svg;
-		}
-
-		// Globe / project page icon
-		const circle = doc.createElementNS(SVG_NS, "circle");
-		circle.setAttribute("cx", "8");
-		circle.setAttribute("cy", "8");
-		circle.setAttribute("r", "5.75");
-		circle.setAttribute("stroke", "currentColor");
-		circle.setAttribute("stroke-width", "1.35");
-		const meridian = doc.createElementNS(SVG_NS, "ellipse");
-		meridian.setAttribute("cx", "8");
-		meridian.setAttribute("cy", "8");
-		meridian.setAttribute("rx", "2.6");
-		meridian.setAttribute("ry", "5.75");
-		meridian.setAttribute("stroke", "currentColor");
-		meridian.setAttribute("stroke-width", "1.2");
-		const equator = doc.createElementNS(SVG_NS, "path");
-		equator.setAttribute("d", "M2.5 8h11");
-		equator.setAttribute("stroke", "currentColor");
-		equator.setAttribute("stroke-width", "1.2");
-		svg.append(circle, meridian, equator);
 		return svg;
 	}
 
+	function stopEvent(event) {
+		event.stopPropagation();
+	}
+
+	function openExternalUrl(url) {
+		try {
+			Zotero.launchURL(url);
+		}
+		catch (e) {
+			Zotero.logError(e);
+		}
+	}
+
 	function attachExternalUrlAction(button, url) {
-		const stop = (event) => event.stopPropagation();
-		button.addEventListener("mousedown", stop);
-		button.addEventListener("mouseup", stop);
-		button.addEventListener("dblclick", stop);
+		button.addEventListener("mousedown", stopEvent);
+		button.addEventListener("mouseup", stopEvent);
+		button.addEventListener("dblclick", stopEvent);
 		button.addEventListener("click", (event) => {
 			event.stopPropagation();
 			event.preventDefault();
-			try {
-				Zotero.launchURL(url);
+			openExternalUrl(url);
+		});
+		button.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				event.stopPropagation();
+				openExternalUrl(url);
+				return;
 			}
-			catch (e) {
-				Zotero.logError(e);
+			if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+				event.stopPropagation();
 			}
 		});
 	}
 
+	function createExternalButton(doc, className, tooltip, url) {
+		const button = createHtml(doc, "button", className);
+		button.setAttribute("type", "button");
+		button.setAttribute("title", tooltip);
+		button.setAttribute("aria-label", tooltip);
+		attachExternalUrlAction(button, url);
+		return button;
+	}
+
 	function renderVenueCell(index, data, column, isFirstColumn, doc) {
-		const cell = createHtml(doc, "span", `cell ${column.className || ""} em-cell em-venue-cell`);
+		const { cell, container } = createCell(doc, column, "em-venue-cell", isFirstColumn);
 		const value = String(data || "").trim();
 		if (!value) {
 			return cell;
@@ -189,15 +246,13 @@ var ExtraMetaMain = (function () {
 		const badge = createHtml(doc, "span", "em-venue-badge");
 		badge.dataset.tone = ExtraMetaVenues.resolveTone(value);
 		badge.setAttribute("title", value);
-		const label = createHtml(doc, "span", "em-badge-text");
-		label.textContent = value;
-		badge.appendChild(label);
-		cell.appendChild(badge);
+		badge.textContent = value;
+		container.appendChild(badge);
 		return cell;
 	}
 
 	function renderAffiliationCell(index, data, column, isFirstColumn, doc) {
-		const cell = createHtml(doc, "span", `cell ${column.className || ""} em-cell em-affil-cell`);
+		const { cell, container } = createCell(doc, column, "em-affil-cell", isFirstColumn);
 		const value = String(data || "").trim();
 		if (!value) {
 			return cell;
@@ -205,27 +260,22 @@ var ExtraMetaMain = (function () {
 		cell.setAttribute("title", value);
 		const text = createHtml(doc, "span", "em-affil-text");
 		text.textContent = value;
-		cell.appendChild(text);
+		container.appendChild(text);
 		return cell;
 	}
 
 	function renderLinksCell(index, data, column, isFirstColumn, doc) {
-		const cell = createHtml(doc, "span", `cell ${column.className || ""} em-cell em-links-cell`);
-		const links = ExtraMetaExtra.decodeLinks(data);
-		for (const link of links) {
-			const button = createHtml(doc, "button", `em-link-btn em-link-${link.kind}`);
-			button.setAttribute("type", "button");
-			button.setAttribute("title", link.tooltip);
-			button.setAttribute("aria-label", link.tooltip);
+		const { cell, container } = createCell(doc, column, "em-links-cell", isFirstColumn);
+		for (const link of ExtraMetaExtra.decodeLinks(data)) {
+			const button = createExternalButton(doc, `em-link-btn em-link-${link.kind}`, link.tooltip, link.url);
 			button.appendChild(createSvgIcon(doc, link.icon));
-			attachExternalUrlAction(button, link.url);
-			cell.appendChild(button);
+			container.appendChild(button);
 		}
 		return cell;
 	}
 
 	function renderArxivCell(index, data, column, isFirstColumn, doc) {
-		const cell = createHtml(doc, "span", `cell ${column.className || ""} em-cell em-arxiv-cell`);
+		const { cell, container } = createCell(doc, column, "em-arxiv-cell", isFirstColumn);
 		const parsed = ExtraMetaExtra.parseArxiv(data);
 		if (!parsed) {
 			return cell;
@@ -234,21 +284,17 @@ var ExtraMetaMain = (function () {
 			const plain = createHtml(doc, "span", "em-arxiv-text");
 			plain.textContent = parsed.id;
 			plain.setAttribute("title", parsed.raw);
-			cell.appendChild(plain);
+			container.appendChild(plain);
 			return cell;
 		}
 		const tooltip = parsed.category
 			? `arXiv:${parsed.id} [${parsed.category}] — Open on arXiv`
 			: `arXiv:${parsed.id} — Open on arXiv`;
-		const button = createHtml(doc, "button", "em-arxiv-btn");
-		button.setAttribute("type", "button");
-		button.setAttribute("title", tooltip);
-		button.setAttribute("aria-label", tooltip);
+		const button = createExternalButton(doc, "em-arxiv-btn", tooltip, parsed.url);
 		const label = createHtml(doc, "span", "em-arxiv-label");
 		label.textContent = parsed.id;
 		button.appendChild(label);
-		attachExternalUrlAction(button, parsed.url);
-		cell.appendChild(button);
+		container.appendChild(button);
 		return cell;
 	}
 
@@ -256,7 +302,7 @@ var ExtraMetaMain = (function () {
 		const specs = [
 			{
 				dataKey: "venue",
-				label: "Venue",
+				label: getL10nString("extra-meta-col-venue", "Venue"),
 				width: "96",
 				minWidth: 64,
 				dataProvider: (item) => ExtraMetaExtra.getValue(getExtraString(item), "tex.venueabbr"),
@@ -264,7 +310,7 @@ var ExtraMetaMain = (function () {
 			},
 			{
 				dataKey: "affiliation",
-				label: "Affiliation",
+				label: getL10nString("extra-meta-col-affiliation", "Affiliation"),
 				flex: 2,
 				minWidth: 90,
 				dataProvider: (item) => ExtraMetaExtra.getValue(getExtraString(item), "tex.affiliation"),
@@ -272,7 +318,7 @@ var ExtraMetaMain = (function () {
 			},
 			{
 				dataKey: "links",
-				label: "Links",
+				label: getL10nString("extra-meta-col-links", "Links"),
 				width: "90",
 				minWidth: 54,
 				dataProvider: (item) => ExtraMetaExtra.encodeLinks(getExtraString(item), getItemField(item, "url")),
@@ -280,7 +326,7 @@ var ExtraMetaMain = (function () {
 			},
 			{
 				dataKey: "arxiv",
-				label: "arXiv",
+				label: getL10nString("extra-meta-col-arxiv", "arXiv"),
 				width: "98",
 				minWidth: 74,
 				dataProvider: (item) => ExtraMetaExtra.formatArxivData(getExtraString(item)),
@@ -290,15 +336,12 @@ var ExtraMetaMain = (function () {
 
 		for (const spec of specs) {
 			try {
-				const key = Zotero.ItemTreeManager.registerColumn({
+				Zotero.ItemTreeManager.registerColumn({
 					...spec,
 					pluginID,
 					enabledTreeIDs: ["main"],
 					zoteroPersist: ["width", "hidden", "sortDirection"],
 				});
-				if (key) {
-					registeredColumns.push(key);
-				}
 			}
 			catch (e) {
 				Zotero.logError(e);
@@ -306,22 +349,55 @@ var ExtraMetaMain = (function () {
 		}
 	}
 
+	function activeInfoBox(item, tabType) {
+		if (!item || (tabType && tabType !== "library")) {
+			return null;
+		}
+		const box = Zotero.getMainWindow?.()?.ZoteroPane?.itemPane?.querySelector("info-box");
+		if (box && box.isConnected !== false && box.item && box.item.id === item.id) {
+			return box;
+		}
+		return null;
+	}
+
 	function editedItems(item, tabType) {
 		if (!item) {
 			return [];
 		}
-		if (tabType && tabType !== "library") {
-			return [item];
-		}
-		for (const win of Zotero.getMainWindows()) {
-			for (const box of win.document.querySelectorAll("info-box")) {
-				const extraItems = box.extraItems;
-				if (box.item && box.item.id === item.id && Array.isArray(extraItems) && extraItems.length) {
-					return [box.item, ...extraItems];
-				}
-			}
+		const box = activeInfoBox(item, tabType);
+		if (box && Array.isArray(box.extraItems) && box.extraItems.length) {
+			return [box.item, ...box.extraItems];
 		}
 		return [item];
+	}
+
+	function getRowValueElement(box, rowID) {
+		if (!box || !rowID) {
+			return null;
+		}
+		const escaped = typeof CSS !== "undefined" && typeof CSS.escape === "function"
+			? CSS.escape(rowID)
+			: rowID;
+		return box.querySelector(`.meta-row[data-custom-row-id="${escaped}"] .custom-row-value`);
+	}
+
+	function bindValueElement(valueElem) {
+		if (!valueElem || boundValueElements.has(valueElem)) {
+			return;
+		}
+		boundValueElements.add(valueElem);
+		valueElem.addEventListener("input", () => {
+			dirtyValueElements.add(valueElem);
+		});
+		valueElem.addEventListener("keydown", (event) => {
+			if ((event.key === "Backspace" || event.key === "Delete") && valueElem.placeholder) {
+				dirtyValueElements.add(valueElem);
+				valueElem.placeholder = "";
+			}
+			else if (event.key === "Escape") {
+				dirtyValueElements.delete(valueElem);
+			}
+		});
 	}
 
 	function readFieldValue(item, field) {
@@ -329,33 +405,46 @@ var ExtraMetaMain = (function () {
 		return field.getValue ? field.getValue(extra) : ExtraMetaExtra.getValue(extra, field.key);
 	}
 
-	function sharedFieldValue(items, field) {
+	function sharedFieldState(items, field) {
 		const eligible = items.filter(isEligibleItem);
 		if (!eligible.length) {
-			return "";
+			return { value: "", mixed: false };
 		}
 		const first = readFieldValue(eligible[0], field);
 		for (let i = 1; i < eligible.length; i++) {
 			if (readFieldValue(eligible[i], field) !== first) {
-				return "";
+				return { value: "", mixed: true };
 			}
 		}
-		return first;
+		return { value: first, mixed: false };
 	}
 
-	async function writeFieldValue(items, key, value) {
-		const eligible = items.filter(isEditableItem);
-		if (!eligible.length) {
+	async function writeFieldValue(items, field, value) {
+		const pending = [];
+		for (const item of items) {
+			if (!isEditableItem(item)) {
+				continue;
+			}
+			const current = item.getField("extra") || "";
+			const updated = ExtraMetaExtra.setValue(current, field.key, value, field.isAliasLine);
+			if (updated !== current) {
+				pending.push({ item, updated });
+			}
+		}
+		if (!pending.length) {
 			return;
 		}
+		const saveOptions = {
+			undoAction: "undo-action-edit-field",
+			undoActionArgs: {
+				field: getL10nString(field.l10nID, field.fallbackLabel),
+				count: pending.length,
+			},
+		};
 		await Zotero.DB.executeTransaction(async () => {
-			for (const item of eligible) {
-				const current = item.getField("extra") || "";
-				const updated = ExtraMetaExtra.setValue(current, key, value);
-				if (updated !== current) {
-					item.setField("extra", updated);
-					await item.save();
-				}
+			for (const { item, updated } of pending) {
+				item.setField("extra", updated);
+				await item.save(saveOptions);
 			}
 		});
 	}
@@ -363,7 +452,7 @@ var ExtraMetaMain = (function () {
 	function registerInfoRows() {
 		for (const field of INFO_FIELDS) {
 			try {
-				const rowID = Zotero.ItemPaneManager.registerInfoRow({
+				Zotero.ItemPaneManager.registerInfoRow({
 					rowID: `em-${field.id}`,
 					pluginID,
 					label: { l10nID: field.l10nID },
@@ -371,24 +460,43 @@ var ExtraMetaMain = (function () {
 					multiline: false,
 					nowrap: false,
 					editable: true,
-					onGetData: ({ item, tabType }) => sharedFieldValue(editedItems(item, tabType), field),
+					onGetData: ({ rowID: id, item, tabType }) => {
+						const state = sharedFieldState(editedItems(item, tabType), field);
+						const valueElem = getRowValueElement(activeInfoBox(item, tabType), id);
+						if (valueElem) {
+							bindValueElement(valueElem);
+							dirtyValueElements.delete(valueElem);
+							valueElem.placeholder = state.mixed ? getMixedPlaceholder() : "";
+						}
+						return state.value;
+					},
 					onSetData: ({ rowID: id, item, tabType, value }) => {
+						const box = activeInfoBox(item, tabType);
+						const valueElem = getRowValueElement(box, id);
+						const edited = valueElem ? dirtyValueElements.delete(valueElem) : false;
 						const items = editedItems(item, tabType);
+						const state = sharedFieldState(items, field);
 						const rawClean = ExtraMetaExtra.sanitizeValue(value);
 						const clean = field.normalize ? field.normalize(rawClean) : rawClean;
 						if (clean === null) {
 							Zotero.ItemPaneManager.refreshInfoRow(id);
 							return;
 						}
-						if (clean === sharedFieldValue(items, field)) {
+						if (state.mixed && clean === "" && !edited) {
+							if (valueElem) {
+								valueElem.placeholder = getMixedPlaceholder();
+							}
+							return;
+						}
+						if (!state.mixed && clean === state.value) {
 							if (clean !== value) {
 								Zotero.ItemPaneManager.refreshInfoRow(id);
 							}
 							return;
 						}
-						writeFieldValue(items, field.key, clean)
+						writeFieldValue(items, field, clean)
 							.then(() => {
-								if (clean !== value) {
+								if (clean !== value || state.mixed) {
 									Zotero.ItemPaneManager.refreshInfoRow(id);
 								}
 							})
@@ -403,9 +511,6 @@ var ExtraMetaMain = (function () {
 						setEditable(isEditableItem(item));
 					},
 				});
-				if (rowID) {
-					registeredRows.push(rowID);
-				}
 			}
 			catch (e) {
 				Zotero.logError(e);
@@ -437,26 +542,5 @@ var ExtraMetaMain = (function () {
 		registerInfoRows();
 	}
 
-	function shutdown() {
-		for (const key of registeredColumns) {
-			try {
-				Zotero.ItemTreeManager.unregisterColumn(key);
-			}
-			catch (e) {
-				Zotero.logError(e);
-			}
-		}
-		for (const rowID of registeredRows) {
-			try {
-				Zotero.ItemPaneManager.unregisterInfoRow(rowID);
-			}
-			catch (e) {
-				Zotero.logError(e);
-			}
-		}
-		registeredColumns = [];
-		registeredRows = [];
-	}
-
-	return { init, shutdown, addToWindow, removeFromWindow };
+	return { init, addToWindow, removeFromWindow };
 })();

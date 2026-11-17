@@ -14,6 +14,7 @@ exec python3 - <<'PY'
 from configparser import ConfigParser, Error
 import fcntl
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -35,10 +36,12 @@ def warn(message):
     print(f"zotero setup: {message}", file=sys.stderr)
 
 
-def digest(path):
+def digest(source):
+    if isinstance(source, bytes):
+        return hashlib.sha256(source).hexdigest()
     h = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+    with source.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -49,24 +52,49 @@ def parse_version(value):
     return tuple(map(int, value.split(".")))
 
 
-def metadata(path, expected_id):
-    with ZipFile(path) as package:
+def metadata(source, expected_id):
+    archive = io.BytesIO(source) if isinstance(source, bytes) else source
+    with ZipFile(archive) as package:
         manifest = json.loads(package.read("manifest.json"))
     if manifest["applications"]["zotero"]["id"] != expected_id:
         raise ValueError("unexpected plugin ID")
-    return parse_version(manifest["version"])
+    version_str = manifest["version"]
+    return parse_version(version_str), version_str
 
 
-def build_xpi(source_dir, expected_id, output_path):
-    files = sorted(
-        p for p in source_dir.rglob("*")
-        if p.is_file()
-        and "__pycache__" not in p.parts
-        and not any(part.startswith(".") for part in p.relative_to(source_dir).parts)
-    )
+def collect_plugin_files(source_dir):
+    if source_dir.is_symlink():
+        raise ValueError("plugin source directory must not be a symlink")
+    files = []
+    for name in ("manifest.json", "bootstrap.js"):
+        path = source_dir / name
+        if path.is_symlink():
+            raise ValueError(f"symlink not allowed in plugin source: {name}")
+        if path.is_file():
+            files.append(path)
+    for dirname in ("content", "locale"):
+        root = source_dir / dirname
+        if root.is_symlink():
+            raise ValueError(f"symlink not allowed in plugin source: {dirname}")
+        if not root.is_dir():
+            continue
+        for entry in root.rglob("*"):
+            rel_parts = entry.relative_to(source_dir).parts
+            if any(part.startswith(".") for part in rel_parts):
+                continue
+            if entry.is_symlink():
+                raise ValueError(f"symlink not allowed in plugin source: {entry.relative_to(source_dir).as_posix()}")
+            if entry.is_file():
+                files.append(entry)
+    return sorted(files)
+
+
+def build_xpi(source_dir):
+    files = collect_plugin_files(source_dir)
     if not files:
         raise ValueError("plugin source directory is empty")
-    with ZipFile(output_path, "w") as package:
+    buffer = io.BytesIO()
+    with ZipFile(buffer, "w") as package:
         for file_path in files:
             rel = file_path.relative_to(source_dir).as_posix()
             info = ZipInfo(rel, date_time=(2026, 1, 1, 0, 0, 0))
@@ -74,7 +102,7 @@ def build_xpi(source_dir, expected_id, output_path):
             info.create_system = 3
             info.external_attr = 0o100644 << 16
             package.writestr(info, file_path.read_bytes())
-    return metadata(output_path, expected_id)
+    return buffer.getvalue()
 
 
 def preferences(profile):
@@ -106,11 +134,12 @@ def addon_status(profile, plugin_id, name, check_updates):
         pass
 
 
-def install_plugin(profile, plugin_id, name, source_path, expected_version, expected_ver_str, check_updates):
+def install_plugin(profile, plugin_id, name, source, expected_version=None, check_updates=False):
     try:
-        if metadata(source_path, plugin_id) != expected_version:
+        actual_version, version_str = metadata(source, plugin_id)
+        if expected_version is not None and actual_version != parse_version(expected_version):
             raise ValueError("package version does not match the catalog pin")
-        wanted = digest(source_path)
+        wanted = digest(source)
         target = profile / "extensions" / f"{plugin_id}.xpi"
         if target.is_symlink():
             warn(f"{target} is a symlink; left it unchanged")
@@ -130,7 +159,7 @@ def install_plugin(profile, plugin_id, name, source_path, expected_version, expe
                 warn(f"{target} is a symlink; left it unchanged")
                 return
             if target.exists():
-                if metadata(target, plugin_id) > expected_version:
+                if metadata(target, plugin_id)[0] > actual_version:
                     warn(f"installed {name} is newer than the pin; downgrade skipped")
                     return
                 old_hash = digest(target)
@@ -146,16 +175,19 @@ def install_plugin(profile, plugin_id, name, source_path, expected_version, expe
             fd, temporary = tempfile.mkstemp(prefix=f".{plugin_id}-", dir=target.parent)
             os.close(fd)
             try:
-                shutil.copy2(source_path, temporary)
+                if isinstance(source, bytes):
+                    Path(temporary).write_bytes(source)
+                else:
+                    shutil.copy2(source, temporary)
                 os.chmod(temporary, 0o644)
                 if digest(Path(temporary)) != wanted:
                     raise ValueError("plugin copy verification failed")
                 os.replace(temporary, target)
             finally:
                 Path(temporary).unlink(missing_ok=True)
-        print(f"zotero setup: installed {name} {expected_ver_str}; start Zotero to load it")
+        print(f"zotero setup: installed {name} {version_str}; start Zotero to load it")
         if check_updates:
-            print("zotero setup: enable a new plugin and set its automatic updates to Off")
+            print(f"zotero setup: enable {name} in Zotero's plugin manager and set its automatic updates to Off")
         else:
             print(f"zotero setup: enable {name} in Zotero's plugin manager if disabled")
     except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
@@ -166,14 +198,12 @@ def install_better_bibtex(profile):
     if not bbt_plugin.is_file():
         warn("Better BibTeX package missing; run dotfiles-fetch sync and chezmoi apply")
         return
-    ver_str = bbt_tag.removeprefix("v")
     install_plugin(
         profile,
         "better-bibtex@iris-advies.com",
         "Better BibTeX",
         bbt_plugin,
-        parse_version(ver_str),
-        ver_str,
+        expected_version=bbt_tag.removeprefix("v"),
         check_updates=True,
     )
 
@@ -182,26 +212,18 @@ def install_extra_meta(profile):
     if not extra_meta_source.is_dir():
         warn("Extra Meta plugin source missing; skipping")
         return
-    plugin_id = "extra-meta@dotfiles.local"
-    fd, temp_xpi = tempfile.mkstemp(prefix=".extra-meta-", suffix=".xpi")
-    os.close(fd)
-    temp_path = Path(temp_xpi)
     try:
-        expected = build_xpi(extra_meta_source, plugin_id, temp_path)
-        ver_str = ".".join(map(str, expected))
-        install_plugin(
-            profile,
-            plugin_id,
-            "Extra Meta",
-            temp_path,
-            expected,
-            ver_str,
-            check_updates=False,
-        )
-    except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
+        xpi_bytes = build_xpi(extra_meta_source)
+    except (OSError, ValueError) as error:
         warn(f"Extra Meta installation skipped ({error})")
-    finally:
-        temp_path.unlink(missing_ok=True)
+        return
+    install_plugin(
+        profile,
+        "extra-meta@dotfiles.local",
+        "Extra Meta",
+        xpi_bytes,
+        check_updates=False,
+    )
 
 
 profiles = ConfigParser(interpolation=None)
