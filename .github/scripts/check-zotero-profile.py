@@ -58,8 +58,15 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     ini.write_text('[Profile0]\nName=default\nIsRelative=1\nPath=random.default\nDefault=1\n')
     link = profile / "user.js"
     result = setup()
-    assert "linked" in result.stdout and "package missing" in result.stderr
+    assert "linked" in result.stdout and "installed Extra Meta" in result.stdout
+    assert "package missing" in result.stderr
     assert link.is_symlink() and link.resolve() == shared
+    extra_target = profile / "extensions/extra-meta@dotfiles.local.xpi"
+    assert extra_target.is_file()
+    with ZipFile(extra_target) as extra_pkg:
+        names = set(extra_pkg.namelist())
+        assert {"manifest.json", "bootstrap.js", "content/main.js", "content/styles.css",
+                "locale/en-US/extra-meta.ftl"}.issubset(names)
     assert not setup().stdout  # A repeated apply is a no-op.
 
     # Neither a user file nor another link may be replaced.
@@ -125,6 +132,20 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     assert "automatic updates to Off" in result.stderr
     state.write_text(json.dumps({"addons": [{"id": plugin_id, "active": True,
                                              "applyBackgroundUpdates": 0}]}))
+    assert not setup().stderr
+
+    # Extra Meta warns only if disabled (it has no remote update_url).
+    state.write_text(json.dumps({"addons": [
+        {"id": plugin_id, "active": True, "applyBackgroundUpdates": 0},
+        {"id": "extra-meta@dotfiles.local", "active": False, "applyBackgroundUpdates": 1},
+    ]}))
+    result = setup()
+    assert "enable Extra Meta" in result.stderr
+    assert "automatic updates to Off" not in result.stderr
+    state.write_text(json.dumps({"addons": [
+        {"id": plugin_id, "active": True, "applyBackgroundUpdates": 0},
+        {"id": "extra-meta@dotfiles.local", "active": True, "applyBackgroundUpdates": 1},
+    ]}))
     assert not setup().stderr
 
 print("ok       Zotero profile: linking, locked installs, backup, no downgrade and addon status")

@@ -1,8 +1,12 @@
 {{- $citekey := `auth + shortyear + ShortTitle.alphanum + "_" + extra("tex.venueabbr").alphanum` -}}
-// Shared Better BibTeX preferences. Zotero reads this file at startup.
+// Shared Zotero & Better BibTeX preferences. Zotero reads this file at startup.
 // Edit this file in the dotfiles source, not in Zotero's profile.
 // This snapshot uses the workstation settings and Better BibTeX 9.0.71 defaults.
 // Keep machine paths, migration state, debug settings and generated charmap local.
+
+// Scan profile/extensions/ on startup so sideloaded plugins (Better BibTeX,
+// Extra Meta) are discovered on an existing Zotero build.
+user_pref("extensions.startupScanScopes", 1);
 
 user_pref("extensions.zotero.translators.better-bibtex.language", "langid");
 user_pref("extensions.zotero.translators.better-bibtex.DOIandURL", "both");

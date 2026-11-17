@@ -1,0 +1,193 @@
+/* Extra Meta item-tree column and interactive pill styles for Zotero 10. */
+
+.virtualized-table .cell.em-cell {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	overflow: hidden;
+}
+
+/* Venue badge ------------------------------------------------------------ */
+
+.em-venue-badge {
+	--em-tone: var(--fill-secondary);
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	height: 18px;
+	padding: 0 7px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 16px;
+	letter-spacing: 0.01em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: color-mix(in srgb, var(--em-tone) 76%, var(--fill-primary));
+	background-color: color-mix(in srgb, var(--em-tone) 14%, transparent);
+	border: 1px solid color-mix(in srgb, var(--em-tone) 30%, transparent);
+	box-sizing: border-box;
+}
+
+.em-badge-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.em-venue-badge[data-tone="purple"] { --em-tone: var(--tag-purple, #8b5cf6); }
+.em-venue-badge[data-tone="blue"]   { --em-tone: var(--accent-blue, #3b82f6); }
+.em-venue-badge[data-tone="cyan"]   { --em-tone: var(--tag-blue, #0ea5e9); }
+.em-venue-badge[data-tone="indigo"] { --em-tone: var(--tag-indigo, #576dd9); }
+.em-venue-badge[data-tone="teal"]   { --em-tone: var(--tag-teal, #009980); }
+.em-venue-badge[data-tone="green"]  { --em-tone: var(--tag-green, #5fb236); }
+.em-venue-badge[data-tone="orange"] { --em-tone: var(--tag-orange, #f19837); }
+.em-venue-badge[data-tone="coral"]  { --em-tone: var(--accent-orange, #e05a3a); }
+.em-venue-badge[data-tone="plum"]   { --em-tone: var(--tag-plum, #a6507b); }
+.em-venue-badge[data-tone="gold"]   { --em-tone: var(--accent-gold, #cc9200); }
+
+.em-venue-badge[data-tone="muted"] {
+	--em-tone: var(--fill-secondary);
+	font-weight: 500;
+	color: var(--fill-secondary);
+	background-color: var(--fill-quinary);
+	border-color: var(--color-border);
+}
+
+/* Affiliation ------------------------------------------------------------ */
+
+.em-affil-text {
+	display: block;
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--fill-secondary);
+}
+
+/* Links (Source Code + Project Page) ------------------------------------- */
+
+.em-links-cell {
+	gap: 4px;
+}
+
+.em-link-btn {
+	all: unset;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 20px;
+	border-radius: 5px;
+	cursor: pointer;
+	flex-shrink: 0;
+	color: var(--fill-secondary);
+	background-color: transparent;
+	transition: background-color 120ms ease, color 120ms ease;
+}
+
+.em-link-btn.em-link-code:hover {
+	color: color-mix(in srgb, var(--accent-blue, #4072e5) 82%, var(--fill-primary));
+	background-color: color-mix(in srgb, var(--accent-blue, #4072e5) 14%, transparent);
+}
+
+.em-link-btn.em-link-page:hover {
+	color: color-mix(in srgb, var(--tag-teal, #009980) 82%, var(--fill-primary));
+	background-color: color-mix(in srgb, var(--tag-teal, #009980) 14%, transparent);
+}
+
+.em-link-btn.em-link-review:hover {
+	color: color-mix(in srgb, var(--tag-orange, #f19837) 82%, var(--fill-primary));
+	background-color: color-mix(in srgb, var(--tag-orange, #f19837) 14%, transparent);
+}
+
+.em-link-btn:active {
+	background-color: var(--fill-quarternary);
+}
+
+.em-link-btn:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 1px;
+}
+
+.em-link-icon {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+}
+
+/* arXiv ------------------------------------------------------------------ */
+
+.em-arxiv-btn {
+	all: unset;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 4px;
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+	color: var(--fill-secondary);
+	transition: background-color 120ms ease, color 120ms ease;
+}
+
+.em-arxiv-btn:hover {
+	color: var(--accent-blue, #4072e5);
+	background-color: color-mix(in srgb, var(--accent-blue, #4072e5) 12%, transparent);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.em-arxiv-btn:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 1px;
+}
+
+.em-arxiv-text {
+	font-variant-numeric: tabular-nums;
+	color: var(--fill-secondary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.em-arxiv-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Focused selected row contrast ------------------------------------------ */
+
+.virtualized-table:focus-within .row.selected .em-venue-badge {
+	color: var(--color-accent-text, #ffffff);
+	background-color: rgba(255, 255, 255, 0.18);
+	border-color: rgba(255, 255, 255, 0.34);
+}
+
+.virtualized-table:focus-within .row.selected .em-link-btn {
+	color: rgba(255, 255, 255, 0.88);
+	background-color: transparent;
+}
+
+.virtualized-table:focus-within .row.selected .em-link-btn:hover {
+	color: #ffffff;
+	background-color: rgba(255, 255, 255, 0.22);
+}
+
+.virtualized-table:focus-within .row.selected .em-affil-text,
+.virtualized-table:focus-within .row.selected .em-arxiv-btn,
+.virtualized-table:focus-within .row.selected .em-arxiv-text {
+	color: rgba(255, 255, 255, 0.88);
+}
+
+.virtualized-table:focus-within .row.selected .em-arxiv-btn:hover {
+	color: #ffffff;
+	background-color: rgba(255, 255, 255, 0.22);
+}

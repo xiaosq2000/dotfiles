@@ -353,27 +353,31 @@ distribution; `desktop` supplies only their configuration. A machine that drops
 a bundle keeps the files it already has, the way an application keeps its
 profile.
 
-### Zotero and Better BibTeX
+### Zotero, Better BibTeX and Extra Meta
 
-Checked on 2026-10-31 with Zotero 10 and Better BibTeX 9.0.71. The `research`
-bundle pins the Better BibTeX release in `.chezmoidata/downloads.toml`.
-`dotfiles-fetch` downloads the release and checks the published digest. An
-apply installs the plugin in the default Zotero profile. It leaves an identical
-installation unchanged. If Zotero is running, an upgrade waits until you close
-Zotero and run `chezmoi apply` again. It saves a copy of the replaced plugin in
-`~/.local/state/dotfiles/zotero-plugins/`. It will not downgrade a newer
+Checked on 2026-11-17 with Zotero 10.0.6, Better BibTeX 9.0.71 and Extra Meta 0.1.6.
+The `research` bundle pins the Better BibTeX release in `.chezmoidata/downloads.toml`
+and ships the local `zotero/extra-meta` plugin (`extra-meta@dotfiles.local`), which
+renders `tex.venueabbr`, `tex.affiliation`, `tex.sourcecode`/`tex.projecturl`/OpenReview
+links and `arXiv` as separate columns and editable Info rows.
+`dotfiles-fetch` downloads Better BibTeX and checks the published digest. An
+apply installs both plugins in the default Zotero profile. It leaves identical
+installations unchanged. If Zotero is running, an install or upgrade waits until
+you close Zotero and run `chezmoi apply` again. It saves a copy of any replaced
+plugin in `~/.local/state/dotfiles/zotero-plugins/`. It will not downgrade a newer
 installation or replace an existing plugin symlink.
 
-On a new profile, open Zotero and enable Better BibTeX in the plugin manager.
-In the plugin's settings, set automatic updates to Off. Do this on each machine
-so Zotero does not change the pinned version. To upgrade, update the catalog
-pin, check plugin compatibility and apply on each machine.
+On a new profile, open Zotero and enable Better BibTeX and Extra Meta in the plugin
+manager. For Better BibTeX, set automatic updates to Off in the plugin's settings on
+each machine so Zotero does not change the pinned version. To upgrade Better BibTeX,
+update the catalog pin, check plugin compatibility and apply on each machine.
 
-The bundle shares Better BibTeX preferences through
-`~/.config/dotfiles/zotero-user.js`. An apply links the profile's `user.js` to
-that file. Zotero reads it at startup. If a `user.js` already exists, apply
-leaves it unchanged and warns. Open Zotero once and apply again if the profile
-does not exist yet.
+The bundle shares Better BibTeX preferences and `extensions.startupScanScopes`
+(`1`, so Zotero discovers sideloaded plugins in `extensions/` on startup)
+through `~/.config/dotfiles/zotero-user.js`. An apply links the profile's
+`user.js` to that file. Zotero reads it at startup. If a `user.js` already
+exists, apply leaves it unchanged and warns. Open Zotero once and apply again
+if the profile does not exist yet.
 
 Edit `private_dot_config/dotfiles/zotero-user.js.tmpl`, apply it, and restart
 Zotero to change a shared preference. The template sets the key formula once
