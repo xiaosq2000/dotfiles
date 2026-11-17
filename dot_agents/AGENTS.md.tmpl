@@ -16,7 +16,11 @@ where all of them will read it, not in one agent's private memory:
 | About one machine | the `machines` skill |
 | A preference that holds everywhere | this file |
 
-Keep private memory for what fits none of these.
+Keep private memory for what fits none of these. Keep every project repository
+self-contained across machines: store all project files (including review
+transcripts, check scripts, design notes, and handoffs) inside the repository
+rather than user-level agent artifact or scratch directories, and use
+repo-relative paths—never machine-local paths outside the repository.
 
 ## Downloads
 
