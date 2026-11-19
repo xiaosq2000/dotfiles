@@ -65,11 +65,17 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-render-") as temporary:
                     ["shellcheck", "--severity=warning", "-"],
                     input=entry["contents"], text=True, check=True,
                 )
-        for name, shell in ((".bashrc", "bash"), (".zshenv", "zsh"), (".zshrc", "zsh")):
+        for name, shell in (
+            (".bashrc", "bash"),
+            (".zshenv", "zsh"),
+            (".zshrc", "zsh"),
+            (".config/dotfiles/env.sh", "sh"),
+        ):
             subprocess.run(
                 [shell, "-n"], input=entries[name]["contents"],
                 text=True, check=True,
             )
+        tomllib.loads(entries[".config/starship.toml"]["contents"])
         if ".config/mise/config.toml" in entries:
             tomllib.loads(entries[".config/mise/config.toml"]["contents"])
         else:

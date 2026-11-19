@@ -90,42 +90,11 @@ setopt long_list_jobs         # the long format for job notifications
 setopt pushdminus             # `cd -2` counts from the top of the stack
 setopt prompt_subst           # expand variables inside PROMPT; starship wants it
 
-################################################################################
-##################################### cuda #####################################
-################################################################################
-prepend_env PATH "/usr/local/cuda/bin"
-
-################################################################################
-##################################### pixi #####################################
-################################################################################
-# ~/.zshenv adds pixi and managed downloads for every zsh session.
-# The coding-agent section restores the managed downloads' priority after
-# other installers add their own bin directories.
-# Completion is cached on fpath, not loaded here. See ~/.sh_utils/CAVEATS.md
-
-# pnpm (also manages node.js; replaces nvm)
-#
-# Up here rather than with the other tool sections below, because codex is a
-# pnpm binary and the completion cache further down has to find it on PATH
-# before compinit runs. Nothing between here and where this block used to sit
-# touches PATH, so the order it produces is unchanged: pnpm prepends straight
-# after pixi either way, and go, google-drive-upload and opencode still land in
-# front of both.
-export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
-
-################################################################################
-##################################### rust #####################################
-################################################################################
-# Not `. "$HOME/.cargo/env"`: rustup's uninstaller strips that exact string out
-# of shell rc files, which leaves a dangling `&&` that swallows the next
-# statement. All the file does is put ~/.cargo/bin on PATH. Appending rather
-# than prepending also keeps pixi's copies in front of any cargo-installed one.
-[ -d "$HOME/.cargo/bin" ] && type append_env >/dev/null 2>&1 && append_env PATH "$HOME/.cargo/bin"
+# Shared POSIX environment (~/.config/dotfiles/env.sh, sourced by ~/.zshenv)
+# sets XDG dirs, PNPM_HOME, PATH (dotfiles/bin, mise shims, pixi, pnpm,
+# ~/.local/bin, cuda, cargo), BASH_ENV, and agent telemetry defaults.
+# Completion for pixi, codex and uv is cached on fpath below. See ~/.sh_utils/CAVEATS.md
+[[ -d "${PNPM_HOME:-}/bin" ]] && prepend_env PATH "$PNPM_HOME/bin"
 
 ################################################################################
 ################################### terminal ###################################
@@ -580,19 +549,6 @@ remove_from_env PATH "${HOME}/.local/share/mise/shims"
 prepend_env PATH "${HOME}/.local/share/mise/shims"
 remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
 prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
-# Keep agy's background updater from replacing the dotfiles-fetch payload.
-[[ -L "${HOME}/.local/opt/dotfiles/bin/agy" ]] && export AGY_CLI_DISABLE_AUTO_UPDATE=true
-
-check_x11_wayland() {
-    if [[ "$XDG_SESSION_TYPE" == "wayland" ]]; then
-        debug "using wayland"
-        # reference: https://unix.stackexchange.com/a/359244/523957
-        __xhost_command="xhost +SI:localuser:$(id -un) >/dev/null 2>&1"
-        debug "executing '$__xhost_command'"
-        eval "$__xhost_command"
-    fi
-}
-check_x11_wayland
 
 setup_texlive() {
     local texlive_root texlive_dir texlive_version texlive_bin

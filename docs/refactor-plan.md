@@ -35,12 +35,13 @@ Checked on 2026-11-19.
 - Trimmed `pixi global` (dropped unused conda `prettier`, pinned `um-vpn` to `rev`, added `mise`) and wired `zoxide` into `dot_zshrc`.
 - Hardened `dotfiles-fetch` (safe version names, fail-closed digest requirement on pinned tags, committed `sha256` verification for Zotero `.xpi` plugins, crash-safe `.old` swap recovery, non-empty font dir checks) and kept it scoped to GUI bundles (`kitty`, `zotero`), `.xpi` plugins, `agy` manifest, and fonts.
 
-### Wave 2 — Dual-mode shell contract & modern Git / Tmux / Starship
+### Wave 2 — Dual-mode shell contract & modern Git / Tmux / Starship (Done on 2026-11-19)
 
-- Extract a silent POSIX `~/.config/dotfiles/env.sh` shared by `.zshenv`, `.profile`, `BASH_ENV`, and `environment.d` so non-interactive agent/SSH shells (both `zsh -c` and `bash -c`) get deterministic `PATH` and telemetry-off env vars (`PI_TELEMETRY=0`, `RTK_TELEMETRY_DISABLED=1`, `AGY_CLI_DISABLE_AUTO_UPDATE=true`).
-- Simplify `dot_bashrc` to a minimal fallback; add `zoxide` to `dot_zshrc`; move Wayland `xhost` into a systemd user oneshot.
-- Manage `~/.config/git/config` + local include (`histogram`, `zdiff3`, `rerere`, `pull.rebase`, `fetch.prune`, `push.autoSetupRemote`, SSH signing, global excludes); stop setting global `diff.external = difft` (use `git dft` + `lazygit` so agents and `.age` textconv stay intact).
-- Modernize `tmux.conf` (portable zsh, `tmux-256color`, OSC 52, `theme` integration, drop `send-keys` hack) and `starship.toml.tmpl` (add `[pixi]`, drop unused languages and `surface`).
+- Extracted silent POSIX `~/.config/dotfiles/env.sh` shared across `~/.zshenv`, `~/.bashrc` (before interactive guard), `modify_dot_profile`, `BASH_ENV`, and `~/.config/environment.d/999-dotfiles.conf` (beating Ubuntu's `99-environment.conf`), setting deterministic `PATH` and `PI_TELEMETRY=0` / `RTK_TELEMETRY_DISABLED=1` / `AGY_CLI_DISABLE_AUTO_UPDATE=true`.
+- Slimmed `dot_bashrc` from 352 to ~100 lines as a clean fallback (with `zoxide` and `starship`) and moved Wayland `xhost` out of shell startup into `wayland-xhost.service` (gated under `desktop`).
+- Managed `~/.config/git/config` + `~/.config/git/ignore` (`histogram`, `zdiff3`, `rerere`, `pull.rebase`, `fetch.prune`, `push.autoSetupRemote`, `git dft`/`dfts`/`dshow`/`dlog` aliases, local include); replaced global `diff.external = difft` with one-time cleanup `run_once_after_09-git-difftastic-cleanup.sh` so agents and `.age` textconv work natively.
+- Modernized `tmux.conf.tmpl` (dynamic pixi/system zsh, `tmux-256color`, RGB/hyperlinks/usstyle, native OSC 52 clipboard, `update-environment`, removed dangerous `send-keys` `update_display.sh`) with native `current-theme.conf.tmpl` across all 7 themes + live reload in `theme`.
+- Updated `starship.toml.tmpl` (added `[pixi]`, trimmed unused languages and unused `surface` palette key).
 
 ### Wave 3 — 4-Agent unified control plane (`.chezmoidata/agents.toml`)
 

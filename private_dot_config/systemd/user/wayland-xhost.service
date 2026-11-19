@@ -1,0 +1,13 @@
+[Unit]
+Description=Allow local user access to XWayland display
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=XDG_SESSION_TYPE=wayland
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'command -v xhost >/dev/null 2>&1 && xhost "+SI:localuser:$(id -un)" || true'
+
+[Install]
+WantedBy=graphical-session.target

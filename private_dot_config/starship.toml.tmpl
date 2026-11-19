@@ -17,16 +17,10 @@ $git_branch\
 $git_status\
 $container\
 $c\
-$elixir\
-$elm\
 $golang\
-$haskell\
-$java\
-$julia\
 $nodejs\
-$nim\
 $rust\
-$scala\
+$pixi\
 $conda\
 $python\
 $fill\
@@ -43,7 +37,7 @@ palette = "{{ .theme }}"
 # config below names is named for its role, never for a scheme, which is what
 # lets one template serve Rosé Pine and Catppuccin alike.
 [palettes.{{ .theme }}]
-{{ range $role := list "surface" "error" "warn" "accent" "lang" "vcs" "primary" -}}
+{{ range $role := list "error" "warn" "accent" "lang" "vcs" "primary" -}}
 {{ $role }} = {{ index $t.starship $role | quote }}
 {{ end }}
 [character]
@@ -104,7 +98,7 @@ use_12hr = false
 format = "[in](dimmed) [$symbol $name]($style) "
 style = "fg:accent"
 
-# Languages
+# Active language and environment toolchains
 
 [c]
 style = "fg:lang"
@@ -112,41 +106,11 @@ format = "[via](dimmed) [$symbol$version]($style) "
 disabled = false
 symbol = " "
 
-[elixir]
-style = "fg:lang"
-format = "[via](dimmed) [$symbol$version]($style) "
-disabled = false
-symbol = " "
-
-[elm]
-style = "fg:lang"
-format = "[via](dimmed) [$symbol$version]($style) "
-disabled = false
-symbol = " "
-
 [golang]
 style = "fg:lang"
 format = "[via](dimmed) [$symbol$version]($style) "
 disabled = false
 symbol = " "
-
-[haskell]
-style = "fg:lang"
-format = "[via](dimmed) [$symbol$version]($style) "
-disabled = false
-symbol = " "
-
-[java]
-style = "fg:lang"
-format = "[via](dimmed) [$symbol$version]($style) "
-disabled = false
-symbol = " "
-
-[julia]
-style = "fg:lang"
-format = "[via](dimmed) [$symbol$version]($style) "
-disabled = false
-symbol = " "
 
 [nodejs]
 style = "fg:lang"
@@ -154,23 +118,17 @@ format = "[via](dimmed) [$symbol$version]($style) "
 disabled = false
 symbol = "󰎙 "
 
-[nim]
-style = "fg:lang"
-format = "[via](dimmed) [$symbol$version]($style) "
-disabled = false
-symbol = "󰆥 "
-
 [rust]
 style = "fg:lang"
 format = "[via](dimmed) [$symbol$version]($style) "
 disabled = false
 symbol = " "
 
-[scala]
+[pixi]
 style = "fg:lang"
-format = "[via](dimmed) [$symbol$version]($style) "
+format = '[via](dimmed) [$symbol($version )(\($environment\))]($style) '
 disabled = false
-symbol = " "
+symbol = "󰏗 "
 
 [python]
 style = "fg:lang"

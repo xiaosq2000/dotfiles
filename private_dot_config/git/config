@@ -1,0 +1,71 @@
+# Shared Git defaults managed by chezmoi.
+# Machine-local identity (user.name, user.email), credential helpers, signing
+# keys, and overrides live in ~/.gitconfig (which Git reads after this file) or
+# ~/.config/git/config.local.
+
+[init]
+	defaultBranch = main
+
+[core]
+	excludesFile = ~/.config/git/ignore
+
+[diff]
+	# Keep native unified diff as the default so coding agents, patch tooling,
+	# and this repository's `.age` textconv driver work without flags.
+	# Use `git dft` / `git dfts` / `git dshow` / `git dlog` (or lazygit) for Difftastic.
+	algorithm = histogram
+	colorMoved = default
+	renames = copies
+
+[difftool]
+	prompt = false
+
+[difftool "difftastic"]
+	cmd = difft "$MERGED" "$LOCAL" "abcdef1" "100644" "$REMOTE" "abcdef2" "100644"
+
+[alias]
+	dft = -c diff.external=difft diff
+	dfts = -c diff.external=difft diff --staged
+	dlog = -c diff.external=difft log -p --ext-diff
+	dshow = -c diff.external=difft show --ext-diff
+
+[merge]
+	conflictStyle = zdiff3
+
+[rerere]
+	enabled = true
+	autoupdate = true
+
+[pull]
+	rebase = true
+
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+
+[fetch]
+	prune = true
+	pruneTags = true
+
+[push]
+	autoSetupRemote = true
+	default = simple
+
+[branch]
+	sort = -committerdate
+
+[tag]
+	sort = version:refname
+
+[commit]
+	verbose = true
+
+[transfer]
+	fsckObjects = true
+
+[receive]
+	fsckObjects = true
+
+[include]
+	path = config.local

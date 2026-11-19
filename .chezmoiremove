@@ -44,3 +44,4 @@
 .sh_utils/tools.sh
 .sh_utils/tools
 .config/nvim/after/lsp/texlab.lua
+.config/tmux/update_display.sh

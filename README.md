@@ -66,22 +66,26 @@ $EDITOR "$(chezmoi source-path)/.chezmoidata/machines.toml"
 chezmoi edit-config-template                            # the config template
 ```
 
-## Git diffs
+## Git configuration and diffs
 
-The Git setup script sets `diff.external = difft` when Difftastic is available.
-It runs after pixi setup and repeats when tool availability changes.
-If `difft` is absent, the script removes that setting but preserves any other diff tool.
-Difftastic renders diffs, not pager input, so Git's pager stays unchanged.
+Shared Git defaults live in `~/.config/git/config` (`histogram` diffs, `zdiff3`
+conflict style, `rerere`, `pull.rebase`, `fetch.prune`, `push.autoSetupRemote`,
+and global excludes in `~/.config/git/ignore`). Machine-local identity
+(`user.name`, `user.email`), credential helpers, and overrides stay in
+`~/.gitconfig` (which Git reads after `~/.config/git/config`) or
+`~/.config/git/config.local`.
+
+Native unified `git diff` stays the default so coding agents, patch tools, and
+this repository's `.age` text-conversion driver work without extra flags. Opt
+into Difftastic via aliases or `lazygit`:
 
 ```sh
-git diff                     # Difftastic when configured
-git show --ext-diff           # use Difftastic for a commit
-git log -p --ext-diff         # use Difftastic in patch history
-git diff --no-ext-diff        # standard patches and text-conversion drivers
+git diff                     # standard unified diff and .age textconv
+git dft                      # Difftastic working-tree diff
+git dfts                     # Difftastic staged diff
+git dshow                    # Difftastic commit diff
+git dlog                     # Difftastic patch history
 ```
-
-Use `--no-ext-diff` for patches that tools must parse or apply.
-It also enables this repository's `.age` text-conversion driver, which Difftastic bypasses.
 
 ## Themes
 

@@ -1,0 +1,6 @@
+# Global Git excludes: OS metadata and editor swap files only.
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

@@ -143,6 +143,8 @@ config = [
     ".config/fcitx5",
     ".config/environment.d/im.conf",
     ".config/autostart/org.fcitx.Fcitx5.desktop",
+    ".config/systemd/user/wayland-xhost.service",
+    ".config/systemd/user/graphical-session.target.wants/wayland-xhost.service",
     ".local/bin/zathura",
 ]
 

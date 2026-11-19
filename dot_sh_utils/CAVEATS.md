@@ -4,24 +4,27 @@ The notes here explain a few parts of this repository that look wrong until you
 know why they are written the way they are. Each section names the file it
 applies to.
 
-## Non-interactive zsh needs the base PATH in .zshenv
+## Non-interactive shells share ~/.config/dotfiles/env.sh
 
 Checked on 2026-11-19.
 
-`~/.zshenv` adds `~/.local/opt/dotfiles/bin`, `~/.local/share/mise/shims`,
-`~/.pixi/bin` and `~/.local/bin` when they are absent from PATH. New entries
-precede the inherited PATH. Existing entries keep their order so a nested zsh
-preserves an activated environment. The file uses only builtins and produces no
-output.
+`~/.config/dotfiles/env.sh` is pure POSIX `sh` with zero external forks and no
+output. It sets XDG base directories, `PNPM_HOME`, deterministic `PATH`
+precedence (`~/.local/opt/dotfiles/bin`, `~/.local/share/mise/shims`,
+`~/.pixi/bin`, `$PNPM_HOME/bin`, `~/.local/bin`, `/usr/local/cuda/bin`, and
+trailing `~/.cargo/bin`), `BASH_ENV`, and agent telemetry/auto-update defaults.
+New entries prepend only when absent so activated environments keep priority.
 
-SSH commands do not read `.zshrc`. This includes the command that starts
-`mosh-server`. Without `.zshenv`, that command can select an older system copy,
-even when an interactive shell selects the managed copy.
+Four entrypoints load it:
+- `~/.zshenv` (every zsh, including `ssh host cmd` and `mosh-server`)
+- `~/.bashrc` before the interactive return (SSH bash and interactive bash)
+- `~/.profile` via `modify_dot_profile` (POSIX login shells)
+- `~/.config/environment.d/999-dotfiles.conf` (desktop / systemd user sessions;
+  `999-` sorts after Ubuntu's `/usr/lib/environment.d/99-environment.conf`)
 
 Keep prompts, completions, aliases and tool initialization in `.zshrc`. Do not
-source `.zshrc` from `.zshenv`: output can break scp, rsync and other SSH tools.
-Bash does not read `.zshenv`, so remote commands that use bash can still need
-an explicit PATH.
+source `.zshrc` from `.zshenv` or `env.sh`: output breaks `scp`, `rsync` and
+other SSH tools.
 
 ```sh
 ssh host 'command -v mosh-server; mosh-server --version'

@@ -1,354 +1,101 @@
 # shellcheck shell=bash
-# ~/.bashrc: executed by bash(1) for non-login shells.
-# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
-# for examples
+# ~/.bashrc: minimal interactive bash fallback. Primary interactive shell is zsh.
+# Non-interactive SSH bash shells also read ~/.bashrc on Debian/Ubuntu, so load
+# the silent shared POSIX environment before checking interactivity.
 
-# If not running interactively, don't do anything
+if [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/env.sh" ]; then
+    # shellcheck source=/dev/null
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/env.sh"
+fi
+
 case $- in
     *i*) ;;
     *) return ;;
 esac
 
-# don't put duplicate lines or lines starting with space in the history.
-# See bash(1) for more options
+_has() { command -v "$1" >/dev/null 2>&1; }
+
+# History and terminal behaviour
 HISTCONTROL=ignoreboth
+HISTSIZE=10000
+HISTFILESIZE=20000
+HISTTIMEFORMAT="%F %T "
+shopt -s histappend checkwinsize
 
-# append to the history file, don't overwrite it
-shopt -s histappend
-
-# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
-
-# check the window size after each command and, if necessary,
-# update the values of LINES and COLUMNS.
-shopt -s checkwinsize
-
-# If set, the pattern "**" used in a pathname expansion context will
-# match all files and zero or more directories and subdirectories.
-#shopt -s globstar
-
-# make less more friendly for non-text input files, see lesspipe(1)
-[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
-
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
+# Editors
+if _has nvim; then
+    export EDITOR=nvim SUDO_EDITOR=nvim
+elif _has vim; then
+    export EDITOR=vim SUDO_EDITOR=vim
+elif _has vi; then
+    export EDITOR=vi SUDO_EDITOR=vi
 fi
+[ -n "${EDITOR:-}" ] && export GIT_EDITOR="$EDITOR"
 
-# set a fancy prompt (non-color, unless we know we "want" color)
-case "$TERM" in
-    xterm-color | *-256color) color_prompt=yes ;;
-esac
-
-# uncomment for a colored prompt, if the terminal has the capability; turned
-# off by default to not distract the user: the focus in a terminal window
-# should be on the output of commands, not on the prompt
-force_color_prompt=yes
-
-if [ -n "$force_color_prompt" ]; then
-    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
-        # We have color support; assume it's compliant with Ecma-48
-        # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
-        # a case would tend to support setf rather than setaf.)
-        color_prompt=yes
+# Colors and core aliases
+if _has dircolors; then
+    if [ -r "$HOME/.dircolors" ]; then
+        eval "$(dircolors -b "$HOME/.dircolors")"
     else
-        color_prompt=
+        eval "$(dircolors -b)"
     fi
-fi
-
-if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-else
-    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
-fi
-unset color_prompt force_color_prompt
-
-# If this is an xterm set the title to user@host:dir
-case "$TERM" in
-    xterm* | rxvt*)
-        PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
-        ;;
-    *) ;;
-esac
-
-# enable color support of ls and also add handy aliases
-if [ -x /usr/bin/dircolors ]; then
-    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto'
-    #alias dir='dir --color=auto'
-    #alias vdir='vdir --color=auto'
-
     alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
 fi
 
-# colored GCC warnings and errors
-#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+if _has eza; then
+    alias ls='eza --group-directories-first --icons=auto'
+    alias la='eza -a --group-directories-first --icons=auto'
+    alias ll='eza -la --group-directories-first --icons=auto --git'
+else
+    alias ls='ls --color=auto'
+    alias ll='ls -alF'
+    alias la='ls -A'
+fi
 
-# some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
+alias lg='lazygit'
+alias t='tmux'
+alias ta='tmux a'
+alias python='python3'
 
-# Add an "alert" alias for long running commands.  Use like so:
-#   sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-
-# Alias definitions.
-# You may want to put all your additions into a separate file like
-# ~/.bash_aliases, instead of adding them here directly.
-# See /usr/share/doc/bash-doc/examples in the bash-doc package.
-
-if [ -f ~/.bash_aliases ]; then
+if [ -r "$HOME/.bash_aliases" ]; then
     # shellcheck source=/dev/null
-    . ~/.bash_aliases
+    . "$HOME/.bash_aliases"
 fi
 
-# enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
+# Programmable completion
 if ! shopt -oq posix; then
-    if [ -f /usr/share/bash-completion/bash_completion ]; then
+    if [ -r /usr/share/bash-completion/bash_completion ]; then
+        # shellcheck source=/dev/null
         . /usr/share/bash-completion/bash_completion
-    elif [ -f /etc/bash_completion ]; then
+    elif [ -r /etc/bash_completion ]; then
+        # shellcheck source=/dev/null
         . /etc/bash_completion
     fi
 fi
 
-# ----- Customizations mirroring ~/.zshrc (portable and conditional) -----
-
-# Load portable shell utilities
-if [ -r "$HOME/.sh_utils/basics.sh" ]; then
-    . "$HOME/.sh_utils/basics.sh"
-else
-    has() { command -v "$1" >/dev/null 2>&1; }
-fi
-
-# Provide zsh-compatible 'unfunction' in bash for sourced helpers
-if [ -n "${BASH_VERSION:-}" ] && ! type unfunction >/dev/null 2>&1; then
-    unfunction() { unset -f "$@"; }
-fi
-
-# Optional helpers
-if type safely_source >/dev/null 2>&1; then
-    safely_source "$HOME/.sh_utils/helpers.sh"
-    safely_source "$HOME/.sh_utils/checkers.sh"
-fi
-
-# Editors
-if has nvim; then
-    export SUDO_EDITOR=nvim
-    export EDITOR=nvim
-elif has vim; then
-    export SUDO_EDITOR=vim
-    export EDITOR=vim
-elif has vi; then
-    export SUDO_EDITOR=vi
-    export EDITOR=vi
-fi
-[ -n "${EDITOR:-}" ] && export GIT_EDITOR="$EDITOR"
-
-# Aliases (mapped from zsh)
-alias zshconfig='chezmoi edit ~/.zshrc'
-alias nvimconfig='chezmoi edit ~/.config/nvim/init.lua'
-alias tmuxconfig='chezmoi edit ~/.config/tmux/tmux.conf'
-alias sshconfig='chezmoi edit ~/.ssh/config'
-alias starshipconfig='chezmoi edit ~/.config/starship.toml'
-alias kittyconfig='chezmoi edit ~/.config/kitty/kitty.conf'
-alias cl='tput clear'
-alias python='python3'
-alias lg='lazygit'
-alias t='tmux'
-alias ta='tmux a'
-alias cdusb='cd /media/$USER/"$(ls -t /media/$USER/ | head -n1)"'
-
-ARCHFLAGS="-arch $(uname -m)"
-export ARCHFLAGS
-NUMCPUS=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || getconf _NPROCESSORS_ONLN)
-export NUMCPUS
-alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
-
-# Bash options approximating zsh behavior
-shopt -s extglob 2>/dev/null || true
-shopt -s globstar 2>/dev/null || true
-shopt -s autocd 2>/dev/null || true
-shopt -s cdspell 2>/dev/null || true
-
-# History timestamp similar to zsh's HIST_STAMPS
-HISTTIMEFORMAT="%d/%m/%Y %T "
-
-# CUDA
-type prepend_env >/dev/null 2>&1 && prepend_env PATH "/usr/local/cuda/bin"
-
-# Rust
-# Not `. "$HOME/.cargo/env"`: rustup's uninstaller strips that exact string out
-# of shell rc files, which leaves a dangling `&&` that swallows the next
-# statement. Appending also keeps pixi's copies in front of a cargo-installed one.
-[ -d "$HOME/.cargo/bin" ] && type append_env >/dev/null 2>&1 && append_env PATH "$HOME/.cargo/bin"
-
-# pnpm
-export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-
-# Go
-type prepend_env >/dev/null 2>&1 && prepend_env PATH "${HOME}/.local/go/bin"
-
-# Deno
-[ -f "$HOME/.deno/env" ] && . "$HOME/.deno/env"
-
-# Google Drive Upload
-type prepend_env >/dev/null 2>&1 && prepend_env PATH "${HOME}/.google-drive-upload/bin"
-
-# Match zsh: managed mise shims and downloads take priority over manual
-# installations, even when the inherited PATH already contains them later.
-if type remove_from_env >/dev/null 2>&1 && type prepend_env >/dev/null 2>&1; then
-    remove_from_env PATH "$HOME/.local/share/mise/shims"
-    prepend_env PATH "$HOME/.local/share/mise/shims"
-    remove_from_env PATH "$HOME/.local/opt/dotfiles/bin"
-    prepend_env PATH "$HOME/.local/opt/dotfiles/bin"
-fi
-# Keep agy's background updater from replacing the dotfiles-fetch payload.
-[ -L "$HOME/.local/opt/dotfiles/bin/agy" ] && export AGY_CLI_DISABLE_AUTO_UPDATE=true
-
-# yazi integration (cd to last dir on exit)
-setup_yazi() {
-    if has yazi; then
-        y() {
-            local tmp cwd
-            tmp="$(mktemp -t "yazi-cwd.XXXXXX")" || return 1
-            yazi "$@" --cwd-file="$tmp"
-            if cwd="$(command cat -- "$tmp" 2>/dev/null)" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-                builtin cd -- "$cwd" || return
-            fi
-            rm -f -- "$tmp"
-        }
-    else
-        [ "$(type -t warning 2>/dev/null)" ] && warning "yazi not found."
-    fi
-}
-setup_yazi
-
-# fzf integration and theme
-if has fzf; then
+# Interactive tool integrations
+if _has fzf; then
     eval "$(fzf --bash)"
-fi
-if has kitten; then
-    export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | kitten clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-elif has wl-copy; then
-    export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | wl-copy)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-elif has xclip; then
-    export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | xclip -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-fi
-export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-if [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh" ]; then
-    # shellcheck source=/dev/null
-    . "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh"
-fi
-
-# Bash vi-mode with jk escape
-set -o vi
-bind 'set editing-mode vi'
-bind 'set keymap vi-insert'
-bind '"jk":"\e"'
-
-# Starship prompt (preferred)
-[ "${TERM:-}" != "dumb" ] && has starship && eval "$(starship init bash)"
-
-# ROS helpers (adapted to bash)
-_guess_ros_distro() {
-    local count=0 last=""
-    if [ -d /opt/ros ]; then
-        while IFS= read -r dir; do
-            last="$(basename "$dir")"
-            count=$((count+1))
-        done < <(find /opt/ros -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
-    fi
-    if [ "$count" -eq 1 ] && [ -n "$last" ]; then
-        printf "%s" "$last"; return 0
-    fi
-    return 1
-}
-setup_ros() {
-    if [ -z "${ROS1_DISTRO}" ]; then
-        local __guess; __guess=$(_guess_ros_distro) || true
-        if [ -n "${__guess}" ]; then
-            export ROS1_DISTRO="${__guess}"
-            [ "$(type -t hint 2>/dev/null)" ] && hint "please specify environment variable \"ROS1_DISTRO\""
-            [ "$(type -t hint 2>/dev/null)" ] && hint "make a guess here: ROS1_DISTRO=${ROS1_DISTRO}"
-        fi
-    fi
-    if [ -n "${ROS1_DISTRO}" ] && [ -f "/opt/ros/${ROS1_DISTRO}/setup.bash" ]; then
+    if [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh" ]; then
         # shellcheck source=/dev/null
-        . "/opt/ros/${ROS1_DISTRO}/setup.bash"
-        [ "$(type -t msg 2>/dev/null)" ] && msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS $ROS1_DISTRO${RESET}"
-    else
-        [ "$(type -t hint 2>/dev/null)" ] && hint "make sure ROS is ready; please specify environment variable \"ROS1_DISTRO\""
+        . "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh"
     fi
-}
-setup_ros2() {
-    if [ -z "${ROS2_DISTRO}" ]; then
-        local __guess; __guess=$(_guess_ros_distro) || true
-        if [ -n "${__guess}" ]; then
-            export ROS2_DISTRO="${__guess}"
-            [ "$(type -t hint 2>/dev/null)" ] && hint "please specify environment variable \"ROS2_DISTRO\""
-            [ "$(type -t hint 2>/dev/null)" ] && hint "make a guess here: ROS2_DISTRO=${ROS2_DISTRO}"
-        fi
-    fi
-    if [ -n "${ROS2_DISTRO}" ] && [ -f "/opt/ros/${ROS2_DISTRO}/setup.bash" ]; then
-        [ "$(type -t msg 2>/dev/null)" ] && msg "${BOLD}${UNDERLINE}${ICON_ROS}ROS 2 $ROS2_DISTRO${RESET}"
-        # shellcheck source=/dev/null
-        . "/opt/ros/${ROS2_DISTRO}/setup.bash"
-        [ "$(type -t info 2>/dev/null)" ] && info "ROS2 Environment Variables:"
-        [ "$(type -t info 2>/dev/null)" ] && info "ROS_VERSION=${ROS_VERSION}"
-        [ "$(type -t info 2>/dev/null)" ] && info "ROS_PYTHON_VERSION=${ROS_PYTHON_VERSION}"
-        [ "$(type -t info 2>/dev/null)" ] && info "ROS_DISTRO=${ROS_DISTRO}"
-        [ "$(type -t info 2>/dev/null)" ] && info "ROS_DOMAIN_ID=${ROS_DOMAIN_ID}"
-        [ "$(type -t info 2>/dev/null)" ] && info "ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY}"
-        if [ -f "/usr/share/colcon_cd/function/colcon_cd.sh" ]; then
-            . "/usr/share/colcon_cd/function/colcon_cd.sh"
-            export _colcon_cd_root="/opt/ros/${ROS_DISTRO}"
-            [ "$(type -t success 2>/dev/null)" ] && success "colcon_cd"
-        else
-            [ "$(type -t warning 2>/dev/null)" ] && warning "colcon_cd not found."
-            [ "$(type -t hint 2>/dev/null)" ] && hint "try 'sudo apt install python3-colcon-common-extensions'"
-        fi
-        if [ -f "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ]; then
-            . "/usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash"
-            [ "$(type -t success 2>/dev/null)" ] && success "colcon-argcomplete"
-        else
-            [ "$(type -t warning 2>/dev/null)" ] && warning "colcon-argcomplete.bash not found."
-            [ "$(type -t hint 2>/dev/null)" ] && hint "try 'sudo apt install python3-colcon-common-extensions'"
-        fi
-    else
-        [ "$(type -t hint 2>/dev/null)" ] && hint "make sure ROS2 is ready; please specify environment variable \"ROS2_DISTRO\""
-    fi
-}
+fi
 
-# Wayland/X11 permission tweak
-check_x11_wayland() {
-    if [ "${XDG_SESSION_TYPE}" = "wayland" ]; then
-        [ "$(type -t debug 2>/dev/null)" ] && debug "using wayland"
-        local __xhost_command
-        __xhost_command="xhost +SI:localuser:$(id -un) >/dev/null 2>&1"
-        [ "$(type -t debug 2>/dev/null)" ] && debug "executing '$__xhost_command'"
-        eval "$__xhost_command"
-    fi
-}
-check_x11_wayland
+if _has zoxide; then
+    eval "$(zoxide init bash)"
+fi
 
-# The proxy client. `sbc init` puts sbc on PATH and adds a prompt hook that
-# applies `sbc on` and `sbc off`. Bash never loaded the bash client, so a
-# machine without sbc gets nothing here.
-case $OSTYPE in
-darwin*) _sbc="$HOME/Library/Application Support/sbc/cli/sbc" ;;
-*) _sbc="${XDG_DATA_HOME:-$HOME/.local/share}/sbc/cli/sbc" ;;
-esac
+if [ "${TERM:-}" != "dumb" ] && _has starship; then
+    eval "$(starship init bash)"
+else
+    PS1='\u@\h:\w\$ '
+fi
+
+# Proxy client
+_sbc="${XDG_DATA_HOME:-$HOME/.local/share}/sbc/cli/sbc"
 if [ -x "$_sbc" ]; then
     eval "$("$_sbc" init bash)"
 fi
 unset _sbc
+unset -f _has

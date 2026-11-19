@@ -1,0 +1,27 @@
+#!/bin/sh
+# Preserve any machine-local ~/.profile while ensuring login shells source
+# ~/.config/dotfiles/env.sh.
+set -eu
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+cat >"$tmp"
+
+if [ ! -s "$tmp" ]; then
+    cat <<'EOF'
+# ~/.profile: executed by login shells.
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/env.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/env.sh"
+
+if [ -n "${BASH_VERSION:-}" ] && [ -r "$HOME/.bashrc" ]; then
+    case $- in
+        *i*) . "$HOME/.bashrc" ;;
+    esac
+fi
+EOF
+    exit 0
+fi
+
+cat "$tmp"
+if ! grep -Fq 'dotfiles/env.sh' "$tmp"; then
+    printf '\n# Shared dotfiles POSIX environment\n[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/env.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/env.sh"\n'
+fi

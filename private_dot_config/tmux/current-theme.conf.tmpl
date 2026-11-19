@@ -1,0 +1,36 @@
+{{- $t := index .themes .theme -}}
+# GENERATED FILE from .chezmoidata/themes-*.toml.
+# Variant: {{ .theme }} — {{ $t.description }} ({{ $t.appearance }})
+# Switch with `theme`; edits in ~ are overwritten by the next `chezmoi apply`.
+
+set -g status on
+set -g status-position bottom
+set -g status-interval 5
+set -g status-justify left
+set -g status-style "bg=default,fg={{ $t.fzf.fg }}"
+
+# Session badge turns warn-coloured while Prefix is active.
+set -g status-left-length 40
+set -g status-left "#[fg={{ $t.starship.primary }},bold]#{?client_prefix,#[fg={{ $t.starship.warn }}],}  #S #[fg={{ $t.fzf.border }},nobold]│ "
+
+# Compact right status: zoom flag and time.
+set -g status-right-length 40
+set -g status-right "#{?window_zoomed_flag,#[fg={{ $t.starship.warn }}]󰁌  ,}#[fg={{ $t.starship.accent }}]󰃰 %H:%M "
+
+# Window tabs
+set -g window-status-separator " "
+set -gw window-status-style "bg=default,fg={{ $t.fzf.fg }}"
+set -gw window-status-format " #I:#W "
+set -gw window-status-current-style "bg={{ $t.starship.surface }},fg={{ $t.fzf.fgPlus }},bold"
+set -gw window-status-current-format " #I:#W "
+set -gw window-status-activity-style "fg={{ $t.starship.warn }}"
+set -gw window-status-bell-style "fg={{ $t.starship.error }},bold"
+
+# Pane borders, messages and copy-mode selection
+set -g pane-border-style "fg={{ $t.fzf.border }}"
+set -g pane-active-border-style "fg={{ $t.starship.primary }}"
+set -g message-style "bg={{ $t.starship.surface }},fg={{ $t.fzf.fgPlus }}"
+set -g message-command-style "bg={{ $t.starship.surface }},fg={{ $t.starship.primary }}"
+set -gw mode-style "bg={{ $t.starship.surface }},fg={{ $t.fzf.fgPlus }}"
+set -g display-panes-colour "{{ $t.fzf.fg }}"
+set -g display-panes-active-colour "{{ $t.starship.primary }}"
