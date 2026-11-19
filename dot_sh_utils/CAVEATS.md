@@ -53,10 +53,12 @@ with no root and no zsh at all.
 
 ## Tool completions are cached on fpath, not evaluated at startup
 
-`.zshrc` does not run `pixi completion --shell zsh` and evaluate the result. It
-writes that output to `${XDG_CACHE_HOME}/zsh/completions/_pixi` and puts the
-directory on `fpath` before `compinit`. codex and uv are handled the same way by
-the same loop.
+Checked on 2026-11-19. `.zshrc` does not run `pixi completion --shell zsh` and
+evaluate the result. It writes that output to
+`${XDG_CACHE_HOME}/zsh/completions/_pixi` and puts the directory on `fpath`
+before `compinit`. `codex`, `uv`, and the Rust `dotfiles` CLI (whose completion
+script also adds dynamic Zsh helpers backed by `dotfiles __complete`) are
+handled the same way by the same loop.
 
 The reason is cost. Those scripts are big — pixi's is 11,781 lines — and `eval`
 has to parse all of it before the shell can draw a prompt. Measured on the

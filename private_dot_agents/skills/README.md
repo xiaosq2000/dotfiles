@@ -32,10 +32,10 @@ them as slash commands, such as `/asd-ste100`. Checked on 2026-10-05.
 ## Adding a skill
 
 Create the directory and its `SKILL.md` here, then run `chezmoi apply` to deploy
-it and update the links. To repair those links separately, run the setup script:
+it and update the links. To repair those links separately, run:
 
 ```sh
-~/.local/libexec/dotfiles/agent-skills.sh
+dotfiles agent skills          # or ~/.local/libexec/dotfiles/agent-skills.sh
 ```
 
 The script is safe to run at any time. It creates missing links, repairs links
@@ -67,7 +67,7 @@ apply STE100.
 To test the linter:
 
 ```sh
-python3 dot_agents/skills/asd-ste100/scripts/ste-lint.py --selftest
+python3 private_dot_agents/skills/asd-ste100/scripts/ste-lint.py --selftest
 ```
 
 ## A skill with encrypted files

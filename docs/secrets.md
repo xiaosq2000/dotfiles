@@ -1,6 +1,6 @@
 # Secrets
 
-Checked on 2026-10-13.
+Checked on 2026-11-19.
 
 This repository is public, so every secret in it is age ciphertext in a file
 named `encrypted_*`. chezmoi decrypts those files on apply with the private key
@@ -94,9 +94,10 @@ An agent cannot drive `chezmoi edit`, which waits for an interactive editor. It
 edits the decrypted file in `~` and hands it back with
 `chezmoi re-add <path>`, which keeps the file encrypted.
 
-On a machine with the key, `git diff --no-ext-diff` in this repository shows
-`.age` files decrypted. Difftastic bypasses Git's text-conversion driver.
-GitHub always shows ciphertext. Checked on 2026-10-04.
+On a machine with the key, `git diff` in this repository shows `.age` files
+decrypted through the `age` text-conversion driver in `.gitattributes`.
+Difftastic (`git dft`) bypasses text-conversion drivers and stays opt-in.
+GitHub always shows ciphertext. Checked on 2026-11-19.
 
 ## Adding an encrypted file
 
@@ -255,11 +256,13 @@ apply that brings `~/.codex/hooks.json`, open Codex and trust the hook in
 `/hooks`. Do it again whenever `hooks.json` changes. Until then only the sandbox
 profile guards the keys in Codex.
 
-A key with a custom name is already covered by the hook and by opencode's rules.
-Codex's sandbox covers any name that starts with `id_` and does not end in
-`.pub`, so name a new key `id_*`. Claude Code's `Read` rules list the default
-names only (`id_rsa`, `id_ed25519` and the rest). To cover another name there,
-add it to the list in `dot_claude/modify_settings.json`.
+A key with a custom name under `~/.ssh/` is covered automatically by both
+`agent-jail` (which masks every non-public file in `~/.ssh/`) and
+`key-guard.py`. Codex's own unjailed sandbox covers any name that starts with
+`id_` and does not end in `.pub`, so name a new key `id_*`. Claude Code's
+`Read` rules list the default names only (`id_rsa`, `id_ed25519` and the rest);
+to add a custom name there, edit `[agents.claude].deny` in
+`.chezmoidata/agents.toml`.
 
 Agents log in with the key through the ssh agent, so ssh works in Codex's
 sandbox although it cannot open the key file. For ssh to run there at all, the
@@ -280,31 +283,42 @@ process from tampering with git hooks or repository configuration (such as
 `core.fsmonitor` or `core.hooksPath`).
 
 Routine GitHub CLI operations are managed by Codex execpolicy rules in
-`~/.codex/rules/gh.rules` (deployed from `dot_codex/rules/gh.rules`). It allows
-read-only queries and routine PR work (`gh pr view`, `list`, `diff`, `checks`,
-`status`, `create`, `edit`, `comment`, `review`, `ready`), prompts before
-destructive or shared PR state changes (`gh pr merge`, `gh pr close`), and
-forbids credential-touching or destructive commands (`gh auth`, `gh repo delete`,
-`gh secret`, `gh ssh-key`). Commands not covered by the rules fall back to
-Codex's normal approval policy. Checked with codex-cli 0.160.0 on 2026-10-03.
+`~/.codex/rules/gh.rules` (deployed from `private_dot_codex/rules/gh.rules`).
+It allows read-only queries and routine PR work (`gh pr view`, `list`, `diff`,
+`checks`, `status`, `create`, `edit`, `comment`, `review`, `ready`), prompts
+before destructive or shared state changes (`gh pr merge`, `gh pr close`,
+`gh api`), and forbids credential-touching or destructive commands (`gh auth`,
+`gh repo delete`, `gh secret`, `gh ssh-key`). Commands not covered by the rules
+fall back to Codex's normal approval policy. Checked on 2026-11-19.
 
-What none of this stops:
+### Defense-in-depth boundaries
 
-- **A command that builds the path at run time.** The hook matches text, so a
-  command that decodes a key path from base64 gets past it. For an `id_*` key,
-  Codex's sandbox still refuses the read. In Claude Code and opencode
-  nothing else does. Claude Code's own sandbox would, but it was turned down on
-  2026-09-21: it also puts every Bash command behind a network allowlist, and it
-  needs bubblewrap and socat installed on each machine.
-- **A key path passed on through a file.** The hook lets `ls -d ~/.ssh/*` print
-  key paths and refuses piping them into `xargs cat`, but a command that saves
-  them to a file for a later command to open gets past it. That is the same
-  gap as a path built at run time.
-- **A Codex command you approve to run outside the sandbox.** Only the hook
-  sees it.
-- **A command you type yourself** with `!` in Claude Code. No hook sees it.
-- **What an MCP server does in its own process.** The hooks see the arguments of
-  an MCP call, not the files the server opens.
+`agent-jail` (OS kernel layer) and `key-guard.py` (tool-call hook layer) are
+complementary:
+
+- **`agent-jail` stops**: runtime-constructed paths, scripts, symlinks, child
+  processes, and local MCP servers from reading masked local keys/credentials
+  (`~/.ssh/*` private keys, `~/.config/chezmoi/key.txt`, `~/.secrets`, AWS,
+  Cargo, Hugging Face, other agents' auth) or writing outside the workspace and
+  allowed caches (plus `.git/hooks` and `.git/config` under `bwrap`).
+- **`key-guard.py` stops** what `agent-jail` intentionally leaves reachable:
+  1. `unjail` / `DOTFILES_NO_JAIL=1` sessions (e.g. running `chezmoi apply`).
+  2. Direct reads of `~/.config/gh/hosts.yml` (kept readable inside `agent-jail`
+     for `gh pr`/`gh run`) and `gh auth token` / `gh secret` / `gh repo delete`.
+  3. Vault extraction commands (`rbw get`/`dump`, `secret-tool lookup`/`search`),
+     whose agent/D-Bus sockets live in `$XDG_RUNTIME_DIR`.
+  4. Remote SSH commands (`ssh sicc 'cat ~/.ssh/id_ed25519'`) run over the
+     forwarded `SSH_AUTH_SOCK`.
+  5. Direct tool reads of the invoked agent's own auth file (`~/.codex/auth.json`,
+     `~/.claude/.credentials.json`, `~/.pi/agent/auth.json`).
+  6. Non-shell entrypoints (IDE plugins, `agy acp`, `remote-control`).
+- **What neither layer stops**:
+  - Commands you run explicitly outside the jail (`unjail`) if an agent computes
+    a secret path dynamically at runtime, or an MCP server process running in an
+    unjailed session.
+  - A command you type yourself with `!` in Claude Code (no hook sees it).
+  - A remote host's filesystem if a command runs a script remotely over `ssh`
+    that constructs a key path dynamically.
 
 A passphrase on the key is the one guard that no agent gets around:
 `ssh-keygen -p -f ~/.ssh/id_ed25519`. An agent that reads the file then gets

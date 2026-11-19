@@ -45,6 +45,25 @@ else assumed.
 
 ## Day to day
 
+Checked on 2026-11-19. The unified `dotfiles` CLI (built in Rust under
+[cli/](cli/Cargo.toml), with a zero-dependency Python fallback at
+`~/.local/bin/dotfiles`) wraps daily operations, dynamic Zsh tab completion
+(via `fzf-tab`), and an interactive Ratatui TUI:
+
+```sh
+dotfiles                            # interactive Ratatui TUI (5 tabs + live Theme Studio)
+dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents and sandbox
+dotfiles sync [--update] [--dry-run] # chezmoi apply/update bypassing the metered proxy
+dotfiles theme [variant]            # switch or preview colour theme across tools
+dotfiles fetch <status|sync|outdated|update>
+dotfiles jail [options] -- <cmd>    # run any command inside agent-jail
+dotfiles agent <skills|plugins|status>
+dotfiles check                      # pre-commit + full tests/ suite via `mise run check`
+dotfiles completion <zsh|bash|fish> # cached automatically on fpath in zsh
+```
+
+Raw `chezmoi` commands work directly as well:
+
 ```sh
 chezmoi diff          # what would change
 chezmoi apply         # make ~ match this repo
@@ -57,8 +76,9 @@ Editing a file in `~` does not update the repository. Use `chezmoi edit`, or
 edit in place and run `chezmoi re-add`.
 
 `chezmoi edit` takes a target path, so it cannot reach the files that have no
-target: `.chezmoidata/*.toml`, `.chezmoiignore` and `.chezmoiexternal.toml` are
-read by chezmoi and never deployed. Reach them through the source tree:
+target: `.chezmoidata/*.toml`, `.chezmoiignore`, `.chezmoiexternal.toml`, `cli/`,
+`tests/`, and `mise.toml` are read by chezmoi or development tooling and never
+deployed. Reach them through the source tree:
 
 ```sh
 chezmoi cd                                              # then edit normally
@@ -90,13 +110,13 @@ git dlog                     # Difftastic patch history
 ## Themes
 
 ```sh
-theme                          # pick a variant with fzf (--help for the plain list)
-theme rose-pine-dawn           # switch everywhere and apply
+dotfiles                       # open the TUI Theme Studio (Tab 2) for truecolor live preview
+dotfiles theme rose-pine-dawn  # switch everywhere and apply (`theme` alias works too)
 theme --dry-run catppuccin-mocha
 ```
 
-One switch covers btop, kitty, Neovim, zathura, fzf, starship and Herdr.
-Variants use the slug upstream uses.
+One switch covers btop, kitty, tmux, Neovim, zathura, fzf, starship and Herdr
+(plus the `dotfiles` TUI itself). Variants use the slug upstream uses.
 
 Zathura starts with recolouring off on every variant, so documents keep their
 own colours; `Ctrl+R` turns it on in the open window.
@@ -153,19 +173,31 @@ file for Claude Code's SessionStart hook and, for Codex, a block written into
 one command. If you want it always on in Claude Code anyway, upstream's own flag
 file still works by hand: `touch ~/.claude/.i-have-adhd-always`.
 
-## Context for agents
+## Context and 4-agent control plane
 
-[private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md) holds the user's preferences for
-every project, such as where knowledge is written down, keeping downloads off
-the metered proxy, and how documents state facts. It deploys to
-`~/.agents/AGENTS.md` and is linked as `~/.claude/CLAUDE.md`,
-`~/.codex/AGENTS.md`, `~/.gemini/AGENTS.md` and `~/.pi/agent/AGENTS.md` on
-`agent-tools` machines, so Claude Code, Codex, Antigravity CLI and Pi all load
-the same file. Pi reads `~/.agents/skills` directly.
+Checked on 2026-11-19. Four primary coding agents share one declarative control
+plane in [agents.toml](.chezmoidata/agents.toml) and one security policy in
+[policy.toml](.chezmoidata/policy.toml): **Claude Code (`claude`)**, **Codex
+(`codex`)**, **Antigravity CLI (`agy`)**, and **Pi (`pi`)**.
 
-Antigravity CLI (`agy`) also reads the shared skills through symlinks in
-`~/.gemini/config/skills/`. See
-[Shared agent skills](private_dot_agents/skills/README.md) for discovery and setup.
+- **Shared instructions**: [private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md)
+  holds user preferences for every project. It deploys to `~/.agents/AGENTS.md`
+  and links to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/AGENTS.md`,
+  and `~/.pi/agent/AGENTS.md` on `agent-tools` machines.
+- **Shared skills**: `~/.agents/skills/` is read directly by Pi and symlinked
+  for Claude Code, Codex, and Antigravity CLI (`~/.gemini/config/skills/`). See
+  [Shared agent skills](private_dot_agents/skills/README.md).
+- **Non-destructive reconciliation**: `dot_local/libexec/dotfiles/executable_agent-reconcile.py`
+  merges shared privacy defaults (`claude_profile` in `chezmoi.toml`, Codex
+  `[otel]`), `gh` rules, MCP servers, `key-guard.py` (`PreToolUse`),
+  `agent-notify.py` (`Stop`), and Pi settings/packages into each agent's native
+  config on `chezmoi apply` while preserving local auth, sessions, and Herdr hooks.
+- **Default OS sandboxing (`agent-jail`)**: Interactive `zsh` and `bash` shells
+  wrap `claude`, `codex`, `agy`, and `pi` in `agent-jail --wrap <agent>`
+  (`bwrap` primary backend, rootless Linux Landlock fallback for `sicc`). Use
+  `unjail <agent>` (or `DOTFILES_NO_JAIL=1`) to bypass when editing `~` (for
+  example running `chezmoi apply`), and `DOTFILES_JAIL_RW=/path1:/path2` to add
+  extra writable directories. See [docs/secrets.md](docs/secrets.md).
 
 [AGENTS.md](AGENTS.md), which `CLAUDE.md` imports, is for an agent changing this
 repository. It covers the source-versus-target model, the naming attributes, and
@@ -250,10 +282,12 @@ per-platform release `manifest` in [downloads.toml](.chezmoidata/downloads.toml)
 linking `~/.local/opt/dotfiles/bin/agy` to the downloaded `antigravity` binary.
 `~/.config/dotfiles/env.sh` exports `AGY_CLI_DISABLE_AUTO_UPDATE=true` so
 background self-updates do not replace the managed payload; upgrade through
-`dotfiles-fetch update agy`. Shared context comes from `~/.gemini/AGENTS.md` and
+`dotfiles fetch update agy`. Interactive sessions default to
+`--dangerously-skip-permissions` inside `agent-jail`, while `key-guard.py`
+(`PreToolUse`) hard-denies secret reads and `agent-notify.py` handles `Stop`
+notifications. Shared context comes from `~/.gemini/AGENTS.md` and
 `~/.gemini/config/skills/`, linked by `agent-skills.sh`. `agent-reconcile.py`
-merges `key-guard` (`PreToolUse`), `agent-notify` (`Stop`), and any declared
-MCP servers into `~/.gemini/config/hooks.json` and
+merges hooks and declared MCP servers into `~/.gemini/config/hooks.json` and
 `~/.gemini/config/mcp_config.json` while preserving Herdr and local entries.
 
 ## Herdr
@@ -292,7 +326,7 @@ plugins and `agy`, and `config` paths that only a machine selecting it receives.
 
 | bundle | contents |
 | --- | --- |
-| `core` | shell, editor, navigation — every machine, including a login node |
+| `core` | shell, editor, navigation, `mise` (locked `gitleaks`, `zoxide`), and static Rust `dotfiles` CLI — every machine, including a login node |
 | `dev-c` `dev-py` `dev-web` `dev-tex` | per-language build and format tooling |
 | `lsp` | language servers and the binaries Neovim's plugins call |
 | `media` | audio, video and image conversion |
@@ -302,7 +336,7 @@ plugins and `agy`, and `config` paths that only a machine selecting it receives.
 | `extras` | convenience and diagnostics, including `tre`; nothing load-bearing |
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | eighteen more document, slide, design, math, CJK and emoji families |
-| `research` | Zotero and pinned Better BibTeX |
+| `research` | Zotero, pinned Better BibTeX, and pinned Extra Meta |
 | `agent-tools` | pinned Pi and RTK binaries, Antigravity CLI (`agy`), Node/npm, shared Pi settings and extensions, on every computing machine except the vps |
 | `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
@@ -406,11 +440,14 @@ preferences, so change them in Zotero if needed.
 
 ## Checks
 
-Checked on 2026-10-18. [CI](.github/workflows/ci.yml) has two jobs:
+Checked on 2026-11-19. [CI](.github/workflows/ci.yml) has three jobs, plus
+[release-cli.yml](.github/workflows/release-cli.yml) for `cli-v*` static musl
+releases (`linux-amd64` and `linux-arm64`):
 
 | Job | Scope |
 | --- | --- |
 | `checks` | Pre-commit hooks (except local Gitleaks) plus `tests.test_suite.UnitChecks` |
+| `cli` | `cargo clippy --all-targets -- -D warnings`, `cargo test`, and `zsh -n` on generated completions |
 | `smoke` | `tests.test_suite.ChezmoiChecks` plus clean no-key `container` apply and verify |
 
 CI skips external theme downloads. It does not enforce specific package versions,
@@ -422,6 +459,8 @@ Run the unified CLI and full local test suite:
 dotfiles doctor                     # host health, drift, tools, agents and sandbox
 dotfiles doctor --json              # machine-readable report
 mise run check                      # pre-commit + full tests/ suite (unittest/pytest)
+mise run cli-check                  # Rust clippy + unit tests for cli/
+mise run build-cli                  # build release Rust CLI locally into ~/.local/opt/dotfiles/bin
 python3 -m unittest discover -s tests -v
 ```
 
@@ -463,10 +502,12 @@ Two things are encrypted: `~/.ssh/config`, and the machine pages of the
 plaintext where either lives, and on a machine with the key `git diff` shows
 both decrypted.
 
-Claude Code and Codex are kept from reading ssh private keys, the age identity
-and local credential stores, and pre-commit hooks refuse a commit that contains
-secrets. [docs/secrets.md](docs/secrets.md#keeping-agents-away-from-private-keys)
-lists what each agent gets and what it does not stop.
+All four primary coding agents (`claude`, `codex`, `agy`, `pi`) are protected by
+two complementary layers — default OS-level `agent-jail` (`bwrap` / Landlock)
+plus `key-guard.py` hooks and native rules — and pre-commit/pre-push hooks
+refuse commits containing secrets.
+[docs/secrets.md](docs/secrets.md#keeping-agents-away-from-private-keys) lists
+what each layer enforces and its boundaries.
 
 [.chezmoidata/machines.toml](.chezmoidata/machines.toml) is deliberately in the
 clear: bundles, roles and filesystem layout are not secrets. Addresses, account

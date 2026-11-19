@@ -29,9 +29,9 @@ deployed, so edit them in the source tree directly. `chezmoi edit` cannot reach
 them.
 
 A file at the root that is repository infrastructure, such as `README.md`,
-`docs/`, this file and `CLAUDE.md`, needs an entry in `.chezmoiignore`, or
-chezmoi deploys it into `~`. Names starting with `.`, such as `.github` and
-`.gitattributes`, are skipped by chezmoi on their own.
+`docs/`, `cli/`, `tests/`, `mise.toml`, this file and `CLAUDE.md`, needs an
+entry in `.chezmoiignore`, or chezmoi deploys it into `~`. Names starting with
+`.`, such as `.github` and `.gitattributes`, are skipped by chezmoi on their own.
 
 Per-machine behaviour is a lookup in `.chezmoidata/machines.toml`, keyed by the
 `machine` answer given at `chezmoi init`, never by the hostname. Run `machine`
@@ -97,6 +97,8 @@ chezmoi diff                          # what apply would change in ~
 chezmoi apply && chezmoi verify
 dotfiles doctor                       # host health, drift, tools, agents and sandbox
 mise run check                        # pre-commit + full tests/ suite
+mise run cli-check                    # Rust clippy + unit tests for cli/
+mise run build-cli                    # local release build -> ~/.local/opt/dotfiles/bin/dotfiles
 ```
 
 To check a change without touching `~`, for example from a git worktree, point
@@ -144,10 +146,14 @@ program also writes: `kitten ssh` rewrites `~/.terminfo` on every connection,
 and chezmoi would then stop a non-interactive apply to ask about the change.
 `python3 tests/check_fetch.py` tests `dotfiles-fetch` in seconds.
 
-CI in `.github/workflows/ci.yml` has two jobs:
+CI in `.github/workflows/ci.yml` has three jobs, plus
+`.github/workflows/release-cli.yml` for `cli-v*` static musl releases
+(`linux-amd64` and `linux-arm64`):
 
 - `checks`: pre-commit hooks, excluding the local Gitleaks scan, plus
   `python3 -m unittest tests.test_suite.UnitChecks -v`.
+- `cli`: `cargo clippy --all-targets -- -D warnings`, `cargo test`, and
+  `zsh -n` verification of generated completions for `cli/`.
 - `smoke`: `python3 -m unittest tests.test_suite.ChezmoiChecks -v`, then apply
   and verify in a clean container with no key or software bundles. Skip external
   theme downloads.
@@ -208,9 +214,9 @@ here may be another agent, on another machine.
 | Topic | Place |
 | --- | --- |
 | Install, daily use, themes, bundles | [README.md](README.md) |
-| Encryption design and key handling | [docs/secrets.md](docs/secrets.md) |
+| Unified Rust CLI and Ratatui TUI | [cli/Cargo.toml](cli/Cargo.toml) |
+| Encryption design, `agent-jail`, key handling | [docs/secrets.md](docs/secrets.md) |
 | Open work | [docs/todo.md](docs/todo.md) |
-| Refactoring roadmap | [docs/refactor-plan.md](docs/refactor-plan.md) |
 | Shell setup constraints | [dot_sh_utils/CAVEATS.md](dot_sh_utils/CAVEATS.md) |
 | Preferences for every project | [private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md), deployed as `~/.agents/AGENTS.md` |
 | Shared agent skills | [private_dot_agents/skills/README.md](private_dot_agents/skills/README.md) |

@@ -10,8 +10,7 @@
 #
 #   btop       catppuccin_mocha    scheme prefix, underscore
 #   kitty      mocha               no prefix
-#   alacritty  catppuccin-mocha    scheme prefix, hyphen
-#   nvim       catppuccin-mocha
+#   nvim       catppuccin-mocha    scheme prefix, hyphen
 #   zathura    catppuccin-mocha    the files already in this repository
 #
 # Coverage is complete as of 2026-09-19. Starship was the one gap: its configs

@@ -55,7 +55,3 @@ fonts, and its dock, default terminal and `zotero://` handler name the
 
 - Neovim's Mason installs language servers on a machine without the `lsp`
   bundle. That is the intended fallback.
-
-## Refactoring roadmap
-
-See [refactor-plan.md](refactor-plan.md).
