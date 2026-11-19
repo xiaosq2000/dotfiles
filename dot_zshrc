@@ -550,6 +550,28 @@ prepend_env PATH "${HOME}/.local/share/mise/shims"
 remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
 prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
 
+# Default interactive Antigravity CLI sessions to --dangerously-skip-permissions.
+# Secret reads remain hard-blocked by ~/.gemini/config/hooks.json (key-guard.py).
+# Pass through subcommands and help/version flags unchanged; use `command agy` to bypass.
+if has agy; then
+    agy() {
+        case "${1:-}" in
+            acp|agent|agents|changelog|help|install|mcp|mic-serve|models|plugin|plugins|remote-control|update|-h|--help|-v|--version)
+                command agy "$@"
+                return
+                ;;
+        esac
+        local _arg
+        for _arg in "$@"; do
+            if [[ "$_arg" == "--dangerously-skip-permissions" ]]; then
+                command agy "$@"
+                return
+            fi
+        done
+        command agy --dangerously-skip-permissions "$@"
+    }
+fi
+
 setup_texlive() {
     local texlive_root texlive_dir texlive_version texlive_bin
     local latest_root=""

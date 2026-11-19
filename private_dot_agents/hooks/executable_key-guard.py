@@ -41,10 +41,27 @@ SSH_PATH = re.compile(r"(?<![\w.-])\.ssh(?![\w.-])(?:/([^\s\"'`;|&<>()]*))?")
 KEY_NAME = re.compile(r"(?<![\w.-])id_(?:(?:rsa|dsa|ecdsa|ed25519|xmss)(?:_sk)?|\*)[\w*?.-]*")
 
 # The chezmoi age identity and its config directory (~/.config/chezmoi/).
-# Only explicit non-secret files (chezmoi.toml, chezmoistate.boltdb) without
-# traversal are allowed under .config/chezmoi; globs, directory reads, and any
-# key* path under chezmoi/ are refused.
-SAFE_CHEZMOI_FILES = {"chezmoi.toml", "chezmoistate.boltdb"}
+# Loaded from ~/.config/dotfiles/policy.json (rendered from .chezmoidata/policy.toml)
+# when present, with fail-closed embedded defaults when running standalone.
+def _load_secrets_policy():
+    policy_file = os.path.join(
+        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+        "dotfiles",
+        "policy.json",
+    )
+    try:
+        with open(policy_file, encoding="utf-8") as fh:
+            data = json.load(fh)
+        secrets = data.get("secrets") if isinstance(data, dict) else None
+        if isinstance(secrets, dict):
+            return secrets
+    except (OSError, ValueError):
+        pass
+    return {}
+
+
+_POLICY = _load_secrets_policy()
+SAFE_CHEZMOI_FILES = set(_POLICY.get("safe_chezmoi_files") or ("chezmoi.toml", "chezmoistate.boltdb"))
 CHEZMOI_CONFIG_PATH = re.compile(r"(?<![\w.-])\.config/chezmoi(?:/([^\s\"'`;|&<>()]*))?")
 AGE_IDENTITY = re.compile(
     r"chezmoi/(?:[^\s\"'`;|&<>()]*/)?(?:key[^/\s\"'`;|&<>()]*|[^/\s\"'`;|&<>()]*[*?\[{][^/\s\"'`;|&<>()]*)"
@@ -64,10 +81,12 @@ CREDENTIAL_PATTERNS = (
 )
 
 # Vault CLI subcommands that print stored secrets (including the age identity).
-VAULT_READ_COMMANDS = {
-    "rbw": {"get", "dump"},
-    "secret-tool": {"lookup", "search"},
-}
+_raw_vault = _POLICY.get("vault_read_commands")
+VAULT_READ_COMMANDS = (
+    {k: set(v) for k, v in _raw_vault.items() if isinstance(v, list)}
+    if isinstance(_raw_vault, dict) and _raw_vault
+    else {"rbw": {"get", "dump"}, "secret-tool": {"lookup", "search"}}
+)
 
 # Modes allowed when running chmod against ~/.ssh or an ssh private key.
 RESTRICTIVE_CHMOD_MODES = {
@@ -822,7 +841,7 @@ def main():
             print(reason, file=sys.stderr)
             return 2
     if is_agy:
-        print("{}")
+        print(json.dumps({"decision": "allow"}))
     return 0
 
 

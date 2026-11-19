@@ -78,6 +78,8 @@ jobs:
         run: python3 .github/scripts/check-git-difftastic.py
       - name: Test 4-agent control plane reconciler and notify hook offline
         run: python3 .github/scripts/check-agent-reconcile.py
+      - name: Test agent-jail sandbox and unified policy.toml
+        run: python3 .github/scripts/check-agent-jail.py
       - name: Test Pi settings and package repair offline
         run: python3 .github/scripts/check-pi.py
       - name: Test Zotero profile setup offline

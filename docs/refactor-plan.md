@@ -49,11 +49,11 @@ Checked on 2026-11-19.
 - Implemented one Python 3.10+ reconciler (`dot_local/libexec/dotfiles/executable_agent-reconcile.py`) behind 6 thin `modify_*.tmpl` shims across Claude Code (`settings.json`), Codex (`config.toml`, `hooks.json`), Antigravity CLI (`~/.gemini/config/hooks.json`, `mcp_config.json`), and Pi (`settings.json` + `dotfiles-guard.ts` extension + `pi-subagents` `inheritGlobalContext: true` and `defaultSubagentOnlyExtensions`).
 - Extended `key-guard.py` with native Antigravity CLI `PreToolUse` JSON protocol (`{"decision":"deny"}` / `{}` passthrough), added unified `agent-notify.py` completion hook across all 4 agents, retired imperative `ai-privacy` (Claude `strict`/`remote-control` via `chezmoi.toml` `[data].claude_profile`), pinned `i-have-adhd` to commit `1ecea1993b7f`, and compressed `herdr/SKILL.md` with `disable-model-invocation: true`.
 
-### Wave 4 — OS-level capability sandbox (`agent-jail`) & unified security policy
+### Wave 4 — OS-level capability sandbox (`agent-jail`) & unified security policy (Done on 2026-11-19)
 
-- Consolidate protected paths and allowlists into `.chezmoidata/policy.toml` shared by `agent-jail`, multi-protocol `key-guard` (Claude/Codex + `agy` JSON + Pi extension), and git secret hooks.
-- Implement opt-in `agent-jail` (`bwrap` with Landlock fallback for rootless HPC) mounting workspace RW and masking SSH private keys, age identity, `~/.secrets`, cloud/CLI/agent auth files while exposing `SSH_AUTH_SOCK`.
-- Complete Codex `/hooks` trust across hosts and transition SSH private keys to passphrase or FIDO2 (`ed25519-sk`).
+- Consolidated protected paths, allowlists, vault rules, and sandbox profiles into `.chezmoidata/policy.toml` (deployed to `~/.config/dotfiles/policy.json`), shared by `agent-jail`, `key-guard.py`, `check-encrypted.sh`, and `check-secrets.py`.
+- Implemented opt-in `dot_local/bin/executable_agent-jail` with Linux `bwrap` primary backend (RO root, RW workspace, RO `.git/hooks` & `.git/config`, `/dev/null` secret masks, empty `tmpfs` `~/.secrets`, `SSH_AUTH_SOCK` & `HERDR_SOCKET_PATH` passthrough, agent-scoped own-auth isolation) and rootless Linux Landlock LSM fallback (`ABI v1+`, verified live on kernel 7.0.0) for HPC login nodes (`sicc`), plus automated tests in `.github/scripts/check-agent-jail.py`.
+- Remaining operator follow-up across hosts: complete Codex `/hooks` trust on each machine (including the new `Stop` notify hook) and optionally transition SSH private keys to passphrase or FIDO2 (`ed25519-sk`).
 
 ### Wave 5 — Unified `dotfiles` CLI, `pytest` suite, and 5-machine rollout
 

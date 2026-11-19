@@ -76,6 +76,7 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-render-") as temporary:
                 text=True, check=True,
             )
         tomllib.loads(entries[".config/starship.toml"]["contents"])
+        json.loads(entries[".config/dotfiles/policy.json"]["contents"])
         if ".config/mise/config.toml" in entries:
             tomllib.loads(entries[".config/mise/config.toml"]["contents"])
         else:

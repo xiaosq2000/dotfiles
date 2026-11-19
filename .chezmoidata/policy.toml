@@ -1,0 +1,71 @@
+# Single source of truth for secret protection policy shared by:
+#   - agent-jail (dot_local/bin/executable_agent-jail) via ~/.config/dotfiles/policy.json
+#   - key-guard.py (private_dot_agents/hooks/executable_key-guard.py)
+#   - Git secret hooks (.github/scripts/check-encrypted.sh and check-secrets.py)
+#
+# Checked on 2026-11-19.
+
+[policy.repo]
+# Source paths (relative to chezmoi source root) where every tracked file MUST
+# be an encrypted_*.age ciphertext with a valid age header.
+protected_source_dirs = [
+    "private_dot_ssh/",
+    "private_dot_agents/skills/private_machines/references/",
+]
+# Narrow allowlist for files containing placeholder /home/<name>/ paths.
+home_path_exceptions = [
+    "private_dot_config/btop/modify_btop.conf",
+    ".github/scripts/check-key-guard.sh",
+]
+
+[policy.secrets]
+age_identity = ".config/chezmoi/key.txt"
+safe_chezmoi_files = ["chezmoi.toml", "chezmoistate.boltdb"]
+ssh_public_names = [
+    "config",
+    "known_hosts",
+    "known_hosts.old",
+    "authorized_keys",
+    "authorized_keys2",
+]
+ssh_public_dirs = ["config.d"]
+masked_dirs = [".secrets"]
+masked_files = [
+    ".config/chezmoi/key.txt",
+    ".config/gh/hosts.yml",
+    ".aws/credentials",
+    ".netrc",
+    ".git-credentials",
+    ".huggingface/token",
+    ".cache/huggingface/token",
+    ".claude/.credentials.json",
+    ".codex/auth.json",
+    ".pi/agent/auth.json",
+]
+
+[policy.secrets.vault_read_commands]
+rbw = ["get", "dump"]
+secret-tool = ["lookup", "search"]
+
+[policy.jail]
+# OpenSSH 10 user-namespace fix: hide /etc/ssh/ssh_config.d inside bwrap so ssh
+# does not abort with "Bad owner or permissions" on root-owned drop-ins.
+hide_system_dirs = ["/etc/ssh/ssh_config.d"]
+# Always writable caches/runtimes (any masked_files inside them are re-masked on top).
+common_rw_dirs = [".cache", ".local/state"]
+
+[policy.jail.agents.claude]
+rw_dirs = [".claude"]
+own_auth_files = [".claude/.credentials.json"]
+
+[policy.jail.agents.codex]
+rw_dirs = [".codex"]
+own_auth_files = [".codex/auth.json"]
+
+[policy.jail.agents.agy]
+rw_dirs = [".gemini"]
+own_auth_files = []
+
+[policy.jail.agents.pi]
+rw_dirs = [".pi"]
+own_auth_files = [".pi/agent/auth.json"]

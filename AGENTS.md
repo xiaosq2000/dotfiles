@@ -72,8 +72,9 @@ A new encrypted target needs two more changes:
 
 1. An entry in the no-key block at the end of `.chezmoiignore`. Without it, a
    machine with no key aborts its whole apply at that file. CI catches this.
-2. If it sits in a new directory, that directory in `PROTECTED` in
-   `.github/scripts/check-encrypted.sh`.
+2. If it sits in a new directory, add that directory to `protected_source_dirs`
+   in `.chezmoidata/policy.toml` (read by both `.github/scripts/check-encrypted.sh`
+   and `.github/scripts/check-secrets.py`).
 
 Agents cannot read ssh private keys or the age identity. A hook and each
 agent's own read rules refuse any call that could read one, as `docs/secrets.md`

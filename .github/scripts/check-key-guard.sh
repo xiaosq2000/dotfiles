@@ -165,7 +165,8 @@ EOF
 
 # Antigravity CLI (agy) PreToolUse JSON protocol checks:
 # - Refuse must exit 0 and print {"decision": "deny", "reason": "..."} on stdout.
-# - Passthrough must exit 0 and print {} (never "allow", which would bypass agy's own approval rules).
+# - Non-sensitive calls exit 0 and print {"decision": "allow"} (agy PreToolUse
+#   requires an explicit decision and fails closed on empty {}).
 python3 - "$guard" <<'PY' || status=1
 import json
 import subprocess
@@ -206,7 +207,7 @@ for name, args in (
     ("grep_search", {"Query": "id_ed25519", "SearchPath": "/home/alice/repo/docs"}),
 ):
     out = call_agy(name, args)
-    assert out == {}, (name, args, out)
+    assert out == {"decision": "allow"}, (name, args, out)
 PY
 
 if [ "$status" -eq 0 ]; then

@@ -11,14 +11,34 @@ import tempfile
 from pathlib import Path
 
 VERSION = "8.30.1"
-PROTECTED = ("private_dot_ssh/", "private_dot_agents/skills/private_machines/references/")
-AGE_HEADERS = (b"-----BEGIN AGE ENCRYPTED FILE-----\n", b"age-encryption.org/v1\n")
-OID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
-HOME_PATH = re.compile(rb"/home/[A-Za-z0-9._-]+/")
-HOME_EXCEPTIONS = {
+_DEFAULT_PROTECTED = (
+    "private_dot_ssh/",
+    "private_dot_agents/skills/private_machines/references/",
+)
+_DEFAULT_HOME_EXCEPTIONS = {
     "private_dot_config/btop/modify_btop.conf",
     ".github/scripts/check-key-guard.sh",
 }
+
+
+def _load_repo_policy():
+    policy_path = Path(__file__).resolve().parents[2] / ".chezmoidata/policy.toml"
+    try:
+        import tomllib
+
+        repo_policy = tomllib.loads(policy_path.read_text(encoding="utf-8"))["policy"]["repo"]
+        return (
+            tuple(repo_policy["protected_source_dirs"]),
+            set(repo_policy["home_path_exceptions"]),
+        )
+    except Exception:
+        return _DEFAULT_PROTECTED, set(_DEFAULT_HOME_EXCEPTIONS)
+
+
+PROTECTED, HOME_EXCEPTIONS = _load_repo_policy()
+AGE_HEADERS = (b"-----BEGIN AGE ENCRYPTED FILE-----\n", b"age-encryption.org/v1\n")
+OID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
+HOME_PATH = re.compile(rb"/home/[A-Za-z0-9._-]+/")
 
 
 class Refused(Exception):

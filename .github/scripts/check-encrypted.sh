@@ -21,12 +21,32 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
-# Source paths, not destination paths. Everything below each one must be
-# ciphertext; add a directory here when it starts holding encrypted files.
-PROTECTED=(
-    private_dot_ssh/
-    private_dot_agents/skills/private_machines/references/
-)
+# Source paths read from .chezmoidata/policy.toml [policy.repo].protected_source_dirs
+# so every secret guard shares one source of truth.
+PROTECTED=()
+if command -v python3 >/dev/null 2>&1 && [ -f .chezmoidata/policy.toml ]; then
+    while IFS= read -r entry; do
+        [ -n "$entry" ] && PROTECTED+=("$entry")
+    done < <(
+        python3 - <<'PY'
+from pathlib import Path
+try:
+    import tomllib
+    data = tomllib.loads(Path(".chezmoidata/policy.toml").read_text(encoding="utf-8"))
+    for item in data["policy"]["repo"]["protected_source_dirs"]:
+        print(item)
+except Exception:
+    print("private_dot_ssh/")
+    print("private_dot_agents/skills/private_machines/references/")
+PY
+    )
+fi
+if [ "${#PROTECTED[@]}" -eq 0 ]; then
+    PROTECTED=(
+        private_dot_ssh/
+        private_dot_agents/skills/private_machines/references/
+    )
+fi
 
 status=0
 while IFS= read -r -d '' f; do

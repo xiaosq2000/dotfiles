@@ -181,11 +181,34 @@ and reconciled by `dot_local/libexec/dotfiles/executable_agent-reconcile.py`.
 | --- | --- | --- |
 | Claude Code | `Read` and `Bash(gh ...)` deny/ask rules, strict/remote-control privacy env, and the `key-guard.py` hook | `private_dot_claude/modify_private_settings.json.tmpl` |
 | Codex | The `key-guard` bubblewrap permissions profile, `[otel]` privacy defaults, `rules/gh.rules` (including `gh api` prompt), and the `key-guard.py` hook | `private_dot_codex/modify_private_config.toml.tmpl` and `private_dot_codex/modify_private_hooks.json.tmpl` |
-| Antigravity CLI (`agy`) | `PreToolUse` JSON hook delegating to `key-guard.py` (`{"decision":"deny"}` / `{}` passthrough) | `private_dot_gemini/private_config/modify_private_hooks.json.tmpl` |
+| Antigravity CLI (`agy`) | `PreToolUse` JSON hook delegating to `key-guard.py` (`{"decision":"deny"}` on secrets, `{"decision":"allow"}` otherwise — enforced even with `--dangerously-skip-permissions`) | `private_dot_gemini/private_config/modify_private_hooks.json.tmpl` |
 | Pi | Local `dotfiles-guard.ts` extension delegating `tool_call` checks to `key-guard.py` (including foreground subagents via `defaultSubagentOnlyExtensions`) | `private_dot_pi/private_agent/extensions/dotfiles-guard.ts` and `modify_private_settings.json.tmpl` |
 
-Opt-in OS-level `bwrap`/Landlock sandboxing (`agent-jail`) and unified
-`policy.toml` live in Wave 4 of [refactor-plan.md](refactor-plan.md).
+Opt-in OS-level sandboxing (`agent-jail`) and unified security policy live in
+`.chezmoidata/policy.toml` (rendered to `~/.config/dotfiles/policy.json`, also
+read by `key-guard.py`, `check-encrypted.sh`, and `check-secrets.py`).
+
+### Opt-in OS sandbox (`agent-jail`)
+
+Run any coding agent or shell command inside an OS-enforced sandbox:
+
+```sh
+agent-jail claude                  # bwrap (or Landlock on rootless HPC)
+agent-jail codex                   # keeps ~/.codex/auth.json; masks SSH/age/other agents
+agent-jail agy                     # masks all private keys, age key, ~/.secrets, other agents
+agent-jail pi                      # keeps ~/.pi/agent/auth.json; masks everything else
+agent-jail --dry-run -- bash       # inspect exact mounts and masked paths
+```
+
+- **Primary backend (`bwrap`)**: mounts `/` read-only, current workspace RW,
+  `.git/hooks` and `.git/config` read-only, `/etc/ssh/ssh_config.d` hidden,
+  `~/.secrets` as empty `tmpfs`, and SSH private keys / age identity / CLI &
+  other-agent credentials over-mounted with `/dev/null`, while passing through
+  `SSH_AUTH_SOCK` and `HERDR_SOCKET_PATH`.
+- **Rootless HPC fallback (`landlock`)**: invokes Linux Landlock LSM (ABI v1+)
+  directly via syscalls with no root or user namespaces required; blocks reads
+  of masked secrets (`EACCES`) and restricts writes to the workspace, `/tmp`,
+  caches, and the invoked agent's own state directory.
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
 guarded file, and tells the agent to ask you instead. The exceptions are

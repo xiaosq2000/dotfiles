@@ -22,6 +22,7 @@ python3 .github/scripts/check-render.py
 python3 .github/scripts/check-fetch.py
 python3 .github/scripts/check-git-difftastic.py
 python3 .github/scripts/check-agent-reconcile.py
+python3 .github/scripts/check-agent-jail.py
 python3 .github/scripts/check-pi.py
 python3 .github/scripts/check-zotero-profile.py
 python3 .github/scripts/check-herdr-theme.py
