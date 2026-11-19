@@ -57,7 +57,7 @@ dotfiles sync [--update] [--dry-run] # chezmoi apply/update bypassing the metere
 dotfiles theme [variant]            # switch or preview colour theme across tools
 dotfiles fetch <status|sync|outdated|update>
 dotfiles jail [options] -- <cmd>    # run any command inside agent-jail
-dotfiles agent <skills|plugins|status>
+dotfiles agent <skills|status>
 dotfiles check                      # pre-commit + full tests/ suite via `mise run check`
 dotfiles completion <zsh|bash|fish> # cached automatically on fpath in zsh
 ```
@@ -148,30 +148,6 @@ field every variant has.
 
 To restyle another tool, add a key to each scheme file and reference it from
 that tool's template. Never hard-code a variant name in a config file.
-
-## Agent output
-
-```sh
-/i-have-adhd                   # Claude Code, for this session
-$i-have-adhd                   # Codex, for this session
-stop adhd mode                 # end it
-```
-
-[i-have-adhd](https://github.com/ayghri/i-have-adhd) reshapes agent output to be
-acted on: next action first, numbered steps, no preamble.
-[agent-plugins.sh](dot_local/libexec/dotfiles/executable_agent-plugins.sh) installs it wherever
-`claude` or `codex` is on PATH, and does nothing where neither is, so it is not
-gated on the machine's bundles.
-
-Installing changes nothing by itself, which is the point. The skill is opt-in on
-both agents, so neither model can reach for it unasked and `chezmoi update` does
-not quietly change how a machine's agents talk.
-
-There is deliberately no always-on switch. On every machine it would need a flag
-file for Claude Code's SessionStart hook and, for Codex, a block written into
-`~/.codex/AGENTS.md`, which is the file every agent shares, only to save typing
-one command. If you want it always on in Claude Code anyway, upstream's own flag
-file still works by hand: `touch ~/.claude/.i-have-adhd-always`.
 
 ## Context and 4-agent control plane
 

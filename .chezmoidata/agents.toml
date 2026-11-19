@@ -101,12 +101,6 @@ ssh_drop_ins = "/etc/ssh/ssh_config.d"
 ".git/hooks" = "read"
 ".git/config" = "read"
 
-[agents.plugins.i-have-adhd]
-# Pinned commit checked on 2026-11-19.
-repo = "ayghri/i-have-adhd"
-plugin = "i-have-adhd@i-have-adhd"
-rev = "1ecea1993b7fce257ffbd686c070948b5e07eda6"
-
 # Declarative MCP server registry synced to Claude Code, Codex, and agy.
 # Add entries as [agents.mcp.<server-id>] with:
 #   targets = ["claude", "codex", "agy"]

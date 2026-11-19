@@ -233,16 +233,6 @@ fn handle_key(
                 pause: true,
             });
         }
-        KeyCode::Char('p') if app.tab == Tab::Agents => {
-            let helper = home_dir().join(".local/libexec/dotfiles/agent-plugins.sh");
-            app.pending_action = Some(PendingAction::RunCommand {
-                label: "agent plugins".to_string(),
-                prog: helper.to_string_lossy().into_owned(),
-                args: vec![],
-                strip_proxy: true,
-                pause: true,
-            });
-        }
         KeyCode::Char('u') if app.tab == Tab::Toolchain => {
             let helper = home_dir().join(".local/bin/dotfiles-fetch");
             app.pending_action = Some(PendingAction::RunCommand {

@@ -6,7 +6,7 @@
 #
 # Runs after 05-pixi (which installs mise) and before 07-sheldon (which uses
 # sheldon), 08-source-repo (pre-commit + gitleaks), 10-pnpm (pnpm + node),
-# 93-i-have-adhd (claude/codex), and 95-pi-packages (pi + node).
+# and 95-pi-packages (pi + node).
 #
 # config sha256: {{ includeTemplate "private_dot_config/mise/config.toml.tmpl" . | sha256sum }}
 # lock sha256: {{ include "private_dot_config/mise/mise.lock" | sha256sum }}

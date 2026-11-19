@@ -56,7 +56,7 @@ enum Commands {
         args: Vec<String>,
     },
 
-    /// Manage shared coding agent skills, plugins, or inspect 4-agent status
+    /// Manage shared coding agent skills or inspect 4-agent status
     Agent {
         #[command(subcommand)]
         action: AgentAction,
@@ -98,11 +98,6 @@ enum Commands {
 enum AgentAction {
     /// Inspect or sync shared agent skills
     Skills {
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
-    /// Inspect or sync pinned agent plugins
-    Plugins {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -234,7 +229,6 @@ fn run() -> anyhow::Result<i32> {
         Some(Commands::Jail { args }) => commands::exec_helper("agent-jail", &args, false),
         Some(Commands::Agent { action }) => match action {
             AgentAction::Skills { args } => commands::exec_helper("agent-skills.sh", &args, true),
-            AgentAction::Plugins { args } => commands::exec_helper("agent-plugins.sh", &args, true),
             AgentAction::Status { json } => commands::cmd_agent_status(json),
         },
         Some(Commands::Sync {

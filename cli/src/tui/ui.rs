@@ -672,7 +672,7 @@ fn render_agents(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
 
     lines.push(Line::raw(""));
     lines.push(Line::from(Span::styled(
-        "  Enter/x: dry-run agent-jail plan · S: agent skills · p: agent plugins",
+        "  Enter/x: dry-run agent-jail plan · S: agent skills",
         Style::default().fg(p.accent),
     )));
 
@@ -881,7 +881,7 @@ fn render_footer(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
     let hints = match app.tab {
         Tab::Overview => "j/k select · 1-5/Tab switch · s sync · d diff · c check · r refresh · ? help · q quit",
         Tab::Themes => "j/k live-preview · Enter apply theme · p dry-run diff · 1-5/Tab switch · q quit",
-        Tab::Agents => "j/k select agent · Enter/x jail dry-run · S skills · p plugins · r refresh · q quit",
+        Tab::Agents => "j/k select agent · Enter/x jail dry-run · S skills · r refresh · q quit",
         Tab::Toolchain => "j/k select tool · u fetch outdated · f fetch sync · r refresh · q quit",
         Tab::Machines => "j/k select machine · 1-5/Tab switch · r refresh · ? help · q quit",
     };
@@ -918,7 +918,7 @@ fn render_help_modal(frame: &mut Frame, p: TuiTheme, area: Rect) {
         kv("r", "Async refresh doctor & host state", p),
         kv("s / d / c", "Overview: sync dotfiles / chezmoi diff / mise check", p),
         kv("Enter / p", "Themes: apply selected theme / dry-run diff", p),
-        kv("Enter / x / S / p", "Agents: jail dry-run / skills / plugins", p),
+        kv("Enter / x / S", "Agents: jail dry-run / skills", p),
         kv("u / f", "Toolchain: fetch outdated / fetch sync", p),
         kv("? / Esc / q", "Toggle help / Quit", p),
     ];

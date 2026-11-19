@@ -7,8 +7,8 @@ Subcommands:
     theme [args...]             switch or preview colour theme across tools
     fetch [args...]             run dotfiles-fetch (status, sync, outdated, update)
     jail [args...]              run a command or coding agent inside agent-jail
-    agent <skills|plugins|status> [args...]
-                                manage shared agent skills, plugins, or inspect status
+    agent <skills|status> [args...]
+                                manage shared agent skills or inspect status
     sync [--dry-run]            apply dotfiles directly (bypassing metered proxy)
     check                       run repository test suite via `mise run check`
     bootstrap                   apply dotfiles and run `dotfiles doctor`
@@ -435,13 +435,11 @@ def cmd_doctor(argv):
 
 def cmd_agent(argv):
     if not argv or argv[0] in ("-h", "--help"):
-        print("usage: dotfiles agent <skills|plugins|status> [args...]")
+        print("usage: dotfiles agent <skills|status> [args...]")
         return 0
     sub, rest = argv[0], argv[1:]
     if sub == "skills":
         return _exec_helper("agent-skills.sh", rest, libexec=True)
-    if sub == "plugins":
-        return _exec_helper("agent-plugins.sh", rest, libexec=True)
     if sub == "status":
         parser = argparse.ArgumentParser(prog="dotfiles agent status")
         parser.add_argument("--json", action="store_true")
