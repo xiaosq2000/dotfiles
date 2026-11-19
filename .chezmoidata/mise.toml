@@ -1,11 +1,105 @@
-# Cross-platform CLI tools managed by `mise` with SHA-256 verification in
-# private_dot_config/mise/mise.lock. A bundle in .chezmoidata/tools.toml selects
-# entries by id; chezmoi renders ~/.config/mise/config.toml and runs
-# `mise install --locked`.
+# Cross-platform CLIs, language runtimes, LSPs, and coding agents managed by
+# `mise` with multi-arch SHA-256 verification in private_dot_config/mise/mise.lock.
+#
+# A bundle in .chezmoidata/tools.toml selects entries by id; chezmoi renders
+# ~/.config/mise/config.toml and runs `mise install --locked`.
+# Optional fields:
+#   bin             shim/binary name checked by `dotfiles doctor` (defaults to id)
+#   version_prefix  tag prefix passed through to mise (e.g. "cli-v")
 #
 # To upgrade a tool: change its version here, run `mise run lock-tools`, review
 # the lockfile diff, and run `chezmoi apply`.
 # Checked on 2026-11-19.
+
+################################################################################
+# Core shell, editor, navigation, and repo guardrails
+################################################################################
+
+[mise.dotfiles-cli]
+tool = "github:xiaosq2000/dotfiles"
+version = "0.1.1"
+version_prefix = "cli-v"
+bin = "dotfiles"
+
+[mise.sheldon]
+tool = "aqua:rossmacarthur/sheldon"
+version = "0.8.5"
+
+[mise.neovim]
+tool = "aqua:neovim/neovim"
+version = "0.12.6"
+bin = "nvim"
+
+[mise.tree-sitter]
+tool = "aqua:tree-sitter/tree-sitter"
+version = "0.27.2"
+
+[mise.fzf]
+tool = "aqua:junegunn/fzf"
+version = "0.75.0"
+
+[mise.starship]
+tool = "aqua:starship/starship"
+version = "1.27.0"
+
+[mise.eza]
+tool = "aqua:eza-community/eza"
+version = "0.23.5"
+
+[mise.ripgrep]
+tool = "aqua:BurntSushi/ripgrep"
+version = "15.2.0"
+bin = "rg"
+
+[mise.fd]
+tool = "aqua:sharkdp/fd"
+version = "10.5.2"
+
+[mise.jq]
+tool = "aqua:jqlang/jq"
+version = "1.8.2"
+
+[mise.yazi]
+tool = "aqua:sxyazi/yazi"
+version = "26.9.1"
+
+[mise.tmux]
+tool = "aqua:tmux/tmux-builds"
+version = "3.8"
+
+[mise.btop]
+tool = "aqua:aristocratos/btop"
+version = "1.4.8"
+
+[mise.dust]
+tool = "aqua:bootandy/dust"
+version = "1.2.7"
+
+[mise.7zip]
+tool = "aqua:ip7z/7zip"
+version = "26.06"
+bin = "7zz"
+
+[mise.git-lfs]
+tool = "aqua:git-lfs/git-lfs"
+version = "3.8.1"
+
+[mise.lazygit]
+tool = "aqua:jesseduffield/lazygit"
+version = "0.66.3"
+
+[mise.difftastic]
+tool = "aqua:Wilfred/difftastic"
+version = "0.72.0"
+bin = "difft"
+
+[mise.pre-commit]
+tool = "aqua:pre-commit/pre-commit"
+version = "4.7.0"
+
+[mise.shellcheck]
+tool = "aqua:koalaman/shellcheck"
+version = "0.11.0"
 
 [mise.gitleaks]
 # Must match VERSION in .github/scripts/check-secrets.py.
@@ -16,6 +110,66 @@ version = "8.30.1"
 tool = "aqua:ajeetdsouza/zoxide"
 version = "0.10.0"
 
+################################################################################
+# Language runtimes, build systems, and formatters
+################################################################################
+
+[mise.cmake]
+tool = "aqua:Kitware/CMake"
+version = "4.5.0"
+
+[mise.ninja]
+tool = "aqua:ninja-build/ninja"
+version = "1.13.2"
+
+[mise.uv]
+tool = "aqua:astral-sh/uv"
+version = "0.13.9"
+
+[mise.ruff]
+tool = "aqua:astral-sh/ruff"
+version = "0.17.5"
+
+[mise.ty]
+tool = "aqua:astral-sh/ty"
+version = "0.0.106"
+
+[mise.node]
+tool = "node"
+version = "24.22.3"
+
+[mise.pnpm]
+tool = "aqua:pnpm/pnpm"
+version = "12.21.0"
+
+[mise.deno]
+tool = "deno"
+version = "2.9.8"
+
+[mise.prettierd]
+tool = "npm:@fsouza/prettierd"
+version = "0.29.0"
+
+[mise.tex-fmt]
+tool = "github:WGUNDERWOOD/tex-fmt"
+version = "0.5.7"
+
+################################################################################
+# Language servers and linters
+################################################################################
+
+[mise.lua-language-server]
+tool = "aqua:LuaLS/lua-language-server"
+version = "3.19.2"
+
+[mise.taplo]
+tool = "aqua:tamasfe/taplo"
+version = "0.10.0"
+
+[mise.marksman]
+tool = "aqua:artempyanykh/marksman"
+version = "2026-02-08"
+
 [mise.stylua]
 tool = "aqua:JohnnyMorganz/StyLua"
 version = "2.6.0"
@@ -24,17 +178,64 @@ version = "2.6.0"
 tool = "aqua:mvdan/sh"
 version = "3.14.1"
 
-[mise.prettierd]
-tool = "npm:@fsouza/prettierd"
-version = "0.29.0"
+[mise.bash-language-server]
+tool = "npm:bash-language-server"
+version = "5.8.1"
+
+[mise.yaml-language-server]
+tool = "npm:yaml-language-server"
+version = "2.0.0"
+
+[mise.vscode-langservers-extracted]
+tool = "npm:vscode-langservers-extracted"
+version = "4.10.0"
+bin = "vscode-json-language-server"
+
+[mise.dockerfile-language-server-nodejs]
+tool = "npm:dockerfile-language-server-nodejs"
+version = "0.15.0"
+bin = "docker-langserver"
+
+################################################################################
+# Secrets, GitHub, and extras
+################################################################################
+
+[mise.age]
+tool = "aqua:FiloSottile/age"
+version = "1.3.2"
+
+[mise.sops]
+tool = "aqua:getsops/sops"
+version = "3.13.3"
+
+[mise.gh]
+tool = "aqua:cli/cli"
+version = "2.105.0"
 
 [mise.tre]
 tool = "github:dduan/tre"
 version = "0.4.0"
 
-[mise.herdr]
-tool = "github:herdrdev/herdr"
-version = "0.9.4"
+[mise.fastfetch]
+tool = "aqua:fastfetch-cli/fastfetch"
+version = "2.71.0"
+
+[mise.lazydocker]
+tool = "aqua:jesseduffield/lazydocker"
+version = "0.25.2"
+
+################################################################################
+# Coding agents and workspaces
+################################################################################
+
+[mise.codex]
+tool = "aqua:openai/codex"
+version = "0.170.0"
+
+[mise.claude-code]
+tool = "aqua:anthropics/claude-code"
+version = "2.1.327"
+bin = "claude"
 
 [mise.pi]
 tool = "github:earendil-works/pi"
@@ -43,3 +244,7 @@ version = "1.5.2"
 [mise.rtk]
 tool = "github:rtk-ai/rtk"
 version = "1.0.0"
+
+[mise.herdr]
+tool = "github:herdrdev/herdr"
+version = "0.9.4"

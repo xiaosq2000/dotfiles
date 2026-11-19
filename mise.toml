@@ -81,7 +81,11 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-mise-lock-") as tmp:
     cfg.mkdir()
     lines = ["[settings]", "lockfile = true", "", "[tools]"]
     for _id, spec in catalog.items():
-        lines.append(f'"{spec["tool"]}" = "{spec["version"]}"')
+        if "version_prefix" in spec:
+            val = '{ version = "' + spec["version"] + '", version_prefix = "' + spec["version_prefix"] + '" }'
+            lines.append(f'"{spec["tool"]}" = {val}')
+        else:
+            lines.append(f'"{spec["tool"]}" = "{spec["version"]}"')
     config_file = cfg / "config.toml"
     config_file.write_text("\\n".join(lines) + "\\n")
 

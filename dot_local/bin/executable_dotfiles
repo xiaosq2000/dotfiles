@@ -192,7 +192,12 @@ def _check_toolchain(home, bundles, data):
                 selected_mise.append(tool_id)
 
     shims_dir = home / ".local/share/mise/shims"
-    missing_mise = [t for t in selected_mise if not (shims_dir / t).exists()]
+    mise_catalog = data.get("mise") or {}
+    missing_mise = [
+        t
+        for t in selected_mise
+        if not (shims_dir / ((mise_catalog.get(t) or {}).get("bin") or t)).exists()
+    ]
 
     state_dir = Path(os.environ.get("XDG_STATE_HOME") or (home / ".local/state")) / "dotfiles"
     pending = [name for name in ("mise-pending", "zotero-pending") if (state_dir / name).exists()]

@@ -42,14 +42,6 @@ terminalFamily = "Maple Mono NF CN"
 # Applications
 ################################################################################
 
-# Unified Rust dotfiles CLI + Ratatui TUI built from cli/ in this repository.
-# Released as static musl binaries by .github/workflows/release-cli.yml.
-# Checked on 2026-11-19.
-[downloads.dotfiles-cli]
-github = "xiaosq2000/dotfiles"
-asset = { linux-amd64 = "dotfiles-cli-*-linux-amd64.tar.gz", linux-arm64 = "dotfiles-cli-*-linux-arm64.tar.gz" }
-bin = ["dotfiles"]
-
 [downloads.kitty]
 github = "kovidgoyal/kitty"
 asset = { linux-amd64 = "kitty-*-x86_64.txz", linux-arm64 = "kitty-*-arm64.txz" }

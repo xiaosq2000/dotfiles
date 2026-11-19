@@ -11,7 +11,7 @@
 #
 # It reruns whenever the rendered text changes, which includes these lines:
 #
-#   pre-commit at apply time: {{ if stat (joinPath .chezmoi.homeDir ".pixi/bin/pre-commit") }}present{{ else }}absent{{ end }}
+#   pre-commit at apply time: {{ if or (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/pre-commit")) (stat (joinPath .chezmoi.homeDir ".pixi/bin/pre-commit")) }}present{{ else }}absent{{ end }}
 #   age identity at apply time: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
 #   chezmoi binary: {{ .chezmoi.executable }}
 #   hook config sha256: {{ include ".pre-commit-config.yaml" | sha256sum }}
@@ -59,8 +59,11 @@ fi
 
 # The hooks. `pre-commit install` reads default_install_hook_types from the
 # config, so this installs both the pre-commit and the commit-msg hook.
+export PATH="$HOME/.local/share/mise/shims:${PIXI_HOME:-$HOME/.pixi}/bin:$PATH"
 PRE_COMMIT=""
-if command -v pre-commit >/dev/null 2>&1; then
+if [ -x "$HOME/.local/share/mise/shims/pre-commit" ]; then
+    PRE_COMMIT="$HOME/.local/share/mise/shims/pre-commit"
+elif command -v pre-commit >/dev/null 2>&1; then
     PRE_COMMIT="$(command -v pre-commit)"
 elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/pre-commit" ]; then
     PRE_COMMIT="${PIXI_HOME:-$HOME/.pixi}/bin/pre-commit"

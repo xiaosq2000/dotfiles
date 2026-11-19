@@ -6,7 +6,7 @@
 # on the network, and on a machine that has none it would fail once per shell.
 # Doing it here means starting a shell only ever reads the lock file.
 #
-# Runs after 05-pixi, which is what installs the sheldon binary.
+# Runs after 06-mise, which installs the sheldon binary.
 #
 # `lock`, not `lock --update`. This installs what is missing and leaves the
 # existing clones at the commit they are on, so applying does not silently move
@@ -18,22 +18,25 @@
 
 set -eu
 
-{{ if not (has "sheldon" (includeTemplate "software-selection" . | fromJson).packages) -}}
+{{- $sel := includeTemplate "software-selection" . | fromJson }}
+{{ if not (or (has "sheldon" $sel.mise) (has "sheldon" $sel.packages)) -}}
 echo "machine {{ .machine }} does not select sheldon; skipping plugin setup"
 exit 0
 {{ end -}}
 
 # Resolve the binary rather than trusting PATH: chezmoi runs this from a
 # temporary file with whatever environment `chezmoi apply` inherited, and a
-# non-interactive shell here does not necessarily have ~/.pixi/bin on PATH.
-if command -v sheldon >/dev/null 2>&1; then
+# non-interactive shell here does not necessarily have mise shims on PATH.
+if [ -x "$HOME/.local/share/mise/shims/sheldon" ]; then
+    SHELDON="$HOME/.local/share/mise/shims/sheldon"
+elif command -v sheldon >/dev/null 2>&1; then
     SHELDON="$(command -v sheldon)"
 elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/sheldon" ]; then
     SHELDON="${PIXI_HOME:-$HOME/.pixi}/bin/sheldon"
 else
     echo "sheldon not found; it comes from the core bundle, so check that" >&2
-    echo "'pixi global sync' succeeded earlier in this apply" >&2
-    exit 1
+    echo "'mise install --locked' succeeded earlier in this apply" >&2
+    exit 0
 fi
 
 # Clear metered proxy variables so plugin clones run direct.

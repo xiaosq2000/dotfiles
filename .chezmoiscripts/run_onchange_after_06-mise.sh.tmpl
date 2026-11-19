@@ -4,8 +4,9 @@
 # Sync locked cross-platform CLIs managed by mise from ~/.config/mise/config.toml
 # and ~/.config/mise/mise.lock.
 #
-# Runs after 05-pixi (which installs mise and nodejs) and before 08-source-repo
-# (whose git hooks use gitleaks) and 95-pi-packages (which uses pi).
+# Runs after 05-pixi (which installs mise) and before 07-sheldon (which uses
+# sheldon), 08-source-repo (pre-commit + gitleaks), 10-pnpm (pnpm + node),
+# 93-i-have-adhd (claude/codex), and 95-pi-packages (pi + node).
 #
 # config sha256: {{ includeTemplate "private_dot_config/mise/config.toml.tmpl" . | sha256sum }}
 # lock sha256: {{ include "private_dot_config/mise/mise.lock" | sha256sum }}
@@ -14,7 +15,7 @@
 
 set -eu
 
-export PATH="${PIXI_HOME:-$HOME/.pixi}/bin:$PATH"
+export PATH="$HOME/.local/share/mise/shims:${PIXI_HOME:-$HOME/.pixi}/bin:$PATH"
 PENDING="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/mise-pending"
 
 if command -v mise >/dev/null 2>&1; then

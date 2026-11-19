@@ -1,114 +1,99 @@
-# Named sets of pixi packages, and the binaries each package should expose.
+# Named software bundles combining three complementary layers:
 #
-# ~/.pixi/manifests/pixi-global.toml used to be a hand-held file: you ran
-# `pixi global install X`, then `chezmoi re-add`, and the install was the edit.
-# That was pleasant to use and gave every machine the same 34 environments,
-# which is how a shared HPC login node ended up with ffmpeg, resvg, deno and a
-# clang-tools environment exposing 60 binaries. The manifest is now rendered
-# from the bundles a machine selects in .chezmoidata/machines.toml.
+#   packages   conda-forge / source-built pixi global environments (kept slim
+#              for rootless HPC ABI strongholds, C/C++ shared-lib tools, Python
+#              CLI packages, and git-built recipes like um-vpn)
+#   mise       multi-arch SHA-256 locked CLIs, runtimes, LSPs, and coding agents
+#              from .chezmoidata/mise.toml (locked in private_dot_config/mise/mise.lock)
+#   downloads  non-CLI GUI bundles, fonts, Zotero .xpi plugins, and agy manifest
+#              from .chezmoidata/downloads.toml (installed by dotfiles-fetch)
+#   config     destination paths deployed only when the bundle is selected
 #
-# The cost of that change is real and worth stating: `pixi global install X` is
-# no longer how you add a tool, because the next `chezmoi apply` would render
-# the manifest again and remove it. Add the package to a bundle here instead,
-# then `chezmoi apply`.
-#
-# One environment per package, not one per bundle. Grouping a bundle into a
-# single environment would make its packages share one solve, so a single
-# conflicting dependency would break every tool in the bundle at once.
-#
-# `exposed` is mandatory, not a nicety. Omit it and `pixi global sync` installs
-# the environment and links nothing at all, leaving the tool present but
-# invisible. It also has to be accurate: naming a binary the package does not
-# ship fails the sync. Several conda-forge packages carry an entire runtime
-# alongside the tool you wanted, so exposing everything would be actively
-# harmful. bash-language-server ships node, npm and openssl; cmake-language-
-# server ships python3.14, tclsh and wish; taplo ships openssl.
-#
-# A bundle may also name `downloads`, ids from .chezmoidata/downloads.toml for
-# software conda-forge does not package, and `config`, destination paths that
-# only a machine selecting the bundle should receive. .chezmoiignore skips the
-# config of every unselected bundle; a machine that drops a bundle keeps the
-# files it already has, the way an application keeps its profile.
+# One pixi environment per package keeps dependency solves isolated, and
+# `[packages.<name>].exposed` lists exact binaries so bundled runtimes stay off PATH.
+# Checked on 2026-11-19.
 
 ################################################################################
 # Bundles
 ################################################################################
 
 [bundles.core]
-description = "Shell, editor and navigation. Every machine, including a login node."
+description = "Shell, editor, navigation, and dotfiles CLI. Every machine, including a login node."
 packages = [
     "chezmoi",
     "mise",
     "zsh",
+    "mosh",
+    "sqlite",
+]
+mise = [
+    "dotfiles-cli",
     "sheldon",
-    "nvim",
-    # nvim's treesitter config calls treesitter.install(), which shells out to
-    # the tree-sitter CLI to build parsers, so it belongs wherever nvim does
-    # rather than in the lsp bundle a login node does not take.
-    "tree-sitter-cli",
+    "neovim",
+    "tree-sitter",
     "fzf",
     "starship",
     "eza",
     "ripgrep",
-    "fd-find",
+    "fd",
     "jq",
     "yazi",
     "tmux",
-    "mosh",
     "btop",
     "dust",
-    "p7zip",
-    "sqlite",
+    "7zip",
     "git-lfs",
     "lazygit",
     "difftastic",
     "pre-commit",
     "shellcheck",
+    "gitleaks",
+    "zoxide",
 ]
-# Pinned CLI binaries with committed SHA-256 lockfile entries.
-mise = ["gitleaks", "zoxide"]
-# Static Rust dotfiles CLI + Ratatui TUI (Python fallback remains in ~/.local/bin).
-downloads = ["dotfiles-cli"]
 
 [bundles.dev-c]
 description = "C and C++ build and format tooling"
-packages = ["cmake", "ninja", "clang-format", "clang-tools"]
+packages = ["clang-format", "clang-tools"]
+mise = ["cmake", "ninja"]
 
 [bundles.dev-py]
 description = "Python tooling"
-packages = ["uv", "ruff", "ty"]
+packages = []
+mise = ["uv", "ruff", "ty"]
 
 [bundles.dev-web]
-description = "Node, Deno and the JavaScript formatters"
-packages = ["nodejs", "pnpm", "deno"]
-mise = ["prettierd"]
+description = "Node, pnpm, Deno and JavaScript formatters"
+packages = []
+mise = ["node", "pnpm", "deno", "prettierd"]
 
 [bundles.dev-tex]
 description = "LaTeX tooling"
-packages = ["tex-fmt"]
+packages = []
+mise = ["tex-fmt"]
 config = [".config/tex-fmt", ".latexmkrc"]
 
 [bundles.lsp]
-description = "Language servers and the external binaries Neovim's plugins call"
+description = "Language servers and external binaries Neovim's plugins call"
 # Everything here has a matching entry in nvim's lua/plugins/lsp/lspconfig.lua.
 # That file falls back to :MasonInstall when a binary is missing, so a machine
 # without this bundle still gets working LSP, just installed per machine and
-# unmanaged. luarocks is not a server; it is what the Lua plugins shell out to.
-# codespell is not one either; nvim-lint runs it on prose filetypes.
-# tree-sitter-cli was here and moved to core, because nvim is in core and its
-# treesitter config cannot build a parser without it.
+# unmanaged.
 packages = [
+    "cmake-language-server",
+    "codespell",
+]
+mise = [
+    "node",
     "lua-language-server",
+    "taplo",
+    "marksman",
+    "stylua",
+    "shfmt",
     "bash-language-server",
     "yaml-language-server",
     "vscode-langservers-extracted",
-    "marksman",
-    "cmake-language-server",
     "dockerfile-language-server-nodejs",
-    "taplo",
-    "codespell",
 ]
-mise = ["stylua", "shfmt"]
 
 [bundles.media]
 description = "Audio and video processing"
@@ -120,18 +105,20 @@ packages = ["huggingface_hub"]
 
 [bundles.secrets]
 description = "age, sops and the Bitwarden client; see docs/secrets.md"
-packages = ["age", "go-sops", "rbw", "libsecret"]
+packages = ["rbw", "libsecret"]
+mise = ["age", "sops"]
 
 [bundles.github]
 # Its own bundle rather than part of core, because core reaches the vps, and a
 # GitHub login is one of the credentials that must never be kept there.
 description = "The GitHub CLI; every machine except the vps"
-packages = ["gh"]
+packages = []
+mise = ["gh"]
 
 [bundles.extras]
 description = "Convenience and diagnostics; nothing here is load-bearing"
-packages = ["fastfetch", "speedtest-cli", "git-filter-repo", "lazydocker"]
-mise = ["tre"]
+packages = ["speedtest-cli", "git-filter-repo"]
+mise = ["tre", "fastfetch", "lazydocker"]
 
 [bundles.desktop]
 description = "Kitty, its terminal font, and the configuration of the GUI programs"
@@ -168,9 +155,9 @@ downloads = ["zotero", "better-bibtex", "extra-meta"]
 config = [".config/dotfiles/zotero-user.js"]
 
 [bundles.agent-tools]
-description = "Pinned Pi with shared extensions, RTK, Antigravity CLI, and shared agent configurations"
-packages = ["nodejs"]
-mise = ["pi", "rtk"]
+description = "Locked Codex, Claude Code, Pi, RTK, Node, Antigravity CLI, and shared 4-agent control plane"
+packages = []
+mise = ["node", "codex", "claude-code", "pi", "rtk"]
 downloads = ["agy"]
 config = [
     ".claude",
@@ -202,40 +189,18 @@ config = [
 ]
 
 ################################################################################
-# Exposed binaries
+# Exposed pixi binaries
 #
 # A package with no entry here exposes exactly one binary, named after the
-# package. Only the exceptions are listed, which is most of the interesting
-# ones. Every list below was read off an installed environment rather than
-# guessed, because an inaccurate name fails the sync. An entry can also name a
-# `git` repository, which pixi builds the package from instead of taking it
-# from conda-forge.
+# package. Only the exceptions are listed.
 ################################################################################
-
-[packages.ripgrep]
-exposed = ["rg"]
-
-[packages.fd-find]
-exposed = ["fd"]
-
-[packages.p7zip]
-exposed = ["7z", "7za", "7zr"]
 
 [packages.sqlite]
 exposed = ["sqlite3"]
 
-[packages.yazi]
-exposed = ["ya", "yazi"]
-
 [packages.mosh]
 # The launcher calls mosh-client, and remote sessions need mosh-server.
 exposed = ["mosh", "mosh-client", "mosh-server"]
-
-[packages.difftastic]
-exposed = ["difft"]
-
-[packages.cmake]
-exposed = ["ccmake", "cmake", "cpack", "ctest"]
 
 [packages.clang-tools]
 # Deliberately four of the sixty binaries this package ships. The rest are
@@ -248,37 +213,8 @@ exposed = [
     "run-clang-tidy",
 ]
 
-[packages.uv]
-exposed = ["uv", "uvx"]
-
-[packages.nodejs]
-exposed = ["node", "npm", "npx"]
-
-[packages.pnpm]
-exposed = ["pn", "pnpm", "pnpx", "pnx"]
-
-[packages.vscode-langservers-extracted]
-# The package also ships css, html, eslint and markdown servers. Only the JSON
-# one is wired up in nvim, and exposing the others would put five more binaries
-# on PATH for nothing.
-exposed = ["vscode-json-language-server"]
-
-[packages.dockerfile-language-server-nodejs]
-# The package names the npm project; the binary it ships is docker-langserver,
-# and its nodejs dependency stays inside the environment.
-exposed = ["docker-langserver"]
-
-[packages.tree-sitter-cli]
-exposed = ["tree-sitter"]
-
 [packages.ffmpeg]
 exposed = ["ffmpeg", "ffplay", "ffprobe"]
-
-[packages.age]
-exposed = ["age", "age-keygen"]
-
-[packages.go-sops]
-exposed = ["sops"]
 
 [packages.rbw]
 exposed = ["rbw", "rbw-agent"]
@@ -294,9 +230,6 @@ git = "https://github.com/xiaosq2000/um-vpn"
 rev = "bb5d34dcd5602812bf165f18f7b4ca39e6cdf5cf"
 exposed = ["um-vpn"]
 
-[packages.fastfetch]
-exposed = ["fastfetch", "flashfetch"]
-
 [packages.speedtest-cli]
 exposed = ["speedtest", "speedtest-cli"]
 
@@ -304,7 +237,5 @@ exposed = ["speedtest", "speedtest-cli"]
 exposed = ["hf", "huggingface-cli", "tiny-agents"]
 
 [packages.zsh]
-# The package also ships a zsh-5.9 binary, and the old hand-held manifest
-# exposed it. Exposing a version-numbered name means the manifest stops
-# matching the package the day conda-forge ships 5.10.
+# The package also ships a zsh-5.9 binary; expose only `zsh` so upgrades keep matching.
 exposed = ["zsh"]

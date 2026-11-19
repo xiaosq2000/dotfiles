@@ -326,7 +326,7 @@ plugins and `agy`, and `config` paths that only a machine selecting it receives.
 
 | bundle | contents |
 | --- | --- |
-| `core` | shell, editor, navigation, `mise` (locked `gitleaks`, `zoxide`), and static Rust `dotfiles` CLI — every machine, including a login node |
+| `core` | `zsh`, `mosh`, `sqlite`, `chezmoi`, `mise`, plus 22 locked CLIs (`dotfiles`, `nvim`, `tmux`, `fzf`, `rg`, `fd`, `eza`, `yazi`, `starship`, `zoxide`, `lazygit`, `difft`, `sheldon`, `pre-commit`, `gitleaks`, ...) — every machine |
 | `dev-c` `dev-py` `dev-web` `dev-tex` | per-language build and format tooling |
 | `lsp` | language servers and the binaries Neovim's plugins call |
 | `media` | audio, video and image conversion |
@@ -337,7 +337,7 @@ plugins and `agy`, and `config` paths that only a machine selecting it receives.
 | `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
 | `fonts` | eighteen more document, slide, design, math, CJK and emoji families |
 | `research` | Zotero, pinned Better BibTeX, and pinned Extra Meta |
-| `agent-tools` | pinned Pi and RTK binaries, Antigravity CLI (`agy`), Node/npm, shared Pi settings and extensions, on every computing machine except the vps |
+| `agent-tools` | locked Codex, Claude Code, Pi, RTK, Node (`mise`), Antigravity CLI (`agy`), and shared 4-agent control plane, on every computing machine except the vps |
 | `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
 | `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
 | `laptop` | a user service that drops the panel to 60 Hz on battery |
@@ -352,12 +352,18 @@ explicitly, so one dependency conflict cannot break a whole bundle and
 conda-forge runtimes (`node`, `openssl`, `python3.14`, `tclsh`, `wish`) stay off
 `PATH`.
 
-**Locked CLIs (`mise`).** chezmoi renders `~/.config/mise/config.toml` from each
-machine's selected `mise` entries alongside the shared multi-arch
-`~/.config/mise/mise.lock` (`linux-x64` and `linux-arm64`), and runs
-`mise install --locked`, `mise reshim`, and `mise prune --yes`. Shims live in
-`~/.local/share/mise/shims`. To upgrade a tool, update its version in
-`.chezmoidata/mise.toml`, run `mise run lock-tools`, and apply.
+**Locked CLIs, runtimes, LSPs, and agents (`mise`).** `mise` is the primary
+manager for cross-platform CLIs, language runtimes (`node`, `pnpm`, `deno`,
+`uv`, `ruff`, `ty`), language servers, and coding agents (`codex`,
+`claude-code`, `pi`, `rtk`, `herdr`, plus `dotfiles-cli`). chezmoi renders
+`~/.config/mise/config.toml` from each machine's selected `mise` entries
+alongside the shared multi-arch `~/.config/mise/mise.lock` (`linux-x64` and
+`linux-arm64`), and runs `mise install --locked`, `mise reshim`, and
+`mise prune --yes`. Shims live in `~/.local/share/mise/shims`. To upgrade a
+tool, update its version in `.chezmoidata/mise.toml`, run `mise run lock-tools`,
+and apply. `pixi global` stays minimal for conda-forge / HPC ABI strongholds
+(`zsh`, `mosh`, `ffmpeg`, `sqlite`, `clang-tools`, `rbw`, `libsecret`,
+`huggingface_hub`, `um-vpn`).
 
 **Downloads.** chezmoi renders the selection into
 `~/.config/dotfiles/downloads.json` and runs `dotfiles-fetch sync` whenever it

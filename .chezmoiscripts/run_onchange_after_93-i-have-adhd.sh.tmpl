@@ -6,12 +6,12 @@
 # Re-runs when agent-plugins.sh, pinned rev, or Claude/Codex availability changes.
 # agent-plugins.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-plugins.sh" | sha256sum }}
 # i-have-adhd rev: {{ $adhd.rev }}
-# claude at apply time: {{ if or (lookPath "claude") (stat (joinPath .chezmoi.homeDir ".local/bin/claude")) }}present{{ else }}absent{{ end }}
-# codex at apply time: {{ if or (lookPath "codex") (stat (joinPath .chezmoi.homeDir ".local/share/pnpm/bin/codex")) }}present{{ else }}absent{{ end }}
+# claude at apply time: {{ if or (lookPath "claude") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/claude")) (stat (joinPath .chezmoi.homeDir ".local/bin/claude")) }}present{{ else }}absent{{ end }}
+# codex at apply time: {{ if or (lookPath "codex") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/codex")) (stat (joinPath .chezmoi.homeDir ".local/share/pnpm/bin/codex")) }}present{{ else }}absent{{ end }}
 
 set -eu
 
-export PATH="$HOME/.local/share/pnpm/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/share/pnpm/bin:$HOME/.local/bin:$PATH"
 export I_HAVE_ADHD_REPO={{ $adhd.repo | quote }}
 export I_HAVE_ADHD_PLUGIN={{ $adhd.plugin | quote }}
 export I_HAVE_ADHD_REV={{ $adhd.rev | quote }}

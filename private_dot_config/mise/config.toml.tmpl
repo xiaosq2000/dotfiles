@@ -11,6 +11,10 @@ status = { missing_tools = "never", show_env = false, show_tools = false }
 [tools]
 {{- range $id := $selection.mise }}
 {{-   $spec := index $.mise $id }}
+{{-   if hasKey $spec "version_prefix" }}
+{{ $spec.tool | quote }} = { version = {{ $spec.version | quote }}, version_prefix = {{ $spec.version_prefix | quote }} }
+{{-   else }}
 {{ $spec.tool | quote }} = {{ $spec.version | quote }}
+{{-   end }}
 {{- end }}
 {{ end -}}
