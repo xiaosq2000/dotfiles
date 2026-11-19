@@ -69,6 +69,14 @@ asset = "zotero-better-bibtex-*.xpi"
 extract = false
 filename = "better-bibtex.xpi"
 
+# Plugin version and release digest checked on 2026-11-19.
+[downloads.extra-meta]
+github = "xiaosq2000/zotero-extra-meta"
+tag = "v0.1.7"
+asset = "zotero-extra-meta-*.xpi"
+extract = false
+filename = "extra-meta.xpi"
+
 # The secret hooks require this version. Checked on 2026-10-13.
 [downloads.gitleaks]
 github = "gitleaks/gitleaks"

@@ -25,8 +25,6 @@ jobs:
         run: python3 .github/scripts/check-fetch.py
       - name: Test GPU fan control without hardware
         run: python3 .github/scripts/check-gpu-fans.py
-      - name: Test Extra Meta plugin helpers and handlers
-        run: node .github/scripts/check-extra-meta.js
       - name: Test shared UI library
         run: python3 .github/scripts/check-ui.py
       - name: Test zsh worktree picker and TeX Live PATH selection

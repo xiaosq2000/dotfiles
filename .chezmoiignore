@@ -18,10 +18,6 @@ docs
 # line chezmoi would also deploy them to ~/system.
 system
 
-# Local Zotero plugin sources, packed and installed into the default profile
-# by run_onchange_after_96-zotero-profile.sh.tmpl.
-zotero
-
 # Instructions for agents working on this repository, at the root where agents
 # look for them. Deployed, they would land in ~, and ~/CLAUDE.md in particular
 # would load into every Claude Code session started in the home directory.

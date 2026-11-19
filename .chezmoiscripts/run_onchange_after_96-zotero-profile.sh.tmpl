@@ -2,12 +2,13 @@
 #!/usr/bin/env bash
 # Zotero owns its profile. Do not overwrite an existing user.js or edit prefs.js.
 #
-# Re-runs when shared preferences, Better BibTeX pin, Extra Meta source, Zotero
-# profile presence, or a deferred (Zotero-running) pending marker changes.
+# Re-runs when shared preferences, plugin pins/downloads, Zotero profile
+# presence, or a deferred (Zotero-running) pending marker changes.
 # zotero-user.js sha256: {{ include "private_dot_config/dotfiles/zotero-user.js.tmpl" | sha256sum }}
 # better-bibtex tag: {{ (index .downloads "better-bibtex").tag }}
 # better-bibtex downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi") }}present{{ else }}absent{{ end }}
-# extra-meta sha256: {{ range (glob (joinPath .chezmoi.sourceDir "zotero/extra-meta/**")) }}{{ if not (stat .).isDir }}{{ include . | sha256sum }}{{ end }}{{ end }}
+# extra-meta tag: {{ (index .downloads "extra-meta").tag }}
+# extra-meta downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi") }}present{{ else }}absent{{ end }}
 # profiles.ini: {{ if stat (joinPath .chezmoi.homeDir ".zotero/zotero/profiles.ini") }}present{{ else }}absent{{ end }}
 # pending: {{ $pending := joinPath .chezmoi.homeDir ".local/state/dotfiles/zotero-pending" }}{{ if stat $pending }}{{ include $pending | trim }}{{ else }}none{{ end }}
 set -eu
@@ -21,7 +22,6 @@ exec python3 - <<'PY'
 from configparser import ConfigParser, Error
 import fcntl
 import hashlib
-import io
 import json
 import os
 from pathlib import Path
@@ -30,14 +30,15 @@ import shutil
 import sys
 import tempfile
 import time
-from zipfile import BadZipFile, ZIP_DEFLATED, ZipFile, ZipInfo
+from zipfile import BadZipFile, ZipFile
 
 home = Path.home()
 zotero = home / ".zotero/zotero"
 shared = home / ".config/dotfiles/zotero-user.js"
 bbt_plugin = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
 bbt_tag = {{ (index .downloads "better-bibtex").tag | quote }}
-extra_meta_source = Path({{ joinPath .chezmoi.sourceDir "zotero/extra-meta" | quote }})
+extra_meta_plugin = home / ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi"
+extra_meta_tag = {{ (index .downloads "extra-meta").tag | quote }}
 pending_marker = home / ".local/state/dotfiles/zotero-pending"
 MAX_BACKUPS = 5
 deferred = False
@@ -53,8 +54,6 @@ def mark_deferred():
 
 
 def digest(source):
-    if isinstance(source, bytes):
-        return hashlib.sha256(source).hexdigest()
     h = hashlib.sha256()
     with source.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -69,56 +68,12 @@ def parse_version(value):
 
 
 def metadata(source, expected_id):
-    archive = io.BytesIO(source) if isinstance(source, bytes) else source
-    with ZipFile(archive) as package:
+    with ZipFile(source) as package:
         manifest = json.loads(package.read("manifest.json"))
     if manifest["applications"]["zotero"]["id"] != expected_id:
         raise ValueError("unexpected plugin ID")
     version_str = manifest["version"]
     return parse_version(version_str), version_str
-
-
-def collect_plugin_files(source_dir):
-    if source_dir.is_symlink():
-        raise ValueError("plugin source directory must not be a symlink")
-    files = []
-    for name in ("manifest.json", "bootstrap.js"):
-        path = source_dir / name
-        if path.is_symlink():
-            raise ValueError(f"symlink not allowed in plugin source: {name}")
-        if path.is_file():
-            files.append(path)
-    for dirname in ("content", "locale"):
-        root = source_dir / dirname
-        if root.is_symlink():
-            raise ValueError(f"symlink not allowed in plugin source: {dirname}")
-        if not root.is_dir():
-            continue
-        for entry in root.rglob("*"):
-            rel_parts = entry.relative_to(source_dir).parts
-            if any(part.startswith(".") for part in rel_parts):
-                continue
-            if entry.is_symlink():
-                raise ValueError(f"symlink not allowed in plugin source: {entry.relative_to(source_dir).as_posix()}")
-            if entry.is_file():
-                files.append(entry)
-    return sorted(files)
-
-
-def build_xpi(source_dir):
-    files = collect_plugin_files(source_dir)
-    if not files:
-        raise ValueError("plugin source directory is empty")
-    buffer = io.BytesIO()
-    with ZipFile(buffer, "w") as package:
-        for file_path in files:
-            rel = file_path.relative_to(source_dir).as_posix()
-            info = ZipInfo(rel, date_time=(2026, 1, 1, 0, 0, 0))
-            info.compress_type = ZIP_DEFLATED
-            info.create_system = 3
-            info.external_attr = 0o100644 << 16
-            package.writestr(info, file_path.read_bytes())
-    return buffer.getvalue()
 
 
 def prune_backups(backup_dir):
@@ -163,6 +118,10 @@ def addon_status(profile, plugin_id, name, check_updates):
 
 
 def install_plugin(profile, plugin_id, name, source, expected_version=None, check_updates=False):
+    if not source.is_file():
+        warn(f"{name} package missing; run dotfiles-fetch sync and chezmoi apply")
+        mark_deferred()
+        return
     try:
         actual_version, version_str = metadata(source, plugin_id)
         if expected_version is not None and actual_version != parse_version(expected_version):
@@ -206,10 +165,7 @@ def install_plugin(profile, plugin_id, name, source, expected_version=None, chec
             fd, temporary = tempfile.mkstemp(prefix=f".{plugin_id}-", dir=target.parent)
             os.close(fd)
             try:
-                if isinstance(source, bytes):
-                    Path(temporary).write_bytes(source)
-                else:
-                    shutil.copy2(source, temporary)
+                shutil.copy2(source, temporary)
                 os.chmod(temporary, 0o644)
                 if digest(Path(temporary)) != wanted:
                     raise ValueError("plugin copy verification failed")
@@ -223,39 +179,6 @@ def install_plugin(profile, plugin_id, name, source, expected_version=None, chec
             print(f"zotero setup: enable {name} in Zotero's plugin manager if disabled")
     except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
         warn(f"{name} installation skipped ({error})")
-
-
-def install_better_bibtex(profile):
-    if not bbt_plugin.is_file():
-        warn("Better BibTeX package missing; run dotfiles-fetch sync and chezmoi apply")
-        mark_deferred()
-        return
-    install_plugin(
-        profile,
-        "better-bibtex@iris-advies.com",
-        "Better BibTeX",
-        bbt_plugin,
-        expected_version=bbt_tag.removeprefix("v"),
-        check_updates=True,
-    )
-
-
-def install_extra_meta(profile):
-    if not extra_meta_source.is_dir():
-        warn("Extra Meta plugin source missing; skipping")
-        return
-    try:
-        xpi_bytes = build_xpi(extra_meta_source)
-    except (OSError, ValueError) as error:
-        warn(f"Extra Meta installation skipped ({error})")
-        return
-    install_plugin(
-        profile,
-        "extra-meta@dotfiles.local",
-        "Extra Meta",
-        xpi_bytes,
-        check_updates=False,
-    )
 
 
 profiles = ConfigParser(interpolation=None)
@@ -280,8 +203,22 @@ except (OSError, Error, ValueError) as error:
     raise SystemExit(0)
 
 preferences(profile)
-install_better_bibtex(profile)
-install_extra_meta(profile)
+install_plugin(
+    profile,
+    "better-bibtex@iris-advies.com",
+    "Better BibTeX",
+    bbt_plugin,
+    expected_version=bbt_tag.removeprefix("v"),
+    check_updates=True,
+)
+install_plugin(
+    profile,
+    "extra-meta@dotfiles.local",
+    "Extra Meta",
+    extra_meta_plugin,
+    expected_version=extra_meta_tag.removeprefix("v"),
+    check_updates=False,
+)
 
 if deferred:
     pending_marker.parent.mkdir(parents=True, exist_ok=True)

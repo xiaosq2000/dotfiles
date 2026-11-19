@@ -155,9 +155,9 @@ downloads = [
 ]
 
 [bundles.research]
-description = "Zotero and Better BibTeX"
+description = "Zotero, Better BibTeX and Extra Meta"
 packages = []
-downloads = ["zotero", "better-bibtex"]
+downloads = ["zotero", "better-bibtex", "extra-meta"]
 config = [".config/dotfiles/zotero-user.js"]
 
 [bundles.agent-tools]

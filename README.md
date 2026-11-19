@@ -351,17 +351,16 @@ it already has, the way an application keeps its profile.
 
 ### Zotero, Better BibTeX and Extra Meta
 
-Checked on 2026-11-17 with Zotero 10.0.6, Better BibTeX 9.0.71 and Extra Meta 0.1.6.
-The `research` bundle pins the Better BibTeX release in `.chezmoidata/downloads.toml`
-and ships the local `zotero/extra-meta` plugin (`extra-meta@dotfiles.local`), which
-renders `tex.venueabbr`, `tex.affiliation`, `tex.sourcecode`/`tex.projecturl`/OpenReview
-links and `arXiv` as separate columns and editable Info rows.
-`dotfiles-fetch` downloads Better BibTeX and checks the published digest. An
-apply installs both plugins in the default Zotero profile. It leaves identical
-installations unchanged. If Zotero is running, an install or upgrade waits until
-you close Zotero and run `chezmoi apply` again. It saves a copy of any replaced
-plugin in `~/.local/state/dotfiles/zotero-plugins/`. It will not downgrade a newer
-installation or replace an existing plugin symlink.
+Checked on 2026-11-19 with Zotero 10.0.6, Better BibTeX 9.0.71 and Extra Meta 0.1.7.
+The `research` bundle pins both Better BibTeX and
+[Extra Meta](https://github.com/xiaosq2000/zotero-extra-meta) (`extra-meta@dotfiles.local`)
+in `.chezmoidata/downloads.toml`. `dotfiles-fetch` downloads both `.xpi` release
+assets and checks their published digests. An apply installs both plugins in the
+default Zotero profile and leaves identical installations unchanged. If Zotero is
+running, an install or upgrade waits until you close Zotero and run
+`chezmoi apply` again. It saves replaced plugins in
+`~/.local/state/dotfiles/zotero-plugins/` (pruning to the five newest backups).
+It will not downgrade a newer installation or replace an existing plugin symlink.
 
 On a new profile, open Zotero and enable Better BibTeX and Extra Meta in the plugin
 manager. For Better BibTeX, set automatic updates to Off in the plugin's settings on

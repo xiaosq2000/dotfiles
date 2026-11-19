@@ -23,16 +23,10 @@ Checked on 2026-11-19.
 
 ## Waves
 
-### Wave 0 — Clean slate, retirements, and P0 hardening
+### Wave 0 — Clean slate, retirements, and P0 hardening (Done on 2026-11-19)
 
-- **PR 0A (dotfiles repo)**:
-  - Retire `alacritty`, `kmonad`, `opencode`, `aider`, `.condarc`, `dot_sh_utils/tools/`, and dead shell helpers; add retired managed paths to `.chezmoiremove`; ignore `.agents/`, `.aws/`, `.claude/`, `.codex/` in `.gitignore`.
-  - Add `private_` (`0700`/`0600`) to all 4 agent directories/configs and gate `.claude`/`.codex`/`.gemini`/`.pi` under `agent-tools`.
-  - Patch all verified `key-guard.py` bypasses, expand protected credential targets, remove `@~/.codex/RTK.md` from shared `AGENTS.md`, and make `ste-lint.py` executable.
-  - Fix P0 bugs: `dot_latexmkrc` (drop global `--shell-escape` and `$HOME/scripts`, gate under `dev-tex`), `power-tunables.service` (drop `RemainAfterExit=yes`), `kitty.conf.tmpl` (slim to ~50 active lines, `socket-only`, add `~/.pixi/bin` to `exe_search_path`), `basics.sh` (drop global `LD_LIBRARY_PATH`, fix `MANPATH`), `dot_zshrc` (drop `.tmpl`, fix TeX `INFOPATH`/`MANPATH`, `dircolors` order, `xclip`, `TERM=dumb` starship guard, `chezmoi edit` aliases, `$EPOCHREALTIME`), Neovim (`0.13` `ui2` guard, `lualine`, `folding`, `kitty_scrollback` gating, `vimtex` scoping, `clangd`, `bashls`), `refresh-rate-on-power`, `zathura`, `zotero-user.js.tmpl`, and `zotero/extra-meta/bootstrap.js`.
-  - Convert `95-pi-packages` and `96-zotero-profile` to `run_onchange_after_` with empty-output gating to restore `chezmoi verify` without `--exclude scripts`; reorder `agent-skills` after `90-downloads` with `--prune`; wire orphaned tests and all-theme checks into CI.
-- **PR 0B (separate repo)**:
-  - Extract `zotero/extra-meta` + tests into `xiaosq2000/zotero-extra-meta`, publish `.xpi` release, consume it like `better-bibtex`, and drop Node.js from dotfiles CI.
+- **PR 0A (done)**: Retired `alacritty`, `kmonad`, `opencode`, `aider`, `.condarc`, `dot_sh_utils/tools/`, hardened agent permissions (`private_`) and `key-guard.py`, fixed P0 bugs across `dot_latexmkrc`, `power-tunables.service`, `kitty.conf.tmpl`, `basics.sh`, `dot_zshrc`, Neovim, `refresh-rate-on-power`, `zathura`, restored `chezmoi verify`, and wired CI checks.
+- **PR 0B (done)**: Extracted `zotero/extra-meta` to public repo `xiaosq2000/zotero-extra-meta` (`v0.1.7`), switched dotfiles to consume its GitHub Release `.xpi` via `dotfiles-fetch`, and removed Node.js from dotfiles CI.
 
 ### Wave 1 — `sbc` split-routing & toolchain convergence (`mise` + `pixi`)
 

@@ -18,11 +18,13 @@ bash = shutil.which("bash")
 assert chezmoi and bash, "chezmoi and bash are required"
 template = root / ".chezmoiscripts/run_onchange_after_96-zotero-profile.sh.tmpl"
 catalog = tomllib.loads((root / ".chezmoidata/downloads.toml").read_text())
-version = catalog["downloads"]["better-bibtex"]["tag"].removeprefix("v")
-plugin_id = "better-bibtex@iris-advies.com"
+bbt_version = catalog["downloads"]["better-bibtex"]["tag"].removeprefix("v")
+bbt_id = "better-bibtex@iris-advies.com"
+extra_version = catalog["downloads"]["extra-meta"]["tag"].removeprefix("v")
+extra_id = "extra-meta@dotfiles.local"
 
 
-def make_plugin(path, ver):
+def make_plugin(path, plugin_id, ver):
     path.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(path, "w") as package:
         package.writestr("manifest.json", json.dumps({
@@ -58,16 +60,11 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     ini.write_text('[Profile0]\nName=default\nIsRelative=1\nPath=random.default\nDefault=1\n')
     link = profile / "user.js"
     result = setup()
-    assert "linked" in result.stdout and "installed Extra Meta" in result.stdout
-    assert "package missing" in result.stderr
+    assert "linked" in result.stdout
+    assert "Better BibTeX package missing" in result.stderr
+    assert "Extra Meta package missing" in result.stderr
     assert link.is_symlink() and link.resolve() == shared
-    extra_target = profile / "extensions/extra-meta@dotfiles.local.xpi"
-    assert extra_target.is_file()
-    with ZipFile(extra_target) as extra_pkg:
-        names = set(extra_pkg.namelist())
-        assert {"manifest.json", "bootstrap.js", "content/main.js", "content/styles.css",
-                "locale/en-US/extra-meta.ftl"}.issubset(names)
-    assert not setup().stdout  # A repeated apply is a no-op.
+    assert not setup().stdout  # Repeated apply is a no-op for user.js.
 
     # Neither a user file nor another link may be replaced.
     link.unlink()
@@ -85,83 +82,73 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     assert "cannot identify the default profile" in setup().stderr
     assert not link.exists() and not link.is_symlink()
 
-    # A machine without the research bundle does not modify the profile.
+    # A machine without the research bundle renders empty and does not touch the profile.
     ini.write_text('[Profile0]\nPath=random.default\n')
     render("container")
+    assert script.read_text() == ""
     setup()
     assert not link.exists() and not link.is_symlink()
     render("laptop")
 
-    plugin = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
-    target = profile / "extensions" / f"{plugin_id}.xpi"
-    make_plugin(plugin, version)
+    bbt_pkg = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
+    extra_pkg = home / ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi"
+    bbt_target = profile / "extensions" / f"{bbt_id}.xpi"
+    extra_target = profile / "extensions" / f"{extra_id}.xpi"
+    make_plugin(bbt_pkg, bbt_id, bbt_version)
+    make_plugin(extra_pkg, extra_id, extra_version)
+
     with (profile / ".parentlock").open("w") as lock:
         fcntl.lockf(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        assert "close Zotero" in setup().stderr
-        assert not target.exists()
-    assert "installed Better BibTeX" in setup().stdout
-    assert target.read_bytes() == plugin.read_bytes()
-    assert "installed Better BibTeX" not in setup().stdout
+        locked = setup()
+        assert "close Zotero" in locked.stderr
+        assert not bbt_target.exists() and not extra_target.exists()
+
+    installed = setup()
+    assert "installed Better BibTeX" in installed.stdout
+    assert "installed Extra Meta" in installed.stdout
+    assert bbt_target.read_bytes() == bbt_pkg.read_bytes()
+    assert extra_target.read_bytes() == extra_pkg.read_bytes()
+    assert (extra_target.stat().st_mode & 0o777) == 0o644
+    assert not setup().stdout
 
     # A valid older plugin is saved before replacement. A newer one is never downgraded.
-    make_plugin(target, "1.0.0")
-    old = target.read_bytes()
+    make_plugin(bbt_target, bbt_id, "1.0.0")
+    old = bbt_target.read_bytes()
     backup = home / ".local/state/dotfiles/zotero-plugins" / f"{hashlib.sha256(old).hexdigest()}.xpi"
     assert "installed Better BibTeX" in setup().stdout
-    assert backup.read_bytes() == old and target.read_bytes() == plugin.read_bytes()
-    make_plugin(target, "9999.0.0")
-    newer = target.read_bytes()
-    assert "downgrade skipped" in setup().stderr and target.read_bytes() == newer
+    assert backup.read_bytes() == old and bbt_target.read_bytes() == bbt_pkg.read_bytes()
+    make_plugin(bbt_target, bbt_id, "9999.0.0")
+    newer = bbt_target.read_bytes()
+    assert "downgrade skipped" in setup().stderr and bbt_target.read_bytes() == newer
 
     # An unmanaged plugin link and an invalid package are left unchanged.
-    target.unlink()
-    target.symlink_to(profile / "outside.xpi")
-    assert "is a symlink" in setup().stderr and target.is_symlink()
-    target.unlink()
-    target.write_bytes(b"not a zip file")
+    bbt_target.unlink()
+    bbt_target.symlink_to(profile / "outside.xpi")
+    assert "is a symlink" in setup().stderr and bbt_target.is_symlink()
+    bbt_target.unlink()
+    bbt_target.write_bytes(b"not a zip file")
     assert "installation skipped" in setup().stderr
-    assert target.read_bytes() == b"not a zip file"
+    assert bbt_target.read_bytes() == b"not a zip file"
 
-    # Zotero needs a one-time enable and per-plugin auto-update setting.
-    target.write_bytes(plugin.read_bytes())
+    # Zotero needs a one-time enable and per-plugin auto-update setting for BBT only.
+    bbt_target.write_bytes(bbt_pkg.read_bytes())
     state = profile / "extensions.json"
-    state.write_text(json.dumps({"addons": [{"id": plugin_id, "active": False,
+    state.write_text(json.dumps({"addons": [{"id": bbt_id, "active": False,
                                              "applyBackgroundUpdates": 1}]}))
     result = setup()
     assert "enable Better BibTeX" in result.stderr
     assert "automatic updates to Off" in result.stderr
-    state.write_text(json.dumps({"addons": [{"id": plugin_id, "active": True,
-                                             "applyBackgroundUpdates": 0}]}))
-    assert not setup().stderr
-
-    # Extra Meta warns only if disabled (update_url points to .invalid; updates are managed locally).
     state.write_text(json.dumps({"addons": [
-        {"id": plugin_id, "active": True, "applyBackgroundUpdates": 0},
-        {"id": "extra-meta@dotfiles.local", "active": False, "applyBackgroundUpdates": 1},
+        {"id": bbt_id, "active": True, "applyBackgroundUpdates": 0},
+        {"id": extra_id, "active": False, "applyBackgroundUpdates": 1},
     ]}))
     result = setup()
     assert "enable Extra Meta" in result.stderr
     assert "automatic updates to Off" not in result.stderr
     state.write_text(json.dumps({"addons": [
-        {"id": plugin_id, "active": True, "applyBackgroundUpdates": 0},
-        {"id": "extra-meta@dotfiles.local", "active": True, "applyBackgroundUpdates": 1},
+        {"id": bbt_id, "active": True, "applyBackgroundUpdates": 0},
+        {"id": extra_id, "active": True, "applyBackgroundUpdates": 1},
     ]}))
     assert not setup().stderr
-
-    # Extra Meta packaging only includes allowlisted files and rejects symlinks.
-    assert (extra_target.stat().st_mode & 0o777) == 0o644
-    with ZipFile(extra_target) as extra_pkg:
-        for entry in extra_pkg.namelist():
-            assert entry in {"manifest.json", "bootstrap.js"} or entry.startswith(("content/", "locale/")), entry
-    bad_source = home / "source-copy"
-    shutil.copytree(root / "zotero/extra-meta", bad_source)
-    (bad_source / "README.md").write_text("ignored\n")
-    (bad_source / "content/extra-link.js").symlink_to(shared)
-    bad_script = script.read_text().replace(str(root / "zotero/extra-meta"), str(bad_source))
-    bad_script_path = home / "bad-setup.sh"
-    bad_script_path.write_text(bad_script)
-    bad_result = subprocess.run([bash, str(bad_script_path)], env=dict(os.environ, HOME=str(home)),
-                                check=True, text=True, capture_output=True)
-    assert "symlink not allowed in plugin source" in bad_result.stderr
 
 print("ok       Zotero profile: linking, locked installs, backup, no downgrade and addon status")
