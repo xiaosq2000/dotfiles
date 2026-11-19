@@ -13,10 +13,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install shellcheck
+      - name: Install shellcheck and zsh
         run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck zsh
+          set -eu
+          if command -v shellcheck >/dev/null 2>&1 && command -v zsh >/dev/null 2>&1; then
+            exit 0
+          fi
+          for attempt in 1 2 3; do
+            if sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=20 update &&
+               sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=20 install -y --no-install-recommends shellcheck zsh; then
+              exit 0
+            fi
+            [ "$attempt" -lt 3 ] && sleep 5
+          done
+          exit 1
       - uses: pre-commit/action@v3.0.1
         env:
           # Gitleaks runs before publication through the local Git hooks.
@@ -40,8 +50,19 @@ jobs:
           cargo test --manifest-path cli/Cargo.toml
       - name: Verify generated zsh completion syntax
         run: |
-          sudo apt-get update
-          sudo apt-get install -y zsh
+          set -eu
+          if ! command -v zsh >/dev/null 2>&1; then
+            ok=0
+            for attempt in 1 2 3; do
+              if sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=20 update &&
+                 sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=20 install -y --no-install-recommends zsh; then
+                ok=1
+                break
+              fi
+              [ "$attempt" -lt 3 ] && sleep 5
+            done
+            [ "$ok" -eq 1 ]
+          fi
           cargo run --quiet --manifest-path cli/Cargo.toml -- completion zsh > /tmp/_dotfiles
           zsh -n /tmp/_dotfiles
 
@@ -51,8 +72,19 @@ jobs:
     steps:
       - name: Install prerequisites
         run: |
-          apt-get update
-          apt-get install -y curl git ca-certificates python3 zsh shellcheck
+          set -eu
+          export DEBIAN_FRONTEND=noninteractive
+          for attempt in 1 2 3; do
+            if apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=20 update &&
+               apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=20 install -y --no-install-recommends curl git ca-certificates python3 zsh shellcheck; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 1 ] && [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+              sed -i 's|http://archive.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g; s|http://security.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+            fi
+            sleep 5
+          done
+          exit 1
       - uses: actions/checkout@v4
       - name: Install chezmoi
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
