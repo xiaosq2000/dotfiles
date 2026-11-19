@@ -27,9 +27,6 @@ else
     exit 0
 fi
 
-# Clear metered proxy variables so tool downloads run direct.
-unset http_proxy HTTP_PROXY https_proxy HTTPS_PROXY ftp_proxy FTP_PROXY socks_proxy SOCKS_PROXY all_proxy ALL_PROXY
-
 # Reuse a logged-in gh token when available so GitHub attestation/asset checks
 # avoid the 60/hr unauthenticated rate limit.
 if [ -z "${GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ] && command -v gh >/dev/null 2>&1; then

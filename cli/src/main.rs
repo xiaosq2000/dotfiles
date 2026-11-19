@@ -62,7 +62,7 @@ enum Commands {
         action: AgentAction,
     },
 
-    /// Apply or update dotfiles directly (bypassing metered proxy)
+    /// Apply or update dotfiles via chezmoi (inherits caller network environment)
     Sync {
         /// Pull latest git changes before applying (`chezmoi update`)
         #[arg(long)]
@@ -73,6 +73,12 @@ enum Commands {
         /// Skip external downloads during apply
         #[arg(long)]
         no_externals: bool,
+    },
+
+    /// Upgrade managed toolchains (mise, pixi, fetch, sheldon) without auto-committing
+    Upgrade {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
     },
 
     /// Run repository pre-commit hooks and full test suite via `mise run check`
@@ -192,12 +198,36 @@ _dotfiles_dynamic_jail() {
         _describe -t agents 'coding agent' agents
     fi
 }
+
+_dotfiles_dynamic_upgrade() {
+    local -a opts layers
+    opts=(
+        '-n:Check upstream versions without modifying anything'
+        '--dry-run:Check upstream versions without modifying anything'
+        '--only:Limit to specific layer(s) (mise,pixi,fetch,sheldon)'
+        '--no-major:Skip major version jumps in mise'
+        '--include-self:Also check self-released dotfiles-cli'
+        '--jobs:Parallel mise version queries'
+    )
+    layers=(
+        'mise:Locked CLIs, runtimes, LSPs, and agents in .chezmoidata/mise.toml'
+        'pixi:Global pixi environments'
+        'fetch:Unpinned dotfiles-fetch apps and fonts'
+        'sheldon:Zsh plugins via sheldon lock --update'
+    )
+    if [[ "${words[CURRENT-1]:-}" == "--only" ]]; then
+        _describe -t layers 'upgrade layer' layers
+    else
+        _describe -t options 'upgrade option' opts
+    fi
+}
 "#;
 
     let mut out = wire_zsh_subcommand(&base, "theme", "_dotfiles_dynamic_themes");
     out = wire_zsh_subcommand(&out, "machine", "_dotfiles_dynamic_machines");
     out = wire_zsh_subcommand(&out, "fetch", "_dotfiles_dynamic_fetch");
     out = wire_zsh_subcommand(&out, "jail", "_dotfiles_dynamic_jail");
+    out = wire_zsh_subcommand(&out, "upgrade", "_dotfiles_dynamic_upgrade");
 
     // Insert helpers right before the final autoload/compdef line.
     if let Some(pos) = out.rfind("\nif [ \"$funcstack[1]\"") {
@@ -236,6 +266,9 @@ fn run() -> anyhow::Result<i32> {
             dry_run,
             no_externals,
         }) => commands::cmd_sync(update, dry_run, no_externals),
+        Some(Commands::Upgrade { args }) => {
+            commands::exec_helper("upgrade-toolchain.py", &args, true)
+        }
         Some(Commands::Check) => commands::cmd_check(),
         Some(Commands::Bootstrap) => commands::cmd_bootstrap(),
         Some(Commands::Completion { shell }) => {
@@ -292,5 +325,6 @@ mod tests {
         assert!(script.contains("'*::args:_dotfiles_dynamic_machines'"));
         assert!(script.contains("'*::args:_dotfiles_dynamic_fetch'"));
         assert!(script.contains("'*::args:_dotfiles_dynamic_jail'"));
+        assert!(script.contains("'*::args:_dotfiles_dynamic_upgrade'"));
     }
 }

@@ -53,7 +53,9 @@ Checked on 2026-11-19. The unified `dotfiles` CLI (built in Rust under
 ```sh
 dotfiles                            # interactive Ratatui TUI (5 tabs + live Theme Studio)
 dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents and sandbox
-dotfiles sync [--update] [--dry-run] # chezmoi apply/update bypassing the metered proxy
+dotfiles sync [--update] [--dry-run] # chezmoi apply/update (inherits shell network/proxy env)
+dotfiles upgrade [--dry-run] [--only mise,pixi,fetch,sheldon] [--no-major]
+                                    # upgrade toolchains, regenerate mise.lock, apply & doctor
 dotfiles theme [variant]            # switch or preview colour theme across tools
 dotfiles fetch <status|sync|outdated|update>
 dotfiles jail [options] -- <cmd>    # run any command inside agent-jail
@@ -219,8 +221,7 @@ Each apply checks installed Pi package versions after `mise` installs `pi`.
 Matching versions need no network request. Missing or mismatched packages
 install through the managed Pi. Failed installations warn and retry on the next
 apply. Change shared package versions in `.chezmoidata/agents.toml`, not
-through `pi update --extensions`. Package installation and startup repairs clear
-the proxy variables.
+through `pi update --extensions`.
 
 `pi-subagents` enables delegated tasks when you request them. Installation does
 not start a reviewer or authorize automatic delegation. Run `/subagents-doctor`
@@ -246,10 +247,9 @@ does not install RTK hooks, change telemetry consent, or enable automatic
 filtering. Existing RTK integrations stay unchanged.
 
 Manual installations remain in place as fallbacks. New bash and zsh shells put
-the managed downloads before those copies. Downloads bypass the metered AI
-proxy. If a target cannot reach an upstream directly, transfer the verified
-archives or resolve network access before deployment. Do not use the proxy
-without explicit approval.
+the managed downloads before those copies. Scripts and CLIs inherit the caller's
+shell network and proxy environment (`sbc` / `http_proxy` / `https_proxy`)
+without overriding it.
 
 ## Antigravity CLI
 

@@ -223,10 +223,10 @@ def fixtures(box, catalog):
     store, fonts = home / ".local/opt/dotfiles", home / ".local/share/fonts/dotfiles"
     resources = {i: publish(box, i, dict(s, tag="v1") if "tag" in s else s, "1")
                  for i, s in catalog.items()}
-    # An inherited proxy must not receive downloads, even without NO_PROXY.
-    box.env.pop("NO_PROXY", None)
-    box.env.pop("no_proxy", None)
-    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+    # Standard proxy env inheritance: NO_PROXY=127.0.0.1 bypasses HTTP_PROXY for
+    # the local fixture server while keeping proxy handling standard.
+    box.env["NO_PROXY"] = box.env["no_proxy"] = "127.0.0.1"
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
         box.env[key] = "http://127.0.0.1:1"
     everything = {"platform": "linux-amd64", "resources": resources}
 

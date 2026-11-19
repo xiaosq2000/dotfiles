@@ -78,9 +78,6 @@ if pi is None or not all(shutil.which(tool) for tool in ("node", "npm")):
     raise SystemExit(0)
 
 environment = os.environ.copy()
-for scheme in ("http", "https", "ftp", "socks", "all"):
-    for key in (f"{scheme}_proxy", f"{scheme}_proxy".upper()):
-        environment.pop(key, None)
 environment["PI_CODING_AGENT_DIR"] = str(agent)
 environment["PI_TELEMETRY"] = "0"
 # A project package must not affect a personal installation.
@@ -90,6 +87,6 @@ for source in pending:
         subprocess.run([str(pi), "install", source], cwd=home, env=environment,
                        check=True, timeout=180)
     except (OSError, subprocess.SubprocessError):
-        warn(f"installation failed for {source}, no proxy retry attempted")
+        warn(f"installation failed for {source}")
 PY
 {{ end -}}

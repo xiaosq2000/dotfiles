@@ -4,27 +4,6 @@ use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
-const PROXY_VARS: &[&str] = &[
-    "http_proxy",
-    "HTTP_PROXY",
-    "https_proxy",
-    "HTTPS_PROXY",
-    "ftp_proxy",
-    "FTP_PROXY",
-    "socks_proxy",
-    "SOCKS_PROXY",
-    "all_proxy",
-    "ALL_PROXY",
-];
-
-pub fn clean_proxy_command(prog: &str) -> Command {
-    let mut cmd = Command::new(prog);
-    for var in PROXY_VARS {
-        cmd.env_remove(var);
-    }
-    cmd
-}
-
 pub fn exec_helper(name: &str, args: &[String], libexec: bool) -> Result<i32> {
     let home = home_dir();
     let candidate = if libexec {
@@ -68,7 +47,7 @@ pub fn cmd_sync(update: bool, dry_run: bool, no_externals: bool) -> Result<i32> 
         args.push("--exclude");
         args.push("externals");
     }
-    let status = clean_proxy_command("chezmoi").args(&args).status()?;
+    let status = Command::new("chezmoi").args(&args).status()?;
     Ok(status.code().unwrap_or(1))
 }
 

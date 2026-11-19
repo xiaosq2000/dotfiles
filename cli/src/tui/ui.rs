@@ -760,7 +760,7 @@ fn render_toolchain(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
     lines.push(kv("mise", tc.mise.as_deref().unwrap_or("missing"), p));
     lines.push(Line::raw(""));
     lines.push(Line::from(Span::styled(
-        "  u: check fetch outdated · f: run dotfiles fetch sync",
+        "  U: upgrade dry-run · u: fetch outdated · f: fetch sync",
         Style::default().fg(p.accent),
     )));
 
@@ -896,7 +896,7 @@ fn render_footer(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         Tab::Overview => "j/k select · 1-5/Tab switch · s sync · d diff · c check · r refresh · ? help · q quit",
         Tab::Themes => "j/k live-preview · Enter apply theme · p dry-run diff · 1-5/Tab switch · q quit",
         Tab::Agents => "j/k select agent · Enter/x jail dry-run · S skills · r refresh · q quit",
-        Tab::Toolchain => "j/k select tool · u fetch outdated · f fetch sync · r refresh · q quit",
+        Tab::Toolchain => "j/k select tool · U upgrade dry-run · u fetch outdated · f fetch sync · r refresh · q quit",
         Tab::Machines => "j/k select machine · 1-5/Tab switch · r refresh · ? help · q quit",
     };
 
@@ -933,7 +933,7 @@ fn render_help_modal(frame: &mut Frame, p: TuiTheme, area: Rect) {
         kv("s / d / c", "Overview: sync dotfiles / chezmoi diff / mise check", p),
         kv("Enter / p", "Themes: apply selected theme / dry-run diff", p),
         kv("Enter / x / S", "Agents: jail dry-run / skills", p),
-        kv("u / f", "Toolchain: fetch outdated / fetch sync", p),
+        kv("U / u / f", "Toolchain: upgrade dry-run / fetch outdated / fetch sync", p),
         kv("? / Esc / q", "Toggle help / Quit", p),
     ];
     let modal = Paragraph::new(lines)

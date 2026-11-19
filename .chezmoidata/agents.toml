@@ -114,16 +114,6 @@ ssh_drop_ins = "/etc/ssh/ssh_config.d"
 defaultProvider = "openai-codex"
 defaultModel = "gpt-6.1-sol"
 defaultThinkingLevel = "xhigh"
-# Package downloads must not use the metered AI proxy, including startup repairs.
-npmCommand = [
-    "env",
-    "-u", "http_proxy", "-u", "HTTP_PROXY",
-    "-u", "https_proxy", "-u", "HTTPS_PROXY",
-    "-u", "ftp_proxy", "-u", "FTP_PROXY",
-    "-u", "socks_proxy", "-u", "SOCKS_PROXY",
-    "-u", "all_proxy", "-u", "ALL_PROXY",
-    "npm",
-]
 
 [agents.pi.subagents]
 # Ensure foreground subagent children load the shared key-guard extension.

@@ -56,8 +56,8 @@ LOCK = HOME / ".local/state/dotfiles/downloads.lock.json"
 # Overridable so tests/check_fetch.py can serve releases from local files.
 API = os.environ.get("DOTFILES_FETCH_GITHUB_API", "https://api.github.com")
 RAW = os.environ.get("DOTFILES_FETCH_GITHUB_RAW", "https://raw.githubusercontent.com")
-# Downloads must not use the metered AI proxy inherited from an agent or shell.
-HTTP = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+# Inherit standard proxy environment variables (http_proxy, https_proxy, no_proxy).
+HTTP = urllib.request.build_opener()
 SOURCE_KEYS = ("github", "asset", "file", "url")
 
 

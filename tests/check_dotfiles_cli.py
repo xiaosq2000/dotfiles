@@ -21,7 +21,7 @@ if RUST_CLI.is_file() and os.access(RUST_CLI, os.X_OK):
 for label, cmd_prefix in TARGETS:
     # 1. --help prints usage and exits 0.
     help_res = subprocess.run([*cmd_prefix, "--help"], text=True, capture_output=True, check=True)
-    assert "doctor" in help_res.stdout and "jail" in help_res.stdout, (label, help_res.stdout)
+    assert "doctor" in help_res.stdout and "jail" in help_res.stdout and "upgrade" in help_res.stdout, (label, help_res.stdout)
 
     # 2. Unknown subcommand exits 2.
     bad_res = subprocess.run([*cmd_prefix, "no-such-cmd"], text=True, capture_output=True, check=False)

@@ -54,7 +54,6 @@ pub enum PendingAction {
         label: String,
         prog: String,
         args: Vec<String>,
-        strip_proxy: bool,
         pause: bool,
     },
 }

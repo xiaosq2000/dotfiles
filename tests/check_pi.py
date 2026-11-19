@@ -11,8 +11,15 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = tomllib.loads((ROOT / ".chezmoidata/agents.toml").read_text())["agents"]["pi"]
 WANTED = {name: f"npm:{name}@{version}" for name, version in BASELINE["packages"].items()}
-PROXIES = [f"{scheme}_proxy" for scheme in ("http", "https", "ftp", "socks", "all")]
-PROXIES += [key.upper() for key in PROXIES]
+LEGACY_NPM_COMMAND = [
+    "env",
+    "-u", "http_proxy", "-u", "HTTP_PROXY",
+    "-u", "https_proxy", "-u", "HTTPS_PROXY",
+    "-u", "ftp_proxy", "-u", "FTP_PROXY",
+    "-u", "socks_proxy", "-u", "SOCKS_PROXY",
+    "-u", "all_proxy", "-u", "ALL_PROXY",
+    "npm",
+]
 
 with tempfile.TemporaryDirectory(prefix="dotfiles-pi-") as temporary:
     base = Path(temporary)
@@ -57,6 +64,12 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-pi-") as temporary:
         result = merge(raw)
         assert result.stdout == raw and "unchanged" in result.stderr
 
+    # Legacy dotfiles proxy-stripping npmCommand is cleaned up while custom npmCommand is preserved.
+    legacy_out = json.loads(merge(json.dumps({"npmCommand": LEGACY_NPM_COMMAND})).stdout)
+    assert "npmCommand" not in legacy_out
+    custom_out = json.loads(merge(json.dumps({"npmCommand": ["pnpm"]})).stdout)
+    assert custom_out["npmCommand"] == ["pnpm"]
+
     target = home / ".pi/agent/settings.json"
     target.parent.mkdir(parents=True)
     target.write_text(first)
@@ -69,8 +82,7 @@ from pathlib import Path
 import sys
 
 with Path(os.environ["PI_TEST_LOG"]).open("a") as log:
-    log.write(json.dumps({"args": sys.argv[1:], "proxy_keys": [key for key in os.environ
-                           if key.lower() in ("http_proxy", "https_proxy", "ftp_proxy", "socks_proxy", "all_proxy")]}) + "\\n")
+    log.write(json.dumps({"args": sys.argv[1:], "http_proxy": os.environ.get("http_proxy")}) + "\\n")
 if os.environ.get("PI_TEST_FAIL"):
     sys.exit(1)
 assert sys.argv[1] == "install"
@@ -88,7 +100,7 @@ manifest.write_text(json.dumps({"name": name, "version": version}))
         stub.write_text("#!/bin/sh\nexit 99\n")
         stub.chmod(0o755)
     environment.update({"PATH": str(stubs) + os.pathsep + os.environ["PATH"],
-                        "PI_TEST_LOG": str(log), **dict.fromkeys(PROXIES, "http://invalid.test:9")})
+                        "PI_TEST_LOG": str(log), "http_proxy": "http://proxy.example:8080"})
 
     def install(**extra):
         return subprocess.run(["bash", "-c", installer], env={**environment, **extra},
@@ -97,18 +109,9 @@ manifest.write_text(json.dumps({"name": name, "version": version}))
     def calls():
         return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
 
-    # The configured package-manager command also protects startup repairs.
-    probe = base / "probe"
-    probe.write_text('#!/usr/bin/env python3\nimport json, os\nprint(json.dumps(list(os.environ)))\n')
-    probe.chmod(0o755)
-    wrapped = BASELINE["settings"]["npmCommand"][:-1] + [str(probe)]
-    clean = json.loads(subprocess.check_output(wrapped, env=environment, text=True))
-    assert not set(PROXIES) & set(clean)
-    assert all(key in environment for key in PROXIES)
-
     install()
     assert {call["args"][1] for call in calls()} == set(WANTED.values())
-    assert all(call["args"][0] == "install" and not call["proxy_keys"] for call in calls())
+    assert all(call["args"][0] == "install" and call["http_proxy"] == "http://proxy.example:8080" for call in calls())
     count = len(calls())
     install()
     assert len(calls()) == count
@@ -141,4 +144,4 @@ manifest.write_text(json.dumps({"name": name, "version": version}))
     install()
     assert len(calls()) == count
 
-print("Pi settings preservation, duplicate removal, package repair, retries and direct downloads pass.")
+print("Pi settings preservation, duplicate removal, legacy npmCommand cleanup, package repair and env inheritance pass.")

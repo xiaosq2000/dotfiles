@@ -23,7 +23,7 @@ Checked on 2026-11-19. `workstation` is deployed, cleaned, and verified;
 remaining hosts in canary order: `laptop` → `imrl` → `sicc` → `vps`. On each host:
 
 ```sh
-dotfiles sync --update      # or: env -u http_proxy -u https_proxy -u all_proxy chezmoi update
+dotfiles sync --update      # or: chezmoi update (inherits shell/sbc network env)
 dotfiles doctor
 ```
 

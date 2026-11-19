@@ -2,7 +2,6 @@ pub mod app;
 pub mod theme;
 pub mod ui;
 
-use crate::commands::clean_proxy_command;
 use crate::doctor::{build_snapshot, home_dir};
 use crate::model::FullSnapshot;
 use crate::tui::app::{AGENT_NAMES, App, PendingAction, Tab};
@@ -159,10 +158,9 @@ fn handle_key(
         }
         KeyCode::Char('s') if app.tab == Tab::Overview => {
             app.pending_action = Some(PendingAction::RunCommand {
-                label: "chezmoi apply (direct)".to_string(),
+                label: "chezmoi apply".to_string(),
                 prog: "chezmoi".to_string(),
                 args: vec!["apply".to_string()],
-                strip_proxy: true,
                 pause: true,
             });
         }
@@ -171,7 +169,6 @@ fn handle_key(
                 label: "chezmoi diff".to_string(),
                 prog: "chezmoi".to_string(),
                 args: vec!["diff".to_string(), "--exclude".to_string(), "externals".to_string()],
-                strip_proxy: false,
                 pause: true,
             });
         }
@@ -180,7 +177,6 @@ fn handle_key(
                 label: "dotfiles check".to_string(),
                 prog: "mise".to_string(),
                 args: vec!["run".to_string(), "check".to_string()],
-                strip_proxy: false,
                 pause: true,
             });
         }
@@ -191,7 +187,6 @@ fn handle_key(
                     label: format!("theme {}", item.slug),
                     prog: helper.to_string_lossy().into_owned(),
                     args: vec![item.slug.clone()],
-                    strip_proxy: true,
                     pause: false,
                 });
             }
@@ -203,7 +198,6 @@ fn handle_key(
                     label: format!("theme --dry-run {}", item.slug),
                     prog: helper.to_string_lossy().into_owned(),
                     args: vec!["--dry-run".to_string(), item.slug.clone()],
-                    strip_proxy: false,
                     pause: true,
                 });
             }
@@ -219,7 +213,6 @@ fn handle_key(
                     agent.to_string(),
                     "--dry-run".to_string(),
                 ],
-                strip_proxy: false,
                 pause: true,
             });
         }
@@ -229,7 +222,6 @@ fn handle_key(
                 label: "agent skills".to_string(),
                 prog: helper.to_string_lossy().into_owned(),
                 args: vec![],
-                strip_proxy: false,
                 pause: true,
             });
         }
@@ -239,7 +231,15 @@ fn handle_key(
                 label: "dotfiles-fetch outdated".to_string(),
                 prog: helper.to_string_lossy().into_owned(),
                 args: vec!["outdated".to_string()],
-                strip_proxy: true,
+                pause: true,
+            });
+        }
+        KeyCode::Char('U') if app.tab == Tab::Toolchain => {
+            let helper = home_dir().join(".local/libexec/dotfiles/upgrade-toolchain.py");
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: "dotfiles upgrade --dry-run".to_string(),
+                prog: helper.to_string_lossy().into_owned(),
+                args: vec!["--dry-run".to_string()],
                 pause: true,
             });
         }
@@ -249,7 +249,6 @@ fn handle_key(
                 label: "dotfiles-fetch sync".to_string(),
                 prog: helper.to_string_lossy().into_owned(),
                 args: vec!["sync".to_string()],
-                strip_proxy: true,
                 pause: true,
             });
         }
@@ -263,16 +262,10 @@ fn execute_action(action: PendingAction) -> String {
             label,
             prog,
             args,
-            strip_proxy,
             pause,
         } => {
             println!("\x1b[1m▸ {label}\x1b[0m\n");
-            let mut cmd = if strip_proxy {
-                clean_proxy_command(&prog)
-            } else {
-                Command::new(&prog)
-            };
-            let status = cmd.args(&args).status();
+            let status = Command::new(&prog).args(&args).status();
             let summary = match status {
                 Ok(st) if st.success() => format!("Completed: {label}"),
                 Ok(st) => format!("Failed (exit {}): {label}", st.code().unwrap_or(1)),

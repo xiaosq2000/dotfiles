@@ -53,6 +53,9 @@ class UnitChecks(unittest.TestCase):
     def test_fetch_offline(self):
         _run_script([sys.executable, str(TESTS / "check_fetch.py")])
 
+    def test_upgrade_toolchain(self):
+        _run_script([sys.executable, str(TESTS / "check_upgrade.py")])
+
     def test_gpu_fans(self):
         _run_script([sys.executable, str(TESTS / "check_gpu_fans.py")])
 

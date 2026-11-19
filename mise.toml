@@ -19,24 +19,21 @@ run = "python3 -m unittest discover -s tests -v"
 
 [tasks.cli-test]
 description = "Run Rust dotfiles CLI unit tests"
-run = "env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY cargo test --manifest-path cli/Cargo.toml"
+run = "cargo test --manifest-path cli/Cargo.toml"
 
 [tasks.cli-check]
 description = "Run cargo clippy and unit tests for the Rust dotfiles CLI"
 run = """
 set -eu
-env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
-  cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
-env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
-  cargo test --manifest-path cli/Cargo.toml
+cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path cli/Cargo.toml
 """
 
 [tasks.build-cli]
 description = "Build release Rust dotfiles CLI and install into ~/.local/opt/dotfiles/bin/dotfiles"
 run = """
 set -eu
-env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
-  cargo build --release --manifest-path cli/Cargo.toml
+cargo build --release --manifest-path cli/Cargo.toml
 mkdir -p "$HOME/.local/opt/dotfiles/bin"
 install -m 0755 cli/target/release/dotfiles "$HOME/.local/opt/dotfiles/bin/dotfiles"
 rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_dotfiles"
@@ -50,6 +47,10 @@ set -eu
 pre-commit run --all-files
 python3 -m unittest discover -s tests -v
 """
+
+[tasks.upgrade]
+description = "Upgrade managed toolchains (mise, pixi, dotfiles-fetch, sheldon) without auto-committing"
+run = "python3 dot_local/libexec/dotfiles/executable_upgrade-toolchain.py"
 
 [tasks.lock-tools]
 description = "Regenerate private_dot_config/mise/mise.lock for linux-x64 and linux-arm64"
@@ -67,9 +68,6 @@ catalog = tomllib.loads((root / ".chezmoidata/mise.toml").read_text())["mise"]
 target_dir = root / "private_dot_config/mise"
 
 env = os.environ.copy()
-for scheme in ("http", "https", "ftp", "socks", "all"):
-    for key in (f"{scheme}_proxy", f"{scheme}_proxy".upper()):
-        env.pop(key, None)
 
 if not env.get("GITHUB_TOKEN") and not env.get("GH_TOKEN") and shutil.which("gh"):
     token = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, check=False)

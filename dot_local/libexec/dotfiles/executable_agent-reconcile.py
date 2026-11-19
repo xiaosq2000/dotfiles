@@ -417,6 +417,17 @@ def reconcile_agy_mcp(raw, spec):
     return json.dumps(after, indent=2, ensure_ascii=False) + "\n"
 
 
+LEGACY_PI_NPM_COMMAND = [
+    "env",
+    "-u", "http_proxy", "-u", "HTTP_PROXY",
+    "-u", "https_proxy", "-u", "HTTPS_PROXY",
+    "-u", "ftp_proxy", "-u", "FTP_PROXY",
+    "-u", "socks_proxy", "-u", "SOCKS_PROXY",
+    "-u", "all_proxy", "-u", "ALL_PROXY",
+    "npm",
+]
+
+
 def reconcile_pi_settings(raw, spec):
     pi_cfg = spec["agents"]["pi"]
     before = json.loads(raw) if raw.strip() else {}
@@ -426,7 +437,12 @@ def reconcile_pi_settings(raw, spec):
     if not isinstance(packages, list):
         raise ValueError("packages must be an array")
     after = copy.deepcopy(before)
-    after.update(copy.deepcopy(pi_cfg.get("settings", {})))
+    desired_settings = pi_cfg.get("settings", {})
+    after.update(copy.deepcopy(desired_settings))
+    # Clean up the retired dotfiles proxy-stripping npmCommand while preserving
+    # any user-configured npmCommand.
+    if "npmCommand" not in desired_settings and after.get("npmCommand") == LEGACY_PI_NPM_COMMAND:
+        after.pop("npmCommand", None)
 
     wanted = {name: f"npm:{name}@{version}" for name, version in pi_cfg.get("packages", {}).items()}
     merged = []

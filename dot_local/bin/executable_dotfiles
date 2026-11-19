@@ -9,7 +9,8 @@ Subcommands:
     jail [args...]              run a command or coding agent inside agent-jail
     agent <skills|status> [args...]
                                 manage shared agent skills or inspect status
-    sync [--dry-run]            apply dotfiles directly (bypassing metered proxy)
+    sync [--dry-run]            apply or update dotfiles via chezmoi
+    upgrade [args...]           upgrade managed toolchains (mise, pixi, fetch, sheldon)
     check                       run repository test suite via `mise run check`
     bootstrap                   apply dotfiles and run `dotfiles doctor`
 
@@ -26,14 +27,6 @@ import stat
 import subprocess
 import sys
 
-PROXY_VARS = (
-    "http_proxy", "HTTP_PROXY",
-    "https_proxy", "HTTPS_PROXY",
-    "ftp_proxy", "FTP_PROXY",
-    "socks_proxy", "SOCKS_PROXY",
-    "all_proxy", "ALL_PROXY",
-)
-
 
 def _run(argv, timeout=15, env=None, cwd=None):
     try:
@@ -49,13 +42,6 @@ def _run(argv, timeout=15, env=None, cwd=None):
         return res.returncode, res.stdout.strip(), res.stderr.strip()
     except (OSError, subprocess.SubprocessError) as exc:
         return 127, "", str(exc)
-
-
-def _clean_proxy_env():
-    env = os.environ.copy()
-    for key in PROXY_VARS:
-        env.pop(key, None)
-    return env
 
 
 def _exec_helper(name, argv, libexec=False):
@@ -463,11 +449,10 @@ def cmd_sync(argv):
     parser.add_argument("-n", "--dry-run", action="store_true", help="Show chezmoi diff without applying")
     parser.add_argument("--update", action="store_true", help="Pull latest changes before applying (chezmoi update)")
     args, extra = parser.parse_known_args(argv)
-    env = _clean_proxy_env()
     if args.dry_run:
-        return subprocess.run(["chezmoi", "diff", *extra], env=env, check=False).returncode
+        return subprocess.run(["chezmoi", "diff", *extra], check=False).returncode
     cmd = ["chezmoi", "update" if args.update else "apply", *extra]
-    return subprocess.run(cmd, env=env, check=False).returncode
+    return subprocess.run(cmd, check=False).returncode
 
 
 def cmd_check(argv):
@@ -507,6 +492,8 @@ def main():
         return cmd_agent(rest)
     if sub == "sync":
         return cmd_sync(rest)
+    if sub == "upgrade":
+        return _exec_helper("upgrade-toolchain.py", rest, libexec=True)
     if sub == "check":
         return cmd_check(rest)
     if sub == "bootstrap":
