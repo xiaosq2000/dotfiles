@@ -30,6 +30,20 @@ weights, packages and large clones without it; the `machines` skill shows how.
 If a download fails without the proxy, ask the user instead of retrying through
 it.
 
+## Environments and CLIs
+
+Invoke modern environment managers (`pixi`, `uv`, `pnpm`, and similar tools) as
+bare commands from `PATH` (for example `pixi run ...`, `uv run ...`,
+`pixi install`, `uv sync`), just as humans do. Never hardcode install paths
+(such as `~/.pixi/bin/pixi` or `~/.local/bin/uv`) or invoke binaries directly
+inside managed environment directories (`.pixi/envs/...`, `.venv/bin/...`)
+unless a wrapper explicitly documents an exception.
+
+Design clean CLIs and task entry points for repeatable project workflows—such
+as `pixi` tasks, `pyproject.toml` scripts, or `package.json` scripts—so humans
+and agents run the same short commands instead of long ad-hoc invocations or
+internal script paths.
+
 ## Changing a system
 
 Prefer the change that is easiest to undo. To replace a package or service,
