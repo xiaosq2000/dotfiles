@@ -9,7 +9,7 @@ import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
-BASELINE = tomllib.loads((ROOT / ".chezmoidata/pi.toml").read_text())["pi"]
+BASELINE = tomllib.loads((ROOT / ".chezmoidata/agents.toml").read_text())["agents"]["pi"]
 WANTED = {name: f"npm:{name}@{version}" for name, version in BASELINE["packages"].items()}
 PROXIES = [f"{scheme}_proxy" for scheme in ("http", "https", "ftp", "socks", "all")]
 PROXIES += [key.upper() for key in PROXIES]

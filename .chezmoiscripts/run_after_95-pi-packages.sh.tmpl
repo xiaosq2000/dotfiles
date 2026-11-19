@@ -1,6 +1,6 @@
 {{- $needs_install := false -}}
 {{- if has "agent-tools" (index .machines .machine).bundles -}}
-{{-   range $name, $version := .pi.packages -}}
+{{-   range $name, $version := .agents.pi.packages -}}
 {{-     $manifest := joinPath $.chezmoi.homeDir ".pi/agent/npm/node_modules" $name "package.json" -}}
 {{-     if stat $manifest -}}
 {{-       $parsed := include $manifest | fromJson -}}
@@ -31,7 +31,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-WANTED = json.loads({{ .pi.packages | toJson | quote }})
+WANTED = json.loads({{ .agents.pi.packages | toJson | quote }})
 home = Path.home()
 agent = home / ".pi/agent"
 pi = next(

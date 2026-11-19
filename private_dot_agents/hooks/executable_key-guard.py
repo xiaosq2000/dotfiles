@@ -76,10 +76,10 @@ RESTRICTIVE_CHMOD_MODES = {
 }
 
 # Tools whose command is a shell script, split into words rather than matched
-# whole: Bash in Claude Code and Codex, and Claude Code's Monitor.
-# Codex may send the command as an argv list.
-SHELL_TOOLS = {"bash", "monitor"}
-SHELL_FIELDS = {"command", "cmd"}
+# whole: Bash in Claude Code and Codex, Claude Code's Monitor, and Antigravity
+# CLI's run_command. Codex may send the command as an argv list.
+SHELL_TOOLS = {"bash", "monitor", "run_command"}
+SHELL_FIELDS = {"command", "cmd", "commandline"}
 
 # Commands that act on a file's name or mode and never print what is in it.
 # chmod is handled separately so permissions cannot be loosened on private keys.
@@ -141,19 +141,21 @@ OPAQUE = re.compile(
 
 def fields(value, tool, key=None):
     """Yield (field, text) for every string in a tool input that could name a file."""
+    key_l = key.lower() if isinstance(key, str) else ""
     if isinstance(value, str):
-        # A description is prose, and Grep's pattern is a regex to search for,
-        # not a path to read. Neither opens a file.
-        if key == "description" or (key == "pattern" and tool == "grep"):
+        # Prose labels and search regexes/queries never open a file by themselves.
+        if key_l in ("description", "toolsummary"):
             return
-        yield key, value
+        if (key_l == "pattern" and tool == "grep") or (key_l == "query" and tool == "grep_search"):
+            return
+        yield key_l, value
     elif isinstance(value, dict):
         for k, v in value.items():
             yield from fields(v, tool, k)
     elif isinstance(value, list):
-        if tool in SHELL_TOOLS and key in SHELL_FIELDS and all(isinstance(v, str) for v in value):
+        if tool in SHELL_TOOLS and key_l in SHELL_FIELDS and all(isinstance(v, str) for v in value):
             # Codex sends a command as an argv list, such as bash -lc SCRIPT.
-            yield key, shlex.join(value)
+            yield key_l, shlex.join(value)
             return
         for v in value:
             yield from fields(v, tool, key)
@@ -782,10 +784,18 @@ def search_offence(args, depth):
 
 
 def main():
+    is_agy = False
     try:
         call = json.load(sys.stdin)
-        tool = str(call.get("tool_name", "")).lower()
-        tool_input = call.get("tool_input", {})
+        if not isinstance(call, dict):
+            raise ValueError("top-level payload must be a JSON object")
+        if isinstance(call.get("toolCall"), dict):
+            is_agy = True
+            tool = str(call["toolCall"].get("name", "")).lower()
+            tool_input = call["toolCall"].get("args", {})
+        else:
+            tool = str(call.get("tool_name", "")).lower()
+            tool_input = call.get("tool_input", {})
     except (ValueError, AttributeError) as e:
         # Every agent sends valid JSON, so this means a broken caller, not an
         # attack. Refusing would block every tool call until someone fixed it.
@@ -797,17 +807,22 @@ def main():
         else:
             found = offence(text)
         if found:
-            print(
+            reason = (
                 "key-guard refused this call because %s. "
                 "Agents must not read private keys or the age identity. "
                 "A shell command may name an ssh key only to use it or to look "
                 "at its name and mode: ssh, scp or sftp -i, ssh -o IdentityFile=, "
                 "ssh-add, ssh-keygen -y or -l, and ls, stat, test, chmod or mkdir. "
                 "Do not work around this: tell the user what you need, "
-                "and let them run the command themselves." % found,
-                file=sys.stderr,
+                "and let them run the command themselves." % found
             )
+            if is_agy:
+                print(json.dumps({"decision": "deny", "reason": reason}))
+                return 0
+            print(reason, file=sys.stderr)
             return 2
+    if is_agy:
+        print("{}")
     return 0
 
 

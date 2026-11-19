@@ -1,0 +1,11 @@
+{{- $spec := dict "agents" .agents "bundles" (index .machines .machine).bundles "claude_profile" (get . "claude_profile" | default .agents.privacy.claude_profile_default) | toJson -}}
+#!/bin/sh
+# Thin shim delegating ~/.claude/settings.json reconciliation to agent-reconcile.py.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "claude settings: python3 not found; left ~/.claude/settings.json unchanged" >&2
+    exec cat
+fi
+
+exec python3 {{ joinPath .chezmoi.sourceDir "dot_local/libexec/dotfiles/executable_agent-reconcile.py" | quote }} claude-settings --spec-file /dev/fd/3 3<<'JSON'
+{{ $spec }}
+JSON

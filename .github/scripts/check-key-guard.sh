@@ -163,6 +163,52 @@ done <<'EOF'
 0 not json
 EOF
 
+# Antigravity CLI (agy) PreToolUse JSON protocol checks:
+# - Refuse must exit 0 and print {"decision": "deny", "reason": "..."} on stdout.
+# - Passthrough must exit 0 and print {} (never "allow", which would bypass agy's own approval rules).
+python3 - "$guard" <<'PY' || status=1
+import json
+import subprocess
+import sys
+
+guard = sys.argv[1]
+
+def call_agy(name, args):
+    payload = {
+        "hookEventName": "PreToolUse",
+        "conversationId": "test-conv",
+        "toolCall": {"id": "call_1", "name": name, "args": args},
+    }
+    res = subprocess.run(
+        ["python3", guard],
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert res.returncode == 0, f"agy hook exited {res.returncode}: {res.stderr}"
+    return json.loads(res.stdout)
+
+for name, args in (
+    ("read_file", {"Path": "/home/alice/.ssh/id_ed25519"}),
+    ("read_file", {"Path": "/home/alice/.config/chezmoi/key.txt"}),
+    ("read_file", {"Path": "/home/alice/.codex/auth.json"}),
+    ("run_command", {"CommandLine": "cat ~/.ssh/id_rsa", "toolSummary": "Inspect key"}),
+    ("run_command", {"CommandLine": "rbw get 'chezmoi age identity'"}),
+):
+    out = call_agy(name, args)
+    assert out.get("decision") == "deny" and out.get("reason"), (name, args, out)
+
+for name, args in (
+    ("read_file", {"Path": "/home/alice/.ssh/config"}),
+    ("read_file", {"Path": "/home/alice/.ssh/id_ed25519.pub"}),
+    ("run_command", {"CommandLine": "ssh -i ~/.ssh/id_ed25519 imrl true", "toolSummary": "SSH check with id_ed25519"}),
+    ("grep_search", {"Query": "id_ed25519", "SearchPath": "/home/alice/repo/docs"}),
+):
+    out = call_agy(name, args)
+    assert out == {}, (name, args, out)
+PY
+
 if [ "$status" -eq 0 ]; then
     echo "key-guard: every case passed"
 fi

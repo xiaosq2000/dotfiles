@@ -174,9 +174,7 @@ config = [
     ".claude",
     ".codex",
     ".gemini",
-    ".pi/agent/AGENTS.md",
-    ".pi/agent/settings.json",
-    ".pi/agent/extensions/pi-openai-toolkit/config.json",
+    ".pi",
 ]
 
 [bundles.herdr]

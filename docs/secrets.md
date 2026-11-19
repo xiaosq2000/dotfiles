@@ -170,19 +170,22 @@ cannot apply at all.
 
 Checked on 2026-11-19.
 
-Claude Code and Codex run as you, so by default they can read any file you can.
-Guarded files include ssh private keys, `~/.config/chezmoi/` (except
+All four primary coding agents run as you, so by default they can read any file
+you can. Guarded files include ssh private keys, `~/.config/chezmoi/` (except
 `chezmoi.toml` and `chezmoistate.boltdb`), `~/.secrets`, vault extraction
 subcommands (`rbw get`/`dump`, `secret-tool lookup`/`search`), and local CLI /
-agent credential files.
+agent credential files. Policy is declared once in `.chezmoidata/agents.toml`
+and reconciled by `dot_local/libexec/dotfiles/executable_agent-reconcile.py`.
 
 | Agent | What refuses the read | Where it comes from |
 | --- | --- | --- |
-| Claude Code | `Read` deny rules for the default key names and the age identity, and the key-guard hook | `private_dot_claude/modify_private_settings.json` merges both into `~/.claude/settings.json` |
-| Codex | The `key-guard` permissions profile, whose bubblewrap sandbox cannot open any `~/.ssh/id_*` file except a `.pub`, and the key-guard hook | `private_dot_codex/modify_private_config.toml` and `private_dot_codex/modify_private_hooks.json` |
+| Claude Code | `Read` and `Bash(gh ...)` deny/ask rules, strict/remote-control privacy env, and the `key-guard.py` hook | `private_dot_claude/modify_private_settings.json.tmpl` |
+| Codex | The `key-guard` bubblewrap permissions profile, `[otel]` privacy defaults, `rules/gh.rules` (including `gh api` prompt), and the `key-guard.py` hook | `private_dot_codex/modify_private_config.toml.tmpl` and `private_dot_codex/modify_private_hooks.json.tmpl` |
+| Antigravity CLI (`agy`) | `PreToolUse` JSON hook delegating to `key-guard.py` (`{"decision":"deny"}` / `{}` passthrough) | `private_dot_gemini/private_config/modify_private_hooks.json.tmpl` |
+| Pi | Local `dotfiles-guard.ts` extension delegating `tool_call` checks to `key-guard.py` (including foreground subagents via `defaultSubagentOnlyExtensions`) | `private_dot_pi/private_agent/extensions/dotfiles-guard.ts` and `modify_private_settings.json.tmpl` |
 
-Antigravity CLI (`agy`) and Pi hook/sandbox coverage are scheduled in Waves 3–4
-of [refactor-plan.md](refactor-plan.md).
+Opt-in OS-level `bwrap`/Landlock sandboxing (`agent-jail`) and unified
+`policy.toml` live in Wave 4 of [refactor-plan.md](refactor-plan.md).
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
 guarded file, and tells the agent to ask you instead. The exceptions are

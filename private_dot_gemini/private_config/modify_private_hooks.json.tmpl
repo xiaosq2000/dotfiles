@@ -1,0 +1,11 @@
+{{- $spec := dict "agents" .agents "bundles" (index .machines .machine).bundles | toJson -}}
+#!/bin/sh
+# Thin shim delegating ~/.gemini/config/hooks.json reconciliation to agent-reconcile.py.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "agy hooks: python3 not found; left ~/.gemini/config/hooks.json unchanged" >&2
+    exec cat
+fi
+
+exec python3 {{ joinPath .chezmoi.sourceDir "dot_local/libexec/dotfiles/executable_agent-reconcile.py" | quote }} agy-hooks --spec-file /dev/fd/3 3<<'JSON'
+{{ $spec }}
+JSON

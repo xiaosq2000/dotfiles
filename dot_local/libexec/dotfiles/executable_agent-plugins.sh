@@ -36,8 +36,10 @@ else
     exit 1
 fi
 
-REPO="ayghri/i-have-adhd"
-PLUGIN="i-have-adhd@i-have-adhd"
+REPO="${I_HAVE_ADHD_REPO:-ayghri/i-have-adhd}"
+PLUGIN="${I_HAVE_ADHD_PLUGIN:-i-have-adhd@i-have-adhd}"
+PIN_REV="${I_HAVE_ADHD_REV:-1ecea1993b7fce257ffbd686c070948b5e07eda6}"
+CHECKOUT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/i-have-adhd"
 
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
@@ -112,6 +114,32 @@ attempt() {
     return 1
 }
 
+sync_pinned_checkout() {
+    if [ "$DRY_RUN" = true ]; then
+        msg "  would checkout https://github.com/$REPO.git @ $PIN_REV into $CHECKOUT_DIR"
+        return 0
+    fi
+    if ! command -v git >/dev/null 2>&1; then
+        warning "git not found; cannot verify pinned checkout of $REPO@$PIN_REV"
+        return 1
+    fi
+    mkdir -p "$CHECKOUT_DIR"
+    if [ ! -d "$CHECKOUT_DIR/.git" ]; then
+        git -C "$CHECKOUT_DIR" init -q || return 1
+        git -C "$CHECKOUT_DIR" remote add origin "https://github.com/$REPO.git" || return 1
+    fi
+    if [ "$(git -C "$CHECKOUT_DIR" rev-parse HEAD 2>/dev/null || true)" != "$PIN_REV" ]; then
+        attempt "git fetch $REPO@$PIN_REV" \
+            git -C "$CHECKOUT_DIR" fetch --depth 1 origin "$PIN_REV" || return 1
+        git -C "$CHECKOUT_DIR" checkout -q --detach FETCH_HEAD || return 1
+    fi
+    if [ "$(git -C "$CHECKOUT_DIR" rev-parse HEAD 2>/dev/null || true)" != "$PIN_REV" ]; then
+        warning "pinned checkout mismatch for $REPO (expected $PIN_REV)"
+        return 1
+    fi
+    return 0
+}
+
 install_claude() {
     if [ "$UPDATE" = false ] && claude_has_plugin; then
         SKIPPED=$((SKIPPED + 1))
@@ -119,15 +147,11 @@ install_claude() {
         return 0
     fi
 
-    if [ "$UPDATE" = true ] && claude_has_plugin; then
-        attempt "claude marketplace update" \
-            claude plugin marketplace update i-have-adhd || true
-    fi
-
-    if attempt "claude marketplace add" claude plugin marketplace add "$REPO" \
+    if sync_pinned_checkout \
+        && attempt "claude marketplace add" claude plugin marketplace add "$CHECKOUT_DIR" \
         && attempt "claude plugin install" claude plugin install "$PLUGIN"; then
         INSTALLED=$((INSTALLED + 1))
-        step "claude: $PLUGIN"
+        step "claude: $PLUGIN @ ${PIN_REV:0:12}"
     else
         FAILED=$((FAILED + 1))
     fi
@@ -145,12 +169,11 @@ install_codex() {
             codex plugin marketplace upgrade i-have-adhd || true
     fi
 
-    # --ref main because Codex pins a marketplace to a ref and defaults to the
-    # repository's default branch only when told which one that is.
-    if attempt "codex marketplace add" codex plugin marketplace add "$REPO" --ref main \
+    # Pin the marketplace checkout to the exact commit SHA from .chezmoidata/agents.toml.
+    if attempt "codex marketplace add" codex plugin marketplace add "$REPO" --ref "$PIN_REV" \
         && attempt "codex plugin add" codex plugin add "$PLUGIN"; then
         INSTALLED=$((INSTALLED + 1))
-        step "codex: $PLUGIN"
+        step "codex: $PLUGIN @ ${PIN_REV:0:12}"
     else
         FAILED=$((FAILED + 1))
     fi

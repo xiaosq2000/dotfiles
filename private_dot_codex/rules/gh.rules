@@ -20,6 +20,11 @@ prefix_rule(
     justification = "Merging or closing a pull request affects remote state and peers; ask first",
 )
 prefix_rule(
+    pattern = ["gh", "api"],
+    decision = "prompt",
+    justification = "Raw GitHub API calls can mutate repositories, releases, or settings; ask first",
+)
+prefix_rule(
     pattern = ["gh", ["repo", "secret", "variable", "ssh-key", "gpg-key", "auth"], ["delete", "set", "add", "token", "logout", "edit", "rename", "archive"]],
     decision = "forbidden",
     justification = "Destructive or credential-touching GitHub commands; the user runs these",

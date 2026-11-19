@@ -45,3 +45,4 @@
 .sh_utils/tools
 .config/nvim/after/lsp/texlab.lua
 .config/tmux/update_display.sh
+.local/bin/ai-privacy

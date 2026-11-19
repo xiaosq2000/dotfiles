@@ -198,24 +198,27 @@ mise ls
 ```
 
 Pi loads `~/.pi/agent/AGENTS.md` and discovers `~/.agents/skills` natively.
-[pi.toml](.chezmoidata/pi.toml) defines the shared startup settings and pins
-`pi-openai-toolkit`, `pi-ask-user` and `pi-subagents`. A modify script merges those
-values into `~/.pi/agent/settings.json`. It preserves other settings and unrelated
-packages.
-The selected package declarations, including their resource filters, belong to
-the shared baseline. Changing them locally does not persist across an apply.
+[agents.toml](.chezmoidata/agents.toml) defines the unified control plane for
+Claude Code, Codex, Antigravity CLI (`agy`), and Pi — including Pi's shared
+startup settings, `pi-subagents` global-context inheritance (`inheritGlobalContext: true`
+plus `defaultSubagentOnlyExtensions` for `dotfiles-guard.ts`), and pinned
+packages (`pi-openai-toolkit`, `pi-ask-user`, `pi-subagents`).
+`dot_local/libexec/dotfiles/executable_agent-reconcile.py` merges those values
+into each agent's native config while preserving local settings, sessions,
+credentials, Herdr hooks, and unrelated packages.
 
-Each apply checks installed package versions after the Pi download. Matching
-versions need no network request. Missing or mismatched packages install through
-the managed Pi. Failed installations warn and retry on the next apply. Change
-shared package versions in `pi.toml`, not through `pi update --extensions`.
-Package installation and startup repairs clear the proxy variables.
+Each apply checks installed Pi package versions after `mise` installs `pi`.
+Matching versions need no network request. Missing or mismatched packages
+install through the managed Pi. Failed installations warn and retry on the next
+apply. Change shared package versions in `.chezmoidata/agents.toml`, not
+through `pi update --extensions`. Package installation and startup repairs clear
+the proxy variables.
 
 `pi-subagents` enables delegated tasks when you request them. Installation does
 not start a reviewer or authorize automatic delegation. Run `/subagents-doctor`
-to check setup and `/subagents-fleet` to inspect active work. Fresh children do
-not inherit the shared global `AGENTS.md` unless their agent configuration sets
-`inheritProjectContext: true` and `inheritGlobalContext: true`.
+to check setup and `/subagents-fleet` to inspect active work. Builtin subagents
+are configured via `subagents.agentOverrides` in `.chezmoidata/agents.toml` to
+inherit both project and global `AGENTS.md` context and load `dotfiles-guard.ts`.
 
 New sessions default to `openai-codex/gpt-6.1-sol` with `xhigh` thinking.
 [Toolkit configuration](private_dot_pi/private_agent/extensions/pi-openai-toolkit/config.json)
@@ -242,14 +245,16 @@ without explicit approval.
 
 ## Antigravity CLI
 
-Checked on 2026-11-16. `agent-tools` also installs Antigravity CLI (`agy`) from
-its per-platform release `manifest` in
-[downloads.toml](.chezmoidata/downloads.toml), linking `~/.local/opt/dotfiles/bin/agy`
-to the downloaded `antigravity` binary. When that symlink is present, bash and
-zsh export `AGY_CLI_DISABLE_AUTO_UPDATE=true` so background self-updates do not
-replace the managed payload; upgrade through `dotfiles-fetch update agy`.
-Shared context comes from `~/.gemini/AGENTS.md` and
-`~/.gemini/config/skills/`, linked by `agent-skills.sh`.
+Checked on 2026-11-19. `agent-tools` installs Antigravity CLI (`agy`) from its
+per-platform release `manifest` in [downloads.toml](.chezmoidata/downloads.toml),
+linking `~/.local/opt/dotfiles/bin/agy` to the downloaded `antigravity` binary.
+`~/.config/dotfiles/env.sh` exports `AGY_CLI_DISABLE_AUTO_UPDATE=true` so
+background self-updates do not replace the managed payload; upgrade through
+`dotfiles-fetch update agy`. Shared context comes from `~/.gemini/AGENTS.md` and
+`~/.gemini/config/skills/`, linked by `agent-skills.sh`. `agent-reconcile.py`
+merges `key-guard` (`PreToolUse`), `agent-notify` (`Stop`), and any declared
+MCP servers into `~/.gemini/config/hooks.json` and
+`~/.gemini/config/mcp_config.json` while preserving Herdr and local entries.
 
 ## Herdr
 

@@ -43,12 +43,11 @@ Checked on 2026-11-19.
 - Modernized `tmux.conf.tmpl` (dynamic pixi/system zsh, `tmux-256color`, RGB/hyperlinks/usstyle, native OSC 52 clipboard, `update-environment`, removed dangerous `send-keys` `update_display.sh`) with native `current-theme.conf.tmpl` across all 7 themes + live reload in `theme`.
 - Updated `starship.toml.tmpl` (added `[pixi]`, trimmed unused languages and unused `surface` palette key).
 
-### Wave 3 — 4-Agent unified control plane (`.chezmoidata/agents.toml`)
+### Wave 3 — 4-Agent unified control plane (`.chezmoidata/agents.toml`) (Done on 2026-11-19)
 
-- Declare shared privacy/telemetry defaults, MCP server registry (per-bundle, secrets via `rbw`/env), command approval rules, and desktop/terminal notification hook (`agent-notify`) in `.chezmoidata/agents.toml`.
-- Compile/reconcile from one Python 3.10+ reconciler across Claude Code, Codex, Antigravity CLI (`~/.gemini/config/hooks.json`, `mcp_config.json`), and Pi (local extension + `pi-subagents` `inheritGlobalContext: true`).
-- Retire imperative `ai-privacy` (move Claude `strict`/`remote-control` profile into `chezmoi.toml` data) and pin or vendor `i-have-adhd`.
-- Tighten `herdr/SKILL.md` into a concise table with explicit-invocation metadata.
+- Consolidated shared privacy/telemetry defaults, MCP server registry, `gh` command rules (including `gh api` prompt), Pi settings/packages/subagent context inheritance, and hooks into `.chezmoidata/agents.toml` (replacing `.chezmoidata/pi.toml`).
+- Implemented one Python 3.10+ reconciler (`dot_local/libexec/dotfiles/executable_agent-reconcile.py`) behind 6 thin `modify_*.tmpl` shims across Claude Code (`settings.json`), Codex (`config.toml`, `hooks.json`), Antigravity CLI (`~/.gemini/config/hooks.json`, `mcp_config.json`), and Pi (`settings.json` + `dotfiles-guard.ts` extension + `pi-subagents` `inheritGlobalContext: true` and `defaultSubagentOnlyExtensions`).
+- Extended `key-guard.py` with native Antigravity CLI `PreToolUse` JSON protocol (`{"decision":"deny"}` / `{}` passthrough), added unified `agent-notify.py` completion hook across all 4 agents, retired imperative `ai-privacy` (Claude `strict`/`remote-control` via `chezmoi.toml` `[data].claude_profile`), pinned `i-have-adhd` to commit `1ecea1993b7f`, and compressed `herdr/SKILL.md` with `disable-model-invocation: true`.
 
 ### Wave 4 — OS-level capability sandbox (`agent-jail`) & unified security policy
 

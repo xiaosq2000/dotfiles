@@ -1,0 +1,26 @@
+{{- $spec := dict "agents" .agents "bundles" (index .machines .machine).bundles | toJson -}}
+#!/bin/sh
+# Thin shim delegating ~/.codex/config.toml reconciliation to agent-reconcile.py.
+# Ubuntu 22.04 (imrl) ships Python 3.10 without tomllib, so fall back to a pixi
+# interpreter when system python3 lacks tomllib/tomli.
+has_toml() {
+    "$1" -c 'import tomllib' </dev/null 2>/dev/null ||
+        "$1" -c 'import tomli' </dev/null 2>/dev/null
+}
+
+python=
+for candidate in python3 "${PIXI_HOME:-$HOME/.pixi}"/envs/*/bin/python3; do
+    if command -v "$candidate" >/dev/null 2>&1 && has_toml "$candidate"; then
+        python=$candidate
+        break
+    fi
+done
+
+if [ -z "$python" ]; then
+    echo "codex config: no python3 with tomllib or tomli; left ~/.codex/config.toml unchanged" >&2
+    exec cat
+fi
+
+exec "$python" {{ joinPath .chezmoi.sourceDir "dot_local/libexec/dotfiles/executable_agent-reconcile.py" | quote }} codex-config --spec-file /dev/fd/3 3<<'JSON'
+{{ $spec }}
+JSON

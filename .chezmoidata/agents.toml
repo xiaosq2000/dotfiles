@@ -1,0 +1,151 @@
+# Single declarative control plane for the four primary coding agents:
+# Claude Code, Codex, Antigravity CLI (agy), and Pi.
+#
+# dot_local/libexec/dotfiles/executable_agent-reconcile.py reconciles these
+# settings non-destructively into each agent's native config file during
+# `chezmoi apply`, preserving local state (auth, sessions, trusted projects,
+# Herdr hooks, unrelated packages and extensions).
+#
+# Checked on 2026-11-19.
+
+[agents.privacy]
+# Override per machine by adding `claude_profile = "remote-control"` under
+# [data] in ~/.config/chezmoi/chezmoi.toml, then running `chezmoi apply`.
+claude_profile_default = "strict"
+
+[agents.privacy.codex_otel]
+exporter = "none"
+metrics_exporter = "none"
+trace_exporter = "none"
+log_user_prompt = false
+
+[agents.privacy.claude_common_env]
+CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY = "1"
+DISABLE_ERROR_REPORTING = "1"
+DISABLE_FEEDBACK_COMMAND = "1"
+
+[agents.privacy.claude_profiles.strict]
+CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
+DISABLE_TELEMETRY = "1"
+
+[agents.privacy.claude_profiles.remote-control]
+DISABLE_AUTOUPDATER = "1"
+
+[agents.privacy.claude_remote_control]
+# Variables that conflict with Claude Code Remote Control feature checks.
+conflicts = [
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+    "DISABLE_TELEMETRY",
+    "DO_NOT_TRACK",
+    "DISABLE_GROWTHBOOK",
+]
+
+[agents.hooks]
+key_guard = "~/.agents/hooks/key-guard.py"
+notify = "~/.agents/hooks/agent-notify.py"
+claude_guard_matcher = "Bash|Monitor|Read|Grep|Glob|mcp__.*"
+codex_guard_matcher = "Bash|mcp__.*"
+# Match read/search/shell/MCP tools in Antigravity CLI without blocking edits
+# to dotfiles documentation or hook test cases that mention protected path names.
+agy_guard_matcher = "run_command|read_file|view_file|view_file_outline|view_code_item|grep_search|find_by_name|list_dir|mcp_.*"
+
+[agents.claude]
+# Default key names and local credential files. A Read(~/.ssh/id_*) glob would
+# also deny .pub files; the key-guard hook covers keys with other names.
+deny = [
+    "Read(~/.ssh/id_rsa)",
+    "Read(~/.ssh/id_dsa)",
+    "Read(~/.ssh/id_ecdsa)",
+    "Read(~/.ssh/id_ecdsa_sk)",
+    "Read(~/.ssh/id_ed25519)",
+    "Read(~/.ssh/id_ed25519_sk)",
+    "Read(~/.ssh/id_xmss)",
+    "Read(~/.config/chezmoi/key.txt)",
+    "Read(~/.secrets/**)",
+    "Read(~/.config/gh/hosts.yml)",
+    "Read(~/.aws/credentials)",
+    "Read(~/.netrc)",
+    "Read(~/.git-credentials)",
+    "Read(~/.huggingface/token)",
+    "Bash(gh auth token:*)",
+    "Bash(gh auth logout:*)",
+    "Bash(gh secret:*)",
+    "Bash(gh variable:*)",
+    "Bash(gh ssh-key:*)",
+    "Bash(gh gpg-key:*)",
+    "Bash(gh repo delete:*)",
+    "Bash(gh repo archive:*)",
+]
+ask = [
+    "Bash(gh pr merge:*)",
+    "Bash(gh pr close:*)",
+    "Bash(gh api:*)",
+]
+
+[agents.codex]
+profile = "key-guard"
+description = "Workspace and network access without ssh private keys. Set by chezmoi."
+extends = ":workspace"
+# Four globs spell "does not end in .pub" without exact paths (Codex creates an
+# empty 0444 placeholder for an exact missing path). Checked on 2026-09-22.
+deny_globs = [
+    "~/.ssh/id_*[!b]",
+    "~/.ssh/id_*[!u]b",
+    "~/.ssh/id_*[!p]ub",
+    "~/.ssh/id_*[!.]pub",
+]
+ssh_drop_ins = "/etc/ssh/ssh_config.d"
+
+[agents.codex.workspace_roots]
+".git" = "write"
+".git/hooks" = "read"
+".git/config" = "read"
+
+[agents.plugins.i-have-adhd]
+# Pinned commit checked on 2026-11-19.
+repo = "ayghri/i-have-adhd"
+plugin = "i-have-adhd@i-have-adhd"
+rev = "1ecea1993b7fce257ffbd686c070948b5e07eda6"
+
+# Declarative MCP server registry synced to Claude Code, Codex, and agy.
+# Add entries as [agents.mcp.<server-id>] with:
+#   targets = ["claude", "codex", "agy"]
+#   bundles = []               # optional machine bundle filter
+#   command = "binary"         # stdio transport (with optional args/env)
+#   url = "https://.../mcp"    # streamable HTTP transport
+[agents.mcp]
+
+# Shared Pi settings, pinned npm packages, and pi-subagents context policy.
+[agents.pi.settings]
+defaultProvider = "openai-codex"
+defaultModel = "gpt-6.1-sol"
+defaultThinkingLevel = "xhigh"
+# Package downloads must not use the metered AI proxy, including startup repairs.
+npmCommand = [
+    "env",
+    "-u", "http_proxy", "-u", "HTTP_PROXY",
+    "-u", "https_proxy", "-u", "HTTPS_PROXY",
+    "-u", "ftp_proxy", "-u", "FTP_PROXY",
+    "-u", "socks_proxy", "-u", "SOCKS_PROXY",
+    "-u", "all_proxy", "-u", "ALL_PROXY",
+    "npm",
+]
+
+[agents.pi.subagents]
+# Ensure foreground subagent children load the shared key-guard extension.
+defaultSubagentOnlyExtensions = ["~/.pi/agent/extensions/dotfiles-guard.ts"]
+# Builtin subagents inherit both repo instructions and global ~/.pi/agent/AGENTS.md.
+inherit_global_context_agents = [
+    "scout",
+    "worker",
+    "reviewer",
+    "researcher",
+    "oracle",
+    "delegate",
+    "evidence-auditor",
+]
+
+[agents.pi.packages]
+pi-openai-toolkit = "0.22.3"
+pi-ask-user = "0.17.0"
+pi-subagents = "0.80.0"
