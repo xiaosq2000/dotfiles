@@ -361,7 +361,7 @@ fn render_overview(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         _ => {
             let ag = &checks.agents;
             lines.push(kv(
-                "agent-tools bundle",
+                "dev bundle",
                 if ag.agent_tools_selected { "enabled" } else { "disabled" },
                 p,
             ));
@@ -794,24 +794,29 @@ fn render_machines(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         .iter()
         .map(|name| {
             let is_cur = name == current;
-            let count = app
-                .snapshot
-                .data
-                .as_ref()
-                .and_then(|d| d.machines.get(name))
-                .map(|m| m.bundles.len())
-                .unwrap_or(0);
-            ListItem::new(Line::from(vec![
+            let spec = app.snapshot.data.as_ref().and_then(|d| d.machines.get(name));
+            let count = spec.map(|m| m.bundles.len()).unwrap_or(0);
+            let is_virtual = spec.map(|m| m.is_virtual).unwrap_or(false);
+            let mut spans = vec![
                 Span::styled(
                     if is_cur { "★ " } else { "  " },
                     Style::default().fg(p.warn).add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
-                    format!("{name:<14}"),
-                    Style::default().fg(p.fg_bright).add_modifier(Modifier::BOLD),
+                    format!("{name:<13}"),
+                    Style::default()
+                        .fg(if is_virtual { p.fg } else { p.fg_bright })
+                        .add_modifier(if is_virtual { Modifier::empty() } else { Modifier::BOLD }),
                 ),
-                Span::styled(format!("{count:>2} bundles"), Style::default().fg(p.fg)),
-            ]))
+            ];
+            if is_virtual {
+                spans.push(Span::styled("[profile] ", Style::default().fg(p.info)));
+            }
+            spans.push(Span::styled(
+                format!("{count} bundles"),
+                Style::default().fg(p.fg),
+            ));
+            ListItem::new(Line::from(spans))
         })
         .collect();
 
@@ -837,6 +842,15 @@ fn render_machines(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         && let Some(spec) = app.snapshot.data.as_ref().and_then(|d| d.machines.get(name))
     {
         lines.push(kv("Machine", name, p));
+        lines.push(kv(
+            "Kind",
+            if spec.is_virtual {
+                "virtual fallback / CI profile"
+            } else {
+                "physical / managed host"
+            },
+            p,
+        ));
         lines.push(kv("Role", &spec.description, p));
         lines.push(kv("Sudo", if spec.sudo { "yes" } else { "no (rootless)" }, p));
         if !spec.docs.is_empty() {

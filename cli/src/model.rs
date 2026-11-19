@@ -41,6 +41,8 @@ pub struct MachineSpec {
     pub bundles: Vec<String>,
     #[serde(default)]
     pub sudo: bool,
+    #[serde(rename = "virtual", default)]
+    pub is_virtual: bool,
     #[serde(default)]
     pub docs: String,
     #[serde(default)]

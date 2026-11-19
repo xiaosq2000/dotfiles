@@ -276,7 +276,7 @@ def _find_tool(home, name):
 
 
 def _check_agents(home, bundles):
-    has_bundle = "agent-tools" in bundles
+    has_bundle = "dev" in bundles
     key_guard = home / ".agents/hooks/key-guard.py"
     notify = home / ".agents/hooks/agent-notify.py"
     jail_bin = home / ".local/bin/agent-jail"

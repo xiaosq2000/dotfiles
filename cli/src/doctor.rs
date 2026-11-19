@@ -415,7 +415,7 @@ fn file_contains(path: &Path, needle: &str) -> bool {
 }
 
 fn check_agents(home: &Path, bundles: &[String]) -> AgentsCheck {
-    let has_bundle = bundles.iter().any(|b| b == "agent-tools");
+    let has_bundle = bundles.iter().any(|b| b == "dev");
     let key_guard = is_executable(&home.join(".agents/hooks/key-guard.py"));
     let agent_notify = is_executable(&home.join(".agents/hooks/agent-notify.py"));
     let jail_bin = home.join(".local/bin/agent-jail");

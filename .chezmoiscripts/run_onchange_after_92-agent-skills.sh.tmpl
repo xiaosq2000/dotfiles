@@ -1,4 +1,4 @@
-{{- if has "agent-tools" (index .machines .machine).bundles -}}
+{{- if has "dev" (index .machines .machine).bundles -}}
 #!/usr/bin/env bash
 # Point every installed AI agent at the shared skills in ~/.agents/skills.
 # Runs after 90-downloads so freshly installed agy is linked on the first apply.

@@ -1,5 +1,5 @@
 {{- $needs_install := false -}}
-{{- if has "agent-tools" (index .machines .machine).bundles -}}
+{{- if has "dev" (index .machines .machine).bundles -}}
 {{-   range $name, $version := .agents.pi.packages -}}
 {{-     $manifest := joinPath $.chezmoi.homeDir ".pi/agent/npm/node_modules" $name "package.json" -}}
 {{-     if stat $manifest -}}

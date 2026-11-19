@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix="herdr-theme-") as temporary:
     for machine, entry in machines.items():
         config.write_text(f'[data]\nmachine = "{machine}"\ntheme = "rose-pine"\n')
         managed = subprocess.check_output(command + ["managed"], text=True).splitlines()
-        assert (".config/herdr/config.toml" in managed) == ("herdr" in entry["bundles"]), machine
+        assert (".config/herdr/config.toml" in managed) == ("dev" in entry["bundles"]), machine
 
     # Exercise the command without contacting a user's running Herdr server.
     stubs = base / "bin"

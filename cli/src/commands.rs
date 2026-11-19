@@ -109,7 +109,7 @@ pub fn cmd_agent_status(json_out: bool) -> Result<i32> {
         return Ok(0);
     }
     println!(
-        "agent-tools bundle: {}",
+        "dev bundle (agents): {}",
         if agents.agent_tools_selected { "enabled" } else { "disabled" }
     );
     let mut jail = if agents.agent_jail_backends.is_empty() {

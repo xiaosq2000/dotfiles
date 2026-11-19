@@ -220,10 +220,19 @@ impl App {
             self.toolchain_idx = 0;
         }
 
-        // Build machine list.
+        // Build machine list: real hosts first, virtual fallback/CI profiles last.
         let mut machines = Vec::new();
         if let Some(data) = &self.snapshot.data {
-            machines.extend(data.machines.keys().cloned());
+            for (name, spec) in &data.machines {
+                if !spec.is_virtual {
+                    machines.push(name.clone());
+                }
+            }
+            for (name, spec) in &data.machines {
+                if spec.is_virtual {
+                    machines.push(name.clone());
+                }
+            }
         }
         self.machine_names = machines;
         if select_defaults {

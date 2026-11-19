@@ -1,4 +1,4 @@
-{{- if has "dev-web" (index .machines .machine).bundles -}}
+{{- if has "dev" (index .machines .machine).bundles -}}
 #!/usr/bin/env bash
 set -eu
 
@@ -19,14 +19,14 @@ PNPM_BIN_DIR="$PNPM_HOME/bin"
 
 if ! command -v pnpm >/dev/null 2>&1; then
     warning "pnpm not found on PATH"
-    hint "it comes from the dev-web bundle; check .chezmoidata/machines.toml"
+    hint "it comes from the dev bundle; check .chezmoidata/machines.toml"
     exit 0
 fi
 PNPM="$(command -v pnpm)"
 
 if ! command -v node >/dev/null 2>&1; then
     warning "node not found on PATH; pnpm's global CLIs will not run"
-    hint "it comes from the dev-web bundle; check .chezmoidata/machines.toml"
+    hint "it comes from the dev bundle; check .chezmoidata/machines.toml"
 fi
 
 mkdir -p "$PNPM_BIN_DIR"

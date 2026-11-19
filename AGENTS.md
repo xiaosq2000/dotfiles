@@ -200,7 +200,7 @@ entry once it is done.
 [private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md) holds the user's preferences that
 apply in every project. It deploys to `~/.agents/AGENTS.md`, and `symlink_`
 entries link it as `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`,
-`~/.gemini/AGENTS.md` and `~/.pi/agent/AGENTS.md` on `agent-tools` machines.
+`~/.gemini/AGENTS.md` and `~/.pi/agent/AGENTS.md` on `dev` machines.
 Each agent loads it at session start. This file adds what is specific to this
 repository.
 

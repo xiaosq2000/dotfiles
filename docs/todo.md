@@ -53,5 +53,5 @@ fonts, and its dock, default terminal and `zotero://` handler name the
 
 ## Not bugs
 
-- Neovim's Mason installs language servers on a machine without the `lsp`
+- Neovim's Mason installs language servers on a machine without the `dev`
   bundle. That is the intended fallback.

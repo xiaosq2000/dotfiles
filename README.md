@@ -159,7 +159,7 @@ plane in [agents.toml](.chezmoidata/agents.toml) and one security policy in
 - **Shared instructions**: [private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md)
   holds user preferences for every project. It deploys to `~/.agents/AGENTS.md`
   and links to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/AGENTS.md`,
-  and `~/.pi/agent/AGENTS.md` on `agent-tools` machines.
+  and `~/.pi/agent/AGENTS.md` on `dev` machines.
 - **Shared skills**: `~/.agents/skills/` is read directly by Pi and symlinked
   for Claude Code, Codex, and Antigravity CLI (`~/.gemini/config/skills/`). See
   [Shared agent skills](private_dot_agents/skills/README.md).
@@ -188,7 +188,7 @@ key is. `machine` prints the path of the current machine's page.
 
 ## Pi and RTK
 
-Workstation, laptop, imrl and sicc select `agent-tools`. The vps, container and
+Workstation, laptop, imrl and sicc select `dev`. The vps, container and
 generic profiles do not. The bundle installs Pi and RTK through `mise` with
 SHA-256 verification from `private_dot_config/mise/mise.lock`, plus Node/npm for
 Pi extensions.
@@ -253,7 +253,7 @@ without explicit approval.
 
 ## Antigravity CLI
 
-Checked on 2026-11-19. `agent-tools` installs Antigravity CLI (`agy`) from its
+Checked on 2026-11-19. `dev` installs Antigravity CLI (`agy`) from its
 per-platform release `manifest` in [downloads.toml](.chezmoidata/downloads.toml),
 linking `~/.local/opt/dotfiles/bin/agy` to the downloaded `antigravity` binary.
 `~/.config/dotfiles/env.sh` exports `AGY_CLI_DISABLE_AUTO_UPDATE=true` so
@@ -268,7 +268,7 @@ merges hooks and declared MCP servers into `~/.gemini/config/hooks.json` and
 
 ## Herdr
 
-The workstation, laptop, imrl and sicc select the `herdr` bundle for coding agents.
+The workstation, laptop, imrl and sicc include Herdr through the `dev` bundle.
 Start `herdr` in a project directory. The shared `herdr` skill teaches agents to
 control panes when asked.
 
@@ -302,21 +302,11 @@ plugins and `agy`, and `config` paths that only a machine selecting it receives.
 
 | bundle | contents |
 | --- | --- |
-| `core` | `zsh`, `mosh`, `sqlite`, `chezmoi`, `mise`, plus 22 locked CLIs (`dotfiles`, `nvim`, `tmux`, `fzf`, `rg`, `fd`, `eza`, `yazi`, `starship`, `zoxide`, `lazygit`, `difft`, `sheldon`, `pre-commit`, `gitleaks`, ...) — every machine |
-| `dev-c` `dev-py` `dev-web` `dev-tex` | per-language build and format tooling |
-| `lsp` | language servers and the binaries Neovim's plugins call |
-| `media` | audio, video and image conversion |
-| `ml` | model and dataset transfer |
-| `secrets` | age, sops, Bitwarden client |
-| `github` | the GitHub CLI; every machine except the vps |
-| `extras` | convenience and diagnostics, including `tre`; nothing load-bearing |
-| `desktop` | kitty, the Maple Mono NF CN terminal font, and the GUI programs' config |
-| `fonts` | eighteen more document, slide, design, math, CJK and emoji families |
-| `research` | Zotero, pinned Better BibTeX, and pinned Extra Meta |
-| `agent-tools` | locked Codex, Claude Code, Pi, RTK, Node (`mise`), Antigravity CLI (`agy`), and shared 4-agent control plane, on every computing machine except the vps |
-| `herdr` | terminal workspaces for coding agents on workstation, laptop, imrl and sicc |
-| `vpn` | um-vpn, the university VPN client, which pixi builds from its repository |
-| `laptop` | a user service that drops the panel to 60 Hz on battery |
+| `core` | `zsh`, `mosh`, `sqlite`, `chezmoi`, `mise`, plus 22 locked CLIs (`dotfiles`, `nvim`, `tmux`, `fzf`, `rg`, `fd`, `eza`, `yazi`, `starship`, `zoxide`, `lazygit`, `difft`, `sheldon`, `pre-commit`, `gitleaks`, ...) — every machine, including VPS and login nodes |
+| `secrets` | encryption, password vault, and GitHub CLI auth boundary (`age`, `sops`, `rbw`, `libsecret`, `gh`) — trusted machines only; never on VPS |
+| `dev` | full development, Python/ML (`uv`, `ruff`, `ty`, `huggingface_hub`), C++/Web/LaTeX, all Neovim LSPs, `ffmpeg`, diagnostics, 4 coding agents (`codex`, `claude`, `agy`, `pi`, `rtk`), and `herdr` |
+| `desktop` | `kitty`, 19 font families, `zathura`/`fcitx5`/Wayland config, and Zotero with pinned Better BibTeX and Extra Meta |
+| `laptop` | `um-vpn` (built by pixi from git) and a user service that drops the panel to 60 Hz on battery |
 
 To add software, add it to a bundle and run `chezmoi apply`.
 
@@ -385,7 +375,7 @@ it already has, the way an application keeps its profile.
 ### Zotero, Better BibTeX and Extra Meta
 
 Checked on 2026-11-19 with Zotero 10.0.6, Better BibTeX 9.0.71 and Extra Meta 0.1.7.
-The `research` bundle pins both Better BibTeX and
+The `desktop` bundle pins both Better BibTeX and
 [Extra Meta](https://github.com/xiaosq2000/zotero-extra-meta) (`extra-meta@dotfiles.local`)
 in `.chezmoidata/downloads.toml`. `dotfiles-fetch` downloads both `.xpi` release
 assets and checks their published digests. An apply installs both plugins in the

@@ -9,8 +9,13 @@
 #              from .chezmoidata/downloads.toml (installed by dotfiles-fetch)
 #   config     destination paths deployed only when the bundle is selected
 #
-# One pixi environment per package keeps dependency solves isolated, and
-# `[packages.<name>].exposed` lists exact binaries so bundled runtimes stay off PATH.
+# Five capability layers cover the entire fleet:
+#   core      universal terminal base (safe on public VPS and unknown hosts)
+#   secrets   identity, encryption, vault, and GitHub auth (never on public VPS)
+#   dev       full development, ML, LSPs, 4 coding agents, and Herdr
+#   desktop   GUI apps (kitty, zathura, fcitx5), 19 font families, and Zotero
+#   laptop    off-campus VPN and battery refresh-rate service
+#
 # Checked on 2026-11-19.
 
 ################################################################################
@@ -18,7 +23,7 @@
 ################################################################################
 
 [bundles.core]
-description = "Shell, editor, navigation, and dotfiles CLI. Every machine, including a login node."
+description = "Shell, editor, navigation, and dotfiles CLI. Every machine, including VPS and login nodes."
 packages = [
     "chezmoi",
     "mise",
@@ -51,39 +56,49 @@ mise = [
     "zoxide",
 ]
 
-[bundles.dev-c]
-description = "C and C++ build and format tooling"
-packages = ["clang-format", "clang-tools"]
-mise = ["cmake", "ninja"]
-
-[bundles.dev-py]
-description = "Python tooling"
-packages = []
-mise = ["uv", "ruff", "ty"]
-
-[bundles.dev-web]
-description = "Node, pnpm, Deno and JavaScript formatters"
-packages = []
-mise = ["node", "pnpm", "deno", "prettierd"]
-
-[bundles.dev-tex]
-description = "LaTeX tooling"
-packages = []
-mise = ["tex-fmt"]
-config = [".config/tex-fmt", ".latexmkrc"]
-
-[bundles.lsp]
-description = "Language servers and external binaries Neovim's plugins call"
-# Everything here has a matching entry in nvim's lua/plugins/lsp/lspconfig.lua.
-# That file falls back to :MasonInstall when a binary is missing, so a machine
-# without this bundle still gets working LSP, just installed per machine and
-# unmanaged.
+[bundles.secrets]
+description = "Encryption, password vault, and GitHub CLI auth boundary (trusted machines only; never on VPS)."
 packages = [
-    "cmake-language-server",
-    "codespell",
+    "rbw",
+    "libsecret",
 ]
 mise = [
+    "age",
+    "sops",
+    "gh",
+]
+
+[bundles.dev]
+description = "Full development, Python/ML, C++/Web/LaTeX, LSPs, 4-agent control plane, and Herdr."
+packages = [
+    "clang-format",
+    "clang-tools",
+    "cmake-language-server",
+    "codespell",
+    "ffmpeg",
+    "huggingface_hub",
+    "speedtest-cli",
+    "git-filter-repo",
+]
+mise = [
+    # 4 coding agents and workspace manager
+    "codex",
+    "claude-code",
+    "pi",
+    "rtk",
+    "herdr",
+    # Language runtimes, build systems, and formatters
+    "uv",
+    "ruff",
+    "ty",
     "node",
+    "pnpm",
+    "deno",
+    "prettierd",
+    "cmake",
+    "ninja",
+    "tex-fmt",
+    # Language servers and linters
     "lua-language-server",
     "taplo",
     "marksman",
@@ -93,39 +108,38 @@ mise = [
     "yaml-language-server",
     "vscode-langservers-extracted",
     "dockerfile-language-server-nodejs",
+    # Diagnostics and convenience
+    "tre",
+    "fastfetch",
+    "lazydocker",
+]
+downloads = ["agy"]
+config = [
+    ".claude",
+    ".codex",
+    ".gemini",
+    ".pi",
+    ".config/herdr/config.toml",
+    ".config/tex-fmt",
+    ".latexmkrc",
 ]
 
-[bundles.media]
-description = "Audio and video processing"
-packages = ["ffmpeg"]
-
-[bundles.ml]
-description = "Model and dataset transfer"
-packages = ["huggingface_hub"]
-
-[bundles.secrets]
-description = "age, sops and the Bitwarden client; see docs/secrets.md"
-packages = ["rbw", "libsecret"]
-mise = ["age", "sops"]
-
-[bundles.github]
-# Its own bundle rather than part of core, because core reaches the vps, and a
-# GitHub login is one of the credentials that must never be kept there.
-description = "The GitHub CLI; every machine except the vps"
-packages = []
-mise = ["gh"]
-
-[bundles.extras]
-description = "Convenience and diagnostics; nothing here is load-bearing"
-packages = ["speedtest-cli", "git-filter-repo"]
-mise = ["tre", "fastfetch", "lazydocker"]
-
 [bundles.desktop]
-description = "Kitty, its terminal font, and the configuration of the GUI programs"
+description = "Desktop GUI (kitty, zathura, fcitx5), 19 font families, and Zotero with pinned plugins."
 packages = []
-downloads = ["kitty", "maple-mono"]
-# Zathura and Fcitx5 come from the distribution; this bundle only supplies
-# their configuration.
+downloads = [
+    "kitty",
+    "maple-mono",
+    "fira", "nerd-font-fira-code", "tex-gyre-pagella", "libertinus",
+    "source-sans", "source-serif", "source-han-sans-sc", "source-han-serif-cn",
+    "apple-color-emoji", "noto-color-emoji", "san-francisco-pro",
+    "san-francisco-mono", "new-york", "pingfang",
+    "newsreader", "inter", "jetbrains-mono", "noto-sans-math",
+    "zotero",
+    "better-bibtex",
+    "extra-meta",
+]
+# Zathura and Fcitx5 come from the distribution; this bundle supplies their config.
 config = [
     ".config/kitty",
     ".config/zathura",
@@ -135,53 +149,14 @@ config = [
     ".config/systemd/user/wayland-xhost.service",
     ".config/systemd/user/graphical-session.target.wants/wayland-xhost.service",
     ".local/bin/zathura",
+    ".config/dotfiles/zotero-user.js",
 ]
-
-[bundles.fonts]
-description = "Document, design, math, CJK and emoji fonts"
-packages = []
-downloads = [
-    "fira", "nerd-font-fira-code", "tex-gyre-pagella", "libertinus",
-    "source-sans", "source-serif", "source-han-sans-sc", "source-han-serif-cn",
-    "apple-color-emoji", "noto-color-emoji", "san-francisco-pro",
-    "san-francisco-mono", "new-york", "pingfang",
-    "newsreader", "inter", "jetbrains-mono", "noto-sans-math",
-]
-
-[bundles.research]
-description = "Zotero, Better BibTeX and Extra Meta"
-packages = []
-downloads = ["zotero", "better-bibtex", "extra-meta"]
-config = [".config/dotfiles/zotero-user.js"]
-
-[bundles.agent-tools]
-description = "Locked Codex, Claude Code, Pi, RTK, Node, Antigravity CLI, and shared 4-agent control plane"
-packages = []
-mise = ["node", "codex", "claude-code", "pi", "rtk"]
-downloads = ["agy"]
-config = [
-    ".claude",
-    ".codex",
-    ".gemini",
-    ".pi",
-]
-
-[bundles.herdr]
-description = "Terminal workspaces for coding agents"
-packages = []
-mise = ["herdr"]
-config = [".config/herdr/config.toml"]
-
-[bundles.vpn]
-description = "um-vpn, the University of Macau VPN client, for work off campus"
-packages = ["um-vpn"]
 
 [bundles.laptop]
-description = "Laptop power: the panel refresh rate follows the power source"
-packages = []
-# The service watches UPower over the system bus and changes the mode through
-# mutter over the session bus, which is why it is a user service. It runs on
-# the system python3, which has the gi bindings.
+description = "Laptop mobility: university VPN client and battery panel refresh-rate service."
+packages = ["um-vpn"]
+# The refresh-rate service watches UPower over the system bus and changes mode
+# through mutter over the session bus using system python3 with gi bindings.
 config = [
     ".local/bin/refresh-rate-on-power",
     ".config/systemd/user/refresh-rate-on-power.service",
