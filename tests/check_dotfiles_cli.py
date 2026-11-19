@@ -11,15 +11,21 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "dot_local/bin/executable_dotfiles"
+RUST_CLI = ROOT / "cli/target/release/dotfiles"
 assert shutil.which("chezmoi"), "chezmoi is required"
 
-# 1. --help prints usage and exits 0.
-help_res = subprocess.run([sys.executable, str(CLI), "--help"], text=True, capture_output=True, check=True)
-assert "doctor" in help_res.stdout and "jail" in help_res.stdout
+TARGETS = [("python", [sys.executable, str(CLI)])]
+if RUST_CLI.is_file() and os.access(RUST_CLI, os.X_OK):
+    TARGETS.append(("rust", [str(RUST_CLI)]))
 
-# 2. Unknown subcommand exits 2.
-bad_res = subprocess.run([sys.executable, str(CLI), "no-such-cmd"], text=True, capture_output=True, check=False)
-assert bad_res.returncode == 2
+for label, cmd_prefix in TARGETS:
+    # 1. --help prints usage and exits 0.
+    help_res = subprocess.run([*cmd_prefix, "--help"], text=True, capture_output=True, check=True)
+    assert "doctor" in help_res.stdout and "jail" in help_res.stdout, (label, help_res.stdout)
+
+    # 2. Unknown subcommand exits 2.
+    bad_res = subprocess.run([*cmd_prefix, "no-such-cmd"], text=True, capture_output=True, check=False)
+    assert bad_res.returncode == 2, (label, bad_res)
 
 # 3. Run `dotfiles doctor --json` inside a disposable applied container home.
 with tempfile.TemporaryDirectory(prefix="dotfiles-cli-") as tmp:
@@ -60,47 +66,55 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-cli-") as tmp:
     chezmoi_shim.chmod(0o755)
     test_env = {**env, "PATH": f"{wrapper_dir}{os.pathsep}{env['PATH']}"}
 
-    doc_res = subprocess.run(
-        [sys.executable, str(CLI), "doctor", "--json"],
-        env=test_env,
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    report = json.loads(doc_res.stdout)
-    assert report["status"] in ("ok", "warn"), report
-    assert report["checks"]["chezmoi"]["machine"] == "container"
-    assert report["checks"]["chezmoi"]["theme"] == "rose-pine"
-    assert report["checks"]["secrets"]["policy_json_valid"] is True
-    assert report["checks"]["shell_git"]["env_sh"] is True
-    assert report["checks"]["shell_git"]["git_xdg_config"] is True
+    for label, cmd_prefix in TARGETS:
+        doc_res = subprocess.run(
+            [*cmd_prefix, "doctor", "--json"],
+            env=test_env,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        report = json.loads(doc_res.stdout)
+        assert report["status"] in ("ok", "warn"), (label, report)
+        assert report["checks"]["chezmoi"]["machine"] == "container", (label, report)
+        assert report["checks"]["chezmoi"]["theme"] == "rose-pine", (label, report)
+        assert report["checks"]["secrets"]["policy_json_valid"] is True, (label, report)
+        assert report["checks"]["shell_git"]["env_sh"] is True, (label, report)
+        assert report["checks"]["shell_git"]["git_xdg_config"] is True, (label, report)
 
-    # Loose SSH private key permissions trigger an error exit code.
-    bad_key = home / ".ssh/id_test_loose"
-    bad_key.write_text("dummy\n")
-    bad_key.chmod(0o644)
-    loose_res = subprocess.run(
-        [sys.executable, str(CLI), "doctor", "--json"],
-        env=test_env,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert loose_res.returncode == 1
-    loose_report = json.loads(loose_res.stdout)
-    assert loose_report["checks"]["secrets"]["status"] == "error"
-    assert loose_report["checks"]["secrets"]["loose_ssh_keys"][0]["name"] == "id_test_loose"
-    bad_key.unlink()
+        # Loose SSH private key permissions trigger an error exit code.
+        bad_key = home / ".ssh/id_test_loose"
+        bad_key.write_text("dummy\n")
+        bad_key.chmod(0o644)
+        loose_res = subprocess.run(
+            [*cmd_prefix, "doctor", "--json"],
+            env=test_env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert loose_res.returncode == 1, (label, loose_res)
+        loose_report = json.loads(loose_res.stdout)
+        assert loose_report["checks"]["secrets"]["status"] == "error", (label, loose_report)
+        assert loose_report["checks"]["secrets"]["loose_ssh_keys"][0]["name"] == "id_test_loose", (label, loose_report)
+        bad_key.unlink()
 
-    # `dotfiles agent status --json` succeeds cleanly.
-    ag_res = subprocess.run(
-        [sys.executable, str(CLI), "agent", "status", "--json"],
-        env=test_env,
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    ag_report = json.loads(ag_res.stdout)
-    assert ag_report["agent_tools_selected"] is False
+        # `dotfiles agent status --json` succeeds cleanly.
+        ag_res = subprocess.run(
+            [*cmd_prefix, "agent", "status", "--json"],
+            env=test_env,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        ag_report = json.loads(ag_res.stdout)
+        assert ag_report["agent_tools_selected"] is False, (label, ag_report)
 
-print("ok       dotfiles CLI: help, doctor --json, loose-key detection, and agent status pass")
+        if label == "rust":
+            comp_res = subprocess.run([*cmd_prefix, "completion", "zsh"], env=test_env, text=True, capture_output=True, check=True)
+            assert comp_res.stdout.startswith("#compdef dotfiles")
+            dyn_res = subprocess.run([*cmd_prefix, "__complete", "themes"], env=test_env, text=True, capture_output=True, check=True)
+            assert "rose-pine:" in dyn_res.stdout
+
+tested = ", ".join(label for label, _ in TARGETS)
+print(f"ok       dotfiles CLI ({tested}): help, doctor --json, loose-key detection, and agent status pass")

@@ -24,6 +24,27 @@ jobs:
       - name: Run offline unit and security test suite
         run: python3 -m unittest tests.test_suite.UnitChecks -v
 
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli
+      - name: Clippy and unit tests
+        run: |
+          cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path cli/Cargo.toml
+      - name: Verify generated zsh completion syntax
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+          cargo run --quiet --manifest-path cli/Cargo.toml -- completion zsh > /tmp/_dotfiles
+          zsh -n /tmp/_dotfiles
+
   smoke:
     runs-on: ubuntu-latest
     container: ubuntu:24.04

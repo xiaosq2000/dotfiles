@@ -24,7 +24,8 @@ system
 AGENTS.md
 CLAUDE.md
 
-# Repository development task runner and test suite, not user dotfiles.
+# Repository development task runner, Rust CLI source, and test suite, not user dotfiles.
+cli
 mise.toml
 tests
 

@@ -17,6 +17,32 @@ run = "python3 tests/check_secrets_tests.py"
 description = "Run the full unittest/pytest-compatible repository test suite"
 run = "python3 -m unittest discover -s tests -v"
 
+[tasks.cli-test]
+description = "Run Rust dotfiles CLI unit tests"
+run = "env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY cargo test --manifest-path cli/Cargo.toml"
+
+[tasks.cli-check]
+description = "Run cargo clippy and unit tests for the Rust dotfiles CLI"
+run = """
+set -eu
+env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
+  cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
+  cargo test --manifest-path cli/Cargo.toml
+"""
+
+[tasks.build-cli]
+description = "Build release Rust dotfiles CLI and install into ~/.local/opt/dotfiles/bin/dotfiles"
+run = """
+set -eu
+env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
+  cargo build --release --manifest-path cli/Cargo.toml
+mkdir -p "$HOME/.local/opt/dotfiles/bin"
+install -m 0755 cli/target/release/dotfiles "$HOME/.local/opt/dotfiles/bin/dotfiles"
+rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_dotfiles"
+echo "Installed $HOME/.local/opt/dotfiles/bin/dotfiles"
+"""
+
 [tasks.check]
 description = "Run all pre-commit hooks and the full offline repository test suite"
 run = """

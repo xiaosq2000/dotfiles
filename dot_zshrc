@@ -255,7 +255,8 @@ theme() {
 
 dotfiles() {
     command dotfiles "$@" || return
-    if [[ ${1:-} == "theme" && -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]]; then
+    if [[ $# -eq 0 || ${1:-} == "theme" || ${1:-} == "tui" ]] &&
+        [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]]; then
         source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
     fi
 }
@@ -409,9 +410,10 @@ if [[ -n ${_zcompcache}(#qNf:g+w:,f:o+w:) || -n ${_zcompcache:h}(#qNf:g+w:,f:o+w
 fi
 
 typeset -A _zcompgen=(
-    pixi  'pixi completion --shell zsh'
-    codex 'codex completion zsh'
-    uv    'uv generate-shell-completion zsh'
+    pixi     'pixi completion --shell zsh'
+    codex    'codex completion zsh'
+    uv       'uv generate-shell-completion zsh'
+    dotfiles 'dotfiles completion zsh'
 )
 
 for _t in ${(k)_zcompgen}; do

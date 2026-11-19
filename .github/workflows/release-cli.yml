@@ -1,0 +1,83 @@
+name: release-cli
+
+on:
+  push:
+    tags:
+      - "cli-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. cli-v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: linux-amd64
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            platform: linux-arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install musl tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli
+          key: ${{ matrix.target }}
+      - name: Build static release binary
+        run: |
+          cargo build --release --locked --manifest-path cli/Cargo.toml --target ${{ matrix.target }}
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          fi
+          mkdir -p dist/pkg
+          cp "cli/target/${{ matrix.target }}/release/dotfiles" dist/pkg/dotfiles
+          chmod 0755 dist/pkg/dotfiles
+          tar -C dist/pkg -czf "dist/dotfiles-cli-${TAG}-${{ matrix.platform }}.tar.gz" dotfiles
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dotfiles-cli-${{ matrix.platform }}
+          path: dist/dotfiles-cli-*.tar.gz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Generate SHA256SUMS and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          fi
+          (cd dist && sha256sum dotfiles-cli-*.tar.gz > SHA256SUMS)
+          cat dist/SHA256SUMS
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --title "dotfiles CLI ${TAG}" \
+              --generate-notes
+          fi
