@@ -76,6 +76,8 @@ pub struct MiseToolSpec {
     #[serde(default)]
     pub version: String,
     #[serde(default)]
+    pub bin: Option<String>,
+    #[serde(default)]
     pub description: String,
 }
 

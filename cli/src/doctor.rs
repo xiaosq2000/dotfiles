@@ -306,7 +306,13 @@ fn check_toolchain(home: &Path, bundles: &[String], data: Option<&ChezmoiData>) 
     let shims_dir = home.join(".local/share/mise/shims");
     let missing_mise: Vec<String> = selected_mise
         .iter()
-        .filter(|t| !shims_dir.join(t.as_str()).exists())
+        .filter(|t| {
+            let bin_name = data
+                .and_then(|d| d.mise.get(t.as_str()))
+                .and_then(|s| s.bin.as_deref())
+                .unwrap_or(t.as_str());
+            !shims_dir.join(bin_name).exists()
+        })
         .cloned()
         .collect();
 
