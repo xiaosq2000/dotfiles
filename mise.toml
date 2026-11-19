@@ -88,6 +88,10 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-mise-lock-") as tmp:
             lines.append(f'"{spec["tool"]}" = "{spec["version"]}"')
     config_file = cfg / "config.toml"
     config_file.write_text("\\n".join(lines) + "\\n")
+    if (target_dir / "mise.lock").is_file():
+        shutil.copyfile(target_dir / "mise.lock", cfg / "mise.lock")
+    if (target_dir / "locks").is_dir():
+        shutil.copytree(target_dir / "locks", cfg / "locks")
 
     env["MISE_CONFIG_DIR"] = str(cfg)
     env["MISE_GLOBAL_CONFIG_FILE"] = str(config_file)
