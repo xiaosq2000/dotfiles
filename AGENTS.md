@@ -36,9 +36,11 @@ chezmoi deploys it into `~`. Names starting with `.`, such as `.github` and
 Per-machine behaviour is a lookup in `.chezmoidata/machines.toml`, keyed by the
 `machine` answer given at `chezmoi init`, never by the hostname. Run `machine`
 to see the current entry. Software comes from the bundles in
-`.chezmoidata/tools.toml`: pixi packages, and downloads from
-`.chezmoidata/downloads.toml` that `dotfiles-fetch` installs. A `pixi global
-install` by hand is undone by the next apply.
+`.chezmoidata/tools.toml`: pixi packages, locked `mise` CLIs in
+`.chezmoidata/mise.toml` (SHA-256 pinned in `private_dot_config/mise/mise.lock`),
+and GUI/font/plugin downloads from `.chezmoidata/downloads.toml` that
+`dotfiles-fetch` installs. A `pixi global install` by hand is undone by the next
+apply.
 
 ## The repository is public
 

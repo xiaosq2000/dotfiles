@@ -18,7 +18,7 @@
 # already installed at its target version (or agent-tools is unselected), so
 # `chezmoi status` and `chezmoi verify` stay clean while failed installs retry.
 set -eu
-export PATH="$HOME/.local/opt/dotfiles/bin:$HOME/.pixi/bin:$PATH"
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/opt/dotfiles/bin:$HOME/.pixi/bin:$PATH"
 if ! command -v python3 >/dev/null 2>&1; then
     echo "pi packages: python3 not found; run chezmoi apply after installation" >&2
     exit 0
@@ -34,7 +34,13 @@ import subprocess
 WANTED = json.loads({{ .pi.packages | toJson | quote }})
 home = Path.home()
 agent = home / ".pi/agent"
-pi = home / ".local/opt/dotfiles/bin/pi"
+pi = next(
+    (candidate for candidate in (
+        home / ".local/share/mise/shims/pi",
+        home / ".local/opt/dotfiles/bin/pi",
+    ) if os.access(candidate, os.X_OK)),
+    None,
+)
 
 
 def warn(message):
@@ -67,7 +73,7 @@ for name, version in WANTED.items():
 
 if not pending:
     raise SystemExit(0)
-if not os.access(pi, os.X_OK) or not all(shutil.which(tool) for tool in ("node", "npm")):
+if pi is None or not all(shutil.which(tool) for tool in ("node", "npm")):
     warn("managed Pi or Node/npm missing, installation skipped")
     raise SystemExit(0)
 

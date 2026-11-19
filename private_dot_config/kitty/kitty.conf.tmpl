@@ -49,9 +49,9 @@ map ctrl+shift+y layout_action rotate
 map ctrl+f2      detach_window
 map ctrl+f3      detach_window new-tab
 
-# kitty-scrollback.nvim (include pixi and dotfiles-fetch bins so desktop-launched
-# kitty resolves the managed nvim instead of /usr/bin/nvim)
-exe_search_path [[ .chezmoi.homeDir ]]/.pixi/bin [[ .chezmoi.homeDir ]]/.local/opt/dotfiles/bin [[ .chezmoi.homeDir ]]/.local/bin
+# kitty-scrollback.nvim (include pixi, mise and dotfiles-fetch bins so
+# desktop-launched kitty resolves the managed nvim instead of /usr/bin/nvim)
+exe_search_path [[ .chezmoi.homeDir ]]/.pixi/bin [[ .chezmoi.homeDir ]]/.local/share/mise/shims [[ .chezmoi.homeDir ]]/.local/opt/dotfiles/bin [[ .chezmoi.homeDir ]]/.local/bin
 action_alias kitty_scrollback_nvim kitten ~/.local/share/nvim/lazy/kitty-scrollback.nvim/python/kitty_scrollback_nvim.py
 map kitty_mod+h kitty_scrollback_nvim
 map kitty_mod+/ kitty_scrollback_nvim

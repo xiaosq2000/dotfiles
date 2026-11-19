@@ -1,0 +1,53 @@
+{{- $selection := includeTemplate "software-selection" . | fromJson -}}
+{{- if $selection.mise -}}
+#!/usr/bin/env bash
+# Sync locked cross-platform CLIs managed by mise from ~/.config/mise/config.toml
+# and ~/.config/mise/mise.lock.
+#
+# Runs after 05-pixi (which installs mise and nodejs) and before 08-source-repo
+# (whose git hooks use gitleaks) and 95-pi-packages (which uses pi).
+#
+# config sha256: {{ includeTemplate "private_dot_config/mise/config.toml.tmpl" . | sha256sum }}
+# lock sha256: {{ include "private_dot_config/mise/mise.lock" | sha256sum }}
+# mise at apply time: {{ if or (lookPath "mise") (stat (joinPath .chezmoi.homeDir ".pixi/bin/mise")) }}present{{ else }}absent{{ end }}
+# pending: {{ $pending := joinPath .chezmoi.homeDir ".local/state/dotfiles/mise-pending" }}{{ if stat $pending }}{{ include $pending | trim }}{{ else }}none{{ end }}
+
+set -eu
+
+export PATH="${PIXI_HOME:-$HOME/.pixi}/bin:$PATH"
+PENDING="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/mise-pending"
+
+if command -v mise >/dev/null 2>&1; then
+    MISE="$(command -v mise)"
+elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/mise" ]; then
+    MISE="${PIXI_HOME:-$HOME/.pixi}/bin/mise"
+else
+    echo "mise: warning: mise not found; it comes from the core bundle, retry with chezmoi apply" >&2
+    exit 0
+fi
+
+# Clear metered proxy variables so tool downloads run direct.
+unset http_proxy HTTP_PROXY https_proxy HTTPS_PROXY ftp_proxy FTP_PROXY socks_proxy SOCKS_PROXY all_proxy ALL_PROXY
+
+# Reuse a logged-in gh token when available so GitHub attestation/asset checks
+# avoid the 60/hr unauthenticated rate limit.
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ] && command -v gh >/dev/null 2>&1; then
+    _gh_token="$(gh auth token 2>/dev/null || true)"
+    if [ -n "$_gh_token" ]; then
+        export GITHUB_TOKEN="$_gh_token"
+    fi
+    unset _gh_token
+fi
+
+export MISE_YES=1
+echo "mise: installing locked tools from ${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml"
+if (cd "$HOME" && "$MISE" install --locked); then
+    (cd "$HOME" && "$MISE" reshim) || echo "mise: warning: reshim failed" >&2
+    (cd "$HOME" && "$MISE" prune --yes) || echo "mise: warning: prune failed" >&2
+    rm -f "$PENDING"
+else
+    mkdir -p "$(dirname "$PENDING")"
+    date +%s >"$PENDING"
+    echo "mise: warning: locked install failed; retry with chezmoi apply" >&2
+fi
+{{ end -}}

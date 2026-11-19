@@ -287,8 +287,8 @@ class SecretHooks(unittest.TestCase):
         self.assertNotIn(TOKEN, output.getvalue())
 
     def test_catalog_pin_matches_hook(self):
-        catalog = tomllib.loads((ROOT / ".chezmoidata/downloads.toml").read_text())
-        self.assertEqual(catalog["downloads"]["gitleaks"]["tag"], "v" + check.VERSION)
+        catalog = tomllib.loads((ROOT / ".chezmoidata/mise.toml").read_text())
+        self.assertEqual(catalog["mise"]["gitleaks"]["version"], check.VERSION)
 
 
 if __name__ == "__main__":

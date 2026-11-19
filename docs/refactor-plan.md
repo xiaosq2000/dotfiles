@@ -28,12 +28,12 @@ Checked on 2026-11-19.
 - **PR 0A (done)**: Retired `alacritty`, `kmonad`, `opencode`, `aider`, `.condarc`, `dot_sh_utils/tools/`, hardened agent permissions (`private_`) and `key-guard.py`, fixed P0 bugs across `dot_latexmkrc`, `power-tunables.service`, `kitty.conf.tmpl`, `basics.sh`, `dot_zshrc`, Neovim, `refresh-rate-on-power`, `zathura`, restored `chezmoi verify`, and wired CI checks.
 - **PR 0B (done)**: Extracted `zotero/extra-meta` to public repo `xiaosq2000/zotero-extra-meta` (`v0.1.7`), switched dotfiles to consume its GitHub Release `.xpi` via `dotfiles-fetch`, and removed Node.js from dotfiles CI.
 
-### Wave 1 — `sbc` split-routing & toolchain convergence (`mise` + `pixi`)
+### Wave 1 — `sbc` split-routing & toolchain convergence (`mise` + `pixi`) (Done on 2026-11-19)
 
-- Audit and align `sbc route` split rules for package registries/downloads; simplify proxy-bypass wording in `AGENTS.md` and provisioning scripts.
-- Introduce `mise` + committed `mise.lock` (SHA-256 locked) for cross-platform CLIs (`gitleaks`, `pi`, `rtk`, `herdr`, `tre`, `kitty`, `stylua`, `shfmt`, `prettierd`, `zoxide`) and repo tasks (`mise run check`).
-- Trim `pixi global` to conda-forge / HPC strongholds (`zsh`, pinned `um-vpn`, `ffmpeg`, `huggingface_hub`, C++/LSP).
-- Shrink `dotfiles-fetch` to a minimal SHA-256-verified asset/font/Zotero helper (fixing `version` containment and atomic swap, replacing unverified floating personal font repos).
+- Aligned `private_dot_agents/AGENTS.md` with `sbc route` split modes (`ai-only`/`gfw-proxy` vs `china-direct`/`global`) while stripping metered proxy vars defensively in `05-pixi`, `06-sheldon`, `07-mise`, and `agent-plugins.sh`.
+- Introduced `mise` + committed multi-arch `private_dot_config/mise/mise.lock` (`linux-x64` & `linux-arm64`, SHA-256 + `aube` locked) for 9 cross-platform CLIs (`gitleaks`, `zoxide`, `stylua`, `shfmt`, `prettierd`, `tre`, `herdr`, `pi`, `rtk`) and root `mise.toml` repo tasks (`check`, `render`, `fetch-test`, `secrets-test`, `lock-tools`).
+- Trimmed `pixi global` (dropped unused conda `prettier`, pinned `um-vpn` to `rev`, added `mise`) and wired `zoxide` into `dot_zshrc`.
+- Hardened `dotfiles-fetch` (safe version names, fail-closed digest requirement on pinned tags, committed `sha256` verification for Zotero `.xpi` plugins, crash-safe `.old` swap recovery, non-empty font dir checks) and kept it scoped to GUI bundles (`kitty`, `zotero`), `.xpi` plugins, `agy` manifest, and fonts.
 
 ### Wave 2 — Dual-mode shell contract & modern Git / Tmux / Starship
 

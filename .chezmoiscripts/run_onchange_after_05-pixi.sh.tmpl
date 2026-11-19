@@ -10,6 +10,9 @@ exit 0
 # shellcheck source=/dev/null
 . "$HOME/.sh_utils/lib/ui.sh"
 
+# Clear metered proxy variables so pixi bootstrap and conda-forge sync run direct.
+unset http_proxy HTTP_PROXY https_proxy HTTPS_PROXY ftp_proxy FTP_PROXY socks_proxy SOCKS_PROXY all_proxy ALL_PROXY
+
 # Ensure pixi is installed (without modifying PATH)
 if command -v pixi >/dev/null 2>&1; then
     PIXI_BIN="$(command -v pixi)"

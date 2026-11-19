@@ -1,15 +1,14 @@
 {{- /*
-   What this machine's bundles select, as JSON: pixi packages, download ids and
-   config paths. The pixi manifest, the download manifest, the launchers and
-   .chezmoiignore all read it, so they cannot disagree.
+   What this machine's bundles select, as JSON: pixi packages, mise tool ids,
+   download ids and config paths. The pixi manifest, mise config, download
+   manifest, launchers and .chezmoiignore all read it, so they cannot disagree.
 
    A name that does not exist fails here rather than quietly selecting less:
-   `pixi global sync` and `dotfiles-fetch sync` both remove what a machine no
-   longer selects, so a typo would uninstall something. Platform support is not
-   checked here; dotfiles-fetch skips an entry the platform lacks, so a core
-   machine on another architecture still applies.
+   `pixi global sync`, `mise prune` and `dotfiles-fetch sync` all remove what a
+   machine no longer selects, so a typo would uninstall something.
 */ -}}
 {{- $packages := list -}}
+{{- $mise := list -}}
 {{- $downloads := list -}}
 {{- $config := list -}}
 {{- range $bundle := (index .machines .machine).bundles -}}
@@ -17,13 +16,19 @@
 {{-     fail (printf "machine %q selects bundle %q, which is not in .chezmoidata/tools.toml" $.machine $bundle) -}}
 {{-   end -}}
 {{-   $spec := index $.bundles $bundle -}}
-{{-   $packages = concat $packages $spec.packages -}}
+{{-   $packages = concat $packages (get $spec "packages" | default list) -}}
+{{-   $mise = concat $mise (get $spec "mise" | default list) -}}
 {{-   $downloads = concat $downloads (get $spec "downloads" | default list) -}}
 {{-   $config = concat $config (get $spec "config" | default list) -}}
+{{- end -}}
+{{- range $id := $mise -}}
+{{-   if not (hasKey $.mise $id) -}}
+{{-     fail (printf "a bundle selects mise tool %q, which is not in .chezmoidata/mise.toml" $id) -}}
+{{-   end -}}
 {{- end -}}
 {{- range $id := $downloads -}}
 {{-   if not (hasKey $.downloads $id) -}}
 {{-     fail (printf "a bundle selects download %q, which is not in .chezmoidata/downloads.toml" $id) -}}
 {{-   end -}}
 {{- end -}}
-{{- dict "packages" ($packages | uniq | sortAlpha) "downloads" ($downloads | uniq | sortAlpha) "config" ($config | uniq | sortAlpha) | toJson -}}
+{{- dict "packages" ($packages | uniq | sortAlpha) "mise" ($mise | uniq | sortAlpha) "downloads" ($downloads | uniq | sortAlpha) "config" ($config | uniq | sortAlpha) | toJson -}}

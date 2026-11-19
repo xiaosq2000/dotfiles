@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Render every machine and theme without downloads or installation, then check shell syntax."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,21 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
 machines = tomllib.loads((ROOT / ".chezmoidata/machines.toml").read_text())["machines"]
+mise_catalog = tomllib.loads((ROOT / ".chezmoidata/mise.toml").read_text())["mise"]
+mise_lock = tomllib.loads((ROOT / "private_dot_config/mise/mise.lock").read_text())["tools"]
+for tool_id, spec in mise_catalog.items():
+    entries = [e for e in mise_lock.get(spec["tool"], []) if e.get("version") == spec["version"]]
+    assert entries, f"mise.lock missing {tool_id} ({spec['tool']}@{spec['version']})"
+    entry = entries[0]
+    if "aube" in entry:
+        lock_file = ROOT / "private_dot_config/mise" / entry["aube"]["path"] / "aube-lock.yaml"
+        digest = "sha256:" + hashlib.sha256(lock_file.read_bytes()).hexdigest()
+        assert digest == entry["aube"]["digest"], f"aube digest mismatch for {tool_id}"
+    else:
+        for platform in ("platforms.linux-x64", "platforms.linux-arm64"):
+            assert entry.get(platform, {}).get("checksum", "").startswith("sha256:"), (
+                f"mise.lock missing {platform} checksum for {tool_id}"
+            )
 themes = {}
 for theme_file in sorted((ROOT / ".chezmoidata").glob("themes-*.toml")):
     themes.update(tomllib.loads(theme_file.read_text())["themes"])
@@ -54,6 +70,10 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-render-") as temporary:
                 [shell, "-n"], input=entries[name]["contents"],
                 text=True, check=True,
             )
+        if ".config/mise/config.toml" in entries:
+            tomllib.loads(entries[".config/mise/config.toml"]["contents"])
+        else:
+            assert machine == "container", f"unexpected missing mise config on {machine}"
 
     # Render every theme variant on the fullest machine and check modify_*.tmpl scripts.
     for theme in sorted(themes):

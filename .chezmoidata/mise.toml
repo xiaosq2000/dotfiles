@@ -1,0 +1,45 @@
+# Cross-platform CLI tools managed by `mise` with SHA-256 verification in
+# private_dot_config/mise/mise.lock. A bundle in .chezmoidata/tools.toml selects
+# entries by id; chezmoi renders ~/.config/mise/config.toml and runs
+# `mise install --locked`.
+#
+# To upgrade a tool: change its version here, run `mise run lock-tools`, review
+# the lockfile diff, and run `chezmoi apply`.
+# Checked on 2026-11-19.
+
+[mise.gitleaks]
+# Must match VERSION in .github/scripts/check-secrets.py.
+tool = "aqua:gitleaks/gitleaks"
+version = "8.30.1"
+
+[mise.zoxide]
+tool = "aqua:ajeetdsouza/zoxide"
+version = "0.10.0"
+
+[mise.stylua]
+tool = "aqua:JohnnyMorganz/StyLua"
+version = "2.6.0"
+
+[mise.shfmt]
+tool = "aqua:mvdan/sh"
+version = "3.14.1"
+
+[mise.prettierd]
+tool = "npm:@fsouza/prettierd"
+version = "0.29.0"
+
+[mise.tre]
+tool = "github:dduan/tre"
+version = "0.4.0"
+
+[mise.herdr]
+tool = "github:herdrdev/herdr"
+version = "0.9.4"
+
+[mise.pi]
+tool = "github:earendil-works/pi"
+version = "1.5.2"
+
+[mise.rtk]
+tool = "github:rtk-ai/rtk"
+version = "1.0.0"

@@ -38,6 +38,7 @@
 description = "Shell, editor and navigation. Every machine, including a login node."
 packages = [
     "chezmoi",
+    "mise",
     "zsh",
     "sheldon",
     "nvim",
@@ -64,8 +65,8 @@ packages = [
     "pre-commit",
     "shellcheck",
 ]
-# Use one pinned scanner version on every machine that can commit dotfiles.
-downloads = ["gitleaks"]
+# Pinned CLI binaries with committed SHA-256 lockfile entries.
+mise = ["gitleaks", "zoxide"]
 
 [bundles.dev-c]
 description = "C and C++ build and format tooling"
@@ -77,7 +78,8 @@ packages = ["uv", "ruff", "ty"]
 
 [bundles.dev-web]
 description = "Node, Deno and the JavaScript formatters"
-packages = ["nodejs", "pnpm", "deno", "prettier"]
+packages = ["nodejs", "pnpm", "deno"]
+mise = ["prettierd"]
 
 [bundles.dev-tex]
 description = "LaTeX tooling"
@@ -104,6 +106,7 @@ packages = [
     "taplo",
     "codespell",
 ]
+mise = ["stylua", "shfmt"]
 
 [bundles.media]
 description = "Audio and video processing"
@@ -126,7 +129,7 @@ packages = ["gh"]
 [bundles.extras]
 description = "Convenience and diagnostics; nothing here is load-bearing"
 packages = ["fastfetch", "speedtest-cli", "git-filter-repo", "lazydocker"]
-downloads = ["tre"]
+mise = ["tre"]
 
 [bundles.desktop]
 description = "Kitty, its terminal font, and the configuration of the GUI programs"
@@ -163,7 +166,8 @@ config = [".config/dotfiles/zotero-user.js"]
 [bundles.agent-tools]
 description = "Pinned Pi with shared extensions, RTK, Antigravity CLI, and shared agent configurations"
 packages = ["nodejs"]
-downloads = ["pi", "rtk", "agy"]
+mise = ["pi", "rtk"]
+downloads = ["agy"]
 config = [
     ".claude",
     ".codex",
@@ -176,7 +180,7 @@ config = [
 [bundles.herdr]
 description = "Terminal workspaces for coding agents"
 packages = []
-downloads = ["herdr"]
+mise = ["herdr"]
 config = [".config/herdr/config.toml"]
 
 [bundles.vpn]
@@ -283,7 +287,9 @@ exposed = ["secret-tool"]
 [packages.um-vpn]
 # conda-forge does not package um-vpn, so pixi builds it from its repository.
 # The environment brings its own secret-tool for the stored UMPASS sign-in.
+# Commit pinned on 2026-11-19.
 git = "https://github.com/xiaosq2000/um-vpn"
+rev = "bb5d34dcd5602812bf165f18f7b4ca39e6cdf5cf"
 exposed = ["um-vpn"]
 
 [packages.fastfetch]

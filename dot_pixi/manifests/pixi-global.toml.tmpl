@@ -24,7 +24,11 @@ version = 1
 {{-   $exposed = $spec.exposed -}}
 {{- /* A package conda-forge lacks is built from its git repository. */ -}}
 {{-   if hasKey $spec "git" -}}
-{{-     $source = printf "{ git = %s }" ($spec.git | quote) -}}
+{{-     if hasKey $spec "rev" -}}
+{{-       $source = printf "{ git = %s, rev = %s }" ($spec.git | quote) ($spec.rev | quote) -}}
+{{-     else -}}
+{{-       $source = printf "{ git = %s }" ($spec.git | quote) -}}
+{{-     end -}}
 {{-   end -}}
 {{- end }}
 [envs.{{ $pkg }}]

@@ -58,6 +58,7 @@ software_overview() {
     fi
     _software_overview_row "chezmoi" bash -c 'chezmoi --version | awk "{print \$3}" | tr -d ,'
     _software_overview_row "pixi" bash -c 'pixi --version | awk "{print \$2}"'
+    _software_overview_row "mise" bash -c 'mise --version | awk "{print \$1}"'
     _software_overview_row "uv" bash -c 'uv --version | awk "{print \$2}"'
     _software_overview_row "zsh" bash -c 'zsh --version | awk "{print \$2}"'
     _software_overview_row "starship" bash -c 'starship --version | head -n1 | awk "{print \$2}"'
@@ -71,6 +72,7 @@ software_overview() {
     _software_overview_row "kitty" bash -c 'kitty --version | awk "{print \$2}"'
     _software_overview_row "yazi" bash -c 'yazi --version | awk "{print \$2}"'
     _software_overview_row "fzf" bash -c 'fzf --version | awk "{print \$1}"'
+    _software_overview_row "zoxide" bash -c 'zoxide --version | awk "{print \$2}"'
     _software_overview_row "rg" bash -c 'rg --version | head -n1 | awk "{print \$2}"'
     _software_overview_row "fd" bash -c 'fd --version | awk "{print \$2}"'
     _software_overview_row "python3" bash -c 'python3 --version | awk "{print \$2}"'

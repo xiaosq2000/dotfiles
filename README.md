@@ -177,21 +177,20 @@ key is. `machine` prints the path of the current machine's page.
 ## Pi and RTK
 
 Workstation, laptop, imrl and sicc select `agent-tools`. The vps, container and
-generic profiles do not. The bundle installs Pi and RTK from upstream release
-archives. Pi includes its runtime. The bundle also installs Node/npm for Pi
-extensions.
+generic profiles do not. The bundle installs Pi and RTK through `mise` with
+SHA-256 verification from `private_dot_config/mise/mise.lock`, plus Node/npm for
+Pi extensions.
 
-Checked on 2026-11-15. Pi is pinned to `v1.5.2`, and RTK to `v1.0.0`, in
-[downloads.toml](.chezmoidata/downloads.toml). To upgrade or roll back, change
-those `tag` values and run `chezmoi apply` on each target.
-`dotfiles-fetch update pi rtk` respects the pins. Do not use `pi update` to
-update the dotfiles-managed executable.
+Checked on 2026-11-19. Pi is pinned to `1.5.2`, and RTK to `1.0.0`, in
+[mise.toml](.chezmoidata/mise.toml). To upgrade or roll back, change the version
+there, run `mise run lock-tools`, and run `chezmoi apply` on each target. Do not
+use `pi update` to update the dotfiles-managed executable.
 
 ```sh
-command -v pi rtk              # ~/.local/opt/dotfiles/bin on a new shell
+command -v pi rtk              # ~/.local/share/mise/shims on a new shell
 pi --version
 rtk --version
-dotfiles-fetch status
+mise ls
 ```
 
 Pi loads `~/.pi/agent/AGENTS.md` and discovers `~/.agents/skills` natively.
@@ -276,9 +275,11 @@ The cause is unresolved.
 
 A machine's `bundles` in [machines.toml](.chezmoidata/machines.toml) decide
 everything it gets. Each bundle in [tools.toml](.chezmoidata/tools.toml) can
-name three kinds of thing: pixi `packages`, `downloads` from
-[downloads.toml](.chezmoidata/downloads.toml) for software conda-forge does not
-package, and `config` paths that only a machine selecting it receives.
+name four kinds of thing: pixi `packages` (conda-forge / HPC strongholds),
+`mise` tools from [mise.toml](.chezmoidata/mise.toml) locked in
+`private_dot_config/mise/mise.lock`, `downloads` from
+[downloads.toml](.chezmoidata/downloads.toml) for GUI bundles, fonts, `.xpi`
+plugins and `agy`, and `config` paths that only a machine selecting it receives.
 
 | bundle | contents |
 | --- | --- |
@@ -308,6 +309,13 @@ explicitly, so one dependency conflict cannot break a whole bundle and
 conda-forge runtimes (`node`, `openssl`, `python3.14`, `tclsh`, `wish`) stay off
 `PATH`.
 
+**Locked CLIs (`mise`).** chezmoi renders `~/.config/mise/config.toml` from each
+machine's selected `mise` entries alongside the shared multi-arch
+`~/.config/mise/mise.lock` (`linux-x64` and `linux-arm64`), and runs
+`mise install --locked`, `mise reshim`, and `mise prune --yes`. Shims live in
+`~/.local/share/mise/shims`. To upgrade a tool, update its version in
+`.chezmoidata/mise.toml`, run `mise run lock-tools`, and apply.
+
 **Downloads.** chezmoi renders the selection into
 `~/.config/dotfiles/downloads.json` and runs `dotfiles-fetch sync` whenever it
 changes. chezmoi never downloads these itself, so `chezmoi diff` and `cat` stay
@@ -316,7 +324,7 @@ fast and work offline. `dotfiles-fetch` installs only under names of its own:
 | what | where |
 | --- | --- |
 | applications, one directory per version | `~/.local/opt/dotfiles/<id>/` |
-| their commands, on `PATH` after pixi's | `~/.local/opt/dotfiles/bin/` |
+| their commands, on `PATH` before `mise` and `pixi` | `~/.local/opt/dotfiles/bin/` |
 | fonts | `~/.local/share/fonts/dotfiles/<id>/` |
 | launchers | `~/.local/share/applications/dotfiles-*.desktop` |
 
@@ -335,10 +343,10 @@ dotfiles-fetch outdated        # GitHub releases newer than what is installed
 dotfiles-fetch update [id...]  # latest release, or the catalog tag when pinned
 ```
 
-GitHub releases are verified against the digest GitHub publishes. Zotero's
-built-in updater is disabled, since `dotfiles-fetch update` replaces the
-application. A download with no build for the machine's platform is skipped with
-a warning; as of 2026-09-23 that is `tre` on linux-arm64.
+GitHub releases are verified against committed catalog `sha256` digests (required
+for pinned tags) and GitHub's published release digests. Zotero's built-in updater
+is disabled, since `dotfiles-fetch update` replaces the application. A download
+with no build for the machine's platform is skipped with a warning.
 
 Kitty, Zotero and the fonts that `setup.d/typefaces.sh` installed before this
 lived at shared paths. `dotfiles-fetch migrate` lists the font directories that

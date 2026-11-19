@@ -19,7 +19,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^private_dot_config/mise/(mise\.lock|locks/)
       - id: end-of-file-fixer
+        exclude: ^private_dot_config/mise/(mise\.lock|locks/)
       - id: check-yaml
         # Go templates are not valid YAML until rendered.
         exclude: \.tmpl$
@@ -35,7 +37,7 @@ repos:
         exclude: (^|/)modify_
       - id: pretty-format-json
         args: [--autofix]
-        exclude: (^|/)modify_
+        exclude: (^|/)modify_|^private_dot_config/mise/locks/
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.0.0
     hooks:

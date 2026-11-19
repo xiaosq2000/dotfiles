@@ -159,15 +159,9 @@ def payload(identifier, spec, version, directory):
     elif identifier == "zotero":
         tar(path, {"Zotero_linux-x86_64/zotero": script(f"zotero {version}"),
                    "Zotero_linux-x86_64/icons/icon128.png": b"icon"}, "xz")
-    elif identifier in ("tre", "rtk", "gitleaks"):
-        tar(path, {identifier: script(f"{identifier} {version}")}, "gz")
-    elif identifier == "pi":
-        tar(path, {"pi/pi": script(f"pi {version}"), "pi/README.md": b"Pi docs"}, "gz")
     elif identifier == "agy":
         tar(path, {"antigravity": script(f"agy {version}")}, "gz")
-    elif identifier == "herdr":
-        path.write_bytes(script(f"herdr {version}"))
-    elif identifier == "better-bibtex":
+    elif identifier in ("better-bibtex", "extra-meta"):
         zip_(path, {"manifest.json": json.dumps({"version": version}).encode()})
     elif path.suffix == ".ttf":
         path.write_bytes(f"{identifier} {version}".encode())
@@ -210,6 +204,8 @@ def publish(box, identifier, spec, version):
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         url = f"{box.releases}/{path.relative_to(base).as_posix()}"
         assets.append({"name": path.name, "browser_download_url": url, "digest": f"sha256:{digest}"})
+        if "sha256" in spec:
+            spec["sha256"] = digest
     data = json.dumps({"tag_name": tag, "assets": assets})
     release.write_text(data)
     tagged = release.parent / "tags" / tag
@@ -270,15 +266,17 @@ def fixtures(box, catalog):
             legacy = hashlib.sha256(json.dumps([spec.get(k) for k in ("github", "asset", "file", "url")],
                                                sort_keys=True).encode()).hexdigest()
             assert lock[identifier]["source"] == legacy, identifier
-    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk", "agy", "gitleaks"]:
+    for command in ["kitty", "kitten", "zotero", "agy"]:
         output = subprocess.run([str(store / "bin" / command)], capture_output=True, text=True, check=True).stdout
         assert output == f"{command} 1\n", (command, output)
     assert json.loads((store / "zotero/current/distribution/policies.json").read_text()) == {"policies": {"DisableAppUpdate": True}}
     # XPI is a zip package, but Zotero needs the archive itself.
+    for xpi_id in ("better-bibtex", "extra-meta"):
+        plugin = store / xpi_id / "current" / f"{xpi_id}.xpi"
+        with zipfile.ZipFile(plugin) as package:
+            assert json.loads(package.read("manifest.json"))["version"] == "1"
+        assert sorted(path.name for path in plugin.parent.iterdir()) == [f"{xpi_id}.xpi"]
     plugin = store / "better-bibtex/current/better-bibtex.xpi"
-    with zipfile.ZipFile(plugin) as package:
-        assert json.loads(package.read("manifest.json"))["version"] == "1"
-    assert sorted(path.name for path in plugin.parent.iterdir()) == ["better-bibtex.xpi"]
     for identifier, spec in catalog.items():
         if "fonts" in spec:
             installed = sorted(p.name for p in (fonts / identifier).iterdir())
@@ -344,42 +342,54 @@ def fixtures(box, catalog):
     assert subprocess.run([str(store / "bin/agy")], capture_output=True, text=True, check=True).stdout == "agy 2\n"
 
     # Catalog pins win over the latest release, including explicit update.
-    for identifier in ("pi", "rtk"):
-        publish(box, identifier, resources[identifier], "2")
+    pinned_ids = ("better-bibtex", "extra-meta")
+    v1_specs = {i: dict(resources[i]) for i in pinned_ids}
+    v2_specs = {i: publish(box, i, dict(catalog[i], tag="v2"), "2") for i in pinned_ids}
     newer = box.fetch("outdated").stdout
     assert "catalog pin: v1" in newer
-    box.fetch("update", "pi", "rtk")
-    assert all(box.lock()[i]["version"] == "v1" for i in ("pi", "rtk"))
-    (store / "bin/pi").unlink()
+    box.fetch("update", *pinned_ids)
+    assert all(box.lock()[i]["version"] == "v1" for i in pinned_ids)
+    plugin.unlink()
     box.fetch("sync")
-    assert (store / "bin/pi").exists() and box.lock()["pi"]["version"] == "v1"
+    assert plugin.is_file() and box.lock()["better-bibtex"]["version"] == "v1"
 
     # Changing a catalog pin upgrades on sync. Restoring it rolls back.
-    for tag in ("v2", "v1"):
-        pinned = dict(everything, resources=dict(resources))
-        for identifier in ("pi", "rtk"):
-            pinned["resources"][identifier] = dict(resources[identifier], tag=tag)
+    for tag, specs in (("v2", v2_specs), ("v1", v1_specs)):
+        pinned = dict(everything, resources=dict(resources, **specs))
         assert "catalog changed" in box.fetch("status", manifest=pinned).stdout
         box.fetch("sync")
-        assert all(box.lock()[i]["version"] == tag for i in ("pi", "rtk"))
-        assert (store / "pi/v1").exists() and (store / "pi/v2").exists()
+        assert all(box.lock()[i]["version"] == tag for i in pinned_ids)
+        assert (store / "better-bibtex/v1").exists() and (store / "better-bibtex/v2").exists()
 
     # A nonexistent pin fails without moving or deleting the installed version.
-    missing = dict(everything, resources=dict(resources, pi=dict(resources["pi"], tag="v404")))
+    missing = dict(everything, resources=dict(resources, **{"better-bibtex": dict(resources["better-bibtex"], tag="v404")}))
     assert box.fetch("sync", manifest=missing, check=False).returncode == 1
-    assert box.lock()["pi"]["version"] == "v1" and (store / "bin/pi").exists()
+    assert box.lock()["better-bibtex"]["version"] == "v1" and plugin.is_file()
 
     # A tag endpoint that answers with another release is refused.
-    tagged = box.base / "api/repos" / resources["pi"]["github"] / "releases/tags/v404"
+    tagged = box.base / "api/repos" / resources["better-bibtex"]["github"] / "releases/tags/v404"
     tagged.write_text((tagged.parent / "v2").read_text())
     assert "requested tag" in box.fetch("sync", check=False).stderr
-    assert box.lock()["pi"]["version"] == "v1"
+    assert box.lock()["better-bibtex"]["version"] == "v1"
+
+    # Empty font directories are treated as missing files and reinstalled.
+    for font_file in (fonts / "fira").iterdir():
+        font_file.unlink()
+    assert "missing files" in box.fetch("status", manifest=everything).stdout
+    box.fetch("sync")
+    assert any((fonts / "fira").iterdir())
+
+    # Interrupted swap recovery restores a surviving .old directory when the target is absent.
+    shutil.move(store / "better-bibtex/v1", store / "better-bibtex/.v1.old")
+    assert not (store / "better-bibtex/v1").exists()
+    box.fetch("sync")
+    assert (store / "better-bibtex/v1").is_dir() and not (store / "better-bibtex/.v1.old").exists()
 
     # Deselecting removes everything a download installed, and nothing else.
-    core = dict(everything, resources={"tre": resources["tre"]})
+    core = dict(everything, resources={"zotero": resources["zotero"]})
     box.fetch("sync", manifest=core)
-    assert sorted(p.name for p in store.iterdir() if not p.name.startswith(".")) == ["bin", "tre"]
-    assert sorted(p.name for p in (store / "bin").iterdir()) == ["tre"]
+    assert sorted(p.name for p in store.iterdir() if not p.name.startswith(".")) == ["bin", "zotero"]
+    assert sorted(p.name for p in (store / "bin").iterdir()) == ["zotero"]
     assert not fonts.exists() or not any(fonts.iterdir())
     assert not (home / ".terminfo/78/xterm-kitty").exists()
     for path, content in manual.items():
@@ -387,18 +397,44 @@ def fixtures(box, catalog):
     assert "fc-cache" in box.refreshes()
 
     # An entry with no download for this platform is skipped, not an error.
-    assert "no download for linux-arm64" in box.fetch("sync", manifest=dict(core, platform="linux-arm64")).stderr
-    assert not (store / "tre").exists()
+    assert "no download for darwin-arm64" in box.fetch(
+        "sync", manifest=dict(core, platform="darwin-arm64", resources={"kitty": resources["kitty"]})
+    ).stderr
+    assert not (store / "kitty").exists() and not (store / "zotero").exists()
 
     # A release asset whose bytes differ from its published digest is refused.
-    tampered = publish(box, "tre", catalog["tre"], "4")
-    (box.base / "assets/tre/4/tre-4-x86_64-unknown-linux-musl.tar.gz").write_bytes(b"tampered")
-    assert box.fetch("sync", manifest=dict(core, resources={"tre": tampered}), check=False).returncode == 1
+    tampered = publish(box, "kitty", catalog["kitty"], "4")
+    (box.base / "assets/kitty/4/kitty-4-x86_64.txz").write_bytes(b"tampered")
+    assert box.fetch("sync", manifest=dict(core, resources={"kitty": tampered}), check=False).returncode == 1
+
+    # A committed catalog sha256 mismatch is refused even when the GitHub API digest matches.
+    wrong_pin = dict(v2_specs["better-bibtex"], sha256="0" * 64)
+    result = box.fetch("sync", manifest=dict(core, resources={"better-bibtex": wrong_pin}), check=False)
+    assert result.returncode == 1 and "expected catalog" in result.stderr
+
+    # A pinned release with no catalog or API digest fails closed.
+    no_digest_spec = {k: v for k, v in v2_specs["extra-meta"].items() if k != "sha256"}
+    tag_file = box.base / "api/repos" / no_digest_spec["github"] / "releases/tags/v2"
+    tag_payload = json.loads(tag_file.read_text())
+    tag_payload["assets"][0].pop("digest", None)
+    tag_file.write_text(json.dumps(tag_payload))
+    result = box.fetch("sync", manifest=dict(core, resources={"extra-meta": no_digest_spec}), check=False)
+    assert result.returncode == 1 and "no digest to verify" in result.stderr
 
     # A manifest release whose sha512 differs from the downloaded archive is refused.
     bad_manifest = publish(box, "agy", catalog["agy"], "3")
     (box.base / "assets/agy/3/agy-3").write_bytes(b"tampered")
     assert box.fetch("sync", manifest=dict(core, resources={"agy": bad_manifest}), check=False).returncode == 1
+
+    # Unsafe version names from a release manifest are refused before touching the store.
+    for bad_version in ("..", "current", ".hidden"):
+        evil = publish(box, "agy", catalog["agy"], "9")
+        manifest_path = Path(evil["manifest"]["linux-amd64"][len("file://"):])
+        manifest_data = json.loads(manifest_path.read_text())
+        manifest_data["version"] = bad_version
+        manifest_path.write_text(json.dumps(manifest_data))
+        result = box.fetch("sync", manifest=dict(core, resources={"agy": evil}), check=False)
+        assert result.returncode == 1 and "unsafe version name" in result.stderr, bad_version
 
     # migrate removes only what typefaces.sh provably wrote.
     legacy = home / ".local/share/fonts/source-sans"
@@ -413,7 +449,7 @@ def live(box, catalog):
     store, fonts = box.home / ".local/opt/dotfiles", box.home / ".local/share/fonts/dotfiles"
     box.fetch("sync", manifest={"platform": "linux-amd64", "resources": catalog})
     box.fetch("status")
-    for command in ["kitty", "kitten", "tre", "zotero", "herdr", "pi", "rtk", "agy"]:
+    for command in ["kitty", "kitten", "zotero", "agy"]:
         result = subprocess.run([str(store / "bin" / command), "--version"], env=dict(box.env, MOZ_HEADLESS="1"),
                                 capture_output=True, text=True, check=True)
         print(result.stdout.strip())

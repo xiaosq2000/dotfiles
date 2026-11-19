@@ -60,7 +60,7 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-pi-") as temporary:
     target = home / ".pi/agent/settings.json"
     target.parent.mkdir(parents=True)
     target.write_text(first)
-    managed_pi = home / ".local/opt/dotfiles/bin/pi"
+    managed_pi = home / ".local/share/mise/shims/pi"
     managed_pi.parent.mkdir(parents=True)
     managed_pi.write_text('''#!/usr/bin/env python3
 import json

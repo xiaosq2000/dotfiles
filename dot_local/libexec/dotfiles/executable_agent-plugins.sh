@@ -103,7 +103,9 @@ attempt() {
         msg "  would run: $*"
         return 0
     fi
-    if "$@" >/dev/null 2>&1; then
+    if env -u http_proxy -u HTTP_PROXY -u https_proxy -u HTTPS_PROXY \
+        -u ftp_proxy -u FTP_PROXY -u socks_proxy -u SOCKS_PROXY \
+        -u all_proxy -u ALL_PROXY "$@" >/dev/null 2>&1; then
         return 0
     fi
     warning "$what failed: $*"

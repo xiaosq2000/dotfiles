@@ -6,12 +6,13 @@ applies to.
 
 ## Non-interactive zsh needs the base PATH in .zshenv
 
-Checked on 2026-10-21.
+Checked on 2026-11-19.
 
-`~/.zshenv` adds `~/.local/opt/dotfiles/bin`, `~/.pixi/bin` and `~/.local/bin`
-when they are absent from PATH. New entries precede the inherited PATH. Existing
-entries keep their order so a nested zsh preserves an activated environment.
-The file uses only builtins and produces no output.
+`~/.zshenv` adds `~/.local/opt/dotfiles/bin`, `~/.local/share/mise/shims`,
+`~/.pixi/bin` and `~/.local/bin` when they are absent from PATH. New entries
+precede the inherited PATH. Existing entries keep their order so a nested zsh
+preserves an activated environment. The file uses only builtins and produces no
+output.
 
 SSH commands do not read `.zshrc`. This includes the command that starts
 `mosh-server`. Without `.zshenv`, that command can select an older system copy,

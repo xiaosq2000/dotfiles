@@ -204,9 +204,11 @@ type prepend_env >/dev/null 2>&1 && prepend_env PATH "${HOME}/.local/go/bin"
 # Google Drive Upload
 type prepend_env >/dev/null 2>&1 && prepend_env PATH "${HOME}/.google-drive-upload/bin"
 
-# Match zsh: bundle-selected downloads take priority over manual installations,
-# even when the inherited PATH already contains the managed bin directory.
+# Match zsh: managed mise shims and downloads take priority over manual
+# installations, even when the inherited PATH already contains them later.
 if type remove_from_env >/dev/null 2>&1 && type prepend_env >/dev/null 2>&1; then
+    remove_from_env PATH "$HOME/.local/share/mise/shims"
+    prepend_env PATH "$HOME/.local/share/mise/shims"
     remove_from_env PATH "$HOME/.local/opt/dotfiles/bin"
     prepend_env PATH "$HOME/.local/opt/dotfiles/bin"
 fi

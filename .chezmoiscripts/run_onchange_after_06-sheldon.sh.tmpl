@@ -36,5 +36,8 @@ else
     exit 1
 fi
 
+# Clear metered proxy variables so plugin clones run direct.
+unset http_proxy HTTP_PROXY https_proxy HTTPS_PROXY ftp_proxy FTP_PROXY socks_proxy SOCKS_PROXY all_proxy ALL_PROXY
+
 echo "locking zsh plugins from ${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml"
 "$SHELDON" --non-interactive lock

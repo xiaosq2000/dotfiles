@@ -33,15 +33,30 @@ jobs:
           python3 .github/scripts/check-texlive-path.py
       - name: Test STE100 skill linter
         run: python3 private_dot_agents/skills/asd-ste100/scripts/executable_ste-lint.py --selftest
-      - name: Check Gitleaks pin consistency
+      - name: Check Gitleaks pin and mise.lock consistency
         run: |
           python3 - <<'PY'
-          import re, tomllib
+          import hashlib, re, tomllib
           from pathlib import Path
-          catalog = tomllib.loads(Path(".chezmoidata/downloads.toml").read_text())
+
+          catalog = tomllib.loads(Path(".chezmoidata/mise.toml").read_text())["mise"]
+          lock = tomllib.loads(Path("private_dot_config/mise/mise.lock").read_text())["tools"]
           hook = Path(".github/scripts/check-secrets.py").read_text()
           m = re.search(r'^VERSION\s*=\s*"([^"]+)"', hook, re.M)
-          assert m and catalog["downloads"]["gitleaks"]["tag"] == "v" + m.group(1)
+          assert m and catalog["gitleaks"]["version"] == m.group(1), "gitleaks pin mismatch"
+          for tool_id, spec in catalog.items():
+              entries = [e for e in lock.get(spec["tool"], []) if e.get("version") == spec["version"]]
+              assert entries, f"mise.lock missing {tool_id} ({spec['tool']}@{spec['version']})"
+              entry = entries[0]
+              if "aube" in entry:
+                  lock_file = Path("private_dot_config/mise") / entry["aube"]["path"] / "aube-lock.yaml"
+                  digest = "sha256:" + hashlib.sha256(lock_file.read_bytes()).hexdigest()
+                  assert digest == entry["aube"]["digest"], f"aube digest mismatch for {tool_id}"
+              else:
+                  for platform in ("platforms.linux-x64", "platforms.linux-arm64"):
+                      assert entry.get(platform, {}).get("checksum", "").startswith("sha256:"), (
+                          f"mise.lock missing {platform} checksum for {tool_id}"
+                      )
           PY
 
   smoke:

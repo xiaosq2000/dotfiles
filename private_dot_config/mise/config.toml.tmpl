@@ -1,0 +1,16 @@
+{{- $selection := includeTemplate "software-selection" . | fromJson -}}
+# GENERATED FILE from .chezmoidata/mise.toml and .chezmoidata/tools.toml.
+# Machine: {{ .machine }} — {{ (index .machines .machine).description }}
+# Edits in ~ are overwritten by the next `chezmoi apply`.
+
+[settings]
+locked = true
+lockfile = true
+status = { missing_tools = "never", show_env = false, show_tools = false }
+{{ if $selection.mise }}
+[tools]
+{{- range $id := $selection.mise }}
+{{-   $spec := index $.mise $id }}
+{{ $spec.tool | quote }} = {{ $spec.version | quote }}
+{{- end }}
+{{ end -}}

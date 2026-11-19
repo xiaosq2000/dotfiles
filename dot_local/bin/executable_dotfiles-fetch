@@ -87,14 +87,30 @@ def fingerprint(value):
 
 
 def source_fingerprint(spec):
-    # Preserve existing locks for unpinned downloads. Adding an absent tag or
-    # manifest key would resolve them again and could upgrade them.
+    # Preserve existing locks for unpinned downloads. Adding an absent tag,
+    # manifest, or sha256 key would resolve them again and could upgrade them.
     values = [spec.get(k) for k in SOURCE_KEYS]
     if "tag" in spec:
         values.append(spec["tag"])
     if "manifest" in spec:
         values.append(spec["manifest"])
+    if "sha256" in spec:
+        values.append(spec["sha256"])
     return fingerprint(values)
+
+
+def spec_sha256(spec, platform):
+    value = spec.get("sha256")
+    if isinstance(value, dict):
+        return value.get(platform)
+    return value
+
+
+def safe_version_name(version):
+    name = str(version).replace("/", "_")
+    if not name or name in (".", "..", "current") or name.startswith(".") or "\\" in name:
+        raise Failure(f"unsafe version name {version!r}")
+    return name
 
 
 def bin_entries(spec):
@@ -312,7 +328,8 @@ def payload(identifier):
 
 def installed(identifier, spec, entry):
     if "fonts" in spec:
-        return (FONTS / identifier).is_dir()
+        font_dir = FONTS / identifier
+        return font_dir.is_dir() and any(p.is_file() for p in font_dir.iterdir())
     if not payload(identifier).is_dir():
         return False
     if spec.get("extract") is False:
@@ -325,21 +342,26 @@ def installed(identifier, spec, entry):
     return all((BIN / name).exists() for name, _ in bin_entries(spec))
 
 
-def install(identifier, spec, entry, target, scratch):
+def install(identifier, spec, entry, target, scratch, platform=None):
     """Download target["url"] and make it the installed version. Returns the
     new lock entry, or None when the download is what is already installed.
     Nothing visible changes until every check has passed."""
     if spec.get("extract") is False and not spec.get("filename"):
         raise Failure("filename is required when extract is false")
     archive, sha256, basename = download(target["url"], scratch)
+    pinned_sha256 = spec_sha256(spec, platform)
     expected = target.get("sha256")
+    expected_sha512 = target.get("sha512")
+    if pinned_sha256 and sha256 != pinned_sha256:
+        raise Failure(f"{target['url']}: sha256 {sha256}, expected catalog {pinned_sha256}")
     if expected and sha256 != expected:
         raise Failure(f"{target['url']}: sha256 {sha256}, expected {expected}")
-    expected_sha512 = target.get("sha512")
     if expected_sha512:
         actual_sha512 = digest(archive, "sha512")
         if actual_sha512 != expected_sha512:
             raise Failure(f"{target['url']}: sha512 {actual_sha512}, expected {expected_sha512}")
+    if spec.get("tag") and not (pinned_sha256 or expected or expected_sha512):
+        raise Failure(f"{target['url']}: pinned release has no digest to verify")
     if (entry and sha256 == entry["sha256"] and entry["spec"] == fingerprint(spec)
             and installed(identifier, spec, entry)):
         archive.unlink()
@@ -401,7 +423,7 @@ def install_payload(identifier, spec, unpacked, version, entry):
             raise Failure(f"{link} already belongs to another download")
     home = STORE / identifier
     home.mkdir(parents=True, exist_ok=True)
-    directory = home / version.replace("/", "_")
+    directory = inside(home, safe_version_name(version))
     new = home / f".{directory.name}.new"
     rmtree(new)
     shutil.move(str(unpacked), str(new))
@@ -413,7 +435,9 @@ def install_payload(identifier, spec, unpacked, version, entry):
     for name in (entry or {}).get("bin", []):
         if name not in wanted_names:
             unlink_command(identifier, name)
-    keep = {"current", directory.name, (entry or {}).get("version", "").replace("/", "_")}
+    prev_version = (entry or {}).get("version", "")
+    prev_name = prev_version.replace("/", "_") if prev_version else ""
+    keep = {"current", directory.name, prev_name}
     for child in home.iterdir():
         if child.name not in keep and not child.name.startswith("."):
             rmtree(child)
@@ -507,12 +531,22 @@ def refresh_caches(fonts_changed):
 
 
 def tidy():
-    """Remove what an interrupted run left: its scratch directory, with any
-    partial download, and a half-swapped payload or font directory, which
-    fontconfig would otherwise scan. The flock means no other run is using
-    them."""
-    leftovers = list(STORE.glob(".scratch-*")) + list(STORE.glob("*/.*.new")) + list(STORE.glob("*/.*.old"))
-    leftovers += list(FONTS.glob(".*.new")) + list(FONTS.glob(".*.old"))
+    """Recover or remove what an interrupted run left behind.
+
+    If a process was killed between the two renames inside swap(), `<final>` is
+    missing while `.<final>.old` still holds the previous payload/fonts; restore
+    it instead of deleting it. Otherwise remove leftover `.new`/`.old` and
+    scratch directories so fontconfig does not scan partial copies.
+    """
+    for old_path in list(STORE.glob("*/.*.old")) + list(FONTS.glob(".*.old")):
+        name = old_path.name
+        if name.startswith(".") and name.endswith(".old") and len(name) > 5:
+            final = old_path.with_name(name[1:-4])
+            if not final.exists() and not final.is_symlink():
+                os.rename(old_path, final)
+                continue
+        rmtree(old_path)
+    leftovers = list(STORE.glob(".scratch-*")) + list(STORE.glob("*/.*.new")) + list(FONTS.glob(".*.new"))
     for path in leftovers:
         rmtree(path)
 
@@ -559,7 +593,7 @@ def sync(manifest, lock, update=()):
                 if scratch is None:
                     STORE.mkdir(parents=True, exist_ok=True)
                     scratch = Path(stack.enter_context(tempfile.TemporaryDirectory(dir=STORE, prefix=".scratch-")))
-                new = install(identifier, spec, entry, target, scratch)
+                new = install(identifier, spec, entry, target, scratch, manifest["platform"])
             except (Failure, OSError, http.client.HTTPException, tarfile.TarError,
                     zipfile.BadZipFile, KeyError, ValueError) as error:
                 warn(f"{identifier}: {error}")

@@ -1,0 +1,99 @@
+# Repository development tasks. Not deployed to ~ (listed in .chezmoiignore).
+# Global user tools live in .chezmoidata/mise.toml and private_dot_config/mise/.
+
+[tasks.render]
+description = "Render all machines, themes, and modify templates and verify shell syntax"
+run = "python3 .github/scripts/check-render.py"
+
+[tasks.fetch-test]
+description = "Run offline dotfiles-fetch fixture tests"
+run = "python3 .github/scripts/check-fetch.py"
+
+[tasks.secrets-test]
+description = "Run offline secret-hook regression tests"
+run = "python3 .github/scripts/check-secrets-tests.py"
+
+[tasks.check]
+description = "Run all pre-commit hooks and offline repository test scripts"
+run = """
+set -eu
+pre-commit run --all-files
+python3 .github/scripts/check-render.py
+python3 .github/scripts/check-fetch.py
+python3 .github/scripts/check-pi.py
+python3 .github/scripts/check-zotero-profile.py
+python3 .github/scripts/check-herdr-theme.py
+python3 .github/scripts/check-ui.py
+python3 .github/scripts/check-wt.py
+python3 .github/scripts/check-texlive-path.py
+python3 .github/scripts/check-gpu-fans.py
+python3 .github/scripts/check-secrets-tests.py
+bash .github/scripts/check-key-guard.sh
+python3 private_dot_agents/skills/asd-ste100/scripts/executable_ste-lint.py --selftest
+"""
+
+[tasks.lock-tools]
+description = "Regenerate private_dot_config/mise/mise.lock for linux-x64 and linux-arm64"
+run = """
+python3 - <<'PY'
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import tomllib
+
+root = Path.cwd()
+catalog = tomllib.loads((root / ".chezmoidata/mise.toml").read_text())["mise"]
+target_dir = root / "private_dot_config/mise"
+
+env = os.environ.copy()
+for scheme in ("http", "https", "ftp", "socks", "all"):
+    for key in (f"{scheme}_proxy", f"{scheme}_proxy".upper()):
+        env.pop(key, None)
+
+if not env.get("GITHUB_TOKEN") and not env.get("GH_TOKEN") and shutil.which("gh"):
+    token = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, check=False)
+    if token.returncode == 0 and token.stdout.strip():
+        env["GITHUB_TOKEN"] = token.stdout.strip()
+
+with tempfile.TemporaryDirectory(prefix="dotfiles-mise-lock-") as tmp:
+    cfg = Path(tmp) / "cfg"
+    cfg.mkdir()
+    lines = ["[settings]", "lockfile = true", "", "[tools]"]
+    for _id, spec in catalog.items():
+        lines.append(f'"{spec["tool"]}" = "{spec["version"]}"')
+    config_file = cfg / "config.toml"
+    config_file.write_text("\\n".join(lines) + "\\n")
+
+    env["MISE_CONFIG_DIR"] = str(cfg)
+    env["MISE_GLOBAL_CONFIG_FILE"] = str(config_file)
+    env["MISE_DATA_DIR"] = str(Path(tmp) / "data")
+    env["MISE_CACHE_DIR"] = str(Path(tmp) / "cache")
+    env["MISE_STATE_DIR"] = str(Path(tmp) / "state")
+    env["MISE_YES"] = "1"
+
+    subprocess.run(
+        ["mise", "lock", "--global", "--platform", "linux-x64", "--platform", "linux-arm64"],
+        cwd=tmp,
+        env=env,
+        check=True,
+    )
+
+    lock_src = cfg / "mise.lock"
+    lock_dst = target_dir / "mise.lock"
+    shutil.copyfile(lock_src, lock_dst)
+    lock_dst.chmod(0o644)
+
+    locks_dst = target_dir / "locks"
+    if locks_dst.exists():
+        shutil.rmtree(locks_dst)
+    locks_src = cfg / "locks"
+    if locks_src.exists():
+        shutil.copytree(locks_src, locks_dst)
+        for item in locks_dst.rglob("*"):
+            item.chmod(0o755 if item.is_dir() else 0o644)
+
+print(f"Updated {lock_dst.relative_to(root)} for {len(catalog)} tools.")
+PY
+"""

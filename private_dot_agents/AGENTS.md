@@ -24,11 +24,14 @@ repo-relative paths—never machine-local paths outside the repository.
 
 ## Downloads
 
-Every machine reaches AI services through a proxy whose traffic is metered, and
-interactive shells export its variables. Run downloads such as datasets, model
-weights, packages and large clones without it; the `machines` skill shows how.
-If a download fails without the proxy, ask the user instead of retrying through
-it.
+Every machine reaches AI services through `sbc`, whose proxy traffic is metered.
+Under `sbc route ai-only` or `gfw-proxy`, non-AI download hosts go direct
+automatically; under `china-direct` or `global`, interactive shells still route
+foreign downloads through the metered proxy. For large downloads (datasets,
+model weights, packages, large clones), unset the proxy variables or confirm
+`sbc route` routes them direct first; the `machines` skill shows how. If a
+direct download fails, ask the user instead of retrying through the metered
+proxy.
 
 ## Environments and CLIs
 

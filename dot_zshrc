@@ -563,14 +563,21 @@ if has tre; then
     tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
 fi
 
+# zoxide
+if has zoxide; then
+    eval "$(zoxide init zsh)"
+fi
+
 # uv, pixi and codex completions are cached to files on fpath in the completion
 # section above, rather than loaded here.
 
 ################################################################################
 ################################# coding agent #################################
 ################################################################################
-# Managed downloads must precede manual Pi, RTK and agy installations,
-# including an inherited PATH that already lists this directory after another copy.
+# Managed mise shims and downloads must precede manual Pi, RTK and agy
+# installations, including an inherited PATH that already lists them later.
+remove_from_env PATH "${HOME}/.local/share/mise/shims"
+prepend_env PATH "${HOME}/.local/share/mise/shims"
 remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
 prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
 # Keep agy's background updater from replacing the dotfiles-fetch payload.

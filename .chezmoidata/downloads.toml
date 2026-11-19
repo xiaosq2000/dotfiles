@@ -61,11 +61,12 @@ bin = ["zotero"]
 # would only fight it.
 write = { "distribution/policies.json" = '{"policies": {"DisableAppUpdate": true}}' }
 
-# Plugin version and release digest checked on 2026-10-31.
+# Plugin version and release digest checked on 2026-11-19.
 [downloads.better-bibtex]
 github = "retorquere/zotero-better-bibtex"
 tag = "v9.0.71"
 asset = "zotero-better-bibtex-*.xpi"
+sha256 = "bf61a1690dc8a2b7ab09be9de2c89986f4fb6d495c82407d89b102b26fbaa9d5"
 extract = false
 filename = "better-bibtex.xpi"
 
@@ -74,42 +75,9 @@ filename = "better-bibtex.xpi"
 github = "xiaosq2000/zotero-extra-meta"
 tag = "v0.1.7"
 asset = "zotero-extra-meta-*.xpi"
+sha256 = "3cad32111df89bd1a70cb52c66cd051b33e75b3dfd897f88612f501df48b329b"
 extract = false
 filename = "extra-meta.xpi"
-
-# The secret hooks require this version. Checked on 2026-10-13.
-[downloads.gitleaks]
-github = "gitleaks/gitleaks"
-tag = "v8.30.1"
-asset = { linux-amd64 = "gitleaks_*_linux_x64.tar.gz", linux-arm64 = "gitleaks_*_linux_arm64.tar.gz" }
-bin = ["gitleaks"]
-
-[downloads.tre]
-github = "dduan/tre"
-asset = { linux-amd64 = "tre-*-x86_64-unknown-linux-musl.tar.gz" }
-bin = ["tre"]
-
-# Release assets checked on 2026-10-04. Herdr ships a lone executable.
-[downloads.herdr]
-github = "herdrdev/herdr"
-asset = { linux-amd64 = "herdr-linux-x86_64", linux-arm64 = "herdr-linux-aarch64" }
-filename = "herdr"
-bin = ["herdr"]
-
-# Agent releases checked on 2026-10-14. Pi's standalone archive includes its
-# runtime, so a login node needs neither Node nor npm to run the core agent.
-[downloads.pi]
-github = "earendil-works/pi"
-tag = "v1.5.2"
-asset = { linux-amd64 = "pi-linux-x64.tar.gz", linux-arm64 = "pi-linux-arm64.tar.gz" }
-strip = 1
-bin = ["pi"]
-
-[downloads.rtk]
-github = "rtk-ai/rtk"
-tag = "v1.0.0"
-asset = { linux-amd64 = "rtk-x86_64-unknown-linux-musl.tar.gz", linux-arm64 = "rtk-aarch64-unknown-linux-gnu.tar.gz" }
-bin = ["rtk"]
 
 # Antigravity CLI publishes per-platform release manifests instead of GitHub
 # Releases, and names the binary `antigravity` inside its archive.

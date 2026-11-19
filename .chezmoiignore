@@ -24,6 +24,9 @@ system
 AGENTS.md
 CLAUDE.md
 
+# Repository development task runner config, not a user dotfile.
+mise.toml
+
 # Keep local archives out of the destination. Actual checkouts must live outside
 # this tree: ignoring them does not stop chezmoi loading their template data.
 .worktrees
@@ -106,6 +109,10 @@ CLAUDE.md
 # machine that drops a bundle keeps its settings, the way an application keeps
 # its profile.
 {{ $selection := includeTemplate "software-selection" . | fromJson -}}
+{{ if not $selection.mise -}}
+.config/mise
+.config/mise/**
+{{ end -}}
 {{ range $name, $bundle := .bundles -}}
 {{   range $path := get $bundle "config" | default list -}}
 {{     if not (has $path $selection.config) -}}
