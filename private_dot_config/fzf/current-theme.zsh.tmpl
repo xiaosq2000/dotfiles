@@ -6,7 +6,7 @@
 # A fixed name, like ~/.config/btop/themes/current.theme and
 # ~/.config/kitty/current-theme.conf, so nothing that reads it has to mention a
 # variant. This string used to be rendered straight into setup_fzf() in
-# dot_zshrc.tmpl, which worked but left FZF_DEFAULT_OPTS as the one thing a
+# dot_zshrc, which worked but left FZF_DEFAULT_OPTS as the one thing a
 # `theme` switch could not reach: an exported variable belongs to the shell that
 # exported it, and chezmoi rewriting the zshrc does nothing to a zsh already
 # running. Now `theme` rewrites this file and the wrapper around it re-sources

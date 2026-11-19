@@ -89,7 +89,7 @@ usage() {
     data '{{ range $scheme, $s := .schemes }}
   {{ $scheme }} — {{ $s.description }}
 {{ range $name, $t := $.themes }}{{ if eq $t.scheme $scheme }}    {{ if eq $name $.theme }}*{{ else }} {{ end }} {{ printf "%-22s" $name }} {{ printf "%-5s" $t.appearance }}  {{ $t.description }}
-      covers: btop kitty alacritty nvim zathura fzf starship herdr
+      covers: btop kitty nvim zathura fzf starship herdr
 {{ end }}{{ end }}{{ end }}'
 }
 

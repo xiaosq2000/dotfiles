@@ -135,32 +135,28 @@ fi
 if type safely_source >/dev/null 2>&1; then
     safely_source "$HOME/.sh_utils/helpers.sh"
     safely_source "$HOME/.sh_utils/checkers.sh"
-    safely_source "$HOME/.sh_utils/tools.sh"
 fi
 
-# Editors and git core.editor
+# Editors
 if has nvim; then
     export SUDO_EDITOR=nvim
     export EDITOR=nvim
-    if has git; then git config --global core.editor "nvim"; fi
 elif has vim; then
     export SUDO_EDITOR=vim
     export EDITOR=vim
-    if has git; then git config --global core.editor "vim"; fi
 elif has vi; then
     export SUDO_EDITOR=vi
     export EDITOR=vi
-    if has git; then git config --global core.editor "vi"; fi
 fi
+[ -n "${EDITOR:-}" ] && export GIT_EDITOR="$EDITOR"
 
 # Aliases (mapped from zsh)
-alias zshconfig='${EDITOR} ${HOME}/.zshrc'
-alias nvimconfig='${EDITOR} ${XDG_CONFIG_HOME}/nvim'
-alias tmuxconfig='${EDITOR} ${XDG_CONFIG_HOME}/tmux'
-alias sshconfig='${EDITOR} ${HOME}/.ssh/config'
-alias starshipconfig='${EDITOR} ${XDG_CONFIG_HOME}/starship.toml'
-alias kittyconfig='${EDITOR} $XDG_CONFIG_HOME/kitty/kitty.conf'
-alias alacrittyconfig='${EDITOR} $XDG_CONFIG_HOME/alacritty/alacritty.toml'
+alias zshconfig='chezmoi edit ~/.zshrc'
+alias nvimconfig='chezmoi edit ~/.config/nvim/init.lua'
+alias tmuxconfig='chezmoi edit ~/.config/tmux/tmux.conf'
+alias sshconfig='chezmoi edit ~/.ssh/config'
+alias starshipconfig='chezmoi edit ~/.config/starship.toml'
+alias kittyconfig='chezmoi edit ~/.config/kitty/kitty.conf'
 alias cl='tput clear'
 alias python='python3'
 alias lg='lazygit'
@@ -177,7 +173,6 @@ alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 # Bash options approximating zsh behavior
 shopt -s extglob 2>/dev/null || true
 shopt -s globstar 2>/dev/null || true
-shopt -s dotglob 2>/dev/null || true
 shopt -s autocd 2>/dev/null || true
 shopt -s cdspell 2>/dev/null || true
 
@@ -187,20 +182,18 @@ HISTTIMEFORMAT="%d/%m/%Y %T "
 # CUDA
 type prepend_env >/dev/null 2>&1 && prepend_env PATH "/usr/local/cuda/bin"
 
-# Tool completions
-has pixi && eval "$(pixi completion --shell bash)"
-has gh && eval "$(gh completion -s bash)"
-has uv && eval "$(uv generate-shell-completion bash)"
-
 # Rust
 # Not `. "$HOME/.cargo/env"`: rustup's uninstaller strips that exact string out
 # of shell rc files, which leaves a dangling `&&` that swallows the next
 # statement. Appending also keeps pixi's copies in front of a cargo-installed one.
 [ -d "$HOME/.cargo/bin" ] && type append_env >/dev/null 2>&1 && append_env PATH "$HOME/.cargo/bin"
 
-# Node.js
-export NVM_DIR="${XDG_CONFIG_HOME}/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+# pnpm
+export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
 
 # Go
 type prepend_env >/dev/null 2>&1 && prepend_env PATH "${HOME}/.local/go/bin"
@@ -239,20 +232,21 @@ setup_yazi() {
 setup_yazi
 
 # fzf integration and theme
-if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzf.bash" ]; then
-    source "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/fzf.bash"
-elif [ -f "$HOME/.fzf.bash" ]; then
-    source "$HOME/.fzf.bash"
+if has fzf; then
+    eval "$(fzf --bash)"
 fi
 if has kitten; then
     export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | kitten clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
 elif has wl-copy; then
     export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | wl-copy)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-elif has xclipboard; then
-    export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+elif has xclip; then
+    export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | xclip -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
 fi
 export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
-export FZF_DEFAULT_OPTS="--color=fg:#797593,bg:#faf4ed,hl:#d7827e --color=fg+:#575279,bg+:#f2e9e1,hl+:#d7827e --color=border:#dfdad9,header:#286983,gutter:#faf4ed --color=spinner:#ea9d34,info:#56949f --color=pointer:#907aa9,marker:#b4637a,prompt:#797593"
+if [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh" ]; then
+    # shellcheck source=/dev/null
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh"
+fi
 
 # Bash vi-mode with jk escape
 set -o vi
@@ -261,7 +255,7 @@ bind 'set keymap vi-insert'
 bind '"jk":"\e"'
 
 # Starship prompt (preferred)
-has starship && eval "$(starship init bash)"
+[ "${TERM:-}" != "dumb" ] && has starship && eval "$(starship init bash)"
 
 # ROS helpers (adapted to bash)
 _guess_ros_distro() {

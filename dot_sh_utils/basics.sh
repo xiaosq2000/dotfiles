@@ -194,7 +194,14 @@ remove_from_env() {
     fi
 }
 
-# Add XDG vars into envs
+# Add user/local binary directories to PATH. Avoid exporting LD_LIBRARY_PATH
+# globally (can interfere with system/pixi dynamic resolution) and preserve
+# /etc/manpath.config by keeping a trailing colon when MANPATH is populated.
 prepend_env PATH "${XDG_PREFIX_HOME}/bin" "${XDG_PREFIX_DIR}/bin"
-prepend_env LD_LIBRARY_PATH "${XDG_PREFIX_HOME}/lib" "${XDG_PREFIX_DIR}/lib"
-prepend_env MANPATH "${XDG_PREFIX_HOME}/man" "${XDG_PREFIX_DIR}/man"
+if [[ -d "${XDG_PREFIX_HOME}/man" || -d "${XDG_PREFIX_DIR}/man" ]]; then
+    prepend_env MANPATH "${XDG_PREFIX_HOME}/man" "${XDG_PREFIX_DIR}/man"
+    case ":${MANPATH:-}" in
+        *:) ;;
+        *) export MANPATH="${MANPATH}:" ;;
+    esac
+fi

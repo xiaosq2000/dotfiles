@@ -1,6 +1,13 @@
 .worktrees/
 .*/worktrees/
 
+# Local agent and cloud tool directories must never be committed if created at
+# the repository root by an agent or CLI.
+.agents/
+.aws/
+.claude/
+.codex/
+
 # Python bytecode generated when tests import scripts under system/.
 __pycache__/
 *.py[cod]

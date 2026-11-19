@@ -27,3 +27,20 @@
 .agents/skills/plain-writing
 .claude/skills/plain-writing
 .codex/skills/plain-writing
+.gemini/config/skills/plain-writing
+
+# Retired tools and configurations removed in the late-2026 cleanup.
+.aider.conf.yml
+.condarc
+.opencode/package-lock.json
+.opencode/plugins/env-protection.js
+.config/opencode/opencode.json
+.config/opencode/opencode-notifier.json
+.config/opencode/plugins/key-guard.js
+.config/opencode/AGENTS.md
+.config/alacritty/alacritty.toml
+.config/alacritty/current-theme.toml
+.config/kmonad/config.kbd
+.sh_utils/tools.sh
+.sh_utils/tools
+.config/nvim/after/lsp/texlab.lua

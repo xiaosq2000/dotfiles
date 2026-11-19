@@ -1,10 +1,10 @@
 #!/usr/bin/env zsh
-zshrc_start_time=$(date +%s%N)
+zmodload zsh/datetime
+zshrc_start_time=$EPOCHREALTIME
 
 source ~/.sh_utils/basics.sh
 source ~/.sh_utils/helpers.sh
 source ~/.sh_utils/checkers.sh
-source ~/.sh_utils/tools.sh
 
 # Preferred editors:
 if has "nvim"; then
@@ -20,27 +20,20 @@ fi
 
 [[ -n ${EDITOR:-} ]] && export GIT_EDITOR="$EDITOR"
 
-# precmd() {
-#     echo;  # Add a newline
-# }
-
 # Aliases:
-alias zshconfig="${EDITOR} ${HOME}/.zshrc"
-alias nvimconfig="${EDITOR} ${XDG_CONFIG_HOME}/nvim"
-alias tmuxconfig="${EDITOR} ${XDG_CONFIG_HOME}/tmux"
-alias sshconfig="${EDITOR} ${HOME}/.ssh/config"
-alias starshipconfig="${EDITOR} ${XDG_CONFIG_HOME}/starship.toml"
-alias kittyconfig="${EDITOR} $XDG_CONFIG_HOME/kitty/kitty.conf"
-alias alacrittyconfig="${EDITOR} $XDG_CONFIG_HOME/alacritty/alacritty.toml"
+alias zshconfig="chezmoi edit ~/.zshrc"
+alias nvimconfig="chezmoi edit ~/.config/nvim/init.lua"
+alias tmuxconfig="chezmoi edit ~/.config/tmux/tmux.conf"
+alias sshconfig="chezmoi edit ~/.ssh/config"
+alias starshipconfig="chezmoi edit ~/.config/starship.toml"
+alias kittyconfig="chezmoi edit ~/.config/kitty/kitty.conf"
 alias cl="tput clear"
 alias python="python3"
 alias lg="lazygit"
 alias t="tmux"
 alias ta="tmux a"
-alias s='web_search google'
 alias cdusb='cd /media/$USER/"$(command ls -t /media/$USER/ | head -n1)"'
-export ARCHFLAGS="-arch $(uname -m)"
-export NUMCPUS=$(grep -c '^processor' /proc/cpuinfo)
+export NUMCPUS=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || getconf _NPROCESSORS_ONLN)
 alias pmake='time nice make -j${NUMCPUS} --load-average=${NUMCPUS}'
 
 ################################################################################
@@ -96,53 +89,6 @@ setopt multios                # allow `echo >file1 >file2`
 setopt long_list_jobs         # the long format for job notifications
 setopt pushdminus             # `cd -2` counts from the top of the stack
 setopt prompt_subst           # expand variables inside PROMPT; starship wants it
-
-# web-search was an oh-my-zsh plugin, and `alias s=` above is the only caller.
-# Its implementation needed two more oh-my-zsh library functions; this needs
-# none. The opener's output is discarded rather than backgrounded with a bare &,
-# which would print a job number over the prompt.
-web_search() {
-    local engine="${1:-google}" opener terms query
-    shift || true
-    if [ "$#" -eq 0 ]; then
-        printf 'usage: web_search <engine> <terms...>\n' >&2
-        printf 'engines: google duckduckgo bing github\n' >&2
-        return 1
-    fi
-
-    local -A engines=(
-        google "https://www.google.com/search?q="
-        duckduckgo "https://duckduckgo.com/?q="
-        bing "https://www.bing.com/search?q="
-        github "https://github.com/search?q="
-    )
-    if [[ -z ${engines[$engine]:-} ]]; then
-        printf 'web_search: unknown engine %s\n' "$engine" >&2
-        return 1
-    fi
-
-    terms="$*"
-    # jq's @uri is a real percent-encoder, and it is right about UTF-8, which
-    # matters for searching in Chinese. jq is in the core bundle. The fallback
-    # handles the two characters that actually break a search URL, and joining
-    # the words with + would not have been enough on its own: a space inside a
-    # quoted argument survives the join and is not legal in a URL.
-    if has jq; then
-        query="$(printf '%s' "$terms" | jq -sRr @uri)"
-    else
-        query="${terms// /+}"
-        query="${query//\//%2F}"
-        query="${query//&/%26}"
-    fi
-
-    for opener in xdg-open open; do
-        if has "$opener"; then
-            "$opener" "${engines[$engine]}${query}" >/dev/null 2>&1
-            return
-        fi
-    done
-    printf '%s\n' "${engines[$engine]}${query}"
-}
 
 ################################################################################
 ##################################### cuda #####################################
@@ -299,8 +245,8 @@ setup_fzf() {
         export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | kitten clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
     elif has wl-copy; then
         export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | wl-copy)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
-    elif has xclipboard; then
-        export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | xclipboard -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
+    elif has xclip; then
+        export FZF_CTRL_R_OPTS="--bind 'ctrl-Y:execute-silent(echo -n {2..} | xclip -selection clipboard)' --color header:italic --header 'Press CTRL-Y to copy command into clipboard'"
     fi
     # Print tree structure in the preview window
     export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target --preview 'tree -C {}'"
@@ -337,6 +283,11 @@ theme() {
     [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]] &&
         source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
 }
+
+# Populate LS_COLORS before setup_fzf_tab captures it into completion list-colors.
+if [[ -z ${LS_COLORS:-} ]] && has dircolors; then
+    eval "$(dircolors -b)"
+fi
 
 ################################################################################
 ###### fzf-tab - Replace zsh's default completion selection menu with fzf ######
@@ -564,13 +515,6 @@ setopt always_to_end          # and move the cursor to the end afterwards
 unsetopt menu_complete        # do not insert the first match automatically
 unsetopt flowcontrol          # ^S and ^Q are not freeze and unfreeze
 
-# fzf-tab's list-colors zstyle above reads LS_COLORS, which oh-my-zsh's
-# lib/theme-and-appearance.zsh used to populate. Without it, completion lists
-# come out unhighlighted.
-if [[ -z ${LS_COLORS:-} ]] && has dircolors; then
-    eval "$(dircolors -b)"
-fi
-
 ################################################################################
 ################################### plugins ####################################
 ######################### https://sheldon.cli.rs/ ##############################
@@ -609,7 +553,7 @@ prepend_env PATH "${HOME}/.local/go/bin"
 [ -f "$HOME/.deno/env" ] && \. "$HOME/.deno/env"
 
 # starship
-if has starship; then eval "$(starship init zsh)"; fi
+if [[ ${TERM:-} != "dumb" ]] && has starship; then eval "$(starship init zsh)"; fi
 
 # google-drive-upload
 prepend_env PATH "${HOME}/.google-drive-upload/bin"
@@ -625,42 +569,12 @@ fi
 ################################################################################
 ################################# coding agent #################################
 ################################################################################
-# claude() {
-#     local country
-#
-#     country="$(curl --silent ipinfo.io 2>/dev/null | jq -r '.country' 2>/dev/null)"
-#     if [[ "$country" == "CN" ]] || [[ "$country" == "MO" ]] || [[ "$country" == "HK" ]]; then
-#         error "How dare you use Claude Code in China!"
-#         hint "Run \`sbc on\`."
-#         return 1
-#     fi
-#
-#     command claude "$@"
-# }
-
-# opencode
-prepend_env PATH "${HOME}/.opencode/bin"
-
 # Managed downloads must precede manual Pi, RTK and agy installations,
 # including an inherited PATH that already lists this directory after another copy.
 remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
 prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
 # Keep agy's background updater from replacing the dotfiles-fetch payload.
 [[ -L "${HOME}/.local/opt/dotfiles/bin/agy" ]] && export AGY_CLI_DISABLE_AUTO_UPDATE=true
-
-check_git_config() {
-    if has "git"; then
-        if [[ ! -f $HOME/.gitconfig ]]; then
-            touch $HOME/.gitconfig
-        fi
-        if [[ ! $(cat $HOME/.gitconfig | grep 'email') ]]; then
-            hint "git config --global user.email \"<YOUR_EMAIL>\""
-        fi
-        if [[ ! $(cat $HOME/.gitconfig | grep 'name') ]]; then
-            hint "git config --global user.name \"<YOUR_NAME>\""
-        fi
-    fi
-}
 
 check_x11_wayland() {
     if [[ "$XDG_SESSION_TYPE" == "wayland" ]]; then
@@ -694,8 +608,8 @@ setup_texlive() {
     fi
 
     if [[ "${latest_root}" == "${XDG_PREFIX_DIR}/texlive" ]]; then
-        append_env PATH "${latest_root}/${latest_version}/texmf-dist/doc/info"
-        append_env PATH "${latest_root}/${latest_version}/texmf-dist/doc/man"
+        append_env INFOPATH "${latest_root}/${latest_version}/texmf-dist/doc/info"
+        append_env MANPATH "${latest_root}/${latest_version}/texmf-dist/doc/man"
     fi
 
     # Keep scripts and their env-selected interpreters in the same TeX tree.
@@ -805,8 +719,8 @@ if [[ -x "$_sbc" ]]; then
 fi
 unset _sbc
 
-zshrc_end_time=$(date +%s%N)
-zshrc_duration=$(((zshrc_end_time - zshrc_start_time) / 1000000))
+typeset -i zshrc_duration=$(( (EPOCHREALTIME - zshrc_start_time) * 1000 ))
 if (( zshrc_duration > 100 )); then
     DEBUG=1 debug "$DIM$zshrc_duration ms$RESET"
 fi
+unset zshrc_start_time zshrc_duration

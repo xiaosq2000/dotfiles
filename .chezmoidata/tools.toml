@@ -108,8 +108,8 @@ packages = [
 ]
 
 [bundles.media]
-description = "Audio, video and image conversion, for ~/.sh_utils/tools"
-packages = ["ffmpeg", "resvg"]
+description = "Audio and video processing"
+packages = ["ffmpeg"]
 
 [bundles.ml]
 description = "Model and dataset transfer"
@@ -134,14 +134,12 @@ downloads = ["tre"]
 description = "Kitty, its terminal font, and the configuration of the GUI programs"
 packages = []
 downloads = ["kitty", "maple-mono"]
-# Alacritty, Zathura, Fcitx5 and kmonad come from the distribution; this bundle
-# only supplies their configuration.
+# Zathura and Fcitx5 come from the distribution; this bundle only supplies
+# their configuration.
 config = [
     ".config/kitty",
-    ".config/alacritty",
     ".config/zathura",
     ".config/fcitx5",
-    ".config/kmonad",
     ".config/environment.d/im.conf",
     ".config/autostart/org.fcitx.Fcitx5.desktop",
     ".local/bin/zathura",

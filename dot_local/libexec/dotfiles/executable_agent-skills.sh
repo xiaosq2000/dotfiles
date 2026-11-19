@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 
-# Share one set of user-level agent skills across Claude Code, Codex, OpenCode
+# Share one set of user-level agent skills across Claude Code, Codex, Pi
 # and Antigravity CLI.
 #
 # The canonical copies live in ~/.agents/skills/<name>/SKILL.md and are the only
@@ -9,7 +9,6 @@ set -eu
 #
 #   Claude Code  ~/.claude/skills/<name>        symlink
 #   Codex        ~/.codex/skills/<name>         symlink (respects $CODEX_HOME)
-#   OpenCode     reads ~/.agents/skills natively, nothing to do
 #   Pi           reads ~/.agents/skills natively, nothing to do
 #   Antigravity  ~/.gemini/config/skills/<name> symlink (respects $GEMINI_CONFIG_DIR)
 #
@@ -56,7 +55,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-header "agent skills - shared across Claude Code, Codex, OpenCode and Antigravity CLI"
+header "agent skills - shared across Claude Code, Codex, Pi and Antigravity CLI"
 
 if [ ! -d "$SKILLS_ROOT" ]; then
     error "canonical skills directory not found at $SKILLS_ROOT"
@@ -207,15 +206,7 @@ else
     info "codex not installed, skipping"
 fi
 
-# OpenCode auto-loads ~/.claude/skills and ~/.agents/skills, so the canonical
-# directory is already on its search path.
-if command -v opencode >/dev/null 2>&1; then
-    info "opencode reads $SKILLS_ROOT natively, no links needed"
-else
-    info "opencode not installed, skipping"
-fi
-
-# Pi also discovers the canonical Agent Skills directory without links.
+# Pi discovers the canonical Agent Skills directory natively without links.
 if command -v pi >/dev/null 2>&1; then
     info "pi reads $SKILLS_ROOT natively, no links needed"
 else

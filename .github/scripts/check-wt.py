@@ -10,7 +10,7 @@ import tempfile
 import unicodedata
 
 ROOT = Path(__file__).resolve().parents[2]
-zshrc = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "dot_zshrc.tmpl"
+zshrc = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "dot_zshrc"
 function = re.search(r"^wt\(\) \{\n.*?^\}", zshrc.read_text(), re.MULTILINE | re.DOTALL)
 assert function, f"wt is missing from {zshrc}"
 

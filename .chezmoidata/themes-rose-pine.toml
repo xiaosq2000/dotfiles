@@ -29,7 +29,6 @@ description = "Rosé Pine — all natural pine, faux fur and a bit of soho vibes
 # %s is the variant's per-tool token below.
 btopURL = "https://raw.githubusercontent.com/rose-pine/btop/main/%s.theme"
 kittyURL = "https://raw.githubusercontent.com/rose-pine/kitty/main/dist/%s.conf"
-alacrittyURL = "https://raw.githubusercontent.com/rose-pine/alacritty/main/dist/%s.toml"
 # lazy.nvim plugin spec. `name` is what the plugin registers itself as, which is
 # not always the repository's basename.
 nvimRepo = "rose-pine/neovim"
@@ -42,7 +41,6 @@ appearance = "dark"
 btop = "rose-pine"
 kitty = "rose-pine"
 kittyName = "Rosé Pine"
-alacritty = "rose-pine"
 # The rose-pine.nvim plugin registers both rose-pine and rose-pine-main for the
 # dark original. Spelling it out keeps every variant's value the same shape.
 nvim = "rose-pine-main"
@@ -81,7 +79,6 @@ appearance = "dark"
 btop = "rose-pine-moon"
 kitty = "rose-pine-moon"
 kittyName = "Rosé Pine Moon"
-alacritty = "rose-pine-moon"
 nvim = "rose-pine-moon"
 zathura = "rose-pine-moon"
 herdr = "rose-pine"
@@ -118,7 +115,6 @@ appearance = "light"
 btop = "rose-pine-dawn"
 kitty = "rose-pine-dawn"
 kittyName = "Rosé Pine Dawn"
-alacritty = "rose-pine-dawn"
 nvim = "rose-pine-dawn"
 zathura = "rose-pine-dawn"
 herdr = "rose-pine-dawn"

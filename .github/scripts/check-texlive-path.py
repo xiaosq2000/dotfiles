@@ -9,7 +9,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-zshrc = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "dot_zshrc.tmpl"
+zshrc = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "dot_zshrc"
 basics = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "dot_sh_utils/basics.sh"
 zsh = shutil.which("zsh")
 assert zsh, "zsh is required"
@@ -34,8 +34,12 @@ export PATH="$TEX_TEST_PATH"
 hash -f
 setup_texlive
 print -r -- "$PATH"
+print -r -- "${INFOPATH:-}"
+print -r -- "${MANPATH:-}"
 setup_texlive
 print -r -- "$PATH"
+print -r -- "${INFOPATH:-}"
+print -r -- "${MANPATH:-}"
 # Plugins read this special array, which populates zsh's command hash.
 : "${commands[l3build]}" "${commands[texlua]}" "${commands[kpsewhich]}"
 for tool in l3build texlua kpsewhich; do
@@ -108,15 +112,21 @@ with tempfile.TemporaryDirectory(prefix="check-texlive-path-") as temporary:
         assert not result.stderr, (name, result.stderr)
         lines = result.stdout.splitlines()
         expected_path = original
+        expected_info = ""
+        expected_man = ""
         if chosen:
             expected_path = binary + ":" + f"{fallback}:/usr/bin:/bin"
             if selected[0] == "system":
-                expected_path += f":{chosen}/texmf-dist/doc/info:{chosen}/texmf-dist/doc/man"
-        assert lines[:2] == [expected_path, expected_path], (name, lines[:2])
-        assert lines[2:5] == [f"{binary}/{tool}" for tool in
+                expected_info = f"{chosen}/texmf-dist/doc/info"
+                expected_man = f"{chosen}/texmf-dist/doc/man"
+        assert lines[:6] == [
+            expected_path, expected_info, expected_man,
+            expected_path, expected_info, expected_man,
+        ], (name, lines[:6])
+        assert lines[6:9] == [f"{binary}/{tool}" for tool in
                               ("l3build", "texlua", "kpsewhich")], (name, lines)
         expected_version = f"TeX Live {selected[1]}" if selected else "system interpreter"
-        assert lines[5:] == [expected_version], (name, lines)
+        assert lines[9:] == [expected_version], (name, lines)
         print(f"TeX PATH: {name} passed")
 
 print(f"{len(cases)} TeX Live selection, interpreter and idempotence checks passed.")

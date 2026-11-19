@@ -30,11 +30,6 @@ type = "file"
 url = {{ printf $s.btopURL $t.btop | quote }}
 refreshPeriod = "672h"
 
-[".config/alacritty/current-theme.toml"]
-type = "file"
-url = {{ printf $s.alacrittyURL $t.alacritty | quote }}
-refreshPeriod = "672h"
-
 # No starship entry. The prompt is rendered by
 # private_dot_config/starship.toml.tmpl from the palette in .chezmoidata, so
 # there is nothing to check out and no scheme that can be missing a port.

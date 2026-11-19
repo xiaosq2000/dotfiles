@@ -39,91 +39,48 @@ display_xdg_envs() {
 }
 
 software_overview() {
-    # Silence stderr locally and restore it afterwards (safe when sourced)
-    exec {__saved_stderr}>&2 2>/dev/null
     echo "${BLUE}Software Overview: ${RESET}"
     local WIDTH=16
-    software_overview_helper() {
-        local format="${INDENT}%-${WIDTH}s%s\n"
-        local not_found_format="${INDENT}${BOLD}${RED}%-${WIDTH}s%s${RESET}\n"
-        local cli_name
-        local version
-        if [[ $# -eq 3 ]]; then
-            format=$1
-            cli_name=$2
-            version=$3
-        elif [[ $# -eq 2 ]]; then
-            cli_name=$1
-            version=$2
+    _software_overview_row() {
+        local cli_name="$1"
+        shift
+        if has "$cli_name"; then
+            local version
+            version="$("$@" 2>/dev/null || true)"
+            printf "${INDENT}%-${WIDTH}s%s\n" "$cli_name" "${version:-installed}"
         else
-            error "Given $# arguments, it should be 2 or 3."
-            return 1
-        fi
-        local unaliased_name
-        local print_only_not_found="false"
-        # Resolve aliases portably across bash and zsh
-        case "$(type -t "$cli_name" 2>/dev/null)" in
-            alias)
-                # Extract the first word of the alias expansion as the command
-                unaliased_name=$(alias "$cli_name" 2>/dev/null | sed -E "s/^alias $cli_name='(.*)'$/\1/" | awk '{print $1}')
-                ;;
-            *)
-                unaliased_name="$cli_name"
-                ;;
-        esac
-        if has "$unaliased_name"; then
-            if [[ ! $print_only_not_found == "true" ]]; then
-                printf "$format" "$unaliased_name" "$version"
-            fi
-        else
-            printf "$not_found_format" "$unaliased_name" "not found"
+            printf "${INDENT}${BOLD}${RED}%-${WIDTH}s%s${RESET}\n" "$cli_name" "not found"
         fi
     }
     printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "Linux Kernel" "$(uname -sr)"
-    printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "Linux Distro" "$(cat /etc/os-release | grep ^'PRETTY_NAME' | grep -oP '"\K[^"]+(?=")')"
-    software_overview_helper "ldd" "$(ldd --version | head -n 1 | cut -f 1 -d ' ' --complement)"
-    software_overview_helper "gcc" "$(gcc --version | head -n 1 | awk '{ print $4; }')"
-    software_overview_helper "nvcc" "$(nvcc --version | sed -n '4p' | awk '{ print $5; }' | sed 's/.\$//')"
-    if [ -f /.dockerenv ]; then
-        warning "This is a docker container."
+    if [ -r /etc/os-release ]; then
+        printf "${INDENT}%-${WIDTH}s${RESET}%s\n" "Linux Distro" "$(sed -n 's/^PRETTY_NAME="\([^"]*\)"/\1/p' /etc/os-release)"
     fi
-    if [[ ! -f /.dockerenv ]]; then
-        software_overview_helper "docker" "$(docker --version | awk '{print $3}' | cut -d, -f1)"
-    fi
-    software_overview_helper "zsh" "$(zsh --version | awk '{ print $2; }')"
-    software_overview_helper "tmux" "$(tmux -V | awk '{ print $2; }')"
-    software_overview_helper "nvim" "$(nvim --version | head -n 1 | awk '{ print $2; }' | cut -dv -f2)"
-    software_overview_helper "vim" "$(vim --version | head -n 1 | awk '{ print $5;}')"
-    software_overview_helper "git" "$(git --version | awk '{ print $3; }')"
-    software_overview_helper "git-lfs" "$(git-lfs --version | awk '{ print $1; }' | cut -d '/' -f 2)"
-    software_overview_helper "lazygit" "$(lazygit --version | cut -d ',' -f 4 | cut -d '=' -f 2)"
-    software_overview_helper "fzf" "$(fzf --version | cut -d ' ' -f 1)"
-    software_overview_helper "cmake" "$(cmake --version | head -n 1 | awk '{ print $3; }')"
-    software_overview_helper "ninja" "$(ninja --version)"
-    software_overview_helper "cargo" "$(cargo --version | awk '{ print $2; }')"
-    software_overview_helper "python" "$(python --version | awk '{ print $2; }')"
-    software_overview_helper "conda" "$(conda --version | awk '{ print $2; }')"
-    software_overview_helper "mamba" "$(mamba --version)"
-    software_overview_helper "micromamba" "$(micromamba --version)"
-    software_overview_helper "lua" "$(lua -v 2>&1 | cut -d ' ' -f 2)"
-    software_overview_helper "luarocks" "$(luarocks --version | head -n 1 | cut -d ' ' -f 2)"
-    software_overview_helper "gnome-shell" "$(gnome-shell --version | awk '{ print $3; }')"
-    software_overview_helper "alacritty" "$(alacritty --version | awk '{ print $2; }')"
-    software_overview_helper "kitty" "$(kitty --version | awk '{ print $2; }')"
-    software_overview_helper "xclip" "$(xclip -version 2>&1 | head -n 1 | awk '{ print $3;}')"
-    software_overview_helper "zathura" "$(zathura --version | head -n 1 | awk '{ print $2; }')"
-    software_overview_helper "TeX" "$(tex --version | grep -o '(.*)' | sed 's/[()]//g')"
-    if [ -z "${ROS_DISTRO}" ]; then
-        software_overview_helper "${INDENT}${RED}%-${WIDTH}s${RESET}%s\n" "ROS" "not found"
-    else
-        software_overview_helper "${INDENT}${GREEN}%-${WIDTH}s${RESET}%s\n" "ROS" "${ROS_DISTRO}"
-    fi
+    _software_overview_row "chezmoi" bash -c 'chezmoi --version | awk "{print \$3}" | tr -d ,'
+    _software_overview_row "pixi" bash -c 'pixi --version | awk "{print \$2}"'
+    _software_overview_row "uv" bash -c 'uv --version | awk "{print \$2}"'
+    _software_overview_row "zsh" bash -c 'zsh --version | awk "{print \$2}"'
+    _software_overview_row "starship" bash -c 'starship --version | head -n1 | awk "{print \$2}"'
+    _software_overview_row "sheldon" bash -c 'sheldon --version | awk "{print \$2}"'
+    _software_overview_row "nvim" bash -c 'nvim --version | head -n1 | awk "{print \$2}" | sed "s/^v//"'
+    _software_overview_row "tmux" bash -c 'tmux -V | awk "{print \$2}"'
+    _software_overview_row "herdr" bash -c 'herdr --version | awk "{print \$2}"'
+    _software_overview_row "git" bash -c 'git --version | awk "{print \$3}"'
+    _software_overview_row "gh" bash -c 'gh --version | head -n1 | awk "{print \$3}"'
+    _software_overview_row "difft" bash -c 'difft --version | awk "{print \$2}"'
+    _software_overview_row "kitty" bash -c 'kitty --version | awk "{print \$2}"'
+    _software_overview_row "yazi" bash -c 'yazi --version | awk "{print \$2}"'
+    _software_overview_row "fzf" bash -c 'fzf --version | awk "{print \$1}"'
+    _software_overview_row "rg" bash -c 'rg --version | head -n1 | awk "{print \$2}"'
+    _software_overview_row "fd" bash -c 'fd --version | awk "{print \$2}"'
+    _software_overview_row "python3" bash -c 'python3 --version | awk "{print \$2}"'
+    _software_overview_row "node" bash -c 'node --version | sed "s/^v//"'
+    _software_overview_row "pnpm" pnpm --version
+    _software_overview_row "pi" pi --version
+    _software_overview_row "rtk" rtk --version
+    _software_overview_row "agy" agy --version
+    _software_overview_row "codex" codex --version
+    _software_overview_row "claude" claude --version
     echo
-    # Clean up helper regardless of shell
-    if [ "$(type -t software_overview_helper 2>/dev/null)" = "function" ]; then
-        unset -f software_overview_helper 2>/dev/null || unfunction software_overview_helper 2>/dev/null || true
-    fi
-    # Restore stderr
-    exec 2>&${__saved_stderr}
-    exec {__saved_stderr}>&-
+    unset -f _software_overview_row 2>/dev/null || true
 }
