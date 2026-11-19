@@ -67,6 +67,8 @@ packages = [
 ]
 # Pinned CLI binaries with committed SHA-256 lockfile entries.
 mise = ["gitleaks", "zoxide"]
+# Static Rust dotfiles CLI + Ratatui TUI (Python fallback remains in ~/.local/bin).
+downloads = ["dotfiles-cli"]
 
 [bundles.dev-c]
 description = "C and C++ build and format tooling"

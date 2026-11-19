@@ -161,6 +161,8 @@ def payload(identifier, spec, version, directory):
                    "Zotero_linux-x86_64/icons/icon128.png": b"icon"}, "xz")
     elif identifier == "agy":
         tar(path, {"antigravity": script(f"agy {version}")}, "gz")
+    elif identifier == "dotfiles-cli":
+        tar(path, {"dotfiles": script(f"dotfiles {version}")}, "gz")
     elif identifier in ("better-bibtex", "extra-meta"):
         zip_(path, {"manifest.json": json.dumps({"version": version}).encode()})
     elif path.suffix == ".ttf":
