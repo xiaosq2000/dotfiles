@@ -236,10 +236,24 @@ def _check_shell_and_git(home):
         "git_xdg_config": git_cfg.is_file(),
         "git_diff_algorithm": diff_algo or None,
         "git_diff_external": diff_ext or None,
-        "zoxide": shutil.which("zoxide"),
+        "zoxide": _find_tool(home, "zoxide"),
         "sbc_route": sbc_route,
         "issues": issues,
     }
+
+
+def _find_tool(home, name):
+    for directory in (
+        home / ".local/opt/dotfiles/bin",
+        home / ".local/share/mise/shims",
+        home / ".pixi/bin",
+        home / ".local/share/pnpm/bin",
+        home / ".local/bin",
+    ):
+        candidate = directory / name
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return shutil.which(name)
 
 
 def _check_agents(home, bundles):
@@ -266,23 +280,23 @@ def _check_agents(home, bundles):
 
     agents = {
         "claude": {
-            "binary": shutil.which("claude"),
+            "binary": _find_tool(home, "claude"),
             "instructions": (home / ".claude/CLAUDE.md").exists(),
             "key_guard_configured": hook_present(home / ".claude/settings.json", "key-guard.py"),
         },
         "codex": {
-            "binary": shutil.which("codex"),
+            "binary": _find_tool(home, "codex"),
             "instructions": (home / ".codex/AGENTS.md").exists(),
             "key_guard_configured": hook_present(home / ".codex/hooks.json", "key-guard.py"),
             "sandbox_profile": hook_present(home / ".codex/config.toml", 'default_permissions = "key-guard"'),
         },
         "agy": {
-            "binary": shutil.which("agy"),
+            "binary": _find_tool(home, "agy"),
             "instructions": (home / ".gemini/AGENTS.md").exists(),
             "key_guard_configured": hook_present(home / ".gemini/config/hooks.json", "key-guard.py"),
         },
         "pi": {
-            "binary": shutil.which("pi"),
+            "binary": _find_tool(home, "pi"),
             "instructions": (home / ".pi/agent/AGENTS.md").exists(),
             "guard_extension": (home / ".pi/agent/extensions/dotfiles-guard.ts").is_file(),
         },

@@ -14,24 +14,22 @@ meantime). On each machine, after `dotfiles sync`:
 2. Trust both `~/.agents/hooks/key-guard.py` (`PreToolUse`) and
    `~/.agents/hooks/agent-notify.py` (`Stop`).
 
-Machines still to do: workstation, laptop, imrl, sicc. Drop a name once done,
+Machines still to do: laptop, imrl, sicc. Drop a name once done,
 and delete this entry when none are left. See [secrets.md](secrets.md).
 
 ## Roll out the late-2026 refactor to remaining machines
 
-Checked on 2026-11-19. `workstation` is deployed and verified; remaining hosts
-in canary order: `laptop` → `imrl` → `sicc` → `vps`. On each host:
+Checked on 2026-11-19. `workstation` is deployed, cleaned, and verified;
+remaining hosts in canary order: `laptop` → `imrl` → `sicc` → `vps`. On each host:
 
 ```sh
 dotfiles sync --update      # or: env -u http_proxy -u https_proxy -u all_proxy chezmoi update
 dotfiles doctor
 ```
 
-On `laptop` and `workstation` (hosts with `sudo = true` and `system/<machine>/`
-files), run `sudo -v && chezmoi apply` once so updated root-owned units (such as
-`power-tunables.service`) install. On `workstation`, close Zotero and re-run
-`chezmoi apply` once so `96-zotero-profile.sh` installs Better BibTeX `v9.0.71`
-and Extra Meta `v0.1.7`.
+On `laptop` (a host with `sudo = true` and `system/laptop/` files), run
+`sudo -v && chezmoi apply` once so updated root-owned units (such as
+`power-tunables.service`) install.
 
 ## Finish the laptop's move to dotfiles-fetch
 
