@@ -11,7 +11,7 @@ Checked on 2026-11-19.
 | Toolchain consolidation | Adopt `mise` + committed `mise.lock` for cross-platform CLIs and repo tasks; keep `pixi global` for conda-forge / HPC strongholds (`zsh`, `um-vpn`, `ffmpeg`, `huggingface_hub`, C++/LSP) |
 | `zotero/extra-meta` | Extract to standalone repo `xiaosq2000/zotero-extra-meta` with GitHub Release `.xpi` assets |
 | Shell history & navigation | Add `zoxide`; skip `atuin` for now |
-| Agent sandboxing | Ship `agent-jail` (`bwrap`/Landlock) as opt-in first alongside 4-agent native hooks/permissions; promote to default after daily burn-in |
+| Agent sandboxing | Wrap `claude`, `codex`, `agy`, and `pi` in `agent-jail` (`bwrap`/Landlock) by default in interactive shells (`unjail` / `DOTFILES_NO_JAIL=1` escape hatch), alongside 4-agent native hooks/permissions |
 | Proxy routing | Align dotfiles and agent rules with `sbc`'s modern split-routing rules |
 
 ## Execution rules

@@ -557,13 +557,53 @@ prepend_env PATH "${HOME}/.local/share/mise/shims"
 remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
 prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
 
-# Default interactive Antigravity CLI sessions to --dangerously-skip-permissions.
-# Secret reads remain hard-blocked by ~/.gemini/config/hooks.json (key-guard.py).
-# Pass through subcommands and help/version flags unchanged; use `command agy` to bypass.
-if has agy; then
+# Default-jail the four primary coding agents (`claude`, `codex`, `agy`, `pi`)
+# using OS-level bwrap / Landlock isolation (policy in ~/.config/dotfiles/policy.json).
+# - `agy` also defaults to `--dangerously-skip-permissions` (guarded by agent-jail + key-guard).
+# - `codex` auto-switches to `-s danger-full-access` inside agent-jail to avoid nested bwrap
+#   failure while keeping gh.rules approval checks; unjailed `codex` keeps its own sandbox.
+# - Escape hatches: `unjail <agent> ...`, `DOTFILES_NO_JAIL=1 <agent> ...`, or `command <agent> ...`.
+# - Extra writable paths: `DOTFILES_JAIL_RW=/path1:/path2 <agent> ...` (or `codex --add-dir`).
+unjail() {
+    DOTFILES_NO_JAIL=1 "$@"
+}
+
+if has agent-jail; then
+    _dotfiles_run_jailed() {
+        local _agent="$1"
+        shift
+        case "$_agent:${1:-}" in
+            *:-h|*:-v|*:-V|*:--help|*:--version|*:help|*:update|*:install|*:mcp|*:plugin|*:plugins|*:doctor)
+                command "$_agent" "$@"
+                return
+                ;;
+            codex:completion|codex:login|codex:logout|codex:sandbox|codex:debug|codex:features|codex:agents|codex:apply|codex:archive|codex:delete|codex:unarchive|codex:queue|codex:migrate-*)
+                command "$_agent" "$@"
+                return
+                ;;
+            claude:auth|claude:config|claude:setup-token)
+                command "$_agent" "$@"
+                return
+                ;;
+            agy:acp|agy:agent|agy:agents|agy:changelog|agy:mic-serve|agy:models|agy:remote-control)
+                command "$_agent" "$@"
+                return
+                ;;
+            pi:remove|pi:list|pi:config)
+                command "$_agent" "$@"
+                return
+                ;;
+        esac
+        command agent-jail --wrap "$_agent" -- "$@"
+    }
+    has claude && claude() { _dotfiles_run_jailed claude "$@"; }
+    has codex  && codex()  { _dotfiles_run_jailed codex "$@"; }
+    has agy    && agy()    { _dotfiles_run_jailed agy "$@"; }
+    has pi     && pi()     { _dotfiles_run_jailed pi "$@"; }
+elif has agy; then
     agy() {
         case "${1:-}" in
-            acp|agent|agents|changelog|help|install|mcp|mic-serve|models|plugin|plugins|remote-control|update|-h|--help|-v|--version)
+            acp|agent|agents|changelog|doctor|help|install|mcp|mic-serve|models|plugin|plugins|remote-control|update|-h|--help|-v|--version)
                 command agy "$@"
                 return
                 ;;

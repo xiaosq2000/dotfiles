@@ -92,6 +92,45 @@ else
     PS1='\u@\h:\w\$ '
 fi
 
+# Default-jail primary coding agents in interactive bash too (`unjail <agent>` to bypass).
+unjail() {
+    DOTFILES_NO_JAIL=1 "$@"
+}
+
+if _has agent-jail; then
+    _dotfiles_run_jailed() {
+        local _agent="$1"
+        shift
+        case "$_agent:${1:-}" in
+            *:-h|*:-v|*:-V|*:--help|*:--version|*:help|*:update|*:install|*:mcp|*:plugin|*:plugins|*:doctor)
+                command "$_agent" "$@"
+                return
+                ;;
+            codex:completion|codex:login|codex:logout|codex:sandbox|codex:debug|codex:features|codex:agents|codex:apply|codex:archive|codex:delete|codex:unarchive|codex:queue|codex:migrate-*)
+                command "$_agent" "$@"
+                return
+                ;;
+            claude:auth|claude:config|claude:setup-token)
+                command "$_agent" "$@"
+                return
+                ;;
+            agy:acp|agy:agent|agy:agents|agy:changelog|agy:mic-serve|agy:models|agy:remote-control)
+                command "$_agent" "$@"
+                return
+                ;;
+            pi:remove|pi:list|pi:config)
+                command "$_agent" "$@"
+                return
+                ;;
+        esac
+        command agent-jail --wrap "$_agent" -- "$@"
+    }
+    if _has claude; then claude() { _dotfiles_run_jailed claude "$@"; }; fi
+    if _has codex; then codex() { _dotfiles_run_jailed codex "$@"; }; fi
+    if _has agy; then agy() { _dotfiles_run_jailed agy "$@"; }; fi
+    if _has pi; then pi() { _dotfiles_run_jailed pi "$@"; }; fi
+fi
+
 # Proxy client
 _sbc="${XDG_DATA_HOME:-$HOME/.local/share}/sbc/cli/sbc"
 if [ -x "$_sbc" ]; then

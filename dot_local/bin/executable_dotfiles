@@ -116,11 +116,23 @@ def _check_chezmoi():
 
 
 def _check_secrets(home, data):
+    in_jail = os.environ.get("DOTFILES_AGENT_JAIL") == "1"
     age_rel = (data.get("secrets") or {}).get("ageIdentity", ".config/chezmoi/key.txt")
     age_path = home / age_rel
     # Only stat metadata (existence and mode); never open or read private keys.
     age_exists = age_path.exists()
-    age_mode = _mode_octal(age_path) if age_exists else None
+    age_masked = False
+    age_mode = None
+    if age_exists:
+        try:
+            age_st = age_path.stat()
+            if in_jail and stat.S_ISCHR(age_st.st_mode):
+                age_masked = True
+                age_mode = "masked"
+            else:
+                age_mode = oct(stat.S_IMODE(age_st.st_mode))
+        except OSError:
+            age_mode = None
 
     ssh_dir = home / ".ssh"
     loose_keys = []
@@ -130,7 +142,10 @@ def _check_secrets(home, data):
             for child in sorted(ssh_dir.iterdir()):
                 if child.is_dir() or child.name in public_names or child.name.endswith(".pub"):
                     continue
-                mode = stat.S_IMODE(child.stat().st_mode)
+                st = child.stat()
+                if in_jail and stat.S_ISCHR(st.st_mode):
+                    continue
+                mode = stat.S_IMODE(st.st_mode)
                 if mode & 0o077:
                     loose_keys.append({"name": child.name, "mode": oct(mode)})
         except OSError:
@@ -146,16 +161,15 @@ def _check_secrets(home, data):
             policy_ok = False
 
     issues = []
-    if age_exists and age_mode not in ("0o600", "0o400"):
+    bad_age_mode = age_exists and not age_masked and age_mode not in ("0o600", "0o400")
+    if bad_age_mode:
         issues.append(f"age identity permissions {age_mode} (expected 0o600)")
     if loose_keys:
         issues.append(f"{len(loose_keys)} ssh private key(s) readable by group/other")
     if not policy_ok:
         issues.append("policy.json missing or invalid")
 
-    status = "error" if loose_keys or (age_exists and age_mode not in ("0o600", "0o400")) else (
-        "warn" if issues else "ok"
-    )
+    status = "error" if loose_keys or bad_age_mode else ("warn" if issues else "ok")
     return {
         "status": status,
         "age_identity_present": age_exists,
@@ -262,13 +276,23 @@ def _check_agents(home, bundles):
     notify = home / ".agents/hooks/agent-notify.py"
     jail_bin = home / ".local/bin/agent-jail"
 
+    active_jail = (
+        os.environ.get("DOTFILES_AGENT_JAIL_BACKEND") or "unknown"
+        if os.environ.get("DOTFILES_AGENT_JAIL") == "1"
+        else None
+    )
     jail_backends = []
-    if shutil.which("bwrap"):
+    if active_jail == "bwrap":
+        jail_backends.append("bwrap")
+    elif shutil.which("bwrap"):
         rc, _, _ = _run(["bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--", "/bin/true"], timeout=5)
         if rc == 0:
             jail_backends.append("bwrap")
     if jail_bin.is_file():
-        rc, _, _ = _run([sys.executable, str(jail_bin), "--backend", "landlock", "--", "/bin/true"], timeout=5)
+        rc, _, _ = _run(
+            [sys.executable, str(jail_bin), "--force", "--backend", "landlock", "--", "/bin/true"],
+            timeout=5,
+        )
         if rc == 0:
             jail_backends.append("landlock")
 
@@ -324,6 +348,7 @@ def _check_agents(home, bundles):
         "key_guard": os.access(key_guard, os.X_OK),
         "agent_notify": os.access(notify, os.X_OK),
         "agent_jail_backends": jail_backends,
+        "active_jail": active_jail,
         "agents": agents,
         "issues": issues,
     }
@@ -377,7 +402,10 @@ def print_doctor(report):
         elif name == "agents":
             installed = [k for k, v in (section.get("agents") or {}).items() if v.get("binary")]
             summary_parts.append(f"installed: {', '.join(installed) or 'none'}")
-            summary_parts.append(f"jail: {', '.join(section.get('agent_jail_backends') or ['none'])}")
+            jail_str = ", ".join(section.get("agent_jail_backends") or ["none"])
+            if section.get("active_jail"):
+                jail_str += f" (active: {section['active_jail']})"
+            summary_parts.append(f"jail: {jail_str}")
         print(f"  [{badge}] {name:<10} {' | '.join(summary_parts)}")
         for issue in section.get("issues") or []:
             print(f"          - {issue}")

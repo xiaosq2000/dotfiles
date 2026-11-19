@@ -184,31 +184,43 @@ and reconciled by `dot_local/libexec/dotfiles/executable_agent-reconcile.py`.
 | Antigravity CLI (`agy`) | `PreToolUse` JSON hook delegating to `key-guard.py` (`{"decision":"deny"}` on secrets, `{"decision":"allow"}` otherwise — enforced even with `--dangerously-skip-permissions`) | `private_dot_gemini/private_config/modify_private_hooks.json.tmpl` |
 | Pi | Local `dotfiles-guard.ts` extension delegating `tool_call` checks to `key-guard.py` (including foreground subagents via `defaultSubagentOnlyExtensions`) | `private_dot_pi/private_agent/extensions/dotfiles-guard.ts` and `modify_private_settings.json.tmpl` |
 
-Opt-in OS-level sandboxing (`agent-jail`) and unified security policy live in
+Default OS-level sandboxing (`agent-jail`) and unified security policy live in
 `.chezmoidata/policy.toml` (rendered to `~/.config/dotfiles/policy.json`, also
 read by `key-guard.py`, `check-encrypted.sh`, and `check-secrets.py`).
 
-### Opt-in OS sandbox (`agent-jail`)
+### Default OS sandbox (`agent-jail`)
 
-Run any coding agent or shell command inside an OS-enforced sandbox:
+Interactive `zsh` and `bash` shells wrap `claude`, `codex`, `agy`, and `pi` in
+`agent-jail --wrap <agent>` by default (help, version, login, completion, and
+package-management subcommands pass through directly).
 
 ```sh
-agent-jail claude                  # bwrap (or Landlock on rootless HPC)
-agent-jail codex                   # keeps ~/.codex/auth.json; masks SSH/age/other agents
-agent-jail agy                     # masks all private keys, age key, ~/.secrets, other agents
-agent-jail pi                      # keeps ~/.pi/agent/auth.json; masks everything else
-agent-jail --dry-run -- bash       # inspect exact mounts and masked paths
+claude / codex / agy / pi          # runs inside agent-jail automatically
+DOTFILES_JAIL_RW=~/datasets codex  # add extra writable directory (or codex --add-dir)
+unjail agy                         # bypass jail (e.g. when running chezmoi apply)
+DOTFILES_NO_JAIL=1 codex           # bypass jail; codex falls back to its own key-guard sandbox
+agent-jail --mask-gh -- codex      # also mask ~/.config/gh/hosts.yml in untrusted repos
+agent-jail --dry-run --wrap codex  # inspect exact mounts, masked paths, and adapted command
 ```
 
 - **Primary backend (`bwrap`)**: mounts `/` read-only, current workspace RW,
   `.git/hooks` and `.git/config` read-only, `/etc/ssh/ssh_config.d` hidden,
   `~/.secrets` as empty `tmpfs`, and SSH private keys / age identity / CLI &
   other-agent credentials over-mounted with `/dev/null`, while passing through
-  `SSH_AUTH_SOCK` and `HERDR_SOCKET_PATH`.
+  `SSH_AUTH_SOCK`, `HERDR_SOCKET_PATH`, and `XDG_RUNTIME_DIR`. Machine-specific
+  `pixi` cache/environment directories from `.chezmoidata/machines.toml` are
+  automatically included as writable paths.
 - **Rootless HPC fallback (`landlock`)**: invokes Linux Landlock LSM (ABI v1+)
   directly via syscalls with no root or user namespaces required; blocks reads
   of masked secrets (`EACCES`) and restricts writes to the workspace, `/tmp`,
   caches, and the invoked agent's own state directory.
+- **Codex & `gh` behavior**: inside `agent-jail`, `codex` automatically runs
+  with `-s danger-full-access` because Linux `bwrap` cannot nest inside an outer
+  `bwrap` namespace (`gh.rules` approvals and `key-guard.py` stay active;
+  unjailed `codex` retains its own `key-guard` sandbox). `~/.config/gh/hosts.yml`
+  remains read-only inside the jail so `gh pr` / `gh run` work out of the box
+  while `key-guard.py`, `gh.rules`, and Claude `deny` rules block reading
+  `hosts.yml` directly or running `gh auth token` / `gh secret` / `gh repo delete`.
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
 guarded file, and tells the agent to ask you instead. The exceptions are

@@ -30,12 +30,17 @@ ssh_public_names = [
 ]
 ssh_public_dirs = ["config.d"]
 masked_dirs = [".secrets"]
+# ~/.config/gh/hosts.yml stays readable inside agent-jail so `gh pr` / `gh run`
+# work out of the box; key-guard.py, Codex gh.rules, and Claude deny rules
+# continue to block direct reads of hosts.yml and token/destructive gh commands.
+# Pass `agent-jail --mask-gh` for untrusted repos that should not use gh auth.
 masked_files = [
     ".config/chezmoi/key.txt",
-    ".config/gh/hosts.yml",
     ".aws/credentials",
     ".netrc",
     ".git-credentials",
+    ".cargo/credentials",
+    ".cargo/credentials.toml",
     ".huggingface/token",
     ".cache/huggingface/token",
     ".claude/.credentials.json",
@@ -51,11 +56,17 @@ secret-tool = ["lookup", "search"]
 # OpenSSH 10 user-namespace fix: hide /etc/ssh/ssh_config.d inside bwrap so ssh
 # does not abort with "Bad owner or permissions" on root-owned drop-ins.
 hide_system_dirs = ["/etc/ssh/ssh_config.d"]
-# Always writable caches/runtimes (any masked_files inside them are re-masked on top).
-common_rw_dirs = [".cache", ".local/state"]
+# Always writable caches/stores (any masked_files inside them are re-masked on top).
+common_rw_dirs = [
+    ".cache",
+    ".local/state",
+    ".local/share/pnpm",
+    ".cargo",
+]
 
 [policy.jail.agents.claude]
 rw_dirs = [".claude"]
+rw_files = [".claude.json"]
 own_auth_files = [".claude/.credentials.json"]
 
 [policy.jail.agents.codex]

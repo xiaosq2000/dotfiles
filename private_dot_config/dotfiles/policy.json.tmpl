@@ -1,1 +1,15 @@
-{{ .policy | toPrettyJson }}
+{{- $m := index .machines .machine -}}
+{{- $pixi := dict -}}
+{{- if and $m (hasKey $m "pixi") -}}
+{{-   $pixi = $m.pixi -}}
+{{- end -}}
+{{- $machineRw := list -}}
+{{- range $k := list "cacheDir" "detachedEnvironments" "repodataDir" -}}
+{{-   $v := get $pixi $k -}}
+{{-   if $v -}}
+{{-     $machineRw = append $machineRw $v -}}
+{{-   end -}}
+{{- end -}}
+{{- $jail := mergeOverwrite (dict) .policy.jail (dict "machine_rw_dirs" $machineRw) -}}
+{{- $out := mergeOverwrite (dict) .policy (dict "jail" $jail) -}}
+{{ $out | toPrettyJson }}

@@ -44,10 +44,11 @@ DEFAULT_POLICY = {
         "masked_dirs": [".secrets"],
         "masked_files": [
             ".config/chezmoi/key.txt",
-            ".config/gh/hosts.yml",
             ".aws/credentials",
             ".netrc",
             ".git-credentials",
+            ".cargo/credentials",
+            ".cargo/credentials.toml",
             ".huggingface/token",
             ".cache/huggingface/token",
             ".claude/.credentials.json",
@@ -57,9 +58,14 @@ DEFAULT_POLICY = {
     },
     "jail": {
         "hide_system_dirs": ["/etc/ssh/ssh_config.d"],
-        "common_rw_dirs": [".cache", ".local/state"],
+        "common_rw_dirs": [".cache", ".local/state", ".local/share/pnpm", ".cargo"],
+        "machine_rw_dirs": [],
         "agents": {
-            "claude": {"rw_dirs": [".claude"], "own_auth_files": [".claude/.credentials.json"]},
+            "claude": {
+                "rw_dirs": [".claude"],
+                "rw_files": [".claude.json"],
+                "own_auth_files": [".claude/.credentials.json"],
+            },
             "codex": {"rw_dirs": [".codex"], "own_auth_files": [".codex/auth.json"]},
             "agy": {"rw_dirs": [".gemini"], "own_auth_files": []},
             "pi": {"rw_dirs": [".pi"], "own_auth_files": [".pi/agent/auth.json"]},
@@ -74,6 +80,136 @@ AGENT_ALIASES = {
     "antigravity": "agy",
     "pi": "pi",
 }
+
+PASSTHROUGH_SUBCOMMANDS = {
+    "claude": {"auth", "config", "doctor", "help", "install", "mcp", "plugin", "plugins", "setup-token", "update"},
+    "codex": {
+        "agents",
+        "apply",
+        "archive",
+        "completion",
+        "debug",
+        "delete",
+        "doctor",
+        "features",
+        "help",
+        "login",
+        "logout",
+        "mcp",
+        "plugin",
+        "plugins",
+        "queue",
+        "sandbox",
+        "unarchive",
+        "update",
+    },
+    "agy": {
+        "acp",
+        "agent",
+        "agents",
+        "changelog",
+        "doctor",
+        "help",
+        "install",
+        "mcp",
+        "mic-serve",
+        "models",
+        "plugin",
+        "plugins",
+        "remote-control",
+        "update",
+    },
+    "pi": {"config", "doctor", "help", "install", "list", "remove", "update"},
+}
+
+META_FLAGS = {"-h", "--help", "-v", "-V", "--version"}
+
+
+def is_passthrough(agent, args):
+    """Return True if agent args represent a help/version/management command."""
+    if not agent or not args:
+        return False
+    first = args[0]
+    if first in META_FLAGS:
+        return True
+    subs = PASSTHROUGH_SUBCOMMANDS.get(agent) or set()
+    if first in subs:
+        return True
+    if agent == "codex" and first.startswith("migrate-"):
+        return True
+    return False
+
+
+def extract_codex_paths(args):
+    """Extract -C/--cd workspace and --add-dir extra RW dirs from codex args."""
+    inferred_ws = None
+    extra_rw = []
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        if tok == "--":
+            break
+        if tok in ("-C", "--cd") and i + 1 < len(args):
+            inferred_ws = args[i + 1]
+            i += 2
+            continue
+        if tok.startswith("--cd="):
+            inferred_ws = tok.split("=", 1)[1]
+            i += 1
+            continue
+        if tok == "--add-dir" and i + 1 < len(args):
+            extra_rw.append(args[i + 1])
+            i += 2
+            continue
+        if tok.startswith("--add-dir="):
+            extra_rw.append(tok.split("=", 1)[1])
+            i += 1
+            continue
+        i += 1
+    return inferred_ws, extra_rw
+
+
+def _codex_has_explicit_sandbox(args):
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        if tok == "--":
+            break
+        if tok in ("-s", "--sandbox", "--dangerously-bypass-approvals-and-sandbox"):
+            return True
+        if tok.startswith("--sandbox="):
+            return True
+        if tok in ("-c", "--config") and i + 1 < len(args):
+            if "sandbox_mode" in args[i + 1]:
+                return True
+            i += 2
+            continue
+        if tok.startswith("--config=") and "sandbox_mode" in tok:
+            return True
+        i += 1
+    return False
+
+
+def adapt_agent_cmd(cmd, jailed, wrap_mode):
+    """Adjust agent argv for jailed/wrapped execution without breaking explicit user flags."""
+    if not cmd:
+        return list(cmd)
+    binary_agent = AGENT_ALIASES.get(Path(cmd[0]).name.lower())
+    if not binary_agent or is_passthrough(binary_agent, cmd[1:]):
+        return list(cmd)
+    args = list(cmd[1:])
+    if binary_agent == "agy" and wrap_mode:
+        if "--dangerously-skip-permissions" not in args:
+            args.insert(0, "--dangerously-skip-permissions")
+        return [cmd[0], *args]
+    if binary_agent == "codex" and jailed:
+        # Linux bwrap cannot nest inside our outer agent-jail bwrap namespace.
+        # Disable Codex's inner sandbox while keeping gh.rules approval checks;
+        # outer agent-jail enforces OS-level isolation.
+        if not _codex_has_explicit_sandbox(args):
+            args = ["-s", "danger-full-access", *args]
+        return [cmd[0], *args]
+    return list(cmd)
 
 
 def load_policy(policy_path=None):
@@ -120,7 +256,7 @@ def resolve_git_dir(workspace):
     return None
 
 
-def collect_plan(home, workspace, extra_rw, agent, policy):
+def collect_plan(home, workspace, extra_rw, agent, policy, mask_gh=False):
     secrets = policy["secrets"]
     jail = policy["jail"]
     agent_cfg = (jail.get("agents") or {}).get(agent) or {}
@@ -128,15 +264,27 @@ def collect_plan(home, workspace, extra_rw, agent, policy):
 
     rw_dirs = [workspace]
     for path in extra_rw:
-        rw_dirs.append(Path(path).expanduser().resolve())
+        p = Path(path).expanduser().resolve()
+        if p.exists():
+            rw_dirs.append(p)
     for rel in jail.get("common_rw_dirs") or []:
         p = home / rel
         if p.exists():
             rw_dirs.append(p)
+    for abs_dir in jail.get("machine_rw_dirs") or []:
+        p = Path(abs_dir).expanduser()
+        if p.exists():
+            rw_dirs.append(p.resolve())
     for rel in agent_cfg.get("rw_dirs") or []:
         p = home / rel
         if p.exists():
             rw_dirs.append(p)
+
+    rw_files = []
+    for rel in agent_cfg.get("rw_files") or []:
+        p = home / rel
+        if p.exists() and not p.is_dir():
+            rw_files.append(p)
 
     # Protect workspace .git/hooks and .git/config from tampering.
     ro_overrides = []
@@ -159,7 +307,10 @@ def collect_plan(home, workspace, extra_rw, agent, policy):
             masked_dirs.append(p)
 
     masked_files = []
-    for rel in secrets.get("masked_files") or []:
+    mask_list = list(secrets.get("masked_files") or [])
+    if mask_gh and ".config/gh/hosts.yml" not in mask_list:
+        mask_list.append(".config/gh/hosts.yml")
+    for rel in mask_list:
         p = home / rel
         if p in own_auth:
             continue
@@ -201,6 +352,7 @@ def collect_plan(home, workspace, extra_rw, agent, policy):
         "workspace": workspace,
         "agent": agent,
         "rw_dirs": dedupe(rw_dirs),
+        "rw_files": dedupe(rw_files),
         "ro_overrides": dedupe(ro_overrides),
         "masked_dirs": dedupe(masked_dirs),
         "masked_files": dedupe(masked_files),
@@ -227,6 +379,10 @@ def build_bwrap_argv(plan, cmd, env):
         if sock.exists() and str(sock).startswith("/tmp/"):
             argv.extend(["--bind", str(sock), str(sock)])
 
+    # Allow X11/XWayland socket connections (read-only dir) when DISPLAY is set.
+    if env.get("DISPLAY") and Path("/tmp/.X11-unix").is_dir():
+        argv.extend(["--ro-bind", "/tmp/.X11-unix", "/tmp/.X11-unix"])
+
     # When HOME lives under /tmp (e.g., disposable test homes), re-bind it RO
     # after `--tmpfs /tmp` so masks and workspace binds inside it take effect.
     if str(plan["home"]).startswith("/tmp/"):
@@ -238,6 +394,9 @@ def build_bwrap_argv(plan, cmd, env):
         argv.extend(["--bind", runtime_dir, runtime_dir])
 
     for path in plan["rw_dirs"]:
+        argv.extend(["--bind", str(path), str(path)])
+
+    for path in plan["rw_files"]:
         argv.extend(["--bind", str(path), str(path)])
 
     for path in plan["ro_overrides"]:
@@ -332,7 +491,7 @@ def compute_landlock_rules(plan):
     differently-permissioned target so forbidden files/dirs receive zero rules.
     """
     forbidden = {p.resolve() for p in plan["masked_dirs"] + plan["masked_files"]}
-    rw_roots = {p.resolve() for p in plan["rw_dirs"]}
+    rw_roots = {p.resolve() for p in plan["rw_dirs"] + plan["rw_files"]}
     for extra in (Path("/tmp"), Path("/dev")):
         if extra.exists():
             rw_roots.add(extra.resolve())
@@ -466,12 +625,28 @@ def main():
         help="Agent profile whose own state/auth stays accessible (default: auto-detect from command)",
     )
     parser.add_argument(
+        "--wrap",
+        choices=("claude", "codex", "agy", "pi"),
+        default=None,
+        help="Default-wrapper mode for an interactive coding agent (prepends binary and applies agent defaults)",
+    )
+    parser.add_argument(
         "--backend",
         choices=("auto", "bwrap", "landlock"),
         default="auto",
         help="Sandbox backend (default: auto -> bwrap, then landlock)",
     )
     parser.add_argument("--policy", default=None, help="Path to policy.json (default: ~/.config/dotfiles/policy.json)")
+    parser.add_argument(
+        "--mask-gh",
+        action="store_true",
+        help="Also mask ~/.config/gh/hosts.yml inside the sandbox (or set DOTFILES_JAIL_MASK_GH=1)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force entering the sandbox even when DOTFILES_AGENT_JAIL=1 is already set",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print the sandbox plan/command without executing")
     parser.add_argument("command", nargs=argparse.REMAINDER, help="Command to execute (prefix with -- if it has flags)")
     args = parser.parse_args()
@@ -479,14 +654,44 @@ def main():
     cmd = list(args.command)
     if cmd and cmd[0] == "--":
         cmd = cmd[1:]
+    wrap_mode = bool(args.wrap)
+    if wrap_mode:
+        cmd = [args.wrap, *cmd]
     if not cmd:
         parser.error("a command is required (e.g., agent-jail codex or agent-jail -- bash)")
 
+    agent = args.wrap if wrap_mode else detect_agent(cmd, args.agent)
+
+    if not args.dry_run:
+        if wrap_mode and is_passthrough(agent, cmd[1:]):
+            os.execvp(cmd[0], cmd)
+        if os.environ.get("DOTFILES_NO_JAIL") == "1":
+            final_cmd = adapt_agent_cmd(cmd, jailed=False, wrap_mode=wrap_mode)
+            os.execvp(final_cmd[0], final_cmd)
+        if os.environ.get("DOTFILES_AGENT_JAIL") == "1" and not args.force:
+            final_cmd = adapt_agent_cmd(cmd, jailed=True, wrap_mode=wrap_mode)
+            os.execvp(final_cmd[0], final_cmd)
+
+    inferred_ws = None
+    codex_rw = []
+    if AGENT_ALIASES.get(Path(cmd[0]).name.lower()) == "codex":
+        inferred_ws, codex_rw = extract_codex_paths(cmd[1:])
+
+    env_rw = [p for p in os.environ.get("DOTFILES_JAIL_RW", "").split(os.pathsep) if p]
+    extra_rw = [*args.rw, *env_rw, *codex_rw]
+
     home = Path.home().resolve()
-    workspace = Path(args.workspace).expanduser().resolve() if args.workspace else Path.cwd().resolve()
+    if args.workspace:
+        workspace = Path(args.workspace).expanduser().resolve()
+    elif inferred_ws and Path(inferred_ws).expanduser().is_dir():
+        workspace = Path(inferred_ws).expanduser().resolve()
+    else:
+        workspace = Path.cwd().resolve()
+
     policy = load_policy(args.policy)
-    agent = detect_agent(cmd, args.agent)
-    plan = collect_plan(home, workspace, args.rw, agent, policy)
+    mask_gh = bool(args.mask_gh or os.environ.get("DOTFILES_JAIL_MASK_GH") == "1")
+    cmd = adapt_agent_cmd(cmd, jailed=True, wrap_mode=wrap_mode)
+    plan = collect_plan(home, workspace, extra_rw, agent, policy, mask_gh=mask_gh)
 
     backend = args.backend
     if backend == "auto":
@@ -495,7 +700,10 @@ def main():
         elif landlock_abi_version() >= 1:
             backend = "landlock"
         else:
-            sys.stderr.write("agent-jail: error: neither bwrap nor Linux Landlock is available\n")
+            sys.stderr.write(
+                "agent-jail: error: neither bwrap nor Linux Landlock is available "
+                "(bypass with DOTFILES_NO_JAIL=1 or unjail)\n"
+            )
             return 1
 
     env = os.environ.copy()
@@ -508,6 +716,7 @@ def main():
             "agent": agent,
             "workspace": str(plan["workspace"]),
             "rw_dirs": [str(p) for p in plan["rw_dirs"]],
+            "rw_files": [str(p) for p in plan["rw_files"]],
             "ro_overrides": [str(p) for p in plan["ro_overrides"]],
             "masked_dirs": [str(p) for p in plan["masked_dirs"]],
             "masked_files": [str(p) for p in plan["masked_files"]],
