@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-pi-") as temporary:
         return subprocess.check_output(command + ["execute-template", "--file", str(ROOT / path)],
                                        env=environment, text=True)
 
-    modify = render("dot_pi/agent/modify_settings.json.tmpl")
+    modify = render("private_dot_pi/private_agent/modify_private_settings.json.tmpl")
     installer = render(".chezmoiscripts/run_after_95-pi-packages.sh.tmpl")
 
     def merge(raw):

@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # Feeds tool calls to the key guard and checks which ones it refuses.
 #
-# The guard is dot_agents/hooks/executable_key-guard.py, deployed as
-# ~/.agents/hooks/key-guard.py. Claude Code, Codex and opencode all run it
-# before a tool call, so a case that passes here holds for all three. Each line
-# below is the exit code the guard must return, then the call as the agent sends
-# it: 2 means refused, 0 means let through.
+# The guard is private_dot_agents/hooks/executable_key-guard.py, deployed as
+# ~/.agents/hooks/key-guard.py. Claude Code and Codex run it before a tool call,
+# so a case that passes here holds for both. Each line below is the exit code
+# the guard must return, then the call as the agent sends it: 2 means refused,
+# 0 means let through.
 #
 # Usage: check-key-guard.sh [path to the guard]. The default is the copy in
 # this source tree, so the check needs no apply.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
-guard=${1:-dot_agents/hooks/executable_key-guard.py}
+guard=${1:-private_dot_agents/hooks/executable_key-guard.py}
 status=0
 
 while read -r want call; do
@@ -81,6 +81,34 @@ done <<'EOF'
 2 {"tool_name":"Bash","tool_input":{"command":"gh pr create --body-file=~/.ssh/id_rsa"}}
 2 {"tool_name":"Bash","tool_input":{"command":"rg foo ~/.ssh/id_ed25519"}}
 2 {"tool_name":"Bash","tool_input":{"command":"grep -f ~/.ssh/id_rsa docs/"}}
+# Regression cases: globs, wrapper long flags, combined search flags, traversal, chmod and credentials
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/*"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/key.*"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/key.t?t"}}
+2 {"tool_name":"Bash","tool_input":{"command":"ls ~/.config/chezmoi"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/chezmoi.toml/../key.txt"}}
+2 {"tool_name":"Bash","tool_input":{"command":"env --chdir=~/.config/chezmoi cat key.txt"}}
+2 {"tool_name":"Bash","tool_input":{"command":"env --split-string='cat ~/.ssh/id_ed25519'"}}
+2 {"tool_name":"Bash","tool_input":{"command":"env -S 'cat ~/.ssh/id_ed25519'"}}
+2 {"tool_name":"Bash","tool_input":{"command":"env --chdir=~/.ssh cat work_key"}}
+2 {"tool_name":"Bash","tool_input":{"command":"grep -f~/.ssh/id_ed25519 README.md"}}
+2 {"tool_name":"Bash","tool_input":{"command":"grep -Ff ~/.ssh/id_ed25519 README.md"}}
+2 {"tool_name":"Bash","tool_input":{"command":"rg --pre='cat ~/.ssh/id_ed25519' foo README.md"}}
+2 {"tool_name":"Bash","tool_input":{"command":"rg --ignore-file=~/.ssh/id_ed25519 foo README.md"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.ssh/config.d/../work_key"}}
+2 {"tool_name":"Bash","tool_input":{"command":"chmod 644 ~/.ssh/id_ed25519"}}
+2 {"tool_name":"Bash","tool_input":{"command":"chmod +r ~/.ssh/id_ed25519"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.secrets/tokens.env"}}
+2 {"tool_name":"Bash","tool_input":{"command":"rbw get 'chezmoi age identity'"}}
+2 {"tool_name":"Bash","tool_input":{"command":"rbw dump"}}
+2 {"tool_name":"Bash","tool_input":{"command":"secret-tool lookup service github"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/gh/hosts.yml"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.aws/credentials"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.netrc"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.huggingface/token"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.codex/auth.json"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.claude/.credentials.json"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.pi/agent/auth.json"}}
 
 # Files in ~/.ssh with nothing secret in them
 0 {"tool_name":"Bash","tool_input":{"command":"cat ~/.ssh/config"}}
@@ -96,6 +124,9 @@ done <<'EOF'
 0 {"tool_name":"Bash","tool_input":{"command":"cat ~/.sshrc /etc/ssh/ssh_config"}}
 0 {"tool_name":"Bash","tool_input":{"command":"echo $SSH_AUTH_SOCK; ssh-add -l"}}
 0 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/chezmoi.toml"}}
+0 {"tool_name":"Bash","tool_input":{"command":"ls ~/.local/share/chezmoi"}}
+0 {"tool_name":"Bash","tool_input":{"command":"cat docs/secrets.md .chezmoidata/secrets.toml"}}
+0 {"tool_name":"Bash","tool_input":{"command":"rbw unlocked"}}
 0 {"tool_name":"Grep","tool_input":{"pattern":"\\.ssh/id_","path":"."}}
 0 {"tool_name":"Bash","tool_input":{"command":"git status","description":"not about ~/.ssh/id_ed25519"}}
 # Using a key by name, which never prints it

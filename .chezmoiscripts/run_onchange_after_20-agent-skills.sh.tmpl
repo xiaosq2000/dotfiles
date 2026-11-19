@@ -7,7 +7,7 @@
 #
 # Re-runs when the script or any skill changes.
 # agent-skills.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-skills.sh" | sha256sum }}
-# skills sha256: {{ range (glob (joinPath .chezmoi.sourceDir "dot_agents/skills/*/SKILL.md")) }}{{ include . | sha256sum }}{{ end }}
+# skills sha256: {{ range (glob (joinPath .chezmoi.sourceDir "private_dot_agents/skills/*/SKILL.md")) }}{{ include . | sha256sum }}{{ end }}
 #
 # The machines skill only deploys where the age key is (see .chezmoiignore), so
 # a machine that gets the key later gains a skill without any SKILL.md changing.

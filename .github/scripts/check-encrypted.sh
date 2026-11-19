@@ -25,7 +25,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 # ciphertext; add a directory here when it starts holding encrypted files.
 PROTECTED=(
     private_dot_ssh/
-    dot_agents/skills/private_machines/references/
+    private_dot_agents/skills/private_machines/references/
 )
 
 status=0

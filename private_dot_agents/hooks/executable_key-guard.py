@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
-"""Refuse an agent tool call that could read an ssh private key or the age identity.
+"""Refuse an agent tool call that could read private keys, the age identity, or local credentials.
 
-Claude Code and Codex run this as a PreToolUse hook, and the opencode plugin in
-~/.config/opencode/plugins/key-guard.js runs it for opencode, so the three
-agents share one rule. The call arrives on stdin as JSON with tool_name and
-tool_input. Exit 2 with the reason on stderr refuses the call, and exit 0 lets
-it through.
+Claude Code and Codex run this as a PreToolUse hook, sharing one rule. The call
+arrives on stdin as JSON with tool_name and tool_input. Exit 2 with the reason
+on stderr refuses the call, and exit 0 lets it through.
 
-It matches text, not files. A call that names a key is refused, which covers
-the Read tool, cat, cp, find -name and the like. The exceptions are shell
-commands that name an ssh key only to use it or to look at its name and mode
-(ssh -i, ssh-add, ssh-keygen -y, ls, stat, chmod and a few more), or inline
-text that never opens a file: git commit -m messages, gh title and body text,
-and grep or rg search patterns. To find those, the command is split into words
-the way a shell splits it, and a command sent over ssh is checked the same
-way. A command whose effect the split cannot follow, such as one with $(...),
-is refused if it names a key at all.
+It matches text, not files. A call that names a guarded secret is refused,
+which covers the Read tool, cat, cp, find -name and the like. The exceptions
+are shell commands that name an ssh key only to use it or to look at its name
+and mode (ssh -i, ssh-add, ssh-keygen -y, ls, stat and restrictive chmod), or
+inline text that never opens a file: git commit -m messages, gh title and body
+text, and grep or rg search patterns. To find those, the command is split into
+words the way a shell splits it, and a command sent over ssh is checked the
+same way. A command whose effect the split cannot follow, such as one with
+$(...), is refused if it names a guarded secret at all.
 
 Text matching cannot stop a command that builds the path at run time.
 docs/secrets.md lists the other layers each agent gets and what none of them
@@ -28,36 +26,67 @@ import re
 import shlex
 import sys
 
-# Names directly under ~/.ssh that hold nothing secret. Every other name there
-# counts as a private key, so a key with a custom name is covered without being
-# listed, and so are ~/.ssh itself and globs such as ~/.ssh/*.
-PUBLIC = re.compile(r"config|config\.d|known_hosts(\.old)?|authorized_keys2?|[^*?\[{]+\.pub")
+# Relative paths under ~/.ssh that hold nothing secret. Any traversal (`..`),
+# glob character, or other filename counts as a private key.
+PUBLIC_SSH_REL = re.compile(
+    r"(?:config|config\.d(?:/[^/*?\[{]+)*|known_hosts(?:\.old)?|authorized_keys2?|[^/*?\[{]+\.pub)"
+)
 
-# .ssh as a path component, and the component after it, if any. The lookarounds
-# keep .sshrc, foo.ssh and chezmoi's private_dot_ssh from matching.
-SSH_PATH = re.compile(r"(?<![\w.-])\.ssh(?![\w.-])(?:/([^/\s\"'`;|&<>()]*))?")
+# .ssh as a path component, and the remaining relative path after it, if any.
+# The lookarounds keep .sshrc, foo.ssh and chezmoi's private_dot_ssh from matching.
+SSH_PATH = re.compile(r"(?<![\w.-])\.ssh(?![\w.-])(?:/([^\s\"'`;|&<>()]*))?")
 
 # A default key name without the directory, as in `find ~ -name 'id_*'`, or
 # `cat id_ed25519` from inside ~/.ssh.
 KEY_NAME = re.compile(r"(?<![\w.-])id_(?:(?:rsa|dsa|ecdsa|ed25519|xmss)(?:_sk)?|\*)[\w*?.-]*")
 
-# The chezmoi age identity, which decrypts every encrypted_ file in the public
-# dotfiles repository. chezmoi reads it itself, so `chezmoi cat` still works.
-# Anything may sit between the two within one path, so chezmoi/./key.txt and
-# chezmoi/x/../key.txt count too. No shell command may name it, not even ls.
-AGE_IDENTITY = re.compile(r"chezmoi/(?:[^\s\"'`;|&<>()]*/)?key\.txt")
+# The chezmoi age identity and its config directory (~/.config/chezmoi/).
+# Only explicit non-secret files (chezmoi.toml, chezmoistate.boltdb) without
+# traversal are allowed under .config/chezmoi; globs, directory reads, and any
+# key* path under chezmoi/ are refused.
+SAFE_CHEZMOI_FILES = {"chezmoi.toml", "chezmoistate.boltdb"}
+CHEZMOI_CONFIG_PATH = re.compile(r"(?<![\w.-])\.config/chezmoi(?:/([^\s\"'`;|&<>()]*))?")
+AGE_IDENTITY = re.compile(
+    r"chezmoi/(?:[^\s\"'`;|&<>()]*/)?(?:key[^/\s\"'`;|&<>()]*|[^/\s\"'`;|&<>()]*[*?\[{][^/\s\"'`;|&<>()]*)"
+)
+
+# Local credential stores and agent auth files that agents must never read.
+CREDENTIAL_PATTERNS = (
+    (re.compile(r"(?<![\w.-])\.secrets(?![\w.-])"), "it names the local ~/.secrets directory"),
+    (re.compile(r"(?<![\w.-])\.config/gh/hosts[^\s\"'`;|&<>()]*"), "it names GitHub CLI credentials (~/.config/gh/hosts.yml)"),
+    (re.compile(r"(?<![\w.-])\.aws/credentials(?![\w.-])"), "it names AWS credentials (~/.aws/credentials)"),
+    (re.compile(r"(?<![\w.-])\.netrc(?![\w.-])"), "it names ~/.netrc credentials"),
+    (re.compile(r"(?<![\w.-])\.git-credentials(?![\w.-])"), "it names ~/.git-credentials"),
+    (re.compile(r"(?<![\w.-])(?:cache/)?\.?huggingface/token(?![\w.-])"), "it names a Hugging Face token"),
+    (re.compile(r"(?<![\w.-])\.claude/\.credentials\.json(?![\w.-])"), "it names Claude Code credentials"),
+    (re.compile(r"(?<![\w.-])\.codex/auth\.json(?![\w.-])"), "it names Codex credentials"),
+    (re.compile(r"(?<![\w.-])\.pi/agent/auth\.json(?![\w.-])"), "it names Pi credentials"),
+)
+
+# Vault CLI subcommands that print stored secrets (including the age identity).
+VAULT_READ_COMMANDS = {
+    "rbw": {"get", "dump"},
+    "secret-tool": {"lookup", "search"},
+}
+
+# Modes allowed when running chmod against ~/.ssh or an ssh private key.
+RESTRICTIVE_CHMOD_MODES = {
+    "400", "0400", "600", "0600", "700", "0700",
+    "go-rwx", "g-rwx,o-rwx", "o-rwx,g-rwx", "u=rw,go=", "u=rwx,go=", "u=r,go=",
+}
 
 # Tools whose command is a shell script, split into words rather than matched
-# whole: Bash in Claude Code and Codex, bash in opencode, and Claude Code's
-# Monitor. Codex may send the command as an argv list.
+# whole: Bash in Claude Code and Codex, and Claude Code's Monitor.
+# Codex may send the command as an argv list.
 SHELL_TOOLS = {"bash", "monitor"}
 SHELL_FIELDS = {"command", "cmd"}
 
 # Commands that act on a file's name or mode and never print what is in it.
+# chmod is handled separately so permissions cannot be loosened on private keys.
 # file, du and sort are left out: `file -f`, `du --files0-from` and
 # `sort --files0-from` read a list of names from a file, so their errors would
 # echo a key's lines.
-METADATA = {"ls", "stat", "test", "[", "[[", "chmod", "mkdir", "realpath", "readlink"}
+METADATA = {"ls", "stat", "test", "[", "[[", "mkdir", "realpath", "readlink"}
 
 # What may read the output of a METADATA command that named a key. None of
 # these opens a file named in its input, so `ls ~/.ssh | grep pub` passes and
@@ -130,11 +159,17 @@ def fields(value, tool, key=None):
             yield from fields(v, tool, key)
 
 
+VAULT_HINT = re.compile(r"(?<![\w.-])(?:rbw|secret-tool)(?![\w.-])")
+
+
 def ssh_key(text):
     """Return why the text names an ssh private key, or None."""
     for m in SSH_PATH.finditer(text):
-        name = m.group(1)
-        if name is None or not PUBLIC.fullmatch(name):
+        rest = m.group(1)
+        if rest is None:
+            return "it names an ssh private key or the ~/.ssh directory (" + m.group(0) + ")"
+        rest = rest.rstrip("/")
+        if not rest or ".." in rest.split("/") or not PUBLIC_SSH_REL.fullmatch(rest):
             return "it names an ssh private key or the ~/.ssh directory (" + m.group(0) + ")"
     for m in KEY_NAME.finditer(text):
         if not m.group(0).endswith(".pub"):
@@ -143,15 +178,35 @@ def ssh_key(text):
 
 
 def age_identity(text):
-    """Return why the text names the age identity, or None."""
+    """Return why the text names the age identity or ~/.config/chezmoi, or None."""
+    for m in CHEZMOI_CONFIG_PATH.finditer(text):
+        rest = m.group(1)
+        if rest is None:
+            return "it names the chezmoi config directory (~/.config/chezmoi)"
+        rest = rest.rstrip("/")
+        if ".." in rest.split("/") or rest not in SAFE_CHEZMOI_FILES:
+            return "it names the chezmoi age identity or protected file (" + m.group(0) + ")"
     if AGE_IDENTITY.search(text):
         return "it names the chezmoi age identity (~/.config/chezmoi/key.txt)"
     return None
 
 
+def credential_secret(text):
+    """Return why the text names a local credential store or agent auth file, or None."""
+    for pattern, reason in CREDENTIAL_PATTERNS:
+        if pattern.search(text):
+            return reason
+    return None
+
+
+def non_ssh_offence(text):
+    """Return why the text names a non-ssh secret (never allowed even in metadata/ssh)."""
+    return age_identity(text) or credential_secret(text)
+
+
 def offence(text):
     """Return why the text names something an agent must not read, or None."""
-    return ssh_key(text) or age_identity(text)
+    return ssh_key(text) or non_ssh_offence(text)
 
 
 def first(check, items):
@@ -244,14 +299,17 @@ def split(script):
 
 
 def shell_offence(script, depth=0):
-    """Return why a shell script could read a key, or None."""
+    """Return why a shell script could read a key or credential, or None."""
     found = offence(script)
-    if found is None or depth > 3 or OPAQUE.search(script):
-        return found
+    has_vault = bool(VAULT_HINT.search(script))
+    if found is None and not has_vault:
+        return None
+    if depth > 3 or OPAQUE.search(script):
+        return found or ("it invokes a credential vault command in an opaque shell expression" if has_vault else None)
     try:
         pipelines = split(script)
     except ValueError:
-        return found
+        return found or ("it invokes a credential vault command in an unparseable shell expression" if has_vault else None)
     for stages in pipelines:
         for i, (words, targets) in enumerate(stages):
             found = first(offence, targets)
@@ -275,6 +333,45 @@ def name_of(words):
     return ""
 
 
+def chmod_offence(args):
+    """Allow chmod on ssh paths only when the mode is strictly restrictive."""
+    found = first(non_ssh_offence, args)
+    if found:
+        return found
+    operands = []
+    options = True
+    for word in args:
+        if options and word == "--":
+            options = False
+            continue
+        if options and word.startswith("-") and len(word) > 1:
+            if word.startswith("--reference"):
+                return "chmod --reference is not allowed on ssh private keys"
+            found = offence(word)
+            if found:
+                return found
+            continue
+        operands.append(word)
+    if not any(ssh_key(a) for a in operands):
+        return None
+    mode = operands[0] if operands else ""
+    if mode not in RESTRICTIVE_CHMOD_MODES:
+        return "chmod mode %r could weaken permissions on ssh private keys" % (mode,)
+    return None
+
+
+def vault_offence(name, args):
+    """Refuse Bitwarden / libsecret subcommands that print secrets."""
+    blocked = VAULT_READ_COMMANDS[name]
+    for word in args:
+        if word.startswith("-"):
+            continue
+        if word in blocked:
+            return "it invokes '%s %s', which prints stored secrets" % (name, word)
+        break
+    return first(offence, args)
+
+
 def command_offence(words, depth):
     """Return why one simple command could read a key, or None.
 
@@ -291,20 +388,24 @@ def command_offence(words, depth):
         return None, False
     name, args = os.path.basename(words[0]), words[1:]
     if name in WRAPPERS:
-        rest, found = unwrap(name, args)
+        rest, found = unwrap(name, args, depth)
         return (found, False) if found else command_offence(rest, depth)
     if name in METADATA:
-        return first(age_identity, args), any(ssh_key(a) for a in args)
+        return first(non_ssh_offence, args), any(ssh_key(a) for a in args)
+    if name == "chmod":
+        return chmod_offence(args), False
+    if name in VAULT_READ_COMMANDS:
+        return vault_offence(name, args), False
     if name in CLIENTS:
         return client_offence(name, args, depth), False
     if name == "ssh-add":
-        return first(age_identity, args), False
+        return first(non_ssh_offence, args), False
     if name == "ssh-keygen":
         # -y, -l and -B print a public key or a fingerprint. -p, -c, -N and -i
         # rewrite or convert the key, so they stay refused.
         flags = set("".join(a[1:] for a in args if a.startswith("-") and not a.startswith("--")))
         if flags & set("ylB") and not flags & set("pcNi"):
-            return first(age_identity, args), False
+            return first(non_ssh_offence, args), False
     if name in SHELLS:
         return shell_c_offence(args, depth), False
     if name == "rsync":
@@ -314,7 +415,7 @@ def command_offence(words, depth):
     if name == "gh":
         return gh_offence(args, depth), False
     if name in ("rg", "grep", "egrep", "fgrep"):
-        return search_offence(args), False
+        return search_offence(args, depth), False
     if name in DECLARATIONS:
         return first(lambda a: assignment_offence(a, depth) if ASSIGNMENT.match(a) else offence(a), args), False
     return first(offence, words), False
@@ -328,8 +429,8 @@ def assignment_offence(word, depth):
     return offence(value)
 
 
-def unwrap(name, args):
-    """Return the command a wrapper such as timeout runs, and why its options offend."""
+def unwrap(name, args, depth):
+    """Return the command a wrapper such as timeout or env runs, and why its options offend."""
     takes_value = WRAPPERS[name]
     i = 0
     while i < len(args) and args[i].startswith("-") and len(args[i]) > 1:
@@ -338,6 +439,35 @@ def unwrap(name, args):
         if word == "--":
             break
         if word.startswith("--"):
+            if name == "env":
+                if word == "--split-string":
+                    if i < len(args):
+                        val = args[i]
+                        i += 1
+                        found = shell_offence(val, depth + 1)
+                        if found:
+                            return [], found
+                    continue
+                if word.startswith("--split-string="):
+                    found = shell_offence(word.partition("=")[2], depth + 1)
+                    if found:
+                        return [], found
+                    continue
+                if word == "--chdir" and i < len(args):
+                    val = args[i]
+                    i += 1
+                    found = offence(val)
+                    if found:
+                        return [], found
+                    continue
+                if word.startswith("--chdir="):
+                    found = offence(word.partition("=")[2])
+                    if found:
+                        return [], found
+                    continue
+            found = offence(word)
+            if found:
+                return [], found
             continue
         for j, letter in enumerate(word[1:], 1):
             if letter in takes_value:
@@ -345,7 +475,10 @@ def unwrap(name, args):
                 if not value and i < len(args):
                     value = args[i]
                     i += 1
-                found = offence(value)
+                if name == "env" and letter == "S":
+                    found = shell_offence(value, depth + 1)
+                else:
+                    found = offence(value)
                 if found:
                     return [], found
                 break
@@ -379,7 +512,7 @@ def client_offence(name, args, depth):
                     value = args[i]
                     i += 1
                 if letter in own_file:
-                    found = age_identity(value)
+                    found = non_ssh_offence(value)
                 elif letter == "o":
                     found = ssh_option_offence(value, depth)
                 else:
@@ -400,7 +533,7 @@ def ssh_option_offence(value, depth):
     """Check the value of ssh -o, as in -o IdentityFile=~/.ssh/id_work."""
     m = re.match(r"\s*([A-Za-z]+)\s*(?:=\s*|\s+)(.*)", value, re.S)
     if m and m.group(1).lower() in SSH_FILE_OPTIONS:
-        return age_identity(m.group(2))
+        return non_ssh_offence(m.group(2))
     if m and m.group(1).lower() in SSH_COMMAND_OPTIONS:
         return shell_offence(m.group(2), depth + 1)
     return offence(value)
@@ -541,7 +674,8 @@ def gh_offence(args, depth):
     return None
 
 
-SEARCH_FILE_OPTIONS = {"-f", "--file"}
+SEARCH_FILE_OPTIONS = {"-f", "--file", "--exclude-from", "--ignore-file"}
+SEARCH_COMMAND_OPTIONS = {"--pre"}
 SEARCH_PATTERN_OPTIONS = {"-e", "--regexp"}
 SEARCH_VALUED_OPTIONS = {
     "-m", "-A", "-B", "-C", "-D", "-d", "-t", "-g", "--type", "--glob",
@@ -550,8 +684,8 @@ SEARCH_VALUED_OPTIONS = {
 }
 
 
-def search_offence(args):
-    """Check grep and rg: search patterns do not open files, but paths and -f do."""
+def search_offence(args, depth):
+    """Check grep and rg: search patterns do not open files, but paths, -f and --pre do."""
     has_pattern = False
     options = True
     i = 0
@@ -562,19 +696,33 @@ def search_offence(args):
             options = False
             continue
         if options and word.startswith("-") and len(word) > 1:
+            if word in SEARCH_COMMAND_OPTIONS:
+                if i < len(args):
+                    found = shell_offence(args[i], depth + 1)
+                    if found:
+                        return found
+                    i += 1
+                continue
+            if any(word.startswith(opt + "=") for opt in SEARCH_COMMAND_OPTIONS):
+                found = shell_offence(word.partition("=")[2], depth + 1)
+                if found:
+                    return found
+                continue
             if word in SEARCH_FILE_OPTIONS:
                 if i < len(args):
                     found = offence(args[i])
                     if found:
                         return found
                     i += 1
-                has_pattern = True
+                if word in ("-f", "--file"):
+                    has_pattern = True
                 continue
             if any(word.startswith(opt + "=") for opt in SEARCH_FILE_OPTIONS):
                 found = offence(word.partition("=")[2])
                 if found:
                     return found
-                has_pattern = True
+                if word.startswith("--file="):
+                    has_pattern = True
                 continue
             if word in SEARCH_PATTERN_OPTIONS:
                 if i < len(args):
@@ -584,9 +732,30 @@ def search_offence(args):
             if any(word.startswith(opt + "=") for opt in SEARCH_PATTERN_OPTIONS):
                 has_pattern = True
                 continue
-            if word.startswith("-e") and len(word) > 2:
-                has_pattern = True
-                continue
+            if not word.startswith("--"):
+                # Parse combined short flags such as -Ff <file>, -f<file>, -Fe <pat>.
+                consumed_inline = False
+                for j, letter in enumerate(word[1:], 1):
+                    if letter == "f":
+                        value = word[j + 1 :]
+                        if not value and i < len(args):
+                            value = args[i]
+                            i += 1
+                        found = offence(value)
+                        if found:
+                            return found
+                        has_pattern = True
+                        consumed_inline = True
+                        break
+                    if letter == "e":
+                        value = word[j + 1 :]
+                        if not value and i < len(args):
+                            i += 1
+                        has_pattern = True
+                        consumed_inline = True
+                        break
+                if consumed_inline:
+                    continue
             if word in SEARCH_VALUED_OPTIONS:
                 if i < len(args):
                     found = offence(args[i])
@@ -599,6 +768,9 @@ def search_offence(args):
                 if found:
                     return found
                 continue
+            found = offence(word)
+            if found:
+                return found
             continue
         if not has_pattern:
             has_pattern = True

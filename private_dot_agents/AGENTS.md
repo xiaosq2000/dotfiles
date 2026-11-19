@@ -81,7 +81,3 @@ rewrite a commit that has been pushed.
   on each line whose check differs.
 - Keep documents that agents read, such as skills and project references,
   short: tables and short sentences, not narrative.
-{{- if stat (joinPath .chezmoi.homeDir ".codex/RTK.md") }}
-
-@{{ .chezmoi.homeDir }}/.codex/RTK.md
-{{- end }}

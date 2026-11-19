@@ -10,7 +10,7 @@
 # file alone, but only because its armor happened to end in a newline with no
 # trailing spaces; a hook that "fixed" ciphertext would corrupt it, and the
 # damage would look like a lost key rather than an edit.
-exclude: (dot_config/nvim/lazy-lock.json|dot_opencode/package-lock.json|private_dot_config/private_fcitx5/|\.age$)
+exclude: (private_dot_config/private_fcitx5/|\.age$)
 default_install_hook_types:
   - pre-commit
   - commit-msg
@@ -21,9 +21,10 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        # .chezmoi.toml.tmpl and the run scripts are Go templates, and a
-        # template is not valid YAML until it is rendered.
+        # Go templates are not valid YAML until rendered.
         exclude: \.tmpl$
+      - id: check-toml
+        exclude: \.tmpl$|(^|/)modify_
       - id: check-added-large-files
       # A private key in any file, under any name. .gitignore stops the usual
       # names, but only for `git add .`; this reads what is actually staged.
@@ -63,8 +64,8 @@ repos:
         name: shellcheck
         entry: shellcheck --severity=warning
         language: system
-        files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_(theme|machine|ai-privacy|zathura)$|^dot_(claude|codex)/modify_|^private_dot_config/btop/modify_|^system/[^/]+/usr/local/s?bin/)
-        exclude: (^dot_sh_utils/tools(\.sh|/)|\.tmpl$)
+        files: (\.sh$|^dot_bashrc$|^dot_local/bin/executable_(theme|machine|ai-privacy|zathura)$|^private_dot_(claude|codex)/modify_|^private_dot_config/btop/modify_|^system/[^/]+/usr/local/s?bin/)
+        exclude: \.tmpl$
       # The repository is public, so plaintext must never reach a commit under
       # a directory that holds secrets. The script reads the whole index itself,
       # for the reasons at its top, so it takes no file names and runs on every
@@ -101,4 +102,4 @@ repos:
         entry: bash .github/scripts/check-key-guard.sh
         language: system
         pass_filenames: false
-        files: ^(dot_agents/hooks/executable_key-guard\.py|\.github/scripts/check-key-guard\.sh)$
+        files: ^(private_dot_agents/hooks/executable_key-guard\.py|\.github/scripts/check-key-guard\.sh)$

@@ -82,7 +82,7 @@ packages = ["nodejs", "pnpm", "deno", "prettier"]
 [bundles.dev-tex]
 description = "LaTeX tooling"
 packages = ["tex-fmt"]
-config = [".config/tex-fmt"]
+config = [".config/tex-fmt", ".latexmkrc"]
 
 [bundles.lsp]
 description = "Language servers and the external binaries Neovim's plugins call"
@@ -163,10 +163,13 @@ downloads = ["zotero", "better-bibtex"]
 config = [".config/dotfiles/zotero-user.js"]
 
 [bundles.agent-tools]
-description = "Pinned Pi with shared extensions, RTK, and Antigravity CLI, without automatic RTK integrations"
+description = "Pinned Pi with shared extensions, RTK, Antigravity CLI, and shared agent configurations"
 packages = ["nodejs"]
 downloads = ["pi", "rtk", "agy"]
 config = [
+    ".claude",
+    ".codex",
+    ".gemini",
     ".pi/agent/AGENTS.md",
     ".pi/agent/settings.json",
     ".pi/agent/extensions/pi-openai-toolkit/config.json",

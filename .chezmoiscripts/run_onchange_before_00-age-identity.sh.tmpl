@@ -109,6 +109,7 @@ fi
 note "fetching the identity from Bitwarden entry '$ITEM'"
 
 umask 077
+mkdir -p "$(dirname "$IDENTITY")"
 tmp="$(mktemp "${IDENTITY}.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 
@@ -124,11 +125,13 @@ grep -q '^AGE-SECRET-KEY-' "$tmp" ||
     give_up "'$ITEM' does not contain a line starting with AGE-SECRET-KEY-; see docs/secrets.md"
 
 # Check the key is the right one before installing it. Fetching the wrong entry
-# would otherwise surface later as an unhelpful age failure on some unrelated
-# file.
+# or a malformed key would otherwise surface later as an unhelpful age failure.
 if [ -n "$AGE_KEYGEN" ]; then
     got="$("$AGE_KEYGEN" -y "$tmp" 2>/dev/null || true)"
-    if [ -n "$got" ] && [ "$got" != "$RECIPIENT" ]; then
+    if [ -z "$got" ]; then
+        give_up "the key in '$ITEM' could not be parsed by age-keygen"
+    fi
+    if [ "$got" != "$RECIPIENT" ]; then
         give_up "the key in '$ITEM' is for $got, but this repository encrypts to $RECIPIENT"
     fi
 fi

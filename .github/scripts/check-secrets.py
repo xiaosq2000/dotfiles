@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 VERSION = "8.30.1"
-PROTECTED = ("private_dot_ssh/", "dot_agents/skills/private_machines/references/")
+PROTECTED = ("private_dot_ssh/", "private_dot_agents/skills/private_machines/references/")
 AGE_HEADERS = (b"-----BEGIN AGE ENCRYPTED FILE-----\n", b"age-encryption.org/v1\n")
 OID = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 HOME_PATH = re.compile(rb"/home/[A-Za-z0-9._-]+/")
