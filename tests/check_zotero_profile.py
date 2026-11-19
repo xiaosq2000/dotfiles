@@ -12,7 +12,7 @@ import tempfile
 import tomllib
 from zipfile import ZipFile
 
-root = Path(__file__).resolve().parents[2]
+root = Path(__file__).resolve().parents[1]
 chezmoi = shutil.which("chezmoi")
 bash = shutil.which("bash")
 assert chezmoi and bash, "chezmoi and bash are required"

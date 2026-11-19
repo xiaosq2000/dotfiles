@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import tomllib
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / ".github/scripts/check-secrets.py"
 # Do not leave bytecode files in the chezmoi source tree.
 sys.dont_write_bytecode = True

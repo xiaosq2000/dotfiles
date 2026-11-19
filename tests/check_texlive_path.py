@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 zshrc = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "dot_zshrc"
 basics = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / "dot_sh_utils/basics.sh"
 zsh = shutil.which("zsh")

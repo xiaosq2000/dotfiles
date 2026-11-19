@@ -28,7 +28,7 @@ import threading
 import tomllib
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 FETCH = ROOT / "dot_local/bin/executable_dotfiles-fetch"
 
 

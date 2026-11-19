@@ -9,7 +9,7 @@ import sys
 import unittest
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "system/imrl/usr/local/libexec/nvidia-gpu-fans-max.py"
 sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_file_location("gpu_fans", SCRIPT)

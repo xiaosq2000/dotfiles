@@ -55,8 +55,8 @@ Checked on 2026-11-19.
 - Implemented opt-in `dot_local/bin/executable_agent-jail` with Linux `bwrap` primary backend (RO root, RW workspace, RO `.git/hooks` & `.git/config`, `/dev/null` secret masks, empty `tmpfs` `~/.secrets`, `SSH_AUTH_SOCK` & `HERDR_SOCKET_PATH` passthrough, agent-scoped own-auth isolation) and rootless Linux Landlock LSM fallback (`ABI v1+`, verified live on kernel 7.0.0) for HPC login nodes (`sicc`), plus automated tests in `.github/scripts/check-agent-jail.py`.
 - Remaining operator follow-up across hosts: complete Codex `/hooks` trust on each machine (including the new `Stop` notify hook) and optionally transition SSH private keys to passphrase or FIDO2 (`ed25519-sk`).
 
-### Wave 5 — Unified `dotfiles` CLI, `pytest` suite, and 5-machine rollout
+### Wave 5 — Unified `dotfiles` CLI, `tests/` suite, and 5-machine rollout (Done on 2026-11-19)
 
-- Unify `machine`, `theme`, `agent`, `bootstrap`, and `doctor --json` under `dotfiles` CLI (keeping compatibility symlinks).
-- Consolidate `.github/scripts/check-*.py` into `tests/` (`pytest`) invoked identically locally and in CI via `mise run check`.
-- Complete canary rollout across all 5 machines (`dotfiles doctor` + `chezmoi verify` green) and offer optional host cleanup.
+- Added unified `dot_local/bin/executable_dotfiles` CLI (`doctor [--json]`, `machine`, `theme`, `fetch`, `jail`, `agent <skills|plugins|status>`, `sync`, `check`, `bootstrap`) with `dot_zshrc` live `FZF_DEFAULT_OPTS` reload for `dotfiles theme`, while retaining all legacy standalone binaries (`machine`, `theme`, `dotfiles-fetch`, `agent-jail`) for compatibility.
+- Consolidated all 13 `.github/scripts/check-*.py` test scripts into `tests/` with `tests/check_dotfiles_cli.py` and stdlib `unittest`/`pytest`-compatible `tests/test_suite.py` (`UnitChecks`, `ChezmoiChecks`, `SecretHookChecks`), invoked identically locally via `mise run check` and in `.github/workflows/ci.yml`.
+- Completed deployment and verification on `container` (CI) and `workstation`; documented the canary rollout checklist for `laptop` → `imrl` → `sicc` → `vps` in `docs/todo.md`.

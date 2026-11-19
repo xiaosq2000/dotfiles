@@ -95,7 +95,8 @@ Checked on 2026-11-19.
 ```sh
 chezmoi diff                          # what apply would change in ~
 chezmoi apply && chezmoi verify
-pre-commit run --all-files
+dotfiles doctor                       # host health, drift, tools, agents and sandbox
+mise run check                        # pre-commit + full tests/ suite
 ```
 
 To check a change without touching `~`, for example from a git worktree, point
@@ -141,14 +142,15 @@ chezmoi never downloads applications or fonts; `dotfiles-fetch` does, into
 writes there. Keep it that way, and do not give chezmoi a file that another
 program also writes: `kitten ssh` rewrites `~/.terminfo` on every connection,
 and chezmoi would then stop a non-interactive apply to ask about the change.
-`python3 .github/scripts/check-fetch.py` tests `dotfiles-fetch` in seconds.
+`python3 tests/check_fetch.py` tests `dotfiles-fetch` in seconds.
 
 CI in `.github/workflows/ci.yml` has two jobs:
 
-- `checks`: pre-commit hooks, excluding the local Gitleaks scan, plus offline
-  downloader tests.
-- `smoke`: render every machine, check shell syntax, then apply and verify in
-  a clean container with no key or software bundles. Skip external theme downloads.
+- `checks`: pre-commit hooks, excluding the local Gitleaks scan, plus
+  `python3 -m unittest tests.test_suite.UnitChecks -v`.
+- `smoke`: `python3 -m unittest tests.test_suite.ChezmoiChecks -v`, then apply
+  and verify in a clean container with no key or software bundles. Skip external
+  theme downloads.
 
 Keep CI focused on installation failures and secret protection. Configuration
 changes do not require new tests. Do not repeat package versions, key bindings,

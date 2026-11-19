@@ -21,43 +21,8 @@ jobs:
         env:
           # Gitleaks runs before publication through the local Git hooks.
           SKIP: gitleaks
-      - name: Test downloads with offline fixtures
-        run: python3 .github/scripts/check-fetch.py
-      - name: Test GPU fan control without hardware
-        run: python3 .github/scripts/check-gpu-fans.py
-      - name: Test shared UI library
-        run: python3 .github/scripts/check-ui.py
-      - name: Test zsh worktree picker and TeX Live PATH selection
-        run: |
-          python3 .github/scripts/check-wt.py
-          python3 .github/scripts/check-texlive-path.py
-      - name: Test STE100 skill linter
-        run: python3 private_dot_agents/skills/asd-ste100/scripts/executable_ste-lint.py --selftest
-      - name: Check Gitleaks pin and mise.lock consistency
-        run: |
-          python3 - <<'PY'
-          import hashlib, re, tomllib
-          from pathlib import Path
-
-          catalog = tomllib.loads(Path(".chezmoidata/mise.toml").read_text())["mise"]
-          lock = tomllib.loads(Path("private_dot_config/mise/mise.lock").read_text())["tools"]
-          hook = Path(".github/scripts/check-secrets.py").read_text()
-          m = re.search(r'^VERSION\s*=\s*"([^"]+)"', hook, re.M)
-          assert m and catalog["gitleaks"]["version"] == m.group(1), "gitleaks pin mismatch"
-          for tool_id, spec in catalog.items():
-              entries = [e for e in lock.get(spec["tool"], []) if e.get("version") == spec["version"]]
-              assert entries, f"mise.lock missing {tool_id} ({spec['tool']}@{spec['version']})"
-              entry = entries[0]
-              if "aube" in entry:
-                  lock_file = Path("private_dot_config/mise") / entry["aube"]["path"] / "aube-lock.yaml"
-                  digest = "sha256:" + hashlib.sha256(lock_file.read_bytes()).hexdigest()
-                  assert digest == entry["aube"]["digest"], f"aube digest mismatch for {tool_id}"
-              else:
-                  for platform in ("platforms.linux-x64", "platforms.linux-arm64"):
-                      assert entry.get(platform, {}).get("checksum", "").startswith("sha256:"), (
-                          f"mise.lock missing {platform} checksum for {tool_id}"
-                      )
-          PY
+      - name: Run offline unit and security test suite
+        run: python3 -m unittest tests.test_suite.UnitChecks -v
 
   smoke:
     runs-on: ubuntu-latest
@@ -70,20 +35,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install chezmoi
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
-      - name: Render every machine and theme and check shell syntax
-        run: python3 .github/scripts/check-render.py
-      - name: Test Herdr theme preservation offline
-        run: python3 .github/scripts/check-herdr-theme.py
-      - name: Test Git XDG config and legacy difft cleanup offline
-        run: python3 .github/scripts/check-git-difftastic.py
-      - name: Test 4-agent control plane reconciler and notify hook offline
-        run: python3 .github/scripts/check-agent-reconcile.py
-      - name: Test agent-jail sandbox and unified policy.toml
-        run: python3 .github/scripts/check-agent-jail.py
-      - name: Test Pi settings and package repair offline
-        run: python3 .github/scripts/check-pi.py
-      - name: Test Zotero profile setup offline
-        run: python3 .github/scripts/check-zotero-profile.py
+      - name: Run chezmoi render and behavioral test suite
+        run: python3 -m unittest tests.test_suite.ChezmoiChecks -v
       - name: Apply in a clean home without a key or software bundles
         run: |
           set -eu

@@ -3,36 +3,26 @@
 
 [tasks.render]
 description = "Render all machines, themes, and modify templates and verify shell syntax"
-run = "python3 .github/scripts/check-render.py"
+run = "python3 tests/check_render.py"
 
 [tasks.fetch-test]
 description = "Run offline dotfiles-fetch fixture tests"
-run = "python3 .github/scripts/check-fetch.py"
+run = "python3 tests/check_fetch.py"
 
 [tasks.secrets-test]
 description = "Run offline secret-hook regression tests"
-run = "python3 .github/scripts/check-secrets-tests.py"
+run = "python3 tests/check_secrets_tests.py"
+
+[tasks.test]
+description = "Run the full unittest/pytest-compatible repository test suite"
+run = "python3 -m unittest discover -s tests -v"
 
 [tasks.check]
-description = "Run all pre-commit hooks and offline repository test scripts"
+description = "Run all pre-commit hooks and the full offline repository test suite"
 run = """
 set -eu
 pre-commit run --all-files
-python3 .github/scripts/check-render.py
-python3 .github/scripts/check-fetch.py
-python3 .github/scripts/check-git-difftastic.py
-python3 .github/scripts/check-agent-reconcile.py
-python3 .github/scripts/check-agent-jail.py
-python3 .github/scripts/check-pi.py
-python3 .github/scripts/check-zotero-profile.py
-python3 .github/scripts/check-herdr-theme.py
-python3 .github/scripts/check-ui.py
-python3 .github/scripts/check-wt.py
-python3 .github/scripts/check-texlive-path.py
-python3 .github/scripts/check-gpu-fans.py
-python3 .github/scripts/check-secrets-tests.py
-bash .github/scripts/check-key-guard.sh
-python3 private_dot_agents/skills/asd-ste100/scripts/executable_ste-lint.py --selftest
+python3 -m unittest discover -s tests -v
 """
 
 [tasks.lock-tools]

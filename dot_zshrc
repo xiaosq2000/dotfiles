@@ -253,6 +253,13 @@ theme() {
         source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
 }
 
+dotfiles() {
+    command dotfiles "$@" || return
+    if [[ ${1:-} == "theme" && -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]]; then
+        source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
+    fi
+}
+
 # Populate LS_COLORS before setup_fzf_tab captures it into completion list-colors.
 if [[ -z ${LS_COLORS:-} ]] && has dircolors; then
     eval "$(dircolors -b)"

@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import tomllib
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 BASELINE = tomllib.loads((ROOT / ".chezmoidata/agents.toml").read_text())["agents"]["pi"]
 WANTED = {name: f"npm:{name}@{version}" for name, version in BASELINE["packages"].items()}
 PROXIES = [f"{scheme}_proxy" for scheme in ("http", "https", "ftp", "socks", "all")]

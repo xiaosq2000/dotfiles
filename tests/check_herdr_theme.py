@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import tomllib
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 MAPPING = {
     "rose-pine": "rose-pine",
     "rose-pine-moon": "rose-pine",

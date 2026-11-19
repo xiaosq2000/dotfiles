@@ -1,0 +1,475 @@
+#!/usr/bin/env python3
+"""Unified CLI for managing and diagnosing this dotfiles environment.
+
+Subcommands:
+    doctor [--json]             check host health, drift, tools, agents and sandbox
+    machine [args...]           describe this machine or list known machines
+    theme [args...]             switch or preview colour theme across tools
+    fetch [args...]             run dotfiles-fetch (status, sync, outdated, update)
+    jail [args...]              run a command or coding agent inside agent-jail
+    agent <skills|plugins|status> [args...]
+                                manage shared agent skills, plugins, or inspect status
+    sync [--dry-run]            apply dotfiles directly (bypassing metered proxy)
+    check                       run repository test suite via `mise run check`
+    bootstrap                   apply dotfiles and run `dotfiles doctor`
+
+Legacy standalone commands (`machine`, `theme`, `dotfiles-fetch`, `agent-jail`)
+remain installed in ~/.local/bin for full backward compatibility.
+"""
+
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import stat
+import subprocess
+import sys
+
+PROXY_VARS = (
+    "http_proxy", "HTTP_PROXY",
+    "https_proxy", "HTTPS_PROXY",
+    "ftp_proxy", "FTP_PROXY",
+    "socks_proxy", "SOCKS_PROXY",
+    "all_proxy", "ALL_PROXY",
+)
+
+
+def _run(argv, timeout=15, env=None, cwd=None):
+    try:
+        res = subprocess.run(
+            argv,
+            env=env,
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+        return res.returncode, res.stdout.strip(), res.stderr.strip()
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 127, "", str(exc)
+
+
+def _clean_proxy_env():
+    env = os.environ.copy()
+    for key in PROXY_VARS:
+        env.pop(key, None)
+    return env
+
+
+def _exec_helper(name, argv, libexec=False):
+    home = Path.home()
+    if libexec:
+        target = home / ".local/libexec/dotfiles" / name
+        binary = str(target) if target.is_file() else shutil.which(name)
+    else:
+        local = home / ".local/bin" / name
+        binary = str(local) if local.is_file() else shutil.which(name)
+    if not binary:
+        sys.stderr.write(f"dotfiles: helper {name!r} not found; run 'chezmoi apply'\n")
+        return 1
+    os.execvp(binary, [binary, *argv])
+
+
+def _mode_octal(path):
+    try:
+        return oct(stat.S_IMODE(path.stat().st_mode))
+    except OSError:
+        return None
+
+
+def _check_chezmoi():
+    if not shutil.which("chezmoi"):
+        return {"status": "error", "detail": "chezmoi not found on PATH"}
+    rc, out, err = _run(["chezmoi", "data", "--format", "json"], timeout=10)
+    if rc != 0:
+        return {"status": "error", "detail": f"chezmoi data failed: {err or out}"}
+    try:
+        data = json.loads(out)
+    except ValueError as exc:
+        return {"status": "error", "detail": f"invalid chezmoi data: {exc}"}
+
+    machine = data.get("machine", "unknown")
+    theme = data.get("theme", "unknown")
+    machines = data.get("machines") or {}
+    m_info = machines.get(machine) or {}
+    bundles = m_info.get("bundles") or []
+
+    src_rc, src_out, _ = _run(["chezmoi", "source-path"], timeout=5)
+    st_rc, st_out, _ = _run(["chezmoi", "status", "--exclude", "externals"], timeout=15)
+    drifted = [line for line in st_out.splitlines() if line.strip()] if st_rc == 0 else []
+
+    status = "ok" if not drifted else "warn"
+    return {
+        "status": status,
+        "machine": machine,
+        "description": m_info.get("description", ""),
+        "theme": theme,
+        "bundles": bundles,
+        "sudo": bool(m_info.get("sudo", False)),
+        "source_path": src_out if src_rc == 0 else None,
+        "drifted_count": len(drifted),
+        "drifted": drifted[:20],
+        "_data": data,
+    }
+
+
+def _check_secrets(home, data):
+    age_rel = (data.get("secrets") or {}).get("ageIdentity", ".config/chezmoi/key.txt")
+    age_path = home / age_rel
+    # Only stat metadata (existence and mode); never open or read private keys.
+    age_exists = age_path.exists()
+    age_mode = _mode_octal(age_path) if age_exists else None
+
+    ssh_dir = home / ".ssh"
+    loose_keys = []
+    if ssh_dir.is_dir():
+        public_names = {"config", "known_hosts", "known_hosts.old", "authorized_keys", "authorized_keys2"}
+        try:
+            for child in sorted(ssh_dir.iterdir()):
+                if child.is_dir() or child.name in public_names or child.name.endswith(".pub"):
+                    continue
+                mode = stat.S_IMODE(child.stat().st_mode)
+                if mode & 0o077:
+                    loose_keys.append({"name": child.name, "mode": oct(mode)})
+        except OSError:
+            pass
+
+    policy_file = Path(os.environ.get("XDG_CONFIG_HOME") or (home / ".config")) / "dotfiles/policy.json"
+    policy_ok = False
+    if policy_file.is_file():
+        try:
+            json.loads(policy_file.read_text(encoding="utf-8"))
+            policy_ok = True
+        except (OSError, ValueError):
+            policy_ok = False
+
+    issues = []
+    if age_exists and age_mode not in ("0o600", "0o400"):
+        issues.append(f"age identity permissions {age_mode} (expected 0o600)")
+    if loose_keys:
+        issues.append(f"{len(loose_keys)} ssh private key(s) readable by group/other")
+    if not policy_ok:
+        issues.append("policy.json missing or invalid")
+
+    status = "error" if loose_keys or (age_exists and age_mode not in ("0o600", "0o400")) else (
+        "warn" if issues else "ok"
+    )
+    return {
+        "status": status,
+        "age_identity_present": age_exists,
+        "age_identity_mode": age_mode,
+        "loose_ssh_keys": loose_keys,
+        "policy_json_valid": policy_ok,
+        "issues": issues,
+    }
+
+
+def _check_toolchain(home, bundles, data):
+    pixi_bin = shutil.which("pixi") or (str(home / ".pixi/bin/pixi") if (home / ".pixi/bin/pixi").is_file() else None)
+    mise_bin = shutil.which("mise") or (str(home / ".pixi/bin/mise") if (home / ".pixi/bin/mise").is_file() else None)
+
+    selected_mise = []
+    all_bundles = data.get("bundles") or {}
+    for b in bundles:
+        for tool_id in (all_bundles.get(b) or {}).get("mise") or []:
+            if tool_id not in selected_mise:
+                selected_mise.append(tool_id)
+
+    shims_dir = home / ".local/share/mise/shims"
+    missing_mise = [t for t in selected_mise if not (shims_dir / t).exists()]
+
+    state_dir = Path(os.environ.get("XDG_STATE_HOME") or (home / ".local/state")) / "dotfiles"
+    pending = [name for name in ("mise-pending", "zotero-pending") if (state_dir / name).exists()]
+
+    issues = []
+    if bundles and not pixi_bin:
+        issues.append("pixi missing")
+    if selected_mise and not mise_bin:
+        issues.append("mise missing")
+    if missing_mise:
+        issues.append(f"missing mise shims: {', '.join(missing_mise)}")
+    if pending:
+        issues.append(f"pending retries: {', '.join(pending)}")
+
+    status = "error" if (selected_mise and not mise_bin) or (bundles and not pixi_bin) else (
+        "warn" if issues else "ok"
+    )
+    return {
+        "status": status,
+        "pixi": pixi_bin,
+        "mise": mise_bin,
+        "selected_mise_tools": selected_mise,
+        "missing_mise_shims": missing_mise,
+        "pending_markers": pending,
+        "issues": issues,
+    }
+
+
+def _check_shell_and_git(home):
+    xdg_cfg = Path(os.environ.get("XDG_CONFIG_HOME") or (home / ".config"))
+    env_sh = xdg_cfg / "dotfiles/env.sh"
+    git_cfg = xdg_cfg / "git/config"
+
+    diff_algo = _run(["git", "config", "--get", "diff.algorithm"], timeout=5)[1] if shutil.which("git") else ""
+    diff_ext = _run(["git", "config", "--get", "diff.external"], timeout=5)[1] if shutil.which("git") else ""
+
+    sbc_bin = Path(os.environ.get("XDG_DATA_HOME") or (home / ".local/share")) / "sbc/cli/sbc"
+    sbc_route = None
+    if sbc_bin.is_file():
+        rc, out, _ = _run([str(sbc_bin), "route"], timeout=3)
+        if rc == 0 and out:
+            sbc_route = out.splitlines()[0].strip()
+
+    issues = []
+    if not env_sh.is_file():
+        issues.append("~/.config/dotfiles/env.sh missing")
+    if not git_cfg.is_file():
+        issues.append("~/.config/git/config missing")
+    if diff_ext == "difft":
+        issues.append("legacy global diff.external=difft still set in ~/.gitconfig")
+
+    return {
+        "status": "warn" if issues else "ok",
+        "env_sh": env_sh.is_file(),
+        "git_xdg_config": git_cfg.is_file(),
+        "git_diff_algorithm": diff_algo or None,
+        "git_diff_external": diff_ext or None,
+        "zoxide": shutil.which("zoxide"),
+        "sbc_route": sbc_route,
+        "issues": issues,
+    }
+
+
+def _check_agents(home, bundles):
+    has_bundle = "agent-tools" in bundles
+    key_guard = home / ".agents/hooks/key-guard.py"
+    notify = home / ".agents/hooks/agent-notify.py"
+    jail_bin = home / ".local/bin/agent-jail"
+
+    jail_backends = []
+    if shutil.which("bwrap"):
+        rc, _, _ = _run(["bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--", "/bin/true"], timeout=5)
+        if rc == 0:
+            jail_backends.append("bwrap")
+    if jail_bin.is_file():
+        rc, _, _ = _run([sys.executable, str(jail_bin), "--backend", "landlock", "--", "/bin/true"], timeout=5)
+        if rc == 0:
+            jail_backends.append("landlock")
+
+    def hook_present(path, needle):
+        try:
+            return needle in path.read_text(encoding="utf-8")
+        except OSError:
+            return False
+
+    agents = {
+        "claude": {
+            "binary": shutil.which("claude"),
+            "instructions": (home / ".claude/CLAUDE.md").exists(),
+            "key_guard_configured": hook_present(home / ".claude/settings.json", "key-guard.py"),
+        },
+        "codex": {
+            "binary": shutil.which("codex"),
+            "instructions": (home / ".codex/AGENTS.md").exists(),
+            "key_guard_configured": hook_present(home / ".codex/hooks.json", "key-guard.py"),
+            "sandbox_profile": hook_present(home / ".codex/config.toml", 'default_permissions = "key-guard"'),
+        },
+        "agy": {
+            "binary": shutil.which("agy"),
+            "instructions": (home / ".gemini/AGENTS.md").exists(),
+            "key_guard_configured": hook_present(home / ".gemini/config/hooks.json", "key-guard.py"),
+        },
+        "pi": {
+            "binary": shutil.which("pi"),
+            "instructions": (home / ".pi/agent/AGENTS.md").exists(),
+            "guard_extension": (home / ".pi/agent/extensions/dotfiles-guard.ts").is_file(),
+        },
+    }
+
+    issues = []
+    if has_bundle:
+        if not os.access(key_guard, os.X_OK):
+            issues.append("key-guard.py missing or not executable")
+        if not os.access(notify, os.X_OK):
+            issues.append("agent-notify.py missing or not executable")
+        if not jail_backends:
+            issues.append("no active agent-jail backend (bwrap/landlock)")
+        for name, info in agents.items():
+            if info["binary"] and not info["instructions"]:
+                issues.append(f"{name}: missing AGENTS/CLAUDE instructions link")
+            if info["binary"] and name in ("claude", "codex", "agy") and not info["key_guard_configured"]:
+                issues.append(f"{name}: key-guard hook not configured")
+            if info["binary"] and name == "pi" and not info["guard_extension"]:
+                issues.append("pi: dotfiles-guard.ts extension missing")
+
+    return {
+        "status": "warn" if issues else "ok",
+        "agent_tools_selected": has_bundle,
+        "key_guard": os.access(key_guard, os.X_OK),
+        "agent_notify": os.access(notify, os.X_OK),
+        "agent_jail_backends": jail_backends,
+        "agents": agents,
+        "issues": issues,
+    }
+
+
+def build_doctor_report():
+    home = Path.home()
+    chezmoi_info = _check_chezmoi()
+    data = chezmoi_info.pop("_data", {})
+    bundles = chezmoi_info.get("bundles") or []
+
+    report = {
+        "chezmoi": chezmoi_info,
+        "secrets": _check_secrets(home, data),
+        "toolchain": _check_toolchain(home, bundles, data),
+        "shell_git": _check_shell_and_git(home),
+        "agents": _check_agents(home, bundles),
+    }
+
+    statuses = [section["status"] for section in report.values()]
+    overall = "error" if "error" in statuses else ("warn" if "warn" in statuses else "ok")
+    return {"status": overall, "checks": report}
+
+
+def print_doctor(report):
+    checks = report["checks"]
+    cz = checks["chezmoi"]
+    print(f"dotfiles doctor: {report['status'].upper()}")
+    if cz.get("machine"):
+        print(f"  machine    {cz['machine']} ({cz.get('theme')}) — {cz.get('description', '')}")
+        print(f"  bundles    {' '.join(cz.get('bundles') or []) or '(none)'}")
+    print()
+    for name, section in checks.items():
+        badge = {"ok": "OK  ", "warn": "WARN", "error": "ERR "}.get(section["status"], section["status"])
+        summary_parts = []
+        if name == "chezmoi":
+            n = section.get("drifted_count", 0)
+            summary_parts.append("clean" if n == 0 else f"{n} drifted/pending target(s)")
+        elif name == "secrets":
+            age = "present" if section.get("age_identity_present") else "absent"
+            summary_parts.append(f"age key {age} ({section.get('age_identity_mode') or '-'})")
+            summary_parts.append("policy.json ok" if section.get("policy_json_valid") else "policy.json missing")
+        elif name == "toolchain":
+            summary_parts.append(f"mise tools: {len(section.get('selected_mise_tools') or [])}")
+            if section.get("pending_markers"):
+                summary_parts.append(f"pending: {', '.join(section['pending_markers'])}")
+        elif name == "shell_git":
+            summary_parts.append(f"git diff={section.get('git_diff_algorithm') or '?'}")
+            if section.get("sbc_route"):
+                summary_parts.append(f"sbc: {section['sbc_route']}")
+        elif name == "agents":
+            installed = [k for k, v in (section.get("agents") or {}).items() if v.get("binary")]
+            summary_parts.append(f"installed: {', '.join(installed) or 'none'}")
+            summary_parts.append(f"jail: {', '.join(section.get('agent_jail_backends') or ['none'])}")
+        print(f"  [{badge}] {name:<10} {' | '.join(summary_parts)}")
+        for issue in section.get("issues") or []:
+            print(f"          - {issue}")
+        if name == "chezmoi" and section.get("drifted"):
+            for item in section["drifted"][:5]:
+                print(f"          - {item}")
+            if len(section["drifted"]) > 5:
+                print(f"          - ... ({len(section['drifted']) - 5} more)")
+
+
+def cmd_doctor(argv):
+    parser = argparse.ArgumentParser(prog="dotfiles doctor")
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    args = parser.parse_args(argv)
+    report = build_doctor_report()
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_doctor(report)
+    return 1 if report["status"] == "error" else 0
+
+
+def cmd_agent(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print("usage: dotfiles agent <skills|plugins|status> [args...]")
+        return 0
+    sub, rest = argv[0], argv[1:]
+    if sub == "skills":
+        return _exec_helper("agent-skills.sh", rest, libexec=True)
+    if sub == "plugins":
+        return _exec_helper("agent-plugins.sh", rest, libexec=True)
+    if sub == "status":
+        parser = argparse.ArgumentParser(prog="dotfiles agent status")
+        parser.add_argument("--json", action="store_true")
+        args = parser.parse_args(rest)
+        report = build_doctor_report()["checks"]["agents"]
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"agent-tools selected: {report['agent_tools_selected']}")
+            print(f"agent-jail backends:  {', '.join(report['agent_jail_backends']) or 'none'}")
+            for name, info in report["agents"].items():
+                present = "installed" if info["binary"] else "absent"
+                print(f"  {name:<8} {present:<10} {json.dumps({k: v for k, v in info.items() if k != 'binary'})}")
+        return 0
+    sys.stderr.write(f"dotfiles agent: unknown subcommand {sub!r}\n")
+    return 2
+
+
+def cmd_sync(argv):
+    parser = argparse.ArgumentParser(prog="dotfiles sync")
+    parser.add_argument("-n", "--dry-run", action="store_true", help="Show chezmoi diff without applying")
+    parser.add_argument("--update", action="store_true", help="Pull latest changes before applying (chezmoi update)")
+    args, extra = parser.parse_known_args(argv)
+    env = _clean_proxy_env()
+    if args.dry_run:
+        return subprocess.run(["chezmoi", "diff", *extra], env=env, check=False).returncode
+    cmd = ["chezmoi", "update" if args.update else "apply", *extra]
+    return subprocess.run(cmd, env=env, check=False).returncode
+
+
+def cmd_check(argv):
+    rc, src, err = _run(["chezmoi", "source-path"], timeout=5)
+    if rc != 0 or not src:
+        sys.stderr.write(f"dotfiles check: could not find chezmoi source-path: {err}\n")
+        return 1
+    if shutil.which("mise"):
+        return subprocess.run(["mise", "run", "check", *argv], cwd=src, check=False).returncode
+    return subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v", *argv], cwd=src, check=False).returncode
+
+
+def cmd_bootstrap(argv):
+    rc = cmd_sync(argv)
+    if rc != 0:
+        return rc
+    return cmd_doctor([])
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+
+    sub, rest = sys.argv[1], sys.argv[2:]
+    if sub == "doctor":
+        return cmd_doctor(rest)
+    if sub == "machine":
+        return _exec_helper("machine", rest)
+    if sub == "theme":
+        return _exec_helper("theme", rest)
+    if sub == "fetch":
+        return _exec_helper("dotfiles-fetch", rest)
+    if sub == "jail":
+        return _exec_helper("agent-jail", rest)
+    if sub == "agent":
+        return cmd_agent(rest)
+    if sub == "sync":
+        return cmd_sync(rest)
+    if sub == "check":
+        return cmd_check(rest)
+    if sub == "bootstrap":
+        return cmd_bootstrap(rest)
+
+    sys.stderr.write(f"dotfiles: unknown subcommand {sub!r} (try 'dotfiles --help')\n")
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

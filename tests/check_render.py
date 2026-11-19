@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import tomllib
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 machines = tomllib.loads((ROOT / ".chezmoidata/machines.toml").read_text())["machines"]
 mise_catalog = tomllib.loads((ROOT / ".chezmoidata/mise.toml").read_text())["mise"]
 mise_lock = tomllib.loads((ROOT / "private_dot_config/mise/mise.lock").read_text())["tools"]

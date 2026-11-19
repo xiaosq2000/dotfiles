@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 git = shutil.which("git")
 bash = shutil.which("bash")
 chezmoi = shutil.which("chezmoi")

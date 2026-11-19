@@ -410,28 +410,28 @@ Checked on 2026-10-18. [CI](.github/workflows/ci.yml) has two jobs:
 
 | Job | Scope |
 | --- | --- |
-| `checks` | Pre-commit hooks, except the local Gitleaks scan, and offline downloader tests |
-| `smoke` | Render every machine, check shell syntax, then apply and verify in a clean no-key container without software bundles |
+| `checks` | Pre-commit hooks (except local Gitleaks) plus `tests.test_suite.UnitChecks` |
+| `smoke` | `tests.test_suite.ChezmoiChecks` plus clean no-key `container` apply and verify |
 
 CI skips external theme downloads. It does not enforce specific package versions,
 key bindings, colours, or other configuration choices.
 
-Run the portable checks locally:
+Run the unified CLI and full local test suite:
 
 ```sh
-pre-commit run --all-files
-python3 .github/scripts/check-render.py
-python3 .github/scripts/check-fetch.py
-python3 .github/scripts/check-pi.py
+dotfiles doctor                     # host health, drift, tools, agents and sandbox
+dotfiles doctor --json              # machine-readable report
+mise run check                      # pre-commit + full tests/ suite (unittest/pytest)
+python3 -m unittest discover -s tests -v
 ```
 
-The render check requires chezmoi, Python 3.11+, bash, zsh, and ShellCheck.
-It uses a temporary home and does not install software.
-Other behavioral tests in `.github/scripts/` remain available for targeted local checks.
+The chezmoi test group requires chezmoi, Python 3.11+, bash, zsh, and ShellCheck.
+Individual test modules under `tests/` remain directly executable for targeted
+checks.
 
-`check-fetch.py --live` installs the real catalog in a temporary home.
-It downloads a few gigabytes. Run it manually without the proxy when testing
-upstream downloads. CI uses local fixtures only.
+`python3 tests/check_fetch.py --live` installs the real catalog in a temporary
+home. It downloads a few gigabytes. Run it manually without the proxy when
+testing upstream downloads. CI uses local fixtures only.
 
 ## System files
 

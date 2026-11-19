@@ -3,19 +3,35 @@
 What is left to do, most useful first. Nothing here stops a machine from
 working. Delete an entry once it is done; git keeps the history.
 
-## Trust the key-guard hook in Codex on each machine
+## Trust user hooks in Codex on each machine
 
 Codex skips a user hook until it has been trusted, so on every machine that
-runs Codex, the hook that keeps it from reading private keys is off until then.
-Only the sandbox profile guards the keys in the meantime. On each machine, after
-the apply that brings `~/.codex/hooks.json`:
+runs Codex, `key-guard.py` (`PreToolUse`) and `agent-notify.py` (`Stop`) stay
+off until trusted (the `key-guard` sandbox profile still guards keys in the
+meantime). On each machine, after `dotfiles sync`:
 
 1. Start `codex` and open `/hooks`.
-2. Trust the `PreToolUse` hook that runs `~/.agents/hooks/key-guard.py`.
+2. Trust both `~/.agents/hooks/key-guard.py` (`PreToolUse`) and
+   `~/.agents/hooks/agent-notify.py` (`Stop`).
 
-Machines still to do: workstation, imrl, sicc. Drop a name once
-it is done, and delete this entry when none are left. The background is under
-"Keeping agents away from private keys" in [secrets.md](secrets.md).
+Machines still to do: workstation, laptop, imrl, sicc. Drop a name once done,
+and delete this entry when none are left. See [secrets.md](secrets.md).
+
+## Roll out the late-2026 refactor to remaining machines
+
+Checked on 2026-11-19. `workstation` is deployed and verified; remaining hosts
+in canary order: `laptop` → `imrl` → `sicc` → `vps`. On each host:
+
+```sh
+dotfiles sync --update      # or: env -u http_proxy -u https_proxy -u all_proxy chezmoi update
+dotfiles doctor
+```
+
+On `laptop` and `workstation` (hosts with `sudo = true` and `system/<machine>/`
+files), run `sudo -v && chezmoi apply` once so updated root-owned units (such as
+`power-tunables.service`) install. On `workstation`, close Zotero and re-run
+`chezmoi apply` once so `96-zotero-profile.sh` installs Better BibTeX `v9.0.71`
+and Extra Meta `v0.1.7`.
 
 ## Finish the laptop's move to dotfiles-fetch
 

@@ -67,7 +67,7 @@ names without a targeted rule. Keep private machine facts encrypted.
 Run local regression tests without scanning this repository's history:
 
 ```sh
-python3 .github/scripts/check-secrets-tests.py
+python3 tests/check_secrets_tests.py
 ```
 
 ## Which machines have the key
@@ -104,7 +104,7 @@ GitHub always shows ciphertext. Checked on 2026-10-04.
    `encrypted_*` file landed in this repository.
 2. Add the target to the no-key block at the end of `.chezmoiignore`.
 3. If the file sits in a directory that held no secrets before, add that
-   directory to `PROTECTED` in `.github/scripts/check-encrypted.sh`.
+   directory to `protected_source_dirs` in `.chezmoidata/policy.toml`.
 
 ## Setting up a new machine
 

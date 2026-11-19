@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tomllib
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 RECONCILE = ROOT / "dot_local/libexec/dotfiles/executable_agent-reconcile.py"
 NOTIFY = ROOT / "private_dot_agents/hooks/executable_agent-notify.py"
 AGENTS = tomllib.loads((ROOT / ".chezmoidata/agents.toml").read_text())["agents"]
