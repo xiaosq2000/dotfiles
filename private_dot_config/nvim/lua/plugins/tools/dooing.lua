@@ -23,6 +23,7 @@ end
 
 return {
 	"atiladefreitas/dooing",
+	cond = not require("core.env").kitty_scrollback,
 	-- Deliberately not lazy-loaded behind the keys below. The "N items due"
 	-- notification fires from setup(), so a dooing that waits for <leader>td
 	-- could only ever warn about deadlines you already went looking for --

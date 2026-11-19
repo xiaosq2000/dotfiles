@@ -90,6 +90,8 @@ var ExtraMetaMain = (function () {
 
 	let pluginID = null;
 	let strings = null;
+	const registeredColumnIDs = [];
+	const registeredRowIDs = [];
 	const boundValueElements = new WeakSet();
 	const dirtyValueElements = new WeakSet();
 
@@ -336,12 +338,22 @@ var ExtraMetaMain = (function () {
 
 		for (const spec of specs) {
 			try {
-				Zotero.ItemTreeManager.registerColumn({
+				const reg = Zotero.ItemTreeManager.registerColumn({
 					...spec,
 					pluginID,
 					enabledTreeIDs: ["main"],
 					zoteroPersist: ["width", "hidden", "sortDirection"],
 				});
+				if (reg && typeof reg.then === "function") {
+					reg.then((colID) => {
+						if (colID) {
+							registeredColumnIDs.push(colID);
+						}
+					}).catch((e) => Zotero.logError(e));
+				}
+				else if (reg) {
+					registeredColumnIDs.push(reg);
+				}
 			}
 			catch (e) {
 				Zotero.logError(e);
@@ -452,7 +464,7 @@ var ExtraMetaMain = (function () {
 	function registerInfoRows() {
 		for (const field of INFO_FIELDS) {
 			try {
-				Zotero.ItemPaneManager.registerInfoRow({
+				const regID = Zotero.ItemPaneManager.registerInfoRow({
 					rowID: `em-${field.id}`,
 					pluginID,
 					label: { l10nID: field.l10nID },
@@ -511,6 +523,9 @@ var ExtraMetaMain = (function () {
 						setEditable(isEditableItem(item));
 					},
 				});
+				if (regID) {
+					registeredRowIDs.push(regID);
+				}
 			}
 			catch (e) {
 				Zotero.logError(e);
@@ -536,11 +551,32 @@ var ExtraMetaMain = (function () {
 		doc.getElementById(STYLE_ID)?.remove();
 	}
 
+	function destroy() {
+		while (registeredColumnIDs.length) {
+			const id = registeredColumnIDs.pop();
+			try {
+				Zotero.ItemTreeManager?.unregisterColumn?.(id);
+			}
+			catch (e) {
+				Zotero.logError(e);
+			}
+		}
+		while (registeredRowIDs.length) {
+			const id = registeredRowIDs.pop();
+			try {
+				Zotero.ItemPaneManager?.unregisterInfoRow?.(id);
+			}
+			catch (e) {
+				Zotero.logError(e);
+			}
+		}
+	}
+
 	function init(options) {
 		pluginID = options.pluginID;
 		registerColumns();
 		registerInfoRows();
 	}
 
-	return { init, addToWindow, removeFromWindow };
+	return { init, destroy, addToWindow, removeFromWindow };
 })();

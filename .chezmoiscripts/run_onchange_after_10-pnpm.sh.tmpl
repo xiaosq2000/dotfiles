@@ -1,12 +1,11 @@
+{{- if has "dev-web" (index .machines .machine).bundles -}}
 #!/usr/bin/env bash
 set -eu
 
 # Global CLIs need a stable bin directory on PATH and a hoisted dependency
 # layout. These are pnpm store settings, separate from installing pnpm itself.
+# pnpm at apply time: {{ if or (lookPath "pnpm") (stat (joinPath .chezmoi.homeDir ".pixi/bin/pnpm")) }}present{{ else }}absent{{ end }}
 
-{{ if not (has "dev-web" (index .machines .machine).bundles) -}}
-exit 0
-{{ end -}}
 # A fresh apply may have installed these without changing its inherited PATH.
 export PATH="$HOME/.pixi/bin:$PATH"
 # shellcheck source=/dev/null
@@ -65,3 +64,4 @@ if [ -n "$PNPM_GLOBAL_DIR" ]; then
 else
     warning "could not determine pnpm's global directory"
 fi
+{{ end -}}

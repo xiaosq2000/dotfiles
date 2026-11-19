@@ -1,5 +1,6 @@
 return {
 	"OXY2DEV/markview.nvim",
+	cond = not require("core.env").kitty_scrollback,
 	-- The author recommends against lazy-loading: markview manages its own
 	-- filetype attachment and needs to be present when the buffer is created.
 	lazy = false,

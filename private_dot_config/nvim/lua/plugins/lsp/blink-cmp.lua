@@ -50,7 +50,11 @@ return {
 			preset = "luasnip",
 		},
 		sources = {
-			default = { "lsp", "path", "snippets", "buffer", "vimtex" },
+			default = { "lsp", "path", "snippets", "buffer" },
+			per_filetype = {
+				tex = { inherit_defaults = true, "vimtex" },
+				plaintex = { inherit_defaults = true, "vimtex" },
+			},
 			providers = {
 				path = {
 					opts = {

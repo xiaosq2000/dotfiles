@@ -4,9 +4,10 @@
 Description=Apply powertop's measured-safe power tunables
 After=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
 
+# Do not set RemainAfterExit=yes: keeping the oneshot unit active prevents
+# systemd from re-running it after suspend or hibernate.
 [Service]
 Type=oneshot
-RemainAfterExit=yes
 ExecStart=/usr/local/sbin/power-tunables
 
 [Install]

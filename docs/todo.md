@@ -13,7 +13,7 @@ the apply that brings `~/.codex/hooks.json`:
 1. Start `codex` and open `/hooks`.
 2. Trust the `PreToolUse` hook that runs `~/.agents/hooks/key-guard.py`.
 
-Machines still to do: workstation, imrl, sicc, vps. Drop a name once
+Machines still to do: workstation, imrl, sicc. Drop a name once
 it is done, and delete this entry when none are left. The background is under
 "Keeping agents away from private keys" in [secrets.md](secrets.md).
 
@@ -37,23 +37,11 @@ fonts, and its dock, default terminal and `zotero://` handler name the
    it, kept because opening the library upgrades the database and 9.0.6 may
    not read it afterwards.
 
-## Move nvim's ui2 config to the 0.13 format before upgrading
-
-Neovim 0.13 stops at startup with an error for two ui2 keys that
-`private_dot_config/nvim/lua/core/options.lua` sets. The first nvim after a
-`pixi global update` to 0.13 would fail until the config changes. Checked on
-0.13 nightly on 2026-09-27:
-
-1. Drop `msg.msg.timeout` and `msg.cmd.height`, and set their values as the
-   `timeout` and `maxheight` items of `'messagesopt'`.
-2. Replace `target = "msg"` with `targets = { default = "msg" }`. 0.13 ignores
-   `target`, and without it neovim/neovim#42116 hides the `:s///c` prompt
-   again.
-3. 0.13 highlights the `:s///c` match with `'hlsearch'` off, so the
-   auto-clearing `'hlsearch'` in the same file is a preference from then on.
-   Keep it or go back to `hlsearch = false`.
-
 ## Not bugs
 
 - Neovim's Mason installs language servers on a machine without the `lsp`
   bundle. That is the intended fallback.
+
+## Refactoring roadmap
+
+See [refactor-plan.md](refactor-plan.md).

@@ -1,6 +1,7 @@
 -- LaTex
 return {
 	"lervag/vimtex",
+	cond = not require("core.env").kitty_scrollback,
 	lazy = false,
 	init = function()
 		vim.g.tex_flavor = "latex"

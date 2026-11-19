@@ -24,7 +24,7 @@ repos:
         # Go templates are not valid YAML until rendered.
         exclude: \.tmpl$
       - id: check-toml
-        exclude: \.tmpl$|(^|/)modify_
+        exclude: \.tmpl$|(^|/)modify_|^\.chezmoiexternal\.toml$
       - id: check-added-large-files
       # A private key in any file, under any name. .gitignore stops the usual
       # names, but only for `git add .`; this reads what is actually staged.

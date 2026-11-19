@@ -4,10 +4,10 @@
 local servers = {
 	ruff = "ruff",
 	ty = "ty",
+	clangd = "clangd",
 	lua_ls = "lua-language-server",
 	bashls = "bash-language-server",
 	marksman = "marksman",
-	-- texlab = "texlab",
 	cmake = "cmake-language-server",
 	dockerls = "dockerfile-language-server",
 	yamlls = "yaml-language-server",

@@ -1,5 +1,6 @@
 return {
 	"rachartier/tiny-cmdline.nvim",
+	cond = not require("core.env").kitty_scrollback,
 	dependencies = { "saghen/blink.cmp" },
 	event = "VeryLazy",
 	config = function()

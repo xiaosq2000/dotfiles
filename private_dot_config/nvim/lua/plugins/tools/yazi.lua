@@ -2,6 +2,7 @@ return {
 	---@type LazySpec
 	{
 		"mikavilpas/yazi.nvim",
+		cond = not require("core.env").kitty_scrollback,
 		event = "VeryLazy",
 		-- All three live on the -/_/= key cluster so the file manager reads as one
 		-- plugin instead of being scattered across unrelated prefixes.

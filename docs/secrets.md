@@ -13,7 +13,7 @@ it. The public half, the recipient, is in `.chezmoidata/secrets.toml`.
 | Secret | Source path |
 | --- | --- |
 | `~/.ssh/config` | `private_dot_ssh/encrypted_private_config.age` |
-| Machine pages of the `machines` skill | `dot_agents/skills/private_machines/references/encrypted_private_*.md.age` |
+| Machine pages of the `machines` skill | `private_dot_agents/skills/private_machines/references/encrypted_private_*.md.age` |
 
 `.chezmoidata/machines.toml` stays in plaintext on purpose. Bundles and roles
 are not secret. Its pixi cache paths do name university filesystems, and they
@@ -167,24 +167,21 @@ cannot apply at all.
 
 ## Keeping agents away from private keys
 
-Claude Code, Codex and opencode run as you, so by default they can read any
-file you can. Two kinds of file are kept from them: ssh private keys, and the
-age identity, which decrypts every `encrypted_*` file in this repository. If an
-agent read either one, the key would go to the model provider, and an agent
-misled by a web page or a file it read could send the key anywhere.
+Checked on 2026-11-19.
 
-The guarded files:
-
-- every name in `~/.ssh` except `config`, `config.d`, `known_hosts`,
-  `authorized_keys` and `*.pub`, which covers a key with a custom name without
-  listing it;
-- `~/.config/chezmoi/key.txt`.
+Claude Code and Codex run as you, so by default they can read any file you can.
+Guarded files include ssh private keys, `~/.config/chezmoi/` (except
+`chezmoi.toml` and `chezmoistate.boltdb`), `~/.secrets`, vault extraction
+subcommands (`rbw get`/`dump`, `secret-tool lookup`/`search`), and local CLI /
+agent credential files.
 
 | Agent | What refuses the read | Where it comes from |
 | --- | --- | --- |
-| Claude Code | `Read` deny rules for the default key names and the age identity, and the key-guard hook | `dot_claude/modify_settings.json` merges both into `~/.claude/settings.json` |
-| Codex | The `key-guard` permissions profile, whose bubblewrap sandbox cannot open any `~/.ssh/id_*` file except a `.pub`, and the key-guard hook | `dot_codex/modify_private_config.toml` and `dot_codex/hooks.json` |
-| opencode | `read` rules in `opencode.json`, and a plugin that runs the key-guard hook | `private_dot_config/opencode/` |
+| Claude Code | `Read` deny rules for the default key names and the age identity, and the key-guard hook | `private_dot_claude/modify_private_settings.json` merges both into `~/.claude/settings.json` |
+| Codex | The `key-guard` permissions profile, whose bubblewrap sandbox cannot open any `~/.ssh/id_*` file except a `.pub`, and the key-guard hook | `private_dot_codex/modify_private_config.toml` and `private_dot_codex/modify_private_hooks.json` |
+
+Antigravity CLI (`agy`) and Pi hook/sandbox coverage are scheduled in Waves 3–4
+of [refactor-plan.md](refactor-plan.md).
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
 guarded file, and tells the agent to ask you instead. The exceptions are

@@ -1,10 +1,23 @@
+{{- $needs_install := false -}}
+{{- if has "agent-tools" (index .machines .machine).bundles -}}
+{{-   range $name, $version := .pi.packages -}}
+{{-     $manifest := joinPath $.chezmoi.homeDir ".pi/agent/npm/node_modules" $name "package.json" -}}
+{{-     if stat $manifest -}}
+{{-       $parsed := include $manifest | fromJson -}}
+{{-       if or (ne (get $parsed "name" | default "") $name) (ne (get $parsed "version" | default "") $version) -}}
+{{-         $needs_install = true -}}
+{{-       end -}}
+{{-     else -}}
+{{-       $needs_install = true -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+{{- if $needs_install -}}
 #!/usr/bin/env bash
-# Run after the managed Pi download. Check locally on every apply so failed
-# installations retry without refreshing packages that already match their pins.
+# Run after the managed Pi download. Renders empty when every pinned package is
+# already installed at its target version (or agent-tools is unselected), so
+# `chezmoi status` and `chezmoi verify` stay clean while failed installs retry.
 set -eu
-{{ if not (has "agent-tools" (index .machines .machine).bundles) -}}
-exit 0
-{{ end -}}
 export PATH="$HOME/.local/opt/dotfiles/bin:$HOME/.pixi/bin:$PATH"
 if ! command -v python3 >/dev/null 2>&1; then
     echo "pi packages: python3 not found; run chezmoi apply after installation" >&2
@@ -73,3 +86,4 @@ for source in pending:
     except (OSError, subprocess.SubprocessError):
         warn(f"installation failed for {source}, no proxy retry attempted")
 PY
+{{ end -}}

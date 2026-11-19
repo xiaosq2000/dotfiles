@@ -86,16 +86,13 @@ On GitHub the files stay ciphertext. The vps has no key and never will.
 
 ## Checking a change
 
-Checked on 2026-10-22.
+Checked on 2026-11-19.
 
 ```sh
 chezmoi diff                          # what apply would change in ~
-chezmoi apply && chezmoi verify --exclude scripts
+chezmoi apply && chezmoi verify
 pre-commit run --all-files
 ```
-
-Always-run scripts remain pending after apply. Exclude scripts from verification
-so that only managed files must match. Apply still checks script exit codes.
 
 To check a change without touching `~`, for example from a git worktree, point
 chezmoi at the other source tree:
@@ -188,12 +185,12 @@ entry once it is done.
 
 ## Instructions for every agent, in every project
 
-[dot_agents/AGENTS.md.tmpl](dot_agents/AGENTS.md.tmpl) holds the user's preferences that
+[private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md) holds the user's preferences that
 apply in every project. It deploys to `~/.agents/AGENTS.md`, and `symlink_`
 entries link it as `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`,
-`~/.config/opencode/AGENTS.md` and `~/.gemini/AGENTS.md`. The `agent-tools` bundle
-also links it as `~/.pi/agent/AGENTS.md`. Each agent loads it at session start.
-This file adds what is specific to this repository.
+`~/.gemini/AGENTS.md` and `~/.pi/agent/AGENTS.md` on `agent-tools` machines.
+Each agent loads it at session start. This file adds what is specific to this
+repository.
 
 A preference that holds everywhere goes there. A rule about this repository
 goes here, and a fact about a machine goes in the `machines` skill. None of
@@ -207,7 +204,8 @@ here may be another agent, on another machine.
 | Install, daily use, themes, bundles | [README.md](README.md) |
 | Encryption design and key handling | [docs/secrets.md](docs/secrets.md) |
 | Open work | [docs/todo.md](docs/todo.md) |
+| Refactoring roadmap | [docs/refactor-plan.md](docs/refactor-plan.md) |
 | Shell setup constraints | [dot_sh_utils/CAVEATS.md](dot_sh_utils/CAVEATS.md) |
-| Preferences for every project | [dot_agents/AGENTS.md.tmpl](dot_agents/AGENTS.md.tmpl), deployed as `~/.agents/AGENTS.md` |
-| Shared agent skills | [dot_agents/skills/README.md](dot_agents/skills/README.md) |
+| Preferences for every project | [private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md), deployed as `~/.agents/AGENTS.md` |
+| Shared agent skills | [private_dot_agents/skills/README.md](private_dot_agents/skills/README.md) |
 | Facts about each machine | the `machines` skill, at `~/.agents/skills/machines` where the key is |

@@ -1,0 +1,14 @@
+{{- if has "agent-tools" (index .machines .machine).bundles -}}
+#!/usr/bin/env bash
+# Install the i-have-adhd skill for whichever agents this machine has.
+#
+# Re-runs when agent-plugins.sh or Claude/Codex availability changes.
+# agent-plugins.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-plugins.sh" | sha256sum }}
+# claude at apply time: {{ if or (lookPath "claude") (stat (joinPath .chezmoi.homeDir ".local/bin/claude")) }}present{{ else }}absent{{ end }}
+# codex at apply time: {{ if or (lookPath "codex") (stat (joinPath .chezmoi.homeDir ".local/share/pnpm/bin/codex")) }}present{{ else }}absent{{ end }}
+
+set -eu
+
+export PATH="$HOME/.local/share/pnpm/bin:$HOME/.local/bin:$PATH"
+exec "$HOME/.local/libexec/dotfiles/agent-plugins.sh"
+{{ end -}}

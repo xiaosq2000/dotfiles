@@ -30,6 +30,7 @@ local disabled = {
 
 return {
 	"nvim-treesitter/nvim-treesitter",
+	cond = not require("core.env").kitty_scrollback,
 	build = ":TSUpdate",
 	lazy = false,
 	branch = "main",

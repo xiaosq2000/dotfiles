@@ -107,15 +107,15 @@ return {
 					lualine_b = {
 						{
 							"diagnostics",
-							source = { "nvim" },
+							sources = { "nvim_diagnostic" },
 							sections = { "error" },
 							diagnostics_color = {
-								error = { bg = colors.command, fg = colors.text },
+								error = { bg = colors.visual, fg = colors.text },
 							},
 						},
 						{
 							"diagnostics",
-							source = { "nvim" },
+							sources = { "nvim_diagnostic" },
 							sections = { "warn" },
 							diagnostics_color = {
 								warn = { bg = colors.command, fg = colors.text },

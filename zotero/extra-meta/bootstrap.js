@@ -55,6 +55,7 @@ function shutdown(data, reason) {
 	for (const win of Zotero.getMainWindows()) {
 		ExtraMetaMain?.removeFromWindow(win);
 	}
+	ExtraMetaMain?.destroy?.();
 	if (chromeHandle) {
 		chromeHandle.destruct();
 		chromeHandle = null;

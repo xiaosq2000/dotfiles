@@ -1,0 +1,18 @@
+{{- if has "agent-tools" (index .machines .machine).bundles -}}
+#!/usr/bin/env bash
+# Point every installed AI agent at the shared skills in ~/.agents/skills.
+# Runs after 90-downloads so freshly installed agy is linked on the first apply.
+#
+# Re-runs when the script, any skill, the age identity, or agent presence changes.
+# agent-skills.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-skills.sh" | sha256sum }}
+# skills sha256: {{ range (glob (joinPath .chezmoi.sourceDir "private_dot_agents/skills/*/SKILL.md")) }}{{ include . | sha256sum }}{{ end }}
+# age identity: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
+# claude at apply time: {{ if or (lookPath "claude") (stat (joinPath .chezmoi.homeDir ".local/bin/claude")) }}present{{ else }}absent{{ end }}
+# codex at apply time: {{ if or (lookPath "codex") (stat (joinPath .chezmoi.homeDir ".local/share/pnpm/bin/codex")) }}present{{ else }}absent{{ end }}
+# agy at apply time: {{ if or (lookPath "agy") (stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/bin/agy")) (stat (joinPath .chezmoi.homeDir ".local/bin/agy")) }}present{{ else }}absent{{ end }}
+
+set -eu
+
+export PATH="$HOME/.local/opt/dotfiles/bin:$HOME/.local/share/pnpm/bin:$HOME/.local/bin:$PATH"
+exec "$HOME/.local/libexec/dotfiles/agent-skills.sh" --prune
+{{ end -}}

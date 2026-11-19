@@ -173,7 +173,7 @@ if [ "$FAILED" -gt 0 ]; then
     warning "$FAILED agent(s) did not install, see above"
     hint "rerun with ~/.local/libexec/dotfiles/agent-plugins.sh once the network is back"
     footer "i-have-adhd"
-    exit 1
+    exit 0
 fi
 
 if [ "$DRY_RUN" = true ]; then

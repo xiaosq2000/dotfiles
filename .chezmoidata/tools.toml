@@ -98,12 +98,10 @@ packages = [
     "bash-language-server",
     "yaml-language-server",
     "vscode-langservers-extracted",
-    "texlab",
     "marksman",
     "cmake-language-server",
     "dockerfile-language-server-nodejs",
     "taplo",
-    "luarocks",
     "codespell",
 ]
 
@@ -266,9 +264,6 @@ exposed = ["docker-langserver"]
 
 [packages.tree-sitter-cli]
 exposed = ["tree-sitter"]
-
-[packages.luarocks]
-exposed = ["luarocks", "luarocks-admin"]
 
 [packages.ffmpeg]
 exposed = ["ffmpeg", "ffplay", "ffprobe"]

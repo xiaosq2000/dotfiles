@@ -1,9 +1,16 @@
+{{- if has "research" (index .machines .machine).bundles -}}
 #!/usr/bin/env bash
 # Zotero owns its profile. Do not overwrite an existing user.js or edit prefs.js.
+#
+# Re-runs when shared preferences, Better BibTeX pin, Extra Meta source, Zotero
+# profile presence, or a deferred (Zotero-running) pending marker changes.
+# zotero-user.js sha256: {{ include "private_dot_config/dotfiles/zotero-user.js.tmpl" | sha256sum }}
+# better-bibtex tag: {{ (index .downloads "better-bibtex").tag }}
+# better-bibtex downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi") }}present{{ else }}absent{{ end }}
+# extra-meta sha256: {{ range (glob (joinPath .chezmoi.sourceDir "zotero/extra-meta/**")) }}{{ if not (stat .).isDir }}{{ include . | sha256sum }}{{ end }}{{ end }}
+# profiles.ini: {{ if stat (joinPath .chezmoi.homeDir ".zotero/zotero/profiles.ini") }}present{{ else }}absent{{ end }}
+# pending: {{ $pending := joinPath .chezmoi.homeDir ".local/state/dotfiles/zotero-pending" }}{{ if stat $pending }}{{ include $pending | trim }}{{ else }}none{{ end }}
 set -eu
-{{ if not (has "research" (index .machines .machine).bundles) -}}
-exit 0
-{{ end -}}
 
 if ! command -v python3 >/dev/null 2>&1; then
     echo "zotero setup: python3 not found; retry with chezmoi apply" >&2
@@ -22,6 +29,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 from zipfile import BadZipFile, ZIP_DEFLATED, ZipFile, ZipInfo
 
 home = Path.home()
@@ -30,10 +38,18 @@ shared = home / ".config/dotfiles/zotero-user.js"
 bbt_plugin = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
 bbt_tag = {{ (index .downloads "better-bibtex").tag | quote }}
 extra_meta_source = Path({{ joinPath .chezmoi.sourceDir "zotero/extra-meta" | quote }})
+pending_marker = home / ".local/state/dotfiles/zotero-pending"
+MAX_BACKUPS = 5
+deferred = False
 
 
 def warn(message):
     print(f"zotero setup: {message}", file=sys.stderr)
+
+
+def mark_deferred():
+    global deferred
+    deferred = True
 
 
 def digest(source):
@@ -105,9 +121,20 @@ def build_xpi(source_dir):
     return buffer.getvalue()
 
 
+def prune_backups(backup_dir):
+    backups = sorted(
+        (p for p in backup_dir.glob("*.xpi") if p.is_file() and not p.is_symlink()),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for stale in backups[MAX_BACKUPS:]:
+        stale.unlink(missing_ok=True)
+
+
 def preferences(profile):
     if not shared.is_file():
         warn("shared preferences missing; retry with chezmoi apply")
+        mark_deferred()
         return
     user_js = profile / "user.js"
     try:
@@ -120,6 +147,7 @@ def preferences(profile):
         print(f"zotero setup: linked {user_js}; restart Zotero to load it")
     except OSError as error:
         warn(f"cannot link {user_js} ({error}); retry with chezmoi apply")
+        mark_deferred()
 
 
 def addon_status(profile, plugin_id, name, check_updates):
@@ -154,6 +182,7 @@ def install_plugin(profile, plugin_id, name, source, expected_version=None, chec
                 fcntl.lockf(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 warn(f"close Zotero and run chezmoi apply to install {name}")
+                mark_deferred()
                 return
             if target.is_symlink():
                 warn(f"{target} is a symlink; left it unchanged")
@@ -163,14 +192,16 @@ def install_plugin(profile, plugin_id, name, source, expected_version=None, chec
                     warn(f"installed {name} is newer than the pin; downgrade skipped")
                     return
                 old_hash = digest(target)
-                backup = home / ".local/state/dotfiles/zotero-plugins" / f"{old_hash}.xpi"
-                backup.parent.mkdir(parents=True, exist_ok=True)
+                backup_dir = home / ".local/state/dotfiles/zotero-plugins"
+                backup = backup_dir / f"{old_hash}.xpi"
+                backup_dir.mkdir(parents=True, exist_ok=True)
                 if backup.exists() and digest(backup) != old_hash:
                     raise ValueError("existing plugin backup has an unexpected hash")
                 if not backup.exists():
                     shutil.copy2(target, backup)
                 if digest(backup) != old_hash:
                     raise ValueError("plugin backup verification failed")
+                prune_backups(backup_dir)
             target.parent.mkdir(parents=True, exist_ok=True)
             fd, temporary = tempfile.mkstemp(prefix=f".{plugin_id}-", dir=target.parent)
             os.close(fd)
@@ -197,6 +228,7 @@ def install_plugin(profile, plugin_id, name, source, expected_version=None, chec
 def install_better_bibtex(profile):
     if not bbt_plugin.is_file():
         warn("Better BibTeX package missing; run dotfiles-fetch sync and chezmoi apply")
+        mark_deferred()
         return
     install_plugin(
         profile,
@@ -250,4 +282,11 @@ except (OSError, Error, ValueError) as error:
 preferences(profile)
 install_better_bibtex(profile)
 install_extra_meta(profile)
+
+if deferred:
+    pending_marker.parent.mkdir(parents=True, exist_ok=True)
+    pending_marker.write_text(f"{time.time_ns()}\n")
+else:
+    pending_marker.unlink(missing_ok=True)
 PY
+{{ end -}}

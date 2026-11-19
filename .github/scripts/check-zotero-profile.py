@@ -16,7 +16,7 @@ root = Path(__file__).resolve().parents[2]
 chezmoi = shutil.which("chezmoi")
 bash = shutil.which("bash")
 assert chezmoi and bash, "chezmoi and bash are required"
-template = root / ".chezmoiscripts/run_after_96-zotero-profile.sh.tmpl"
+template = root / ".chezmoiscripts/run_onchange_after_96-zotero-profile.sh.tmpl"
 catalog = tomllib.loads((root / ".chezmoidata/downloads.toml").read_text())
 version = catalog["downloads"]["better-bibtex"]["tag"].removeprefix("v")
 plugin_id = "better-bibtex@iris-advies.com"

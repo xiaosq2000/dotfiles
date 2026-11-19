@@ -19,7 +19,7 @@ docs
 system
 
 # Local Zotero plugin sources, packed and installed into the default profile
-# by run_after_96-zotero-profile.sh.tmpl.
+# by run_onchange_after_96-zotero-profile.sh.tmpl.
 zotero
 
 # Instructions for agents working on this repository, at the root where agents

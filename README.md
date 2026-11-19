@@ -1,7 +1,7 @@
 # dotfiles
 
 Managed with [chezmoi](https://www.chezmoi.io/). This repository is the chezmoi
-*source* tree, so files here carry chezmoi's naming: `dot_zshrc.tmpl` becomes
+*source* tree, so files here carry chezmoi's naming: `dot_zshrc` becomes
 `~/.zshrc`, `private_dot_config/` becomes `~/.config` with mode 0700,
 `executable_` sets the executable bit, and `encrypted_` is age ciphertext.
 
@@ -91,7 +91,7 @@ theme rose-pine-dawn           # switch everywhere and apply
 theme --dry-run catppuccin-mocha
 ```
 
-One switch covers btop, kitty, alacritty, Neovim, zathura, fzf, starship and Herdr.
+One switch covers btop, kitty, Neovim, zathura, fzf, starship and Herdr.
 Variants use the slug upstream uses.
 
 Zathura starts with recolouring off on every variant, so documents keep their
@@ -109,12 +109,10 @@ holds:
   `appearance` (`light` or `dark`), and its fzf and starship palettes.
 
 Tokens are per tool because upstreams disagree: Catppuccin Mocha is
-`catppuccin_mocha` to btop, `mocha` to kitty and `catppuccin-mocha` to
-alacritty.
+`catppuccin_mocha` to btop and `mocha` to kitty.
 
 Theme files are fetched to a fixed name —
 `~/.config/btop/themes/current.theme`,
-`~/.config/alacritty/current-theme.toml`,
 `~/.config/kitty/current-theme.conf` — so nothing is vendored per variant.
 Starship is the exception: it has no include mechanism, so
 `~/.config/starship.toml` is rendered from
@@ -153,18 +151,17 @@ file still works by hand: `touch ~/.claude/.i-have-adhd-always`.
 
 ## Context for agents
 
-[dot_agents/AGENTS.md.tmpl](dot_agents/AGENTS.md.tmpl) holds the user's preferences for
+[private_dot_agents/AGENTS.md](private_dot_agents/AGENTS.md) holds the user's preferences for
 every project, such as where knowledge is written down, keeping downloads off
 the metered proxy, and how documents state facts. It deploys to
 `~/.agents/AGENTS.md` and is linked as `~/.claude/CLAUDE.md`,
-`~/.codex/AGENTS.md`, `~/.config/opencode/AGENTS.md` and `~/.gemini/AGENTS.md`,
-so Claude Code, Codex, OpenCode and Antigravity CLI all load the same file.
-The `agent-tools` bundle also links it as `~/.pi/agent/AGENTS.md` for Pi.
-Pi reads `~/.agents/skills` directly.
+`~/.codex/AGENTS.md`, `~/.gemini/AGENTS.md` and `~/.pi/agent/AGENTS.md` on
+`agent-tools` machines, so Claude Code, Codex, Antigravity CLI and Pi all load
+the same file. Pi reads `~/.agents/skills` directly.
 
 Antigravity CLI (`agy`) also reads the shared skills through symlinks in
 `~/.gemini/config/skills/`. See
-[Shared agent skills](dot_agents/skills/README.md) for discovery and setup.
+[Shared agent skills](private_dot_agents/skills/README.md) for discovery and setup.
 
 [AGENTS.md](AGENTS.md), which `CLAUDE.md` imports, is for an agent changing this
 repository. It covers the source-versus-target model, the naming attributes, and
@@ -173,7 +170,7 @@ the rules that keep secrets out of a public repository.
 The `machines` skill is for an agent working anywhere else. It carries a page per
 machine (what it is for, how to reach it, accounts, hardware, storage, rules and
 quirks) plus a page on the network between them. The pages are age-encrypted in
-[dot_agents/skills/private_machines](dot_agents/skills/private_machines) and
+[private_dot_agents/skills/private_machines](private_dot_agents/skills/private_machines) and
 decrypted to `~/.agents/skills/machines` on apply, so they exist only where the
 key is. `machine` prints the path of the current machine's page.
 
@@ -218,7 +215,7 @@ not inherit the shared global `AGENTS.md` unless their agent configuration sets
 `inheritProjectContext: true` and `inheritGlobalContext: true`.
 
 New sessions default to `openai-codex/gpt-6.1-sol` with `xhigh` thinking.
-[Toolkit configuration](dot_pi/agent/extensions/pi-openai-toolkit/config.json)
+[Toolkit configuration](private_dot_pi/private_agent/extensions/pi-openai-toolkit/config.json)
 enables remote compaction for the `openai-codex-responses` API, including new
 Codex model IDs. Other APIs use Pi's native compaction. Remote failure can fall
 back to a text summary, so a completed `/compact` is not proof of a checkpoint.
@@ -348,10 +345,9 @@ lived at shared paths. `dotfiles-fetch migrate` lists the font directories that
 script wrote, and `--apply` deletes them; it only reports the rest.
 
 **Config.** The `config` paths of every bundle a machine does not select go into
-`.chezmoiignore`. Alacritty, Zathura, Fcitx5 and kmonad come from the
-distribution; `desktop` supplies only their configuration. A machine that drops
-a bundle keeps the files it already has, the way an application keeps its
-profile.
+`.chezmoiignore`. Zathura and Fcitx5 come from the distribution; `desktop`
+supplies only their configuration. A machine that drops a bundle keeps the files
+it already has, the way an application keeps its profile.
 
 ### Zotero, Better BibTeX and Extra Meta
 
@@ -451,10 +447,10 @@ Two things are encrypted: `~/.ssh/config`, and the machine pages of the
 plaintext where either lives, and on a machine with the key `git diff` shows
 both decrypted.
 
-Claude Code, Codex and opencode are kept from reading ssh private keys and the
-age identity, and pre-commit hooks refuse a commit that contains either.
-[docs/secrets.md](docs/secrets.md#keeping-agents-away-from-private-keys) lists
-what each agent gets and what it does not stop.
+Claude Code and Codex are kept from reading ssh private keys, the age identity
+and local credential stores, and pre-commit hooks refuse a commit that contains
+secrets. [docs/secrets.md](docs/secrets.md#keeping-agents-away-from-private-keys)
+lists what each agent gets and what it does not stop.
 
 [.chezmoidata/machines.toml](.chezmoidata/machines.toml) is deliberately in the
 clear: bundles, roles and filesystem layout are not secrets. Addresses, account

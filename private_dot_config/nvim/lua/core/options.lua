@@ -70,29 +70,45 @@ vim.diagnostic.config({
 ---------------------------------- message ui ----------------------------------
 --------------------------------------------------------------------------------
 -- Experimental message UI, not available before nvim 0.12.
+-- Guard the 0.12 vs 0.13 option schema so upgrades never break startup.
 local ok, ui2 = pcall(require, "vim._core.ui2")
 if ok then
-	ui2.enable({
-		msg = {
-			-- Every kind not listed in `targets` goes to the message window.
-			-- With 'cmdheight' 0, a message left in the cmdline hides the next
-			-- :s///c prompt; plugin errors sent through vim.notify, such as
-			-- dooing's "items due", did that. It is open upstream as
-			-- neovim/neovim#42116 and still happens on 0.13 nightly (checked
-			-- on 2026-09-27).
-			target = "msg",
-			targets = {
-				list_cmd = "pager",
-				shell_out = "pager",
-				shell_err = "pager",
-				verbose = "pager",
-				lua_error = "pager",
-				rpc_error = "pager",
+	local targets = {
+		list_cmd = "pager",
+		shell_out = "pager",
+		shell_err = "pager",
+		verbose = "pager",
+		lua_error = "pager",
+		rpc_error = "pager",
+	}
+	if vim.fn.has("nvim-0.13") == 1 then
+		targets.default = "msg"
+		if vim.fn.exists("+messagesopt") == 1 then
+			pcall(function()
+				vim.opt.messagesopt:append({ "timeout:2500", "maxheight:0.35" })
+			end)
+		end
+		pcall(ui2.enable, {
+			msg = {
+				targets = targets,
+				msg = { height = 0.25 },
+				dialog = { height = 0.45 },
+				pager = { height = 0.7 },
 			},
-			msg = { height = 0.25, timeout = 2500 },
-			cmd = { height = 0.35 },
-			dialog = { height = 0.45 },
-			pager = { height = 0.7 },
-		},
-	})
+		})
+	else
+		pcall(ui2.enable, {
+			msg = {
+				-- Every kind not listed in `targets` goes to the message window.
+				-- With 'cmdheight' 0, a message left in the cmdline hides the next
+				-- :s///c prompt (neovim/neovim#42116).
+				target = "msg",
+				targets = targets,
+				msg = { height = 0.25, timeout = 2500 },
+				cmd = { height = 0.35 },
+				dialog = { height = 0.45 },
+				pager = { height = 0.7 },
+			},
+		})
+	end
 end

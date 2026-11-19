@@ -1,5 +1,5 @@
 return {
-	filetypes = { "bash", "sh", "zsh" },
+	filetypes = { "bash", "sh" },
 	settings = {
 		bashIde = {
 			shellcheckPath = "shellcheck",
