@@ -6,6 +6,9 @@
 [settings]
 locked = false
 lockfile = false
+# Keep mise's default release-age cooldown for third-party tools, but let our
+# own CLI releases install immediately after tagging cli-v*.
+minimum_release_age_excludes = ["github:xiaosq2000/dotfiles"]
 status = { missing_tools = "never", show_env = false, show_tools = false }
 {{ if $selection.mise }}
 [tools]

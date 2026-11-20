@@ -2,8 +2,8 @@
 {{- if $selection.mise -}}
 #!/usr/bin/env bash
 # Sync cross-platform CLIs managed by mise from ~/.config/mise/config.toml.
-# Existing installed tools stay at their machine-local lockfile version until
-# upgraded explicitly via `dotfiles upgrade` (or `mise upgrade`).
+# Existing installed tools stay at their installed version until upgraded
+# explicitly via `dotfiles upgrade` (or `mise upgrade`).
 #
 # Runs after 05-pixi (which installs mise) and before 07-sheldon (which uses
 # sheldon), 08-source-repo (pre-commit + gitleaks), 10-pnpm (pnpm + node),
@@ -40,8 +40,14 @@ fi
 export MISE_YES=1
 echo "mise: syncing tools from ${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml"
 if (cd "$HOME" && "$MISE" install); then
-    (cd "$HOME" && "$MISE" reshim) || echo "mise: warning: reshim failed" >&2
     (cd "$HOME" && "$MISE" prune --yes) || echo "mise: warning: prune failed" >&2
+    # Pruning stale lockfile-suffixed installs (for example npm ~aube~ dirs)
+    # can remove the only copy of a tool that the first pass treated as
+    # installed. Re-run `mise install` if anything is now missing.
+    if [ -n "$(cd "$HOME" && "$MISE" ls --global --missing --no-header 2>/dev/null || true)" ]; then
+        (cd "$HOME" && "$MISE" install) || echo "mise: warning: post-prune install failed" >&2
+    fi
+    (cd "$HOME" && "$MISE" reshim) || echo "mise: warning: reshim failed" >&2
     rm -f "$PENDING"
 else
     mkdir -p "$(dirname "$PENDING")"
