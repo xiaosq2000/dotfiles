@@ -122,21 +122,21 @@ url = "https://github.com/ajeetdsouza/zoxide/releases/download/v0.10.0/zoxide-0.
 url_api = "https://api.github.com/repos/ajeetdsouza/zoxide/releases/assets/466316293"
 
 [[tools."aqua:anthropics/claude-code"]]
-version = "2.1.327"
+version = "2.1.328"
 backend = "aqua:anthropics/claude-code"
-specifiers = ["2.1.327"]
+specifiers = ["2.1.328"]
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-arm64"]
-checksum = "sha256:39d249137bacdd872d536d2aa50fd52bedd5d55c79e35efce96b9f658b2ea6d8"
+checksum = "sha256:e95be009ef9548aec0bd34fe2d2736e9b887aef7452b31a8cd3d00cfe0ed7382"
 checksum_source = "mise-versions"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.327/claude-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/760565151"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.328/claude-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/765459532"
 
 [tools."aqua:anthropics/claude-code"."platforms.linux-x64"]
-checksum = "sha256:7f03a9981918fbd38eca529bdd19807eedb021a9ed2feb9923dc10a581a5aa1f"
+checksum = "sha256:4404b3dc35afe7dde16c572197f69c210dffdb038f05ee3c532e683732f5aa9f"
 checksum_source = "mise-versions"
-url = "https://github.com/anthropics/claude-code/releases/download/v2.1.327/claude-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/760565483"
+url = "https://github.com/anthropics/claude-code/releases/download/v2.1.328/claude-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/anthropics/claude-code/releases/assets/765460041"
 
 [[tools."aqua:aristocratos/btop"]]
 version = "1.4.8"
@@ -190,20 +190,20 @@ url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/740497139
 provenance = "github-attestations"
 
 [[tools."aqua:astral-sh/ty"]]
-version = "0.0.106"
+version = "0.0.107"
 backend = "aqua:astral-sh/ty"
-specifiers = ["0.0.106"]
+specifiers = ["0.0.107"]
 
 [tools."aqua:astral-sh/ty"."platforms.linux-arm64"]
-checksum = "sha256:0bd9317919b385a543b96ff69711e61404c6f4bbb4281652d3fb59bd866a2aa6"
-url = "https://github.com/astral-sh/ty/releases/download/0.0.106/ty-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ty/releases/assets/763328184"
+checksum = "sha256:952097983ff6b6b3235b4b5ec8077c1b8bf5c485679fd794ee70ca2007a3cf7f"
+url = "https://github.com/astral-sh/ty/releases/download/0.0.107/ty-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ty/releases/assets/765014515"
 provenance = "github-attestations"
 
 [tools."aqua:astral-sh/ty"."platforms.linux-x64"]
-checksum = "sha256:28e2346a296e58eacfc79ce168e1a2402c69d17d7a6e6ac652902fa5eb1e88ad"
-url = "https://github.com/astral-sh/ty/releases/download/0.0.106/ty-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/ty/releases/assets/763328489"
+checksum = "sha256:f93e1f3e45ec81b3ce21473d541eb94470546928499415fc263f2858d65f28af"
+url = "https://github.com/astral-sh/ty/releases/download/0.0.107/ty-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ty/releases/assets/765014836"
 provenance = "github-attestations"
 
 [[tools."aqua:astral-sh/uv"]]
@@ -726,38 +726,38 @@ url = "https://github.com/earendil-works/pi/releases/download/v1.5.2/pi-linux-x6
 url_api = "https://api.github.com/repos/earendil-works/pi/releases/assets/731292534"
 
 [[tools."github:herdrdev/herdr"]]
-version = "0.9.4"
+version = "0.9.5"
 backend = "github:herdrdev/herdr"
-specifiers = ["0.9.4"]
+specifiers = ["0.9.5"]
 
 [tools."github:herdrdev/herdr"."platforms.linux-arm64"]
-checksum = "sha256:9511cb70982c1ef115f232058e7ed7cf9640aa5a2c0ca78934cefda3aeb093fd"
-url = "https://github.com/herdrdev/herdr/releases/download/v0.9.4/herdr-linux-aarch64"
-url_api = "https://api.github.com/repos/herdrdev/herdr/releases/assets/637474390"
+checksum = "sha256:17d7536f2da50859523680ef279dffcac8e4a235f4e46fe8da6c2ec44141897c"
+url = "https://github.com/herdrdev/herdr/releases/download/v0.9.5/herdr-linux-aarch64"
+url_api = "https://api.github.com/repos/herdrdev/herdr/releases/assets/640898231"
 provenance = "github-attestations"
 
 [tools."github:herdrdev/herdr"."platforms.linux-x64"]
-checksum = "sha256:493304fbefb0ed0ea0455f373b47f48d24e8774bc7974f4c916ad2e937675b23"
-url = "https://github.com/herdrdev/herdr/releases/download/v0.9.4/herdr-linux-x86_64"
-url_api = "https://api.github.com/repos/herdrdev/herdr/releases/assets/637474400"
+checksum = "sha256:14d9e8bc8b4a9e0118d77c32266f76d461f09b40342eb23752960bd89f59929d"
+url = "https://github.com/herdrdev/herdr/releases/download/v0.9.5/herdr-linux-x86_64"
+url_api = "https://api.github.com/repos/herdrdev/herdr/releases/assets/640898235"
 provenance = "github-attestations"
 
 [[tools."github:rtk-ai/rtk"]]
-version = "1.0.0"
+version = "1.2.0"
 backend = "github:rtk-ai/rtk"
-specifiers = ["1.0.0"]
+specifiers = ["1.2.0"]
 
 [tools."github:rtk-ai/rtk"."platforms.linux-arm64"]
-checksum = "sha256:9438c2c99d428fa6fbe7f4d1c01a87babd5feec17ee6d7bb3372a613a21db7d3"
+checksum = "sha256:93c1dcd37fd5fcae8fa772a5b5c34a30af142ace4f4081c8f98319146b7a10a4"
 checksum_source = "mise-versions"
-url = "https://github.com/rtk-ai/rtk/releases/download/v1.0.0/rtk-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/rtk-ai/rtk/releases/assets/638121344"
+url = "https://github.com/rtk-ai/rtk/releases/download/v1.2.0/rtk-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/rtk-ai/rtk/releases/assets/723664873"
 
 [tools."github:rtk-ai/rtk"."platforms.linux-x64"]
-checksum = "sha256:b0b69fbed72f55d8eae18587c0b6bc140a8a8b39d5b7c6e6df33795249940926"
+checksum = "sha256:70fee7b4a548c43dde94c77e2335550981b0bc2fb013691d8c8109b5bd0eda37"
 checksum_source = "mise-versions"
-url = "https://github.com/rtk-ai/rtk/releases/download/v1.0.0/rtk-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/rtk-ai/rtk/releases/assets/638121323"
+url = "https://github.com/rtk-ai/rtk/releases/download/v1.2.0/rtk-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/rtk-ai/rtk/releases/assets/723664846"
 
 [[tools."github:xiaosq2000/dotfiles"]]
 version = "0.1.4"
