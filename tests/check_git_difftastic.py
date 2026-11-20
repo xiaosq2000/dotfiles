@@ -60,4 +60,38 @@ with tempfile.TemporaryDirectory(prefix="git-config-check-") as directory:
     git_cmd("config", "--file", str(gitconfig), "pull.rebase", "false")
     assert git_cmd("config", "--get", "pull.rebase").stdout.strip() == "false"
 
-print("ok       Git config: XDG defaults, native diff, git dft alias, and local override")
+    # Managed GitHub credential helper resolves `gh` from mise shims without hardcoded
+    # versioned paths, and exits 0 silently when `gh` is absent.
+    shims = home / ".local/share/mise/shims"
+    shims.mkdir(parents=True)
+    fake_gh = shims / "gh"
+    fake_gh.write_text(
+        "#!/bin/sh\n"
+        "printf 'protocol=https\\nhost=github.com\\nusername=stub-user\\npassword=stub-token\\n'\n"
+    )
+    fake_gh.chmod(0o755)
+    cred_env = {**env, "PATH": str(binaries), "GIT_TERMINAL_PROMPT": "0"}
+    with_gh = subprocess.run(
+        [git, "credential", "fill"],
+        input="protocol=https\nhost=github.com\n\n",
+        cwd=home,
+        env=cred_env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert "username=stub-user" in with_gh.stdout and "password=stub-token" in with_gh.stdout, with_gh
+
+    fake_gh.unlink()
+    without_gh = subprocess.run(
+        [git, "credential", "fill"],
+        input="protocol=https\nhost=github.com\n\n",
+        cwd=home,
+        env=cred_env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert "not found" not in without_gh.stderr, without_gh
+
+print("ok       Git config: XDG defaults, native diff, git dft alias, credential helper, and local override")

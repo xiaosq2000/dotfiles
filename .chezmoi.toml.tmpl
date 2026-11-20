@@ -99,11 +99,16 @@ umask = 0o022
 {{ if $secrets.ageRecipient -}}
 # Decrypt the encrypted_ files in this repository with age.
 #
-# These two have to sit above [data]. A bare key after a table header belongs to
+# These keys have to sit above [data]. A bare key after a table header belongs to
 # that table in TOML, so `encryption` written at the bottom of this file becomes
 # data.encryption, and chezmoi says so and carries on unencrypted:
 #
 #   warning: 'encryption' not set, using age configuration.
+#
+# `useBuiltinAge = true` uses chezmoi's built-in Go age implementation instead of
+# calling an external `age` binary (which lives behind a mise shim). That breaks
+# the circular dependency where a broken mise config stops `chezmoi apply` from
+# decrypting `.agents/...` before it can repair `~/.config/mise/config.toml`.
 #
 # The recipient is a public key and lives in .chezmoidata/secrets.toml; the
 # identity is the private half and is never committed. A machine without the
@@ -111,6 +116,7 @@ umask = 0o022
 # writing anything, which is the behaviour you want. docs/secrets.md covers how
 # a new machine gets the key out of Bitwarden.
 encryption = "age"
+useBuiltinAge = true
 
 [age]
     identity = {{ (joinPath .chezmoi.homeDir $secrets.ageIdentity) | quote }}

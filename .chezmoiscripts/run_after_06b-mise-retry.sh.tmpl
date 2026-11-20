@@ -1,0 +1,12 @@
+{{- $selection := includeTemplate "software-selection" . | fromJson -}}
+{{- $pending := joinPath .chezmoi.homeDir ".local/state/dotfiles/mise-pending" -}}
+{{- if and $selection.mise (stat $pending) -}}
+#!/usr/bin/env bash
+# Retry a failed `mise install` on the next `chezmoi apply`.
+# Renders empty once mise-pending is removed on success, so `chezmoi status`,
+# `chezmoi verify`, and `dotfiles doctor` turn green immediately without needing
+# a second apply.
+[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/mise-pending" ] || exit 0
+
+{{ includeTemplate "mise-sync.sh" . }}
+{{- end -}}

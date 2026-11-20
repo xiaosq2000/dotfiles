@@ -1,9 +1,11 @@
 # Secrets
 
-Checked on 2026-11-19.
+Checked on 2026-11-20.
 
 This repository is public, so every secret in it is age ciphertext in a file
-named `encrypted_*`. chezmoi decrypts those files on apply with the private key
+named `encrypted_*`. chezmoi decrypts those files on apply with its built-in Go
+age implementation (`useBuiltinAge = true` in `.chezmoi.toml.tmpl`, so applying
+never depends on `mise`'s external `age` shim) using the private key
 at `~/.config/chezmoi/key.txt`, which is never committed. Bitwarden holds a
 copy of the key in the item `chezmoi age identity`, so a new machine can fetch
 it. The public half, the recipient, is in `.chezmoidata/secrets.toml`.

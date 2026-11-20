@@ -67,5 +67,17 @@
 [receive]
 	fsckObjects = true
 
+# Stable GitHub/Gist credential helpers that resolve `gh` via mise/pixi/PATH at
+# call time instead of hardcoding a versioned install path (as `gh auth setup-git`
+# writes into ~/.gitconfig, which breaks whenever `gh` is upgraded and pruned).
+# Hosts without `gh` (such as vps or containers) exit 0 silently.
+[credential "https://github.com"]
+	helper =
+	helper = "!f() { PATH=\"$HOME/.local/share/mise/shims:$HOME/.pixi/bin:$PATH\"; command -v gh >/dev/null 2>&1 || return 0; exec gh auth git-credential \"$@\"; }; f"
+
+[credential "https://gist.github.com"]
+	helper =
+	helper = "!f() { PATH=\"$HOME/.local/share/mise/shims:$HOME/.pixi/bin:$PATH\"; command -v gh >/dev/null 2>&1 || return 0; exec gh auth git-credential \"$@\"; }; f"
+
 [include]
 	path = config.local

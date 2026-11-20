@@ -111,6 +111,16 @@ tests
 .claude/**
 {{ end -}}
 
+{{ if not (stat (joinPath .chezmoi.homeDir ".gemini/config/plugins/rtk/hooks.json")) -}}
+# Only harden an already-installed Antigravity RTK plugin hook; never create it
+# on hosts that did not opt into RTK hooks.
+{{   if not (stat (joinPath .chezmoi.homeDir ".gemini/config/plugins")) -}}
+.gemini/config/plugins
+{{   end -}}
+.gemini/config/plugins/rtk
+.gemini/config/plugins/rtk/**
+{{ end -}}
+
 # Configuration a machine's bundles do not select, from the `config` lists in
 # .chezmoidata/tools.toml. The second pattern of each pair matters: a bare
 # directory hides the files chezmoi manages there, but not an external fetched

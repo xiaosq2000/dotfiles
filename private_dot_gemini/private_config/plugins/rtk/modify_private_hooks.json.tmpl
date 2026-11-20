@@ -1,0 +1,9 @@
+#!/bin/sh
+# Keep an existing Antigravity RTK PreToolUse hook fail-open so a broken mise
+# shim never locks the agent out of running shell commands.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "agy rtk hooks: python3 not found; left ~/.gemini/config/plugins/rtk/hooks.json unchanged" >&2
+    exec cat
+fi
+
+exec python3 {{ joinPath .chezmoi.sourceDir "dot_local/libexec/dotfiles/executable_agent-reconcile.py" | quote }} agy-rtk-hooks --spec '{}'

@@ -53,7 +53,7 @@ interactive Ratatui TUI:
 ```sh
 dotfiles                            # interactive Ratatui TUI (5 tabs + live Theme Studio)
 dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents and sandbox
-dotfiles sync [--update] [--dry-run] # chezmoi apply/update (inherits shell network/proxy env)
+dotfiles sync [--update] [--dry-run] # chezmoi apply/update (--init + dirty-tree guard)
 dotfiles upgrade [--dry-run] [--now] [--only mise,pixi,fetch,sheldon,pi]
                                     # upgrade toolchains locally & run doctor (--now skips mise 24h cooldown)
 dotfiles machine [--list]           # describe this host or list known machines
@@ -93,10 +93,11 @@ chezmoi edit-config-template                            # the config template
 
 Shared Git defaults live in `~/.config/git/config` (`histogram` diffs, `zdiff3`
 conflict style, `rerere`, `pull.rebase`, `fetch.prune`, `push.autoSetupRemote`,
-and global excludes in `~/.config/git/ignore`). Machine-local identity
-(`user.name`, `user.email`), credential helpers, and overrides stay in
-`~/.gitconfig` (which Git reads after `~/.config/git/config`) or
-`~/.config/git/config.local`.
+version-independent GitHub/Gist `gh` credential helpers, and global excludes in
+`~/.config/git/ignore`). Machine-local identity (`user.name`, `user.email`) and
+overrides stay in `~/.gitconfig` (which Git reads after `~/.config/git/config`)
+or `~/.config/git/config.local`. Avoid running `gh auth setup-git`, which writes
+an ephemeral versioned `mise` install path into `~/.gitconfig`.
 
 Native unified `git diff` stays the default so coding agents, patch tools, and
 this repository's `.age` text-conversion driver work without extra flags. Opt

@@ -394,6 +394,41 @@ def reconcile_agy_hooks(raw, spec):
     return json.dumps(after, indent=2, ensure_ascii=False) + "\n"
 
 
+RTK_AGY_FAIL_OPEN = (
+    'sh -c \'rtk hook antigravity 2>/dev/null || printf "%s\\n" "{\\"decision\\":\\"allow\\"}"\''
+)
+
+
+def reconcile_agy_rtk_hooks(raw, _spec):
+    """Wrap bare `rtk hook antigravity` commands so a broken mise shim fails open."""
+    if not raw.strip():
+        return raw
+    before = json.loads(raw)
+    if not isinstance(before, dict):
+        raise ValueError("top level is not a JSON object")
+    after = copy.deepcopy(before)
+
+    for plugin in after.values():
+        if not isinstance(plugin, dict):
+            continue
+        for groups in plugin.values():
+            if not isinstance(groups, list):
+                continue
+            for group in groups:
+                if not isinstance(group, dict):
+                    continue
+                hooks = group.get("hooks")
+                if not isinstance(hooks, list):
+                    continue
+                for hook in hooks:
+                    if isinstance(hook, dict) and hook.get("command") == "rtk hook antigravity":
+                        hook["command"] = RTK_AGY_FAIL_OPEN
+
+    if after == before:
+        return raw
+    return json.dumps(after, indent=2, ensure_ascii=False) + "\n"
+
+
 def reconcile_agy_mcp(raw, spec):
     mcp_want = selected_mcp(spec, "agy")
     if not mcp_want:
@@ -478,6 +513,7 @@ HANDLERS = {
     "codex-config": reconcile_codex_config,
     "codex-hooks": reconcile_codex_hooks,
     "agy-hooks": reconcile_agy_hooks,
+    "agy-rtk-hooks": reconcile_agy_rtk_hooks,
     "agy-mcp": reconcile_agy_mcp,
     "pi-settings": reconcile_pi_settings,
 }

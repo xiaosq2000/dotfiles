@@ -148,6 +148,34 @@ assert ah_out["dotfiles-key-guard"]["PreToolUse"][0]["hooks"][0]["command"] == A
 assert ah_out["dotfiles-agent-notify"]["Stop"][0]["command"] == AGENTS["hooks"]["notify"]
 assert run_reconcile("agy-hooks", ah_res.stdout, base_spec).stdout == ah_res.stdout
 
+# Antigravity RTK plugin hook is wrapped fail-open while keeping all other fields intact
+rtk_hooks_in = json.dumps({
+    "rtk-rewrite": {
+        "enabled": True,
+        "PreToolUse": [
+            {
+                "matcher": "run_command",
+                "hooks": [{"type": "command", "command": "rtk hook antigravity", "timeout": 10}],
+            }
+        ],
+    }
+})
+rtk_res = run_reconcile("agy-rtk-hooks", rtk_hooks_in, {})
+rtk_out = json.loads(rtk_res.stdout)
+rtk_cmd = rtk_out["rtk-rewrite"]["PreToolUse"][0]["hooks"][0]["command"]
+assert rtk_cmd != "rtk hook antigravity" and "rtk hook antigravity" in rtk_cmd, rtk_cmd
+assert run_reconcile("agy-rtk-hooks", rtk_res.stdout, {}).stdout == rtk_res.stdout
+# Verify the fail-open command prints valid allow JSON and exits 0 when `rtk` is missing
+fallback = subprocess.run(
+    ["sh", "-c", rtk_cmd],
+    env={"PATH": "/usr/bin:/bin"},
+    text=True,
+    capture_output=True,
+    check=True,
+)
+assert json.loads(fallback.stdout) == {"decision": "allow"}, fallback
+assert fallback.stderr == "", fallback
+
 # Empty MCP config stays valid JSON object when no managed servers apply
 assert run_reconcile("agy-mcp", "", base_spec).stdout == "{}\n"
 assert run_reconcile("agy-mcp", "{}\n", base_spec).stdout == "{}\n"

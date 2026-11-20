@@ -1,0 +1,42 @@
+# shellcheck shell=bash
+set -eu
+
+export PATH="$HOME/.local/share/mise/shims:${PIXI_HOME:-$HOME/.pixi}/bin:$PATH"
+PENDING="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/mise-pending"
+
+if command -v mise >/dev/null 2>&1; then
+    MISE="$(command -v mise)"
+elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/mise" ]; then
+    MISE="${PIXI_HOME:-$HOME/.pixi}/bin/mise"
+else
+    echo "mise: warning: mise not found; it comes from the core bundle, retry with chezmoi apply" >&2
+    exit 0
+fi
+
+# Reuse a logged-in gh token when available so GitHub attestation/asset checks
+# avoid the 60/hr unauthenticated rate limit.
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ] && command -v gh >/dev/null 2>&1; then
+    _gh_token="$(gh auth token 2>/dev/null || true)"
+    if [ -n "$_gh_token" ]; then
+        export GITHUB_TOKEN="$_gh_token"
+    fi
+    unset _gh_token
+fi
+
+export MISE_YES=1
+echo "mise: syncing tools from ${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml"
+if (cd "$HOME" && "$MISE" install); then
+    (cd "$HOME" && "$MISE" prune --yes) || echo "mise: warning: prune failed" >&2
+    # Pruning stale lockfile-suffixed installs (for example npm ~aube~ dirs)
+    # can remove the only copy of a tool that the first pass treated as
+    # installed. Re-run `mise install` if anything is now missing.
+    if [ -n "$(cd "$HOME" && "$MISE" ls --global --missing --no-header 2>/dev/null || true)" ]; then
+        (cd "$HOME" && "$MISE" install) || echo "mise: warning: post-prune install failed" >&2
+    fi
+    (cd "$HOME" && "$MISE" reshim) || echo "mise: warning: reshim failed" >&2
+    rm -f "$PENDING"
+else
+    mkdir -p "$(dirname "$PENDING")"
+    date +%s >"$PENDING"
+    echo "mise: warning: mise install failed; retry with chezmoi apply" >&2
+fi
