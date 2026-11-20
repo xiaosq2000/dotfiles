@@ -6,10 +6,8 @@ Split into three test classes so CI jobs can run the matching subset cleanly:
   - SecretHookChecks: local Gitleaks pre-commit/pre-push hook tests
 """
 
-import hashlib
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tomllib
@@ -28,27 +26,16 @@ def _run_script(argv):
 
 
 class UnitChecks(unittest.TestCase):
-    def test_mise_lock_and_gitleaks_pin(self):
+    def test_mise_catalog_schema(self):
         catalog = tomllib.loads((ROOT / ".chezmoidata/mise.toml").read_text(encoding="utf-8"))["mise"]
-        lock = tomllib.loads((ROOT / "private_dot_config/mise/mise.lock").read_text(encoding="utf-8"))["tools"]
-        hook = (ROOT / ".github/scripts/check-secrets.py").read_text(encoding="utf-8")
-        match = re.search(r'^VERSION\s*=\s*"([^"]+)"', hook, re.M)
-        self.assertIsNotNone(match)
-        self.assertEqual(catalog["gitleaks"]["version"], match.group(1))
+        bundles = tomllib.loads((ROOT / ".chezmoidata/tools.toml").read_text(encoding="utf-8"))["bundles"]
+        self.assertTrue(catalog)
         for tool_id, spec in catalog.items():
-            entries = [e for e in lock.get(spec["tool"], []) if e.get("version") == spec["version"]]
-            self.assertTrue(entries, f"mise.lock missing {tool_id} ({spec['tool']}@{spec['version']})")
-            entry = entries[0]
-            if "aube" in entry:
-                lock_file = ROOT / "private_dot_config/mise" / entry["aube"]["path"] / "aube-lock.yaml"
-                digest = "sha256:" + hashlib.sha256(lock_file.read_bytes()).hexdigest()
-                self.assertEqual(digest, entry["aube"]["digest"])
-            else:
-                for platform in ("platforms.linux-x64", "platforms.linux-arm64"):
-                    self.assertTrue(
-                        entry.get(platform, {}).get("checksum", "").startswith("sha256:"),
-                        f"mise.lock missing {platform} checksum for {tool_id}",
-                    )
+            self.assertIsInstance(spec.get("tool"), str, f"{tool_id} missing tool string")
+            self.assertTrue(spec["tool"].strip(), f"{tool_id} has empty tool string")
+        for bundle_name, bundle in bundles.items():
+            for tool_id in bundle.get("mise", []):
+                self.assertIn(tool_id, catalog, f"bundle {bundle_name} selects unknown mise tool {tool_id}")
 
     def test_fetch_offline(self):
         _run_script([sys.executable, str(TESTS / "check_fetch.py")])

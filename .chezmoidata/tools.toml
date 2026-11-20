@@ -3,8 +3,8 @@
 #   packages   conda-forge / source-built pixi global environments (kept slim
 #              for rootless HPC ABI strongholds, C/C++ shared-lib tools, Python
 #              CLI packages, and git-built recipes like um-vpn)
-#   mise       multi-arch SHA-256 locked CLIs, runtimes, LSPs, and coding agents
-#              from .chezmoidata/mise.toml (locked in private_dot_config/mise/mise.lock)
+#   mise       cross-platform CLIs, runtimes, LSPs, and coding agents from
+#              .chezmoidata/mise.toml (machine-local lock in ~/.config/mise/mise.lock)
 #   downloads  non-CLI GUI bundles, fonts, Zotero .xpi plugins, and agy manifest
 #              from .chezmoidata/downloads.toml (installed by dotfiles-fetch)
 #   config     destination paths deployed only when the bundle is selected
@@ -200,9 +200,7 @@ exposed = ["secret-tool"]
 [packages.um-vpn]
 # conda-forge does not package um-vpn, so pixi builds it from its repository.
 # The environment brings its own secret-tool for the stored UMPASS sign-in.
-# Commit pinned on 2026-11-19.
 git = "https://github.com/xiaosq2000/um-vpn"
-rev = "bb5d34dcd5602812bf165f18f7b4ca39e6cdf5cf"
 exposed = ["um-vpn"]
 
 [packages.speedtest-cli]

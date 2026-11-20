@@ -424,7 +424,7 @@ def reconcile_pi_settings(raw, spec):
     desired_settings = pi_cfg.get("settings", {})
     after.update(copy.deepcopy(desired_settings))
 
-    wanted = {name: f"npm:{name}@{version}" for name, version in pi_cfg.get("packages", {}).items()}
+    wanted = {name: f"npm:{name}" for name in pi_cfg.get("packages", [])}
     merged = []
     seen = set()
     for entry in packages:

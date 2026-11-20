@@ -60,21 +60,18 @@ bin = ["zotero"]
 # would only fight it.
 write = { "distribution/policies.json" = '{"policies": {"DisableAppUpdate": true}}' }
 
-# Plugin version and release digest checked on 2026-11-19.
+# Zotero plugins follow latest releases like Zotero itself; GitHub release
+# digests are verified automatically and 96-zotero-profile backs up replaced
+# copies before installing. Checked on 2026-11-20.
 [downloads.better-bibtex]
 github = "retorquere/zotero-better-bibtex"
-tag = "v9.0.71"
 asset = "zotero-better-bibtex-*.xpi"
-sha256 = "bf61a1690dc8a2b7ab09be9de2c89986f4fb6d495c82407d89b102b26fbaa9d5"
 extract = false
 filename = "better-bibtex.xpi"
 
-# Plugin version and release digest checked on 2026-11-19.
 [downloads.extra-meta]
 github = "xiaosq2000/zotero-extra-meta"
-tag = "v0.1.7"
 asset = "zotero-extra-meta-*.xpi"
-sha256 = "3cad32111df89bd1a70cb52c66cd051b33e75b3dfd897f88612f501df48b329b"
 extract = false
 filename = "extra-meta.xpi"
 

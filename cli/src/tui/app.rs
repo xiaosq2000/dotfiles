@@ -186,13 +186,20 @@ impl App {
                 .data
                 .as_ref()
                 .and_then(|d| d.mise.get(tool_id))
-                .map(|m| format!("{} @ {}", m.tool, m.version))
-                .unwrap_or_else(|| "mise locked".to_string());
+                .map(|m| {
+                    let ver = if m.version.is_empty() {
+                        "latest"
+                    } else {
+                        m.version.as_str()
+                    };
+                    format!("{} @ {ver}", m.tool)
+                })
+                .unwrap_or_else(|| "mise".to_string());
             rows.push(ToolchainRow {
                 category: "mise",
                 id: tool_id.clone(),
                 detail: spec_info,
-                status: if missing { "missing shim" } else { "locked" }.to_string(),
+                status: if missing { "missing shim" } else { "installed" }.to_string(),
                 ok: !missing,
             });
         }

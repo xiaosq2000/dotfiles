@@ -9,7 +9,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
-import tomllib
 from zipfile import ZipFile
 
 root = Path(__file__).resolve().parents[1]
@@ -17,10 +16,9 @@ chezmoi = shutil.which("chezmoi")
 bash = shutil.which("bash")
 assert chezmoi and bash, "chezmoi and bash are required"
 template = root / ".chezmoiscripts/run_onchange_after_96-zotero-profile.sh.tmpl"
-catalog = tomllib.loads((root / ".chezmoidata/downloads.toml").read_text())
-bbt_version = catalog["downloads"]["better-bibtex"]["tag"].removeprefix("v")
+bbt_version = "9.0.71"
 bbt_id = "better-bibtex@iris-advies.com"
-extra_version = catalog["downloads"]["extra-meta"]["tag"].removeprefix("v")
+extra_version = "0.1.7"
 extra_id = "extra-meta@dotfiles.local"
 
 

@@ -33,12 +33,10 @@ GitHub secret scanning and push protection are enabled. Enabling secret scanning
 also starts GitHub's automatic history scan. There is no separate local history
 audit or Gitleaks CI scan. CI still runs the existing encryption and key guards.
 
-The `core` bundle installs Gitleaks `8.30.1` through `mise` (SHA-256 locked in
-`private_dot_config/mise/mise.lock`). The version in `.chezmoidata/mise.toml`
-must match `VERSION` in `.github/scripts/check-secrets.py`, and CI verifies both
-the version pin and lockfile integrity (checked on 2026-11-19). `.gitleaks.toml`
-adds the broad age-identity pattern from the existing guard. The hook checks
-account paths separately.
+The `core` bundle installs Gitleaks through `mise` (following latest;
+`.github/scripts/check-secrets.py` enforces `>= 8.30.0`, checked on 2026-11-20).
+`.gitleaks.toml` adds the broad age-identity pattern from the existing guard.
+The hook checks account paths separately.
 
 The local scanner reads raw Git blobs. It does not run the age diff driver or
 decrypt private files. It skips ciphertext only under an `encrypted_*.age`

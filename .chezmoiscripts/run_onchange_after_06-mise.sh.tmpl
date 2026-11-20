@@ -1,15 +1,15 @@
 {{- $selection := includeTemplate "software-selection" . | fromJson -}}
 {{- if $selection.mise -}}
 #!/usr/bin/env bash
-# Sync locked cross-platform CLIs managed by mise from ~/.config/mise/config.toml
-# and ~/.config/mise/mise.lock.
+# Sync cross-platform CLIs managed by mise from ~/.config/mise/config.toml.
+# Existing installed tools stay at their machine-local lockfile version until
+# upgraded explicitly via `dotfiles upgrade` (or `mise upgrade`).
 #
 # Runs after 05-pixi (which installs mise) and before 07-sheldon (which uses
 # sheldon), 08-source-repo (pre-commit + gitleaks), 10-pnpm (pnpm + node),
 # and 95-pi-packages (pi + node).
 #
 # config sha256: {{ includeTemplate "private_dot_config/mise/config.toml.tmpl" . | sha256sum }}
-# lock sha256: {{ include "private_dot_config/mise/mise.lock" | sha256sum }}
 # mise at apply time: {{ if or (lookPath "mise") (stat (joinPath .chezmoi.homeDir ".pixi/bin/mise")) }}present{{ else }}absent{{ end }}
 # pending: {{ $pending := joinPath .chezmoi.homeDir ".local/state/dotfiles/mise-pending" }}{{ if stat $pending }}{{ include $pending | trim }}{{ else }}none{{ end }}
 
@@ -38,14 +38,14 @@ if [ -z "${GITHUB_TOKEN:-}" ] && [ -z "${GH_TOKEN:-}" ] && command -v gh >/dev/n
 fi
 
 export MISE_YES=1
-echo "mise: installing locked tools from ${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml"
-if (cd "$HOME" && "$MISE" install --locked); then
+echo "mise: syncing tools from ${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml"
+if (cd "$HOME" && "$MISE" install); then
     (cd "$HOME" && "$MISE" reshim) || echo "mise: warning: reshim failed" >&2
     (cd "$HOME" && "$MISE" prune --yes) || echo "mise: warning: prune failed" >&2
     rm -f "$PENDING"
 else
     mkdir -p "$(dirname "$PENDING")"
     date +%s >"$PENDING"
-    echo "mise: warning: locked install failed; retry with chezmoi apply" >&2
+    echo "mise: warning: mise install failed; retry with chezmoi apply" >&2
 fi
 {{ end -}}

@@ -75,7 +75,7 @@ enum Commands {
         no_externals: bool,
     },
 
-    /// Upgrade managed toolchains (mise, pixi, fetch, sheldon) without auto-committing
+    /// Upgrade managed toolchains locally (mise, pixi, fetch, sheldon, pi)
     Upgrade {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
@@ -203,16 +203,14 @@ _dotfiles_dynamic_upgrade() {
     opts=(
         '-n:Check upstream versions without modifying anything'
         '--dry-run:Check upstream versions without modifying anything'
-        '--only:Limit to specific layer(s) (mise,pixi,fetch,sheldon)'
-        '--no-major:Skip major version jumps in mise'
-        '--include-self:Also check self-released dotfiles-cli'
-        '--jobs:Parallel mise version queries'
+        '--only:Limit to specific layer(s) (mise,pixi,fetch,sheldon,pi)'
     )
     layers=(
-        'mise:Locked CLIs, runtimes, LSPs, and agents in .chezmoidata/mise.toml'
+        'mise:CLIs, runtimes, LSPs, and agents in .chezmoidata/mise.toml'
         'pixi:Global pixi environments'
-        'fetch:Unpinned dotfiles-fetch apps and fonts'
+        'fetch:Managed apps, fonts, and Zotero plugins'
         'sheldon:Zsh plugins via sheldon lock --update'
+        'pi:Pi npm extensions via pi update --extensions'
     )
     if [[ "${words[CURRENT-1]:-}" == "--only" ]]; then
         _describe -t layers 'upgrade layer' layers

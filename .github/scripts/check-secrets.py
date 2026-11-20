@@ -10,7 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-VERSION = "8.30.1"
+MIN_VERSION = (8, 30, 0)
 _DEFAULT_PROTECTED = (
     "private_dot_ssh/",
     "private_dot_agents/skills/private_machines/references/",
@@ -53,6 +53,13 @@ def git(*args, check=True):
     return result
 
 
+def parse_version(raw):
+    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?", raw.strip())
+    if not match:
+        return None
+    return tuple(int(part) for part in match.groups())
+
+
 def scanner():
     mise_shim = Path.home() / ".local/share/mise/shims/gitleaks"
     binary = str(mise_shim) if mise_shim.is_file() else shutil.which("gitleaks")
@@ -61,8 +68,12 @@ def scanner():
     result = subprocess.run(
         [binary, "version"], capture_output=True, text=True, check=False
     )
-    if result.returncode or result.stdout.strip() != VERSION:
-        raise Refused(f"Gitleaks {VERSION} is required. Run chezmoi apply, then retry.")
+    version = parse_version(result.stdout) if result.returncode == 0 else None
+    if version is None or version < MIN_VERSION:
+        need = ".".join(str(part) for part in MIN_VERSION)
+        raise Refused(
+            f"Gitleaks >= {need} is required. Run dotfiles upgrade, then retry."
+        )
     return binary
 
 

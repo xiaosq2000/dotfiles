@@ -1,10 +1,10 @@
 {{- $needs_install := false -}}
 {{- if has "dev" (index .machines .machine).bundles -}}
-{{-   range $name, $version := .agents.pi.packages -}}
+{{-   range $name := .agents.pi.packages -}}
 {{-     $manifest := joinPath $.chezmoi.homeDir ".pi/agent/npm/node_modules" $name "package.json" -}}
 {{-     if stat $manifest -}}
 {{-       $parsed := include $manifest | fromJson -}}
-{{-       if or (ne (get $parsed "name" | default "") $name) (ne (get $parsed "version" | default "") $version) -}}
+{{-       if ne (get $parsed "name" | default "") $name -}}
 {{-         $needs_install = true -}}
 {{-       end -}}
 {{-     else -}}
@@ -14,9 +14,10 @@
 {{- end -}}
 {{- if $needs_install -}}
 #!/usr/bin/env bash
-# Run after the managed Pi download. Renders empty when every pinned package is
-# already installed at its target version (or agent-tools is unselected), so
-# `chezmoi status` and `chezmoi verify` stay clean while failed installs retry.
+# Run after mise installs Pi. Renders empty once every declared package is
+# present (or dev is unselected), so `chezmoi status` and `chezmoi verify` stay
+# clean while missing installs retry. Upgrade anytime via `pi update --extensions`
+# or `dotfiles upgrade --only pi`.
 set -eu
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 if ! command -v python3 >/dev/null 2>&1; then
@@ -52,15 +53,15 @@ except (OSError, ValueError, KeyError, TypeError):
     raise SystemExit(0)
 
 pending = []
-for name, version in WANTED.items():
-    source = f"npm:{name}@{version}"
+for name in WANTED:
+    source = f"npm:{name}"
     if source not in configured:
         warn(f"shared declaration absent for {name}, installation skipped")
         continue
     manifest = agent / "npm/node_modules" / name / "package.json"
     try:
         installed = json.loads(manifest.read_text())
-        if installed.get("name") == name and installed.get("version") == version:
+        if installed.get("name") == name:
             continue
     except (OSError, ValueError, AttributeError):
         pass

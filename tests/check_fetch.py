@@ -343,9 +343,11 @@ def fixtures(box, catalog):
 
     # Catalog pins win over the latest release, including explicit update.
     pinned_ids = ("better-bibtex", "extra-meta")
-    v1_specs = {i: dict(resources[i]) for i in pinned_ids}
+    v1_specs = {i: publish(box, i, dict(catalog[i], tag="v1"), "1") for i in pinned_ids}
+    pinned_v1 = dict(everything, resources=dict(resources, **v1_specs))
+    box.fetch("sync", manifest=pinned_v1)
     v2_specs = {i: publish(box, i, dict(catalog[i], tag="v2"), "2") for i in pinned_ids}
-    newer = box.fetch("outdated").stdout
+    newer = box.fetch("outdated", manifest=pinned_v1).stdout
     assert "catalog pin: v1" in newer
     box.fetch("update", *pinned_ids)
     assert all(box.lock()[i]["version"] == "v1" for i in pinned_ids)
@@ -362,7 +364,7 @@ def fixtures(box, catalog):
         assert (store / "better-bibtex/v1").exists() and (store / "better-bibtex/v2").exists()
 
     # A nonexistent pin fails without moving or deleting the installed version.
-    missing = dict(everything, resources=dict(resources, **{"better-bibtex": dict(resources["better-bibtex"], tag="v404")}))
+    missing = dict(everything, resources=dict(resources, **{"better-bibtex": dict(v1_specs["better-bibtex"], tag="v404")}))
     assert box.fetch("sync", manifest=missing, check=False).returncode == 1
     assert box.lock()["better-bibtex"]["version"] == "v1" and plugin.is_file()
 
@@ -375,7 +377,7 @@ def fixtures(box, catalog):
     # Empty font directories are treated as missing files and reinstalled.
     for font_file in (fonts / "fira").iterdir():
         font_file.unlink()
-    assert "missing files" in box.fetch("status", manifest=everything).stdout
+    assert "missing files" in box.fetch("status", manifest=pinned_v1).stdout
     box.fetch("sync")
     assert any((fonts / "fira").iterdir())
 

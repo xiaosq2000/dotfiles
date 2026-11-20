@@ -14,8 +14,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import tomllib
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / ".github/scripts/check-secrets.py"
 # Do not leave bytecode files in the chezmoi source tree.
@@ -286,9 +284,24 @@ class SecretHooks(unittest.TestCase):
             )
         self.assertNotIn(TOKEN, output.getvalue())
 
-    def test_catalog_pin_matches_hook(self):
-        catalog = tomllib.loads((ROOT / ".chezmoidata/mise.toml").read_text())
-        self.assertEqual(catalog["mise"]["gitleaks"]["version"], check.VERSION)
+    def test_scanner_min_version_check(self):
+        self.assertEqual(check.parse_version("8.30.1\n"), (8, 30, 1))
+        self.assertEqual(check.parse_version("v9.1.0-rc1"), (9, 1, 0))
+        self.assertIsNone(check.parse_version("unknown"))
+
+        fake_bin = self.base / "gitleaks"
+        for output, should_pass in (("8.30.0", True), ("8.31.2", True), ("8.29.9", False), ("broken", False)):
+            fake_bin.write_text(f"#!/usr/bin/env python3\nprint({output!r})\n")
+            fake_bin.chmod(0o755)
+            with (
+                patch.object(check.Path, "home", return_value=self.base / "no-home"),
+                patch.object(check.shutil, "which", return_value=str(fake_bin)),
+            ):
+                if should_pass:
+                    self.assertEqual(check.scanner(), str(fake_bin))
+                else:
+                    with self.assertRaisesRegex(check.Refused, "Gitleaks >="):
+                        check.scanner()
 
 
 if __name__ == "__main__":

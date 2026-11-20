@@ -2,12 +2,11 @@
 #!/usr/bin/env bash
 # Zotero owns its profile. Do not overwrite an existing user.js or edit prefs.js.
 #
-# Re-runs when shared preferences, plugin pins/downloads, Zotero profile
+# Re-runs when shared preferences, downloaded plugins, Zotero profile
 # presence, or a deferred (Zotero-running) pending marker changes.
 # zotero-user.js sha256: {{ include "private_dot_config/dotfiles/zotero-user.js.tmpl" | sha256sum }}
-# better-bibtex tag: {{ (index .downloads "better-bibtex").tag }}
+# downloads lock: {{ $lock := joinPath .chezmoi.homeDir ".local/state/dotfiles/downloads.lock.json" }}{{ if stat $lock }}{{ include $lock | sha256sum }}{{ else }}none{{ end }}
 # better-bibtex downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi") }}present{{ else }}absent{{ end }}
-# extra-meta tag: {{ (index .downloads "extra-meta").tag }}
 # extra-meta downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi") }}present{{ else }}absent{{ end }}
 # profiles.ini: {{ if stat (joinPath .chezmoi.homeDir ".zotero/zotero/profiles.ini") }}present{{ else }}absent{{ end }}
 # pending: {{ $pending := joinPath .chezmoi.homeDir ".local/state/dotfiles/zotero-pending" }}{{ if stat $pending }}{{ include $pending | trim }}{{ else }}none{{ end }}
@@ -36,9 +35,7 @@ home = Path.home()
 zotero = home / ".zotero/zotero"
 shared = home / ".config/dotfiles/zotero-user.js"
 bbt_plugin = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
-bbt_tag = {{ (index .downloads "better-bibtex").tag | quote }}
 extra_meta_plugin = home / ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi"
-extra_meta_tag = {{ (index .downloads "extra-meta").tag | quote }}
 pending_marker = home / ".local/state/dotfiles/zotero-pending"
 MAX_BACKUPS = 5
 deferred = False
@@ -117,15 +114,13 @@ def addon_status(profile, plugin_id, name, check_updates):
         pass
 
 
-def install_plugin(profile, plugin_id, name, source, expected_version=None, check_updates=False):
+def install_plugin(profile, plugin_id, name, source, check_updates=False):
     if not source.is_file():
         warn(f"{name} package missing; run dotfiles fetch sync and chezmoi apply")
         mark_deferred()
         return
     try:
         actual_version, version_str = metadata(source, plugin_id)
-        if expected_version is not None and actual_version != parse_version(expected_version):
-            raise ValueError("package version does not match the catalog pin")
         wanted = digest(source)
         target = profile / "extensions" / f"{plugin_id}.xpi"
         if target.is_symlink():
@@ -208,7 +203,6 @@ install_plugin(
     "better-bibtex@iris-advies.com",
     "Better BibTeX",
     bbt_plugin,
-    expected_version=bbt_tag.removeprefix("v"),
     check_updates=True,
 )
 install_plugin(
@@ -216,7 +210,6 @@ install_plugin(
     "extra-meta@dotfiles.local",
     "Extra Meta",
     extra_meta_plugin,
-    expected_version=extra_meta_tag.removeprefix("v"),
     check_updates=False,
 )
 

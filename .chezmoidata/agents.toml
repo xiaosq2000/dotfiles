@@ -109,7 +109,15 @@ ssh_drop_ins = "/etc/ssh/ssh_config.d"
 #   url = "https://.../mcp"    # streamable HTTP transport
 [agents.mcp]
 
-# Shared Pi settings, pinned npm packages, and pi-subagents context policy.
+# Shared Pi settings, npm packages (unpinned; upgraded via `pi update --extensions`
+# or `dotfiles upgrade`), and pi-subagents context policy.
+[agents.pi]
+packages = [
+    "pi-openai-toolkit",
+    "pi-ask-user",
+    "pi-subagents",
+]
+
 [agents.pi.settings]
 defaultProvider = "openai-codex"
 defaultModel = "gpt-6.1-sol"
@@ -128,8 +136,3 @@ inherit_global_context_agents = [
     "delegate",
     "evidence-auditor",
 ]
-
-[agents.pi.packages]
-pi-openai-toolkit = "0.22.3"
-pi-ask-user = "0.17.0"
-pi-subagents = "0.80.0"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Pi settings preservation and package repair without network access."""
+"""Check Pi settings preservation and unpinned package installation without network access."""
 
 import json
 import os
@@ -10,7 +10,7 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = tomllib.loads((ROOT / ".chezmoidata/agents.toml").read_text())["agents"]["pi"]
-WANTED = {name: f"npm:{name}@{version}" for name, version in BASELINE["packages"].items()}
+WANTED = {name: f"npm:{name}" for name in BASELINE["packages"]}
 
 with tempfile.TemporaryDirectory(prefix="dotfiles-pi-") as temporary:
     base = Path(temporary)
@@ -75,10 +75,10 @@ with Path(os.environ["PI_TEST_LOG"]).open("a") as log:
 if os.environ.get("PI_TEST_FAIL"):
     sys.exit(1)
 assert sys.argv[1] == "install"
-name, version = sys.argv[2][4:].rsplit("@", 1)
-manifest = Path.home() / ".pi/agent/npm/node_modules" / name / "package.json"
+pkg = sys.argv[2].removeprefix("npm:")
+manifest = Path.home() / ".pi/agent/npm/node_modules" / pkg / "package.json"
 manifest.parent.mkdir(parents=True, exist_ok=True)
-manifest.write_text(json.dumps({"name": name, "version": version}))
+manifest.write_text(json.dumps({"name": pkg, "version": "1.0.0"}))
 ''')
     managed_pi.chmod(0o755)
     log = base / "calls.jsonl"
@@ -106,15 +106,19 @@ manifest.write_text(json.dumps({"name": name, "version": version}))
     assert len(calls()) == count
     assert target.read_text() == first
 
-    # A mismatched package is repaired alone. Failed repairs retry next apply.
+    # Upgraded local versions are left untouched; missing manifests are installed and retry on failure.
     manifest = home / ".pi/agent/npm/node_modules" / name / "package.json"
-    manifest.write_text(json.dumps({"name": name, "version": "wrong"}))
+    manifest.write_text(json.dumps({"name": name, "version": "9.9.9"}))
+    install()
+    assert len(calls()) == count
+
+    manifest.unlink()
     install(PI_TEST_FAIL="1")
     install(PI_TEST_FAIL="1")
     assert len(calls()) == count + 2
     install()
     assert calls()[-1]["args"] == ["install", WANTED[name]]
-    assert json.loads(manifest.read_text())["version"] == BASELINE["packages"][name]
+    assert json.loads(manifest.read_text())["name"] == name
 
     # Invalid settings must not trigger an installation or stop apply.
     target.write_text("invalid JSON\n")
@@ -123,7 +127,7 @@ manifest.write_text(json.dumps({"name": name, "version": version}))
     assert len(calls()) == count
     target.write_text(first)
     managed_pi.rename(managed_pi.with_name("pi-disabled"))
-    manifest.write_text("{}")
+    manifest.unlink()
     install()
     assert len(calls()) == count
 
@@ -133,4 +137,4 @@ manifest.write_text(json.dumps({"name": name, "version": version}))
     install()
     assert len(calls()) == count
 
-print("Pi settings preservation, duplicate removal, package repair and env inheritance pass.")
+print("Pi settings preservation, duplicate removal, unpinned package install and env inheritance pass.")

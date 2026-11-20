@@ -54,8 +54,8 @@ interactive Ratatui TUI:
 dotfiles                            # interactive Ratatui TUI (5 tabs + live Theme Studio)
 dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents and sandbox
 dotfiles sync [--update] [--dry-run] # chezmoi apply/update (inherits shell network/proxy env)
-dotfiles upgrade [--dry-run] [--only mise,pixi,fetch,sheldon] [--no-major]
-                                    # upgrade toolchains, regenerate mise.lock, apply & doctor
+dotfiles upgrade [--dry-run] [--only mise,pixi,fetch,sheldon,pi]
+                                    # upgrade toolchains locally & run doctor
 dotfiles machine [--list]           # describe this host or list known machines
 dotfiles theme [variant]            # switch or preview colour theme across tools
 dotfiles fetch <status|sync|outdated|update>
@@ -192,14 +192,14 @@ key is. `dotfiles machine` prints the path of the current machine's page.
 ## Pi and RTK
 
 Workstation, laptop, imrl and sicc select `dev`. The vps, container and
-generic profiles do not. The bundle installs Pi and RTK through `mise` with
-SHA-256 verification from `private_dot_config/mise/mise.lock`, plus Node/npm for
-Pi extensions.
+generic profiles do not. The bundle installs Pi and RTK through `mise` (latest
+upstream releases verified via `mise` attestations), plus Node/npm for Pi
+extensions.
 
-Checked on 2026-11-19. Pi is pinned to `1.5.2`, and RTK to `1.0.0`, in
-[mise.toml](.chezmoidata/mise.toml). To upgrade or roll back, change the version
-there, run `mise run lock-tools`, and run `chezmoi apply` on each target. Do not
-use `pi update` to update the dotfiles-managed executable.
+Checked on 2026-11-20. Upgrade Pi and RTK anytime with `dotfiles upgrade --only mise`
+(or `mise upgrade pi rtk`), and Pi extensions with `dotfiles upgrade --only pi`
+(or `pi update --extensions`). Do not use `pi update` (`--self`) on the
+`mise`-managed binary.
 
 ```sh
 command -v pi rtk              # ~/.local/share/mise/shims on a new shell
@@ -212,17 +212,15 @@ Pi loads `~/.pi/agent/AGENTS.md` and discovers `~/.agents/skills` natively.
 [agents.toml](.chezmoidata/agents.toml) defines the unified control plane for
 Claude Code, Codex, Antigravity CLI (`agy`), and Pi — including Pi's shared
 startup settings, `pi-subagents` global-context inheritance (`inheritGlobalContext: true`
-plus `defaultSubagentOnlyExtensions` for `dotfiles-guard.ts`), and pinned
+plus `defaultSubagentOnlyExtensions` for `dotfiles-guard.ts`), and shared npm
 packages (`pi-openai-toolkit`, `pi-ask-user`, `pi-subagents`).
 `dot_local/libexec/dotfiles/executable_agent-reconcile.py` merges those values
 into each agent's native config while preserving local settings, sessions,
 credentials, Herdr hooks, and unrelated packages.
 
-Each apply checks installed Pi package versions after `mise` installs `pi`.
-Matching versions need no network request. Missing or mismatched packages
-install through the managed Pi. Failed installations warn and retry on the next
-apply. Change shared package versions in `.chezmoidata/agents.toml`, not
-through `pi update --extensions`.
+Each apply ensures declared Pi packages are installed after `mise` installs
+`pi`. Already-installed packages stay offline and untouched; upgrade them
+anytime with `pi update --extensions` or `dotfiles upgrade --only pi`.
 
 `pi-subagents` enables delegated tasks when you request them. Installation does
 not start a reviewer or authorize automatic delegation. Run `/subagents-doctor`
@@ -294,17 +292,16 @@ The cause is unresolved.
 A machine's `bundles` in [machines.toml](.chezmoidata/machines.toml) decide
 everything it gets. Each bundle in [tools.toml](.chezmoidata/tools.toml) can
 name four kinds of thing: pixi `packages` (conda-forge / HPC strongholds),
-`mise` tools from [mise.toml](.chezmoidata/mise.toml) locked in
-`private_dot_config/mise/mise.lock`, `downloads` from
+`mise` tools from [mise.toml](.chezmoidata/mise.toml), `downloads` from
 [downloads.toml](.chezmoidata/downloads.toml) for GUI bundles, fonts, `.xpi`
 plugins and `agy`, and `config` paths that only a machine selecting it receives.
 
 | bundle | contents |
 | --- | --- |
-| `core` | `zsh`, `mosh`, `sqlite`, `chezmoi`, `mise`, plus 22 locked CLIs (`dotfiles`, `nvim`, `tmux`, `fzf`, `rg`, `fd`, `eza`, `yazi`, `starship`, `zoxide`, `lazygit`, `difft`, `sheldon`, `pre-commit`, `gitleaks`, ...) — every machine, including VPS and login nodes |
+| `core` | `zsh`, `mosh`, `sqlite`, `chezmoi`, `mise`, plus 22 CLIs (`dotfiles`, `nvim`, `tmux`, `fzf`, `rg`, `fd`, `eza`, `yazi`, `starship`, `zoxide`, `lazygit`, `difft`, `sheldon`, `pre-commit`, `gitleaks`, ...) — every machine, including VPS and login nodes |
 | `secrets` | encryption, password vault, and GitHub CLI auth boundary (`age`, `sops`, `rbw`, `libsecret`, `gh`) — trusted machines only; never on VPS |
 | `dev` | full development, Python/ML (`uv`, `ruff`, `ty`, `huggingface_hub`), C++/Web/LaTeX, all Neovim LSPs, `ffmpeg`, diagnostics, 4 coding agents (`codex`, `claude`, `agy`, `pi`, `rtk`), and `herdr` |
-| `desktop` | `kitty`, 19 font families, `zathura`/`fcitx5`/Wayland config, and Zotero with pinned Better BibTeX and Extra Meta |
+| `desktop` | `kitty`, 19 font families, `zathura`/`fcitx5`/Wayland config, and Zotero with Better BibTeX and Extra Meta |
 | `laptop` | `um-vpn` (built by pixi from git) and a user service that drops the panel to 60 Hz on battery |
 
 To add software, add it to a bundle and run `chezmoi apply`.
@@ -317,18 +314,18 @@ explicitly, so one dependency conflict cannot break a whole bundle and
 conda-forge runtimes (`node`, `openssl`, `python3.14`, `tclsh`, `wish`) stay off
 `PATH`.
 
-**Locked CLIs, runtimes, LSPs, and agents (`mise`).** `mise` is the primary
-manager for cross-platform CLIs, language runtimes (`node`, `pnpm`, `deno`,
+**CLIs, runtimes, LSPs, and agents (`mise`).** `mise` is the primary manager
+for cross-platform CLIs, language runtimes (`node` on `lts`, `pnpm`, `deno`,
 `uv`, `ruff`, `ty`), language servers, and coding agents (`codex`,
-`claude-code`, `pi`, `rtk`, `herdr`, plus `dotfiles-cli`). chezmoi renders
-`~/.config/mise/config.toml` from each machine's selected `mise` entries
-alongside the shared multi-arch `~/.config/mise/mise.lock` (`linux-x64` and
-`linux-arm64`), and runs `mise install --locked`, `mise reshim`, and
-`mise prune --yes`. Shims live in `~/.local/share/mise/shims`. To upgrade a
-tool, update its version in `.chezmoidata/mise.toml`, run `mise run lock-tools`,
-and apply. `pixi global` stays minimal for conda-forge / HPC ABI strongholds
-(`zsh`, `mosh`, `ffmpeg`, `sqlite`, `clang-tools`, `rbw`, `libsecret`,
-`huggingface_hub`, `um-vpn`).
+`claude-code`, `pi`, `rtk`, `herdr`, plus `dotfiles-cli`). Tools follow
+upstream `latest` by default (verified via `mise`'s built-in SLSA / cosign /
+GitHub attestation / npm provenance checks). `chezmoi apply` renders
+`~/.config/mise/config.toml` and runs `mise install`, `mise reshim`, and
+`mise prune --yes` without churning already-installed tools. Shims live in
+`~/.local/share/mise/shims`. Upgrade anytime on any machine with
+`dotfiles upgrade` or `mise upgrade [tool]`. `pixi global` stays minimal for
+conda-forge / HPC ABI strongholds (`zsh`, `mosh`, `ffmpeg`, `sqlite`,
+`clang-tools`, `rbw`, `libsecret`, `huggingface_hub`, `um-vpn`).
 
 **Downloads.** chezmoi renders the selection into
 `~/.config/dotfiles/downloads.json` and runs `dotfiles fetch sync` whenever it
@@ -369,21 +366,21 @@ it already has, the way an application keeps its profile.
 
 ### Zotero, Better BibTeX and Extra Meta
 
-Checked on 2026-11-19 with Zotero 10.0.6, Better BibTeX 9.0.71 and Extra Meta 0.1.7.
-The `desktop` bundle pins both Better BibTeX and
+Checked on 2026-11-20. The `desktop` bundle declares Better BibTeX and
 [Extra Meta](https://github.com/xiaosq2000/zotero-extra-meta) (`extra-meta@dotfiles.local`)
-in `.chezmoidata/downloads.toml`. `dotfiles-fetch` downloads both `.xpi` release
-assets and checks their published digests. An apply installs both plugins in the
-default Zotero profile and leaves identical installations unchanged. If Zotero is
-running, an install or upgrade waits until you close Zotero and run
-`chezmoi apply` again. It saves replaced plugins in
-`~/.local/state/dotfiles/zotero-plugins/` (pruning to the five newest backups).
-It will not downgrade a newer installation or replace an existing plugin symlink.
+in `.chezmoidata/downloads.toml` alongside Zotero itself (all unpinned, updated
+via `dotfiles fetch update` or `dotfiles upgrade --only fetch`). `dotfiles fetch`
+downloads both `.xpi` release assets and verifies their published digests. An
+apply installs both plugins in the default Zotero profile and leaves identical
+installations unchanged. If Zotero is running, an install or upgrade waits
+until you close Zotero and run `chezmoi apply` again. It saves replaced plugins
+in `~/.local/state/dotfiles/zotero-plugins/` (pruning to the five newest
+backups). It will not downgrade a newer installation or replace an existing
+plugin symlink.
 
 On a new profile, open Zotero and enable Better BibTeX and Extra Meta in the plugin
 manager. For Better BibTeX, set automatic updates to Off in the plugin's settings on
-each machine so Zotero does not change the pinned version. To upgrade Better BibTeX,
-update the catalog pin, check plugin compatibility and apply on each machine.
+each machine so Zotero and `dotfiles fetch` do not compete.
 
 The bundle shares Better BibTeX preferences and `extensions.startupScanScopes`
 (`1`, so Zotero discovers sideloaded plugins in `extensions/` on startup)

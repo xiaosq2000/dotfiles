@@ -4,17 +4,18 @@
 # Edits in ~ are overwritten by the next `chezmoi apply`.
 
 [settings]
-locked = true
-lockfile = true
+locked = false
+lockfile = false
 status = { missing_tools = "never", show_env = false, show_tools = false }
 {{ if $selection.mise }}
 [tools]
 {{- range $id := $selection.mise }}
 {{-   $spec := index $.mise $id }}
+{{-   $ver := get $spec "version" | default "latest" }}
 {{-   if hasKey $spec "version_prefix" }}
-{{ $spec.tool | quote }} = { version = {{ $spec.version | quote }}, version_prefix = {{ $spec.version_prefix | quote }} }
+{{ $spec.tool | quote }} = { version = {{ $ver | quote }}, version_prefix = {{ $spec.version_prefix | quote }} }
 {{-   else }}
-{{ $spec.tool | quote }} = {{ $spec.version | quote }}
+{{ $spec.tool | quote }} = {{ $ver | quote }}
 {{-   end }}
 {{- end }}
 {{ end -}}
