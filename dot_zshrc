@@ -227,32 +227,17 @@ setup_fzf() {
     # Sourced rather than rendered here, because this is the one part of a theme
     # switch that cannot reach a shell already running: an exported variable
     # belongs to the shell that exported it, and chezmoi rewriting this file
-    # does nothing to the zsh reading it. Behind a fixed name the `theme`
+    # does nothing to the zsh reading it. Behind a fixed name the `dotfiles`
     # wrapper below can re-source it, the same way kitty gets poked over its
     # socket and starship re-reads its config on the next prompt.
     [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]] &&
         source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
 }
 
-# `theme` is a script in ~/.local/bin, and a script cannot change the
-# environment of the shell that ran it. Everything else a switch touches
-# re-reads its own config — starship spawns a fresh process per prompt, kitty is
-# poked over its socket, btop and zathura read theirs at startup — so this
-# wrapper exists for FZF_DEFAULT_OPTS alone.
-#
-# Which is also the answer to why `theme` does not exec a new shell: one
-# variable is not worth the directory stack, the background jobs, and whatever
-# you were half-way through typing. Other shells already open stay stale either
-# way, and a new one was always going to be correct.
-#
-# `command` so this is a wrapper and not a loop. Guarded on success so a typo or
-# an abandoned picker does not re-source anything.
-theme() {
-    command theme "$@" || return
-    [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh ]] &&
-        source ${XDG_CONFIG_HOME:-$HOME/.config}/fzf/current-theme.zsh
-}
-
+# `dotfiles` is an external binary, so it cannot change the environment of the
+# shell that ran it. Re-source `current-theme.zsh` after a theme switch or TUI
+# session so FZF_DEFAULT_OPTS updates in place; guarded on success so an error
+# or cancelled picker leaves the shell untouched.
 dotfiles() {
     command dotfiles "$@" || return
     if [[ $# -eq 0 || ${1:-} == "theme" || ${1:-} == "tui" ]] &&
@@ -390,10 +375,8 @@ zvm_config() {
 # so a single file is correct whether it is autoloaded or sourced, and this block
 # does not have to care which.
 #
-# Regeneration is keyed on the binary being newer than the cache, which is what
-# the uv block did before this. It has to be: pixi installs itself, uv comes from
-# the pixi manifest and codex from pnpm, and none of them tell chezmoi when they
-# move.
+# Regeneration is keyed on the binary being newer than the cache. pixi installs
+# itself while uv, codex, and dotfiles are managed by mise.
 _zcompcache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions"
 _zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-${ZSH_VERSION}"
 [[ -d "$_zcompcache" ]] || mkdir -p "$_zcompcache"
@@ -521,20 +504,8 @@ if has eza; then
     alias lt='eza --tree --level=2 --icons=auto'
 fi
 
-# pnpm's PATH entry is set up with pixi's, far above, because codex is a pnpm
-# binary and the completion cache has to see it before compinit runs.
-
-# go
-prepend_env PATH "${HOME}/.local/go/bin"
-
-# deno
-[ -f "$HOME/.deno/env" ] && \. "$HOME/.deno/env"
-
 # starship
 if [[ ${TERM:-} != "dumb" ]] && has starship; then eval "$(starship init zsh)"; fi
-
-# google-drive-upload
-prepend_env PATH "${HOME}/.google-drive-upload/bin"
 
 # tre
 if has tre; then
@@ -546,19 +517,12 @@ if has zoxide; then
     eval "$(zoxide init zsh)"
 fi
 
-# uv, pixi and codex completions are cached to files on fpath in the completion
-# section above, rather than loaded here.
+# uv, pixi, codex, and dotfiles completions are cached to files on fpath in the
+# completion section above, rather than loaded here.
 
 ################################################################################
 ################################# coding agent #################################
 ################################################################################
-# Managed mise shims and downloads must precede manual Pi, RTK and agy
-# installations, including an inherited PATH that already lists them later.
-remove_from_env PATH "${HOME}/.local/share/mise/shims"
-prepend_env PATH "${HOME}/.local/share/mise/shims"
-remove_from_env PATH "${HOME}/.local/opt/dotfiles/bin"
-prepend_env PATH "${HOME}/.local/opt/dotfiles/bin"
-
 # Default-jail the four primary coding agents (`claude`, `codex`, `agy`, `pi`)
 # using OS-level bwrap / Landlock isolation (policy in ~/.config/dotfiles/policy.json).
 # - `agy` also defaults to `--dangerously-skip-permissions` (guarded by agent-jail + key-guard).
@@ -570,7 +534,7 @@ unjail() {
     DOTFILES_NO_JAIL=1 "$@"
 }
 
-if has agent-jail; then
+if [[ -x "${HOME}/.local/libexec/dotfiles/agent-jail" ]]; then
     _dotfiles_run_jailed() {
         local _agent="$1"
         shift
@@ -596,29 +560,12 @@ if has agent-jail; then
                 return
                 ;;
         esac
-        command agent-jail --wrap "$_agent" -- "$@"
+        "${HOME}/.local/libexec/dotfiles/agent-jail" --wrap "$_agent" -- "$@"
     }
     has claude && claude() { _dotfiles_run_jailed claude "$@"; }
     has codex  && codex()  { _dotfiles_run_jailed codex "$@"; }
     has agy    && agy()    { _dotfiles_run_jailed agy "$@"; }
     has pi     && pi()     { _dotfiles_run_jailed pi "$@"; }
-elif has agy; then
-    agy() {
-        case "${1:-}" in
-            acp|agent|agents|changelog|doctor|help|install|mcp|mic-serve|models|plugin|plugins|remote-control|update|-h|--help|-v|--version)
-                command agy "$@"
-                return
-                ;;
-        esac
-        local _arg
-        for _arg in "$@"; do
-            if [[ "$_arg" == "--dangerously-skip-permissions" ]]; then
-                command agy "$@"
-                return
-            fi
-        done
-        command agy --dangerously-skip-permissions "$@"
-    }
 fi
 
 setup_texlive() {

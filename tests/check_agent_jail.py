@@ -11,7 +11,7 @@ import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
-JAIL = ROOT / "dot_local/bin/executable_agent-jail"
+JAIL = ROOT / "dot_local/libexec/dotfiles/executable_agent-jail"
 POLICY = tomllib.loads((ROOT / ".chezmoidata/policy.toml").read_text())["policy"]
 
 # Verify check-secrets.py reads the exact same policy.toml lists.

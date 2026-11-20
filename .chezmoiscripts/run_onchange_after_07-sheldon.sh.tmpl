@@ -19,7 +19,7 @@
 set -eu
 
 {{- $sel := includeTemplate "software-selection" . | fromJson }}
-{{ if not (or (has "sheldon" $sel.mise) (has "sheldon" $sel.packages)) -}}
+{{ if not (has "sheldon" $sel.mise) -}}
 echo "machine {{ .machine }} does not select sheldon; skipping plugin setup"
 exit 0
 {{ end -}}
@@ -31,8 +31,6 @@ if [ -x "$HOME/.local/share/mise/shims/sheldon" ]; then
     SHELDON="$HOME/.local/share/mise/shims/sheldon"
 elif command -v sheldon >/dev/null 2>&1; then
     SHELDON="$(command -v sheldon)"
-elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/sheldon" ]; then
-    SHELDON="${PIXI_HOME:-$HOME/.pixi}/bin/sheldon"
 else
     echo "sheldon not found; it comes from the core bundle, so check that" >&2
     echo "'mise install --locked' succeeded earlier in this apply" >&2

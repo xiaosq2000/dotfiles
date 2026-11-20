@@ -45,10 +45,10 @@ else assumed.
 
 ## Day to day
 
-Checked on 2026-11-19. The unified `dotfiles` CLI (built in Rust under
-[cli/](cli/Cargo.toml), with a zero-dependency Python fallback at
-`~/.local/bin/dotfiles`) wraps daily operations, dynamic Zsh tab completion
-(via `fzf-tab`), and an interactive Ratatui TUI:
+Checked on 2026-11-20. The unified `dotfiles` CLI (built in Rust under
+[cli/](cli/Cargo.toml) and installed via `mise` in the `core` bundle) wraps
+daily operations, dynamic Zsh tab completion (via `fzf-tab`), and an
+interactive Ratatui TUI:
 
 ```sh
 dotfiles                            # interactive Ratatui TUI (5 tabs + live Theme Studio)
@@ -56,6 +56,7 @@ dotfiles doctor [--json]            # host health, drift, secrets, toolchain, ag
 dotfiles sync [--update] [--dry-run] # chezmoi apply/update (inherits shell network/proxy env)
 dotfiles upgrade [--dry-run] [--only mise,pixi,fetch,sheldon] [--no-major]
                                     # upgrade toolchains, regenerate mise.lock, apply & doctor
+dotfiles machine [--list]           # describe this host or list known machines
 dotfiles theme [variant]            # switch or preview colour theme across tools
 dotfiles fetch <status|sync|outdated|update>
 dotfiles jail [options] -- <cmd>    # run any command inside agent-jail
@@ -112,9 +113,9 @@ git dlog                     # Difftastic patch history
 ## Themes
 
 ```sh
-dotfiles                       # open the TUI Theme Studio (Tab 2) for truecolor live preview
-dotfiles theme rose-pine-dawn  # switch everywhere and apply (`theme` alias works too)
-theme --dry-run catppuccin-mocha
+dotfiles                            # open the TUI Theme Studio (Tab 2) for truecolor live preview
+dotfiles theme rose-pine-dawn       # switch everywhere and apply
+dotfiles theme --dry-run catppuccin-mocha
 ```
 
 One switch covers btop, kitty, tmux, Neovim, zathura, fzf, starship and Herdr
@@ -186,7 +187,7 @@ machine (what it is for, how to reach it, accounts, hardware, storage, rules and
 quirks) plus a page on the network between them. The pages are age-encrypted in
 [private_dot_agents/skills/private_machines](private_dot_agents/skills/private_machines) and
 decrypted to `~/.agents/skills/machines` on apply, so they exist only where the
-key is. `machine` prints the path of the current machine's page.
+key is. `dotfiles machine` prints the path of the current machine's page.
 
 ## Pi and RTK
 
@@ -246,10 +247,8 @@ RTK is available for explicit commands, such as `rtk git status`. This bundle
 does not install RTK hooks, change telemetry consent, or enable automatic
 filtering. Existing RTK integrations stay unchanged.
 
-Manual installations remain in place as fallbacks. New bash and zsh shells put
-the managed downloads before those copies. Scripts and CLIs inherit the caller's
-shell network and proxy environment (`sbc` / `http_proxy` / `https_proxy`)
-without overriding it.
+Scripts and CLIs inherit the caller's shell network and proxy environment
+(`sbc` / `http_proxy` / `https_proxy`) without overriding it.
 
 ## Antigravity CLI
 
@@ -272,7 +271,7 @@ The workstation, laptop, imrl and sicc include Herdr through the `dev` bundle.
 Start `herdr` in a project directory. The shared `herdr` skill teaches agents to
 control panes when asked.
 
-`theme` selects a supported Herdr palette, preserving light or dark appearance,
+`dotfiles theme` selects a supported Herdr palette, preserving light or dark appearance,
 and reloads the running session when available. It owns the `[theme]` section of
 Herdr's config; other settings are preserved.
 
@@ -332,9 +331,9 @@ and apply. `pixi global` stays minimal for conda-forge / HPC ABI strongholds
 `huggingface_hub`, `um-vpn`).
 
 **Downloads.** chezmoi renders the selection into
-`~/.config/dotfiles/downloads.json` and runs `dotfiles-fetch sync` whenever it
+`~/.config/dotfiles/downloads.json` and runs `dotfiles fetch sync` whenever it
 changes. chezmoi never downloads these itself, so `chezmoi diff` and `cat` stay
-fast and work offline. `dotfiles-fetch` installs only under names of its own:
+fast and work offline. `dotfiles fetch` installs only under names of its own:
 
 | what | where |
 | --- | --- |
@@ -353,19 +352,15 @@ A GitHub download with a catalog `tag` follows that pin on every sync, including
 upgrades and rollbacks. Updating is a decision, as with `sheldon lock --update`:
 
 ```sh
-dotfiles-fetch status          # what is selected and installed; offline
-dotfiles-fetch outdated        # GitHub releases newer than what is installed
-dotfiles-fetch update [id...]  # latest release, or the catalog tag when pinned
+dotfiles fetch status          # what is selected and installed; offline
+dotfiles fetch outdated        # GitHub releases newer than what is installed
+dotfiles fetch update [id...]  # latest release, or the catalog tag when pinned
 ```
 
 GitHub releases are verified against committed catalog `sha256` digests (required
 for pinned tags) and GitHub's published release digests. Zotero's built-in updater
-is disabled, since `dotfiles-fetch update` replaces the application. A download
+is disabled, since `dotfiles fetch update` replaces the application. A download
 with no build for the machine's platform is skipped with a warning.
-
-Kitty, Zotero and the fonts that `setup.d/typefaces.sh` installed before this
-lived at shared paths. `dotfiles-fetch migrate` lists the font directories that
-script wrote, and `--apply` deletes them; it only reports the rest.
 
 **Config.** The `config` paths of every bundle a machine does not select go into
 `.chezmoiignore`. Zathura and Fcitx5 come from the distribution; `desktop`

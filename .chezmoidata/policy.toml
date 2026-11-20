@@ -1,5 +1,5 @@
 # Single source of truth for secret protection policy shared by:
-#   - agent-jail (dot_local/bin/executable_agent-jail) via ~/.config/dotfiles/policy.json
+#   - agent-jail (dot_local/libexec/dotfiles/executable_agent-jail) via ~/.config/dotfiles/policy.json
 #   - key-guard.py (private_dot_agents/hooks/executable_key-guard.py)
 #   - Git secret hooks (.github/scripts/check-encrypted.sh and check-secrets.py)
 #

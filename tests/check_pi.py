@@ -11,15 +11,6 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = tomllib.loads((ROOT / ".chezmoidata/agents.toml").read_text())["agents"]["pi"]
 WANTED = {name: f"npm:{name}@{version}" for name, version in BASELINE["packages"].items()}
-LEGACY_NPM_COMMAND = [
-    "env",
-    "-u", "http_proxy", "-u", "HTTP_PROXY",
-    "-u", "https_proxy", "-u", "HTTPS_PROXY",
-    "-u", "ftp_proxy", "-u", "FTP_PROXY",
-    "-u", "socks_proxy", "-u", "SOCKS_PROXY",
-    "-u", "all_proxy", "-u", "ALL_PROXY",
-    "npm",
-]
 
 with tempfile.TemporaryDirectory(prefix="dotfiles-pi-") as temporary:
     base = Path(temporary)
@@ -64,9 +55,7 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-pi-") as temporary:
         result = merge(raw)
         assert result.stdout == raw and "unchanged" in result.stderr
 
-    # Legacy dotfiles proxy-stripping npmCommand is cleaned up while custom npmCommand is preserved.
-    legacy_out = json.loads(merge(json.dumps({"npmCommand": LEGACY_NPM_COMMAND})).stdout)
-    assert "npmCommand" not in legacy_out
+    # Custom npmCommand is preserved untouched.
     custom_out = json.loads(merge(json.dumps({"npmCommand": ["pnpm"]})).stdout)
     assert custom_out["npmCommand"] == ["pnpm"]
 
@@ -144,4 +133,4 @@ manifest.write_text(json.dumps({"name": name, "version": version}))
     install()
     assert len(calls()) == count
 
-print("Pi settings preservation, duplicate removal, legacy npmCommand cleanup, package repair and env inheritance pass.")
+print("Pi settings preservation, duplicate removal, package repair and env inheritance pass.")

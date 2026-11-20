@@ -97,7 +97,7 @@ unjail() {
     DOTFILES_NO_JAIL=1 "$@"
 }
 
-if _has agent-jail; then
+if [ -x "$HOME/.local/libexec/dotfiles/agent-jail" ]; then
     _dotfiles_run_jailed() {
         local _agent="$1"
         shift
@@ -123,7 +123,7 @@ if _has agent-jail; then
                 return
                 ;;
         esac
-        command agent-jail --wrap "$_agent" -- "$@"
+        "$HOME/.local/libexec/dotfiles/agent-jail" --wrap "$_agent" -- "$@"
     }
     if _has claude; then claude() { _dotfiles_run_jailed claude "$@"; }; fi
     if _has codex; then codex() { _dotfiles_run_jailed codex "$@"; }; fi

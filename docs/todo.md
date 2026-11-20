@@ -17,20 +17,6 @@ meantime). On each machine, after `dotfiles sync`:
 Machines still to do: laptop, imrl, sicc. Drop a name once done,
 and delete this entry when none are left. See [secrets.md](secrets.md).
 
-## Roll out the late-2026 refactor to remaining machines
-
-Checked on 2026-11-19. `workstation` is deployed, cleaned, and verified;
-remaining hosts in canary order: `laptop` → `imrl` → `sicc` → `vps`. On each host:
-
-```sh
-dotfiles sync --update      # or: chezmoi update (inherits shell/sbc network env)
-dotfiles doctor
-```
-
-On `laptop` (a host with `sudo = true` and `system/laptop/` files), run
-`sudo -v && chezmoi apply` once so updated root-owned units (such as
-`power-tunables.service`) install.
-
 ## Finish the laptop's move to dotfiles-fetch
 
 The laptop runs the dotfiles-fetch copies of kitty, Zotero, `tre` and the

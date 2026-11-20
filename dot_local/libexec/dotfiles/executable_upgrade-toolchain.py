@@ -429,10 +429,12 @@ def upgrade_pixi(args, env):
 def upgrade_fetch(args, env):
     """Upgrade unpinned dotfiles-fetch downloads and report newer pinned releases."""
     print("\n==> [fetch] Managed apps, fonts, and plugins", flush=True)
-    fetch_bin = shutil.which("dotfiles-fetch", path=env.get("PATH"))
-    if not fetch_bin:
-        print("  dotfiles-fetch not found on PATH; skipping.", flush=True)
+    home = Path(env.get("HOME") or Path.home())
+    fetch_path = home / ".local/libexec/dotfiles/dotfiles-fetch"
+    if not fetch_path.is_file():
+        print(f"  {fetch_path} not found; skipping.", flush=True)
         return "skipped"
+    fetch_bin = str(fetch_path)
     if args.dry_run:
         rc = _run_step([fetch_bin, "outdated"], env=env)
         return "dry-run" if rc == 0 else "warn"

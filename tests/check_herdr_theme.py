@@ -105,14 +105,14 @@ exit "${THEME_TEST_RELOAD_STATUS:-0}"
     for status in ("0", "1"):
         config.write_text('[data]\ntheme = "rose-pine"\n')
         log.write_text("")
-        result = subprocess.run(["bash", str(ROOT / "dot_local/bin/executable_theme"), "catppuccin-mocha"],
+        result = subprocess.run(["bash", str(ROOT / "dot_local/libexec/dotfiles/executable_theme"), "catppuccin-mocha"],
                                 env={**environment, "THEME_TEST_RELOAD_STATUS": status},
                                 text=True, capture_output=True, check=True)
         assert log.read_text().splitlines() == ["apply", "reload"]
         assert ("reloaded herdr" in result.stdout) == (status == "0")
     config.write_text('[data]\ntheme = "rose-pine"\n')
     log.write_text("")
-    subprocess.run(["bash", str(ROOT / "dot_local/bin/executable_theme"), "--dry-run", "catppuccin-mocha"],
+    subprocess.run(["bash", str(ROOT / "dot_local/libexec/dotfiles/executable_theme"), "--dry-run", "catppuccin-mocha"],
                    env=environment, text=True, capture_output=True, check=True)
     assert log.read_text().splitlines() == ["diff"]
     assert tomllib.loads(config.read_text())["data"]["theme"] == "rose-pine"

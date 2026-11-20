@@ -196,12 +196,12 @@ Interactive `zsh` and `bash` shells wrap `claude`, `codex`, `agy`, and `pi` in
 package-management subcommands pass through directly).
 
 ```sh
-claude / codex / agy / pi          # runs inside agent-jail automatically
-DOTFILES_JAIL_RW=~/datasets codex  # add extra writable directory (or codex --add-dir)
-unjail agy                         # bypass jail (e.g. when running chezmoi apply)
-DOTFILES_NO_JAIL=1 codex           # bypass jail; codex falls back to its own key-guard sandbox
-agent-jail --mask-gh -- codex      # also mask ~/.config/gh/hosts.yml in untrusted repos
-agent-jail --dry-run --wrap codex  # inspect exact mounts, masked paths, and adapted command
+claude / codex / agy / pi              # runs inside agent-jail automatically
+DOTFILES_JAIL_RW=~/datasets codex      # add extra writable directory (or codex --add-dir)
+unjail agy                             # bypass jail (e.g. when running chezmoi apply)
+DOTFILES_NO_JAIL=1 codex               # bypass jail; codex falls back to its own key-guard sandbox
+dotfiles jail --mask-gh -- codex       # also mask ~/.config/gh/hosts.yml in untrusted repos
+dotfiles jail --dry-run --wrap codex   # inspect exact mounts, masked paths, and adapted command
 ```
 
 - **Primary backend (`bwrap`)**: mounts `/` read-only, current workspace RW,

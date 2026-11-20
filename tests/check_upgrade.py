@@ -183,8 +183,13 @@ def test_end_to_end_preserves_proxy_env():
             logger_preamble
             + f'if sys.argv[1:2] == ["source-path"]: print({str(repo)!r})\n',
         )
-        for tool in ("pixi", "dotfiles-fetch", "sheldon", "dotfiles"):
+        for tool in ("pixi", "sheldon", "dotfiles"):
             make_stub(tool, logger_preamble)
+        libexec = home / ".local/libexec/dotfiles"
+        libexec.mkdir(parents=True)
+        fetch_stub = libexec / "dotfiles-fetch"
+        fetch_stub.write_text(f"#!/usr/bin/env python3\n{logger_preamble}\n", encoding="utf-8")
+        fetch_stub.chmod(0o755)
 
         env = {
             **os.environ,

@@ -65,6 +65,11 @@ jobs:
           fi
           cargo run --quiet --manifest-path cli/Cargo.toml -- completion zsh > /tmp/_dotfiles
           zsh -n /tmp/_dotfiles
+      - name: Run Rust CLI integration tests
+        run: |
+          set -eu
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
+          DOTFILES_CLI_BIN=cli/target/debug/dotfiles python3 tests/check_dotfiles_cli.py
 
   smoke:
     runs-on: ubuntu-latest
@@ -89,6 +94,8 @@ jobs:
       - name: Install chezmoi
         run: sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /usr/local/bin
       - name: Run chezmoi render and behavioral test suite
+        env:
+          SKIP_RUST_CLI: "1"
         run: python3 -m unittest tests.test_suite.ChezmoiChecks -v
       - name: Apply in a clean home without a key or software bundles
         run: |

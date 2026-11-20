@@ -80,6 +80,8 @@ give_up() {
 resolve() {
     if command -v "$1" >/dev/null 2>&1; then
         command -v "$1"
+    elif [ -x "$HOME/.local/share/mise/shims/$1" ]; then
+        printf '%s\n' "$HOME/.local/share/mise/shims/$1"
     elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/$1" ]; then
         printf '%s\n' "${PIXI_HOME:-$HOME/.pixi}/bin/$1"
     fi

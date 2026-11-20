@@ -23,12 +23,7 @@ CODEX_COMMENT = [
     "# Managed by chezmoi from .chezmoidata/agents.toml (agent-reconcile.py).",
     "# Edits to managed sections are overwritten on the next apply. See docs/secrets.md.",
 ]
-# Also strip legacy comment lines written by the pre-Wave-3 modify script.
-LEGACY_CODEX_COMMENTS = {
-    "# Set by chezmoi from dot_codex/modify_private_config.toml, so an edit to",
-    "# this profile is undone by the next apply. See docs/secrets.md.",
-    *CODEX_COMMENT,
-}
+MANAGED_CODEX_COMMENTS = set(CODEX_COMMENT)
 
 
 def warn(target, message):
@@ -282,7 +277,7 @@ def reconcile_codex_config(raw, spec):
         if m:
             in_top = False
             in_managed = table_is_managed(m.group(1))
-        if in_managed or line in LEGACY_CODEX_COMMENTS:
+        if in_managed or line in MANAGED_CODEX_COMMENTS:
             continue
         if in_top:
             d = TOML_TOP_DEFAULT.match(line)
@@ -417,17 +412,6 @@ def reconcile_agy_mcp(raw, spec):
     return json.dumps(after, indent=2, ensure_ascii=False) + "\n"
 
 
-LEGACY_PI_NPM_COMMAND = [
-    "env",
-    "-u", "http_proxy", "-u", "HTTP_PROXY",
-    "-u", "https_proxy", "-u", "HTTPS_PROXY",
-    "-u", "ftp_proxy", "-u", "FTP_PROXY",
-    "-u", "socks_proxy", "-u", "SOCKS_PROXY",
-    "-u", "all_proxy", "-u", "ALL_PROXY",
-    "npm",
-]
-
-
 def reconcile_pi_settings(raw, spec):
     pi_cfg = spec["agents"]["pi"]
     before = json.loads(raw) if raw.strip() else {}
@@ -439,10 +423,6 @@ def reconcile_pi_settings(raw, spec):
     after = copy.deepcopy(before)
     desired_settings = pi_cfg.get("settings", {})
     after.update(copy.deepcopy(desired_settings))
-    # Clean up the retired dotfiles proxy-stripping npmCommand while preserving
-    # any user-configured npmCommand.
-    if "npmCommand" not in desired_settings and after.get("npmCommand") == LEGACY_PI_NPM_COMMAND:
-        after.pop("npmCommand", None)
 
     wanted = {name: f"npm:{name}@{version}" for name, version in pi_cfg.get("packages", {}).items()}
     merged = []

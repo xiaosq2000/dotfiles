@@ -7,12 +7,12 @@
 # selects a variant from .chezmoidata/themes-*.toml and `chezmoi apply` rewrites
 # every tool's config from it.
 #
-#   theme                        pick a variant with fzf, and apply it
-#   theme --help                 the same list as plain text
-#   theme rose-pine-dawn         switch and apply
-#   theme --dry-run catppuccin-mocha
-#                                show what would change without writing
-#   theme --dry-run              pick a variant, then diff it instead of applying
+#   dotfiles theme                        pick a variant with fzf, and apply it
+#   dotfiles theme --help                 the same list as plain text
+#   dotfiles theme rose-pine-dawn         switch and apply
+#   dotfiles theme --dry-run catppuccin-mocha
+#                                         show what would change without writing
+#   dotfiles theme --dry-run              pick a variant, then diff it instead of applying
 #
 # The variant list is not hard-coded here. It used to be, as
 # VARIANTS=(main moon dawn), which meant adding a colour scheme required editing
@@ -74,7 +74,7 @@ variants() {
 usage() {
     local current
     current="$(current_theme)"
-    printf 'usage: theme [--dry-run] [<variant>]\n\n'
+    printf 'usage: dotfiles theme [--dry-run] [<variant>]\n\n'
     # Worth saying, because this listing is now also what you get *instead of*
     # the picker. Without the second sentence, someone who just lost their
     # picker to a missing fzf has no way to tell that is what happened.

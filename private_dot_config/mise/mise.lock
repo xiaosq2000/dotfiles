@@ -760,24 +760,24 @@ url = "https://github.com/rtk-ai/rtk/releases/download/v1.2.0/rtk-x86_64-unknown
 url_api = "https://api.github.com/repos/rtk-ai/rtk/releases/assets/723664846"
 
 [[tools."github:xiaosq2000/dotfiles"]]
-version = "0.1.4"
+version = "0.1.5"
 backend = "github:xiaosq2000/dotfiles"
-specifiers = ["0.1.4"]
+specifiers = ["0.1.5"]
 
 [tools."github:xiaosq2000/dotfiles".options]
 version_prefix = "cli-v"
 
 [tools."github:xiaosq2000/dotfiles"."platforms.linux-arm64"]
-checksum = "sha256:f20af900838112c6ece03e2b3f12a993b8d67aa0efa8e7fe3d11bdb3c933360c"
+checksum = "sha256:710bda741249ccdcdca57c89ae3efe0bff7f054373f0d03b806e852e4711a82b"
 checksum_source = "mise-versions"
-url = "https://github.com/xiaosq2000/dotfiles/releases/download/cli-v0.1.4/dotfiles-cli-cli-v0.1.4-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/xiaosq2000/dotfiles/releases/assets/768122579"
+url = "https://github.com/xiaosq2000/dotfiles/releases/download/cli-v0.1.5/dotfiles-cli-cli-v0.1.5-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/xiaosq2000/dotfiles/releases/assets/770738683"
 
 [tools."github:xiaosq2000/dotfiles"."platforms.linux-x64"]
-checksum = "sha256:410b99ee9ccd15eee69db31a074d55adf66e0b112dd4d8eafec0faef3895b573"
+checksum = "sha256:c5edfc84785d8a3c2894ccb69a375a0f9418226fccf7920d1ca171ff352905c9"
 checksum_source = "mise-versions"
-url = "https://github.com/xiaosq2000/dotfiles/releases/download/cli-v0.1.4/dotfiles-cli-cli-v0.1.4-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/xiaosq2000/dotfiles/releases/assets/768122589"
+url = "https://github.com/xiaosq2000/dotfiles/releases/download/cli-v0.1.5/dotfiles-cli-cli-v0.1.5-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/xiaosq2000/dotfiles/releases/assets/770738684"
 
 [[tools.node]]
 version = "24.22.3"

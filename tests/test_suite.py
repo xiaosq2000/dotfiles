@@ -89,7 +89,7 @@ class ChezmoiChecks(unittest.TestCase):
     def test_render_all_machines_and_themes(self):
         _run_script([sys.executable, str(TESTS / "check_render.py")])
 
-    def test_git_xdg_config_and_cleanup(self):
+    def test_git_xdg_config(self):
         _run_script([sys.executable, str(TESTS / "check_git_difftastic.py")])
 
     def test_herdr_theme_preservation(self):
@@ -101,6 +101,7 @@ class ChezmoiChecks(unittest.TestCase):
     def test_zotero_profile_setup(self):
         _run_script([sys.executable, str(TESTS / "check_zotero_profile.py")])
 
+    @unittest.skipIf(os.environ.get("SKIP_RUST_CLI") == "1", "Rust CLI binary tested in CI cli job")
     def test_dotfiles_cli(self):
         _run_script([sys.executable, str(TESTS / "check_dotfiles_cli.py")])
 

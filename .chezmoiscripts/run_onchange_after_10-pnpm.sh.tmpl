@@ -4,10 +4,10 @@ set -eu
 
 # Global CLIs need a stable bin directory on PATH and a hoisted dependency
 # layout. These are pnpm store settings, separate from installing pnpm itself.
-# pnpm at apply time: {{ if or (lookPath "pnpm") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/pnpm")) (stat (joinPath .chezmoi.homeDir ".pixi/bin/pnpm")) }}present{{ else }}absent{{ end }}
+# pnpm at apply time: {{ if or (lookPath "pnpm") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/pnpm")) }}present{{ else }}absent{{ end }}
 
 # A fresh apply may have installed these without changing its inherited PATH.
-export PATH="$HOME/.local/share/mise/shims:$HOME/.pixi/bin:$PATH"
+export PATH="$HOME/.local/share/mise/shims:$PATH"
 # shellcheck source=/dev/null
 . "$HOME/.sh_utils/lib/ui.sh"
 

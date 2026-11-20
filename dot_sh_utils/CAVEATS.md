@@ -101,11 +101,10 @@ rebuild the first time the directory joins `fpath`, and only the apply that
 rewrote `.zshrc` can show that.
 
 **Every tool has to be on `PATH` before the block that generates its
-completion.** This is why pnpm's `PATH` entry sits up with pixi's rather than
-with the other tool sections. `codex` is a pnpm binary, and while pnpm's entry
-was below `compinit`, a shell that did not already have it inherited generated
-no codex completion at all — and said nothing, because the loop skips a tool it
-cannot find. It only shows up on a login shell with a clean environment:
+completion.** `~/.zshenv` sources `~/.config/dotfiles/env.sh` before `.zshrc`
+runs, so `mise` shims (`codex`, `uv`, `dotfiles`) and `pixi` are on `PATH`
+before `compinit`. Without that, a login shell with a clean environment would
+silently skip generating cached completions:
 
 ```sh
 rm ~/.cache/zsh/completions/_codex

@@ -119,7 +119,7 @@ def addon_status(profile, plugin_id, name, check_updates):
 
 def install_plugin(profile, plugin_id, name, source, expected_version=None, check_updates=False):
     if not source.is_file():
-        warn(f"{name} package missing; run dotfiles-fetch sync and chezmoi apply")
+        warn(f"{name} package missing; run dotfiles fetch sync and chezmoi apply")
         mark_deferred()
         return
     try:

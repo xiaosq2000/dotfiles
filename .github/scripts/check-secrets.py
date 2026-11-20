@@ -54,11 +54,8 @@ def git(*args, check=True):
 
 
 def scanner():
-    candidates = (
-        Path.home() / ".local/share/mise/shims/gitleaks",
-        Path.home() / ".local/opt/dotfiles/bin/gitleaks",
-    )
-    binary = next((str(p) for p in candidates if p.is_file()), None) or shutil.which("gitleaks")
+    mise_shim = Path.home() / ".local/share/mise/shims/gitleaks"
+    binary = str(mise_shim) if mise_shim.is_file() else shutil.which("gitleaks")
     if not binary:
         raise Refused("Gitleaks is missing. Run chezmoi apply, then retry.")
     result = subprocess.run(

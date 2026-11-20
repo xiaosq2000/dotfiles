@@ -1,7 +1,7 @@
-# Software that no conda-forge package provides, fetched by dotfiles-fetch
-# (dot_local/bin/executable_dotfiles-fetch). A bundle in tools.toml selects an
-# entry by its id, chezmoi renders the selection into
-# ~/.config/dotfiles/downloads.json, and dotfiles-fetch installs from that.
+# Software that no conda-forge package provides, fetched by `dotfiles fetch`
+# (dot_local/libexec/dotfiles/executable_dotfiles-fetch). A bundle in tools.toml
+# selects an entry by its id, chezmoi renders the selection into
+# ~/.config/dotfiles/downloads.json, and `dotfiles fetch` installs from that.
 # chezmoi never downloads these itself: large archives in its source state made
 # every `chezmoi cat` and `diff` take seconds and a gigabyte of memory.
 #

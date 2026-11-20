@@ -66,7 +66,7 @@ repos:
         name: shellcheck
         entry: shellcheck --severity=warning
         language: system
-        files: (\.sh$|^dot_bashrc$|^modify_dot_profile$|^dot_local/bin/executable_(theme|machine|zathura)$|^private_dot_(claude|codex|gemini)/modify_|^private_dot_config/btop/modify_|^system/[^/]+/usr/local/s?bin/)
+        files: (\.sh$|^dot_bashrc$|^modify_dot_profile$|^dot_local/bin/executable_zathura$|^dot_local/libexec/dotfiles/executable_(theme|machine)$|^private_dot_(claude|codex|gemini)/modify_|^private_dot_config/btop/modify_|^system/[^/]+/usr/local/s?bin/)
         exclude: \.tmpl$
       # The repository is public, so plaintext must never reach a commit under
       # a directory that holds secrets. The script reads the whole index itself,

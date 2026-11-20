@@ -2,7 +2,7 @@
 """Install the downloads this machine's bundles select.
 
 chezmoi renders the selection into ~/.config/dotfiles/downloads.json from
-.chezmoidata/downloads.toml, and runs `dotfiles-fetch sync` whenever that file
+.chezmoidata/downloads.toml, and runs `dotfiles fetch sync` whenever that file
 changes. This program owns only paths under its own names:
 
     ~/.local/opt/dotfiles/<id>/<version>   application payloads, and `current`
@@ -22,8 +22,6 @@ Commands:
                     Pinned downloads stay at their catalog tag.
     outdated        list upstream releases newer than the locked version.
     status          list what is selected, installed and pending, offline.
-    migrate         list font directories left by the retired typefaces.sh;
-                    --apply removes them.
 
 GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`, raises GitHub's API allowance.
 """
@@ -624,7 +622,7 @@ def outdated(manifest, lock):
         entry = resources.get(identifier)
         if not spec.get("github") and not spec.get("manifest"):
             print(f"{identifier:24} {entry['version'] if entry else '-':20} "
-                  "follows a URL; `dotfiles-fetch update` downloads it to check")
+                  "follows a URL; `dotfiles fetch update` downloads it to check")
             continue
         try:
             target = resolve(spec, manifest["platform"], latest=True)
@@ -656,31 +654,6 @@ def status(manifest, lock):
     return 0
 
 
-def migrate(apply):
-    """typefaces.sh wrote .installed-ref into every family directory it made,
-    so such a directory is provably this repository's and safe to delete."""
-    fonts = HOME / ".local/share/fonts"
-    legacy = sorted(p.parent for p in fonts.glob("*/.installed-ref"))
-    for directory in legacy:
-        print(f"{'removing' if apply else 'would remove'} {directory}")
-        if apply:
-            shutil.rmtree(directory)
-    others = [".local/kitty.app", ".local/zotero", ".local/bin/kitty", ".local/bin/kitten",
-              ".local/bin/zotero", ".local/share/applications/kitty.desktop",
-              ".local/share/applications/kitty-open.desktop",
-              ".local/share/applications/zotero.desktop", ".cargo/bin/tre"]
-    for relative in others:
-        if os.path.lexists(HOME / relative):
-            print(f"left alone: {HOME / relative}; delete it once the dotfiles copy works")
-    if not legacy:
-        print("no font directories from typefaces.sh")
-    elif not apply:
-        print("run `dotfiles-fetch migrate --apply` to remove them")
-    elif shutil.which("fc-cache"):
-        subprocess.run(["fc-cache", str(fonts)], check=False)
-    return 0
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command")
@@ -689,12 +662,8 @@ def main():
     updating.add_argument("ids", nargs="*")
     commands.add_parser("outdated")
     commands.add_parser("status")
-    migrating = commands.add_parser("migrate")
-    migrating.add_argument("--apply", action="store_true")
     arguments = parser.parse_args()
     command = arguments.command or "sync"
-    if command == "migrate":
-        return migrate(arguments.apply)
 
     manifest = load(MANIFEST, None)
     if manifest is None:

@@ -5,7 +5,7 @@ By default every download in .chezmoidata/downloads.toml is replaced by a small
 local fixture shaped like its upstream, and GitHub's release API is served from
 files, so the run needs no network and takes seconds. It covers installing,
 an offline sync, updating, a catalog change, deselecting, a failed download,
-an unsupported platform, the terminfo copies and `migrate`.
+an unsupported platform and the terminfo copies.
 
 --live installs the real catalog from the real upstreams instead and checks
 that the commands run and the fonts parse. It downloads a few gigabytes.
@@ -29,7 +29,7 @@ import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-FETCH = ROOT / "dot_local/bin/executable_dotfiles-fetch"
+FETCH = ROOT / "dot_local/libexec/dotfiles/executable_dotfiles-fetch"
 
 
 class Releases(http.server.BaseHTTPRequestHandler):
@@ -435,14 +435,6 @@ def fixtures(box, catalog):
         manifest_path.write_text(json.dumps(manifest_data))
         result = box.fetch("sync", manifest=dict(core, resources={"agy": evil}), check=False)
         assert result.returncode == 1 and "unsafe version name" in result.stderr, bad_version
-
-    # migrate removes only what typefaces.sh provably wrote.
-    legacy = home / ".local/share/fonts/source-sans"
-    legacy.mkdir(parents=True)
-    (legacy / ".installed-ref").write_text("3.052R\n")
-    assert "would remove" in box.fetch("migrate").stdout and legacy.exists()
-    box.fetch("migrate", "--apply")
-    assert not legacy.exists() and (home / ".local/share/fonts/fira/Fira.otf").exists()
 
 
 def live(box, catalog):

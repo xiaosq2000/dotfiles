@@ -6,14 +6,14 @@
 # from it. This prints the derivation so you do not have to read the templates
 # to find out why a tool is or is not installed here.
 #
-#   machine           describe this machine
-#   machine --list    list every machine the repository knows about
+#   dotfiles machine           describe this machine
+#   dotfiles machine --list    list every machine the repository knows about
 #
 # Changing machine means editing the entry in .chezmoidata/machines.toml, or
 # re-running `chezmoi init --promptString machine=<name>` to point this host at
-# a different entry. There is deliberately no `machine <name>` that rewrites the
-# config the way `theme <variant>` does: a machine is what the hardware is, not
-# a preference to flip.
+# a different entry. There is deliberately no `dotfiles machine <name>` that
+# rewrites the config the way `dotfiles theme <variant>` does: a machine is
+# what the hardware is, not a preference to flip.
 set -euo pipefail
 
 die() {
@@ -22,7 +22,7 @@ die() {
 }
 
 usage() {
-    printf '%s\n' "usage: machine [--list]"
+    printf '%s\n' "usage: dotfiles machine [--list]"
     printf '%s\n' ""
     printf '%s\n' "  (no arguments)  describe this machine"
     printf '%s\n' "  -l, --list      list every known machine"
@@ -69,11 +69,5 @@ case "${1:-}" in
 esac
 
 command -v chezmoi >/dev/null 2>&1 || die "chezmoi is not on PATH"
-
-# A config file predating the machine layer has no `machine` key, and the
-# template would fail with a bare "map has no entry" from deep inside chezmoi.
-if ! chezmoi execute-template '{{ hasKey . "machine" }}' 2>/dev/null | grep -qx true; then
-    die "no machine recorded in the chezmoi config; run 'chezmoi init --promptString machine=<name>'"
-fi
 
 chezmoi execute-template "$template"

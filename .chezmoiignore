@@ -96,7 +96,7 @@ tests
 .agents/skills/machines
 {{ end -}}
 
-{{ if not (or (lookPath "claude") (stat (joinPath .chezmoi.homeDir ".local/bin/claude")) (stat (joinPath .chezmoi.homeDir ".claude"))) -}}
+{{ if not (or (lookPath "claude") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/claude")) (stat (joinPath .chezmoi.homeDir ".claude"))) -}}
 # Claude Code is not installed and ~/.claude is absent.
 # Without this, skipping a deleted ~/.claude leaves the parent directory missing
 # while dot_claude/modify_settings.json still runs and aborts the apply.

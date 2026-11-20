@@ -1,28 +1,6 @@
 #!/usr/bin/env bash
 
-# Cross-shell compatibility shims (works for bash and zsh)
-# Provide 'has' if not already defined
-if ! command -v has >/dev/null 2>&1; then
-    has() { command -v "$1" >/dev/null 2>&1; }
-fi
-# Provide 'unfunction' for bash (maps to unset -f)
-if ! command -v unfunction >/dev/null 2>&1; then
-    unfunction() { unset -f "$@" 2>/dev/null || true; }
-fi
-# Provide minimal UI fallbacks if ui.sh wasn't sourced
-if ! command -v error >/dev/null 2>&1; then
-    error() { printf 'error: %s\n' "$*" >&2; }
-fi
-if ! command -v warning >/dev/null 2>&1; then
-    warning() { printf 'warning: %s\n' "$*"; }
-fi
-if ! command -v info >/dev/null 2>&1; then
-    info() { printf '%s\n' "$*"; }
-fi
-if ! command -v debug >/dev/null 2>&1; then
-    debug() { :; }
-fi
-# Safe default for INDENT if unset
+# Interactive shell overview helpers (sourced from ~/.zshrc after basics.sh).
 : "${INDENT:=  }"
 display_xdg_envs() {
     echo "${BLUE}XDG Environment Variables:${RESET}"

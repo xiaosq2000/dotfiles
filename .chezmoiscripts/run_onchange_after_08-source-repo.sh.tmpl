@@ -11,13 +11,13 @@
 #
 # It reruns whenever the rendered text changes, which includes these lines:
 #
-#   pre-commit at apply time: {{ if or (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/pre-commit")) (stat (joinPath .chezmoi.homeDir ".pixi/bin/pre-commit")) }}present{{ else }}absent{{ end }}
+#   pre-commit at apply time: {{ if stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/pre-commit") }}present{{ else }}absent{{ end }}
 #   age identity at apply time: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
 #   chezmoi binary: {{ .chezmoi.executable }}
 #   hook config sha256: {{ include ".pre-commit-config.yaml" | sha256sum }}
 #   secret hook sha256: {{ include ".github/scripts/check-secrets.py" | sha256sum }}
 #
-# pre-commit arrives with the core bundle in run_onchange_after_05-pixi.sh, so
+# pre-commit arrives with the core bundle in run_onchange_after_06-mise.sh, so
 # on a new machine the first apply renders `absent` and gives up, and the next
 # renders `present` and installs the hooks. The age identity line works the same
 # way for the diff driver. run_onchange_before_00-age-identity.sh explains why
@@ -65,8 +65,6 @@ if [ -x "$HOME/.local/share/mise/shims/pre-commit" ]; then
     PRE_COMMIT="$HOME/.local/share/mise/shims/pre-commit"
 elif command -v pre-commit >/dev/null 2>&1; then
     PRE_COMMIT="$(command -v pre-commit)"
-elif [ -x "${PIXI_HOME:-$HOME/.pixi}/bin/pre-commit" ]; then
-    PRE_COMMIT="${PIXI_HOME:-$HOME/.pixi}/bin/pre-commit"
 fi
 
 if [ -z "$PRE_COMMIT" ]; then
