@@ -38,9 +38,9 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     def render(machine):
         config.write_text(f'[data]\nmachine = "{machine}"\ntheme = "rose-pine"\n')
         script.write_text(subprocess.check_output([
-            chezmoi, "--source", str(root), "--config", str(config),
+            chezmoi, "--source", str(root), "--destination", str(home), "--config", str(config),
             "execute-template", "--file", str(template),
-        ], text=True))
+        ], env=dict(os.environ, HOME=str(home)), text=True))
 
     def setup():
         return subprocess.run([bash, str(script)], env=dict(os.environ, HOME=str(home)),
@@ -148,5 +148,33 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
         {"id": extra_id, "active": True, "applyBackgroundUpdates": 1},
     ]}))
     assert not setup().stderr
+
+    # Template hash tracks only Zotero plugin entries in downloads.lock.json,
+    # so updating unrelated downloads (like kitty) does not mark the script pending.
+    lock_file = home / ".local/state/dotfiles/downloads.lock.json"
+    lock_file.parent.mkdir(parents=True, exist_ok=True)
+    lock_data = {
+        "resources": {
+            "kitty": {"sha256": "kitty-v1"},
+            "better-bibtex": {"sha256": "bbt-v1"},
+            "extra-meta": {"sha256": "extra-v1"},
+        }
+    }
+    lock_file.write_text(json.dumps(lock_data))
+    render("laptop")
+    rendered_v1 = script.read_text()
+    assert "# better-bibtex lock: bbt-v1" in rendered_v1
+    assert "# extra-meta lock: extra-v1" in rendered_v1
+
+    lock_data["resources"]["kitty"]["sha256"] = "kitty-v2"
+    lock_file.write_text(json.dumps(lock_data))
+    render("laptop")
+    assert script.read_text() == rendered_v1
+
+    lock_data["resources"]["better-bibtex"]["sha256"] = "bbt-v2"
+    lock_file.write_text(json.dumps(lock_data))
+    render("laptop")
+    assert "# better-bibtex lock: bbt-v2" in script.read_text()
+    assert script.read_text() != rendered_v1
 
 print("ok       Zotero profile: linking, locked installs, backup, no downgrade and addon status")

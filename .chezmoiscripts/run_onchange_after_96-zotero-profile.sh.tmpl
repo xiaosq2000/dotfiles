@@ -5,7 +5,21 @@
 # Re-runs when shared preferences, downloaded plugins, Zotero profile
 # presence, or a deferred (Zotero-running) pending marker changes.
 # zotero-user.js sha256: {{ include "private_dot_config/dotfiles/zotero-user.js.tmpl" | sha256sum }}
-# downloads lock: {{ $lock := joinPath .chezmoi.homeDir ".local/state/dotfiles/downloads.lock.json" }}{{ if stat $lock }}{{ include $lock | sha256sum }}{{ else }}none{{ end }}
+{{- $lock := joinPath .chezmoi.homeDir ".local/state/dotfiles/downloads.lock.json" -}}
+{{- $resources := dict -}}
+{{- if stat $lock -}}
+{{-   $raw := include $lock | trim -}}
+{{-   if $raw -}}
+{{-     $parsed := $raw | fromJson -}}
+{{-     if and $parsed (hasKey $parsed "resources") -}}
+{{-       with index $parsed "resources" -}}
+{{-         $resources = . -}}
+{{-       end -}}
+{{-     end -}}
+{{-   end -}}
+{{- end }}
+# better-bibtex lock: {{ with index $resources "better-bibtex" }}{{ get . "sha256" | default "none" }}{{ else }}none{{ end }}
+# extra-meta lock: {{ with index $resources "extra-meta" }}{{ get . "sha256" | default "none" }}{{ else }}none{{ end }}
 # better-bibtex downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi") }}present{{ else }}absent{{ end }}
 # extra-meta downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi") }}present{{ else }}absent{{ end }}
 # profiles.ini: {{ if stat (joinPath .chezmoi.homeDir ".zotero/zotero/profiles.ini") }}present{{ else }}absent{{ end }}

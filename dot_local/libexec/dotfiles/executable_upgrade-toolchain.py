@@ -93,10 +93,11 @@ def upgrade_mise(args, env):
         print("  mise not found on PATH; skipping.", flush=True)
         return "skipped"
     home = Path(env.get("HOME") or Path.home())
+    mise_env = {**env, "MISE_MINIMUM_RELEASE_AGE": "0"} if args.now else env
     if args.dry_run:
-        rc = _run_step([mise_bin, "outdated"], env=env, cwd=home)
+        rc = _run_step([mise_bin, "outdated"], env=mise_env, cwd=home)
         return "dry-run" if rc == 0 else "warn"
-    upgrade_env = {**env, "MISE_YES": "1"}
+    upgrade_env = {**mise_env, "MISE_YES": "1"}
     rc = _run_step([mise_bin, "upgrade"], env=upgrade_env, cwd=home)
     if rc != 0:
         return "error"
@@ -178,6 +179,11 @@ def build_parser():
         "--dry-run",
         action="store_true",
         help="Check upstream versions and print planned actions without modifying anything",
+    )
+    parser.add_argument(
+        "--now",
+        action="store_true",
+        help="Bypass mise's 24h release-age cooldown to check/install same-day releases immediately",
     )
     parser.add_argument(
         "--only",

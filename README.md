@@ -54,8 +54,8 @@ interactive Ratatui TUI:
 dotfiles                            # interactive Ratatui TUI (5 tabs + live Theme Studio)
 dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents and sandbox
 dotfiles sync [--update] [--dry-run] # chezmoi apply/update (inherits shell network/proxy env)
-dotfiles upgrade [--dry-run] [--only mise,pixi,fetch,sheldon,pi]
-                                    # upgrade toolchains locally & run doctor
+dotfiles upgrade [--dry-run] [--now] [--only mise,pixi,fetch,sheldon,pi]
+                                    # upgrade toolchains locally & run doctor (--now skips mise 24h cooldown)
 dotfiles machine [--list]           # describe this host or list known machines
 dotfiles theme [variant]            # switch or preview colour theme across tools
 dotfiles fetch <status|sync|outdated|update>

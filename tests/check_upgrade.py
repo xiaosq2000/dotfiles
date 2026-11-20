@@ -45,7 +45,8 @@ def test_end_to_end_preserves_proxy_env():
             "from pathlib import Path\n"
             'with Path(os.environ["UPGRADE_TEST_LOG"]).open("a") as fh:\n'
             '    fh.write(json.dumps({"cmd": Path(sys.argv[0]).name, "args": sys.argv[1:], '
-            '"http_proxy": os.environ.get("http_proxy"), "https_proxy": os.environ.get("https_proxy")}) + "\\n")\n'
+            '"http_proxy": os.environ.get("http_proxy"), "https_proxy": os.environ.get("https_proxy"), '
+            '"min_age": os.environ.get("MISE_MINIMUM_RELEASE_AGE")}) + "\\n")\n'
         )
 
         def make_stub(path):
@@ -82,6 +83,7 @@ def test_end_to_end_preserves_proxy_env():
         assert ("dotfiles-fetch", ["outdated"]) in dry_invoked
         assert ("mise", ["upgrade"]) not in dry_invoked
         assert ("dotfiles", ["doctor"]) not in dry_invoked
+        assert all(c["min_age"] is None for c in dry_calls), dry_calls
         log_file.unlink()
 
         # 2. Full upgrade runs all 5 layers + doctor and preserves proxy env for every child.
@@ -97,6 +99,7 @@ def test_end_to_end_preserves_proxy_env():
         for call in calls:
             assert call["http_proxy"] == "http://proxy.example:1080", call
             assert call["https_proxy"] == "http://proxy.example:1080", call
+            assert call["min_age"] is None, call
         invoked = [(c["cmd"], c["args"]) for c in calls]
         assert ("mise", ["upgrade"]) in invoked
         assert ("mise", ["reshim"]) in invoked
@@ -105,6 +108,39 @@ def test_end_to_end_preserves_proxy_env():
         assert ("sheldon", ["--non-interactive", "lock", "--update"]) in invoked
         assert ("pi", ["update", "--extensions"]) in invoked
         assert ("dotfiles", ["doctor"]) in invoked
+        log_file.unlink()
+
+        # 3. --now bypasses mise's 24h release-age cooldown for both dry-run and upgrade.
+        subprocess.run(
+            [sys.executable, str(SCRIPT), "--dry-run", "--now", "--only", "mise"],
+            env=env,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        now_dry = [json.loads(line) for line in log_file.read_text(encoding="utf-8").splitlines()]
+        assert now_dry == [{
+            "cmd": "mise",
+            "args": ["outdated"],
+            "http_proxy": "http://proxy.example:1080",
+            "https_proxy": "http://proxy.example:1080",
+            "min_age": "0",
+        }], now_dry
+        log_file.unlink()
+
+        subprocess.run(
+            [sys.executable, str(SCRIPT), "--now", "--only", "mise"],
+            env=env,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        now_calls = [json.loads(line) for line in log_file.read_text(encoding="utf-8").splitlines()]
+        mise_now = [c for c in now_calls if c["cmd"] == "mise"]
+        assert [(c["args"], c["min_age"]) for c in mise_now] == [
+            (["upgrade"], "0"),
+            (["reshim"], "0"),
+        ], mise_now
 
 
 if __name__ == "__main__":

@@ -203,6 +203,7 @@ _dotfiles_dynamic_upgrade() {
     opts=(
         '-n:Check upstream versions without modifying anything'
         '--dry-run:Check upstream versions without modifying anything'
+        '--now:Bypass mise 24h release-age cooldown for same-day releases'
         '--only:Limit to specific layer(s) (mise,pixi,fetch,sheldon,pi)'
     )
     layers=(
