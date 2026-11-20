@@ -5,9 +5,9 @@ description: "Look up host-specific access, compute, storage, or service facts f
 
 # Machines
 
-Checked on 2026-10-31.
+Checked on 2026-11-20.
 
-Run `machine` only if the current host is unknown. Do not infer it from the hostname.
+Run `dotfiles machine` only if the current host is unknown. Do not infer it from the hostname.
 Read `references/<host>.md` for access, resources, or host-wide boundaries.
 For a public VPS, read its boundary page before acting.
 
@@ -30,7 +30,8 @@ Choose task references directly. Links are lookup choices, not required reading.
 
 If no topic fits, use that host's page. Do not load another host's references.
 Cross-machine work needs only facts that affect the route or operation, not every source and destination page.
-Use `command ssh` for noninteractive calls. Check remote PATH before running user-installed tools.
+Use `command ssh` only for short noninteractive calls. For long-running tasks (downloads, transfers, builds, training, evaluations), do not use bare SSH: prefer Herdr panes (`herdr --machine <host>` or a remote Herdr session; see the [Herdr skill](../herdr/SKILL.md)) so tasks survive network drops and stay easy for the user to monitor, falling back to `tmux` (or Slurm on `sicc`) only where Herdr is unavailable.
+Check remote PATH before running user-installed tools.
 Run downloads without proxy variables. Ask the user if direct access fails.
 Recheck changing facts before acting. Keep project procedures in their project.
 
