@@ -1,7 +1,7 @@
 # Cross-platform CLIs, language runtimes, LSPs, and coding agents managed by
-# `mise`. Versions follow upstream latest by default (resolved and cached in
-# each machine's local ~/.config/mise/mise.lock, verified by mise's built-in
-# SLSA / cosign / GitHub attestation / npm provenance checks).
+# `mise`. Versions follow upstream latest by default (`lockfile = false`,
+# verified by mise's built-in SLSA / cosign / GitHub attestation / npm
+# provenance checks; existing installed copies stay put until upgraded).
 #
 # A bundle in .chezmoidata/tools.toml selects entries by id; chezmoi renders
 # ~/.config/mise/config.toml and runs `mise install`.

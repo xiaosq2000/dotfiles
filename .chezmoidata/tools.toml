@@ -4,7 +4,7 @@
 #              for rootless HPC ABI strongholds, C/C++ shared-lib tools, Python
 #              CLI packages, and git-built recipes like um-vpn)
 #   mise       cross-platform CLIs, runtimes, LSPs, and coding agents from
-#              .chezmoidata/mise.toml (machine-local lock in ~/.config/mise/mise.lock)
+#              .chezmoidata/mise.toml (floating latest, upgraded locally via dotfiles upgrade)
 #   downloads  non-CLI GUI bundles, fonts, Zotero .xpi plugins, and agy manifest
 #              from .chezmoidata/downloads.toml (installed by dotfiles-fetch)
 #   config     destination paths deployed only when the bundle is selected

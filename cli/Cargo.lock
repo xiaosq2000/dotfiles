@@ -222,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "dotfiles-cli"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "clap",
