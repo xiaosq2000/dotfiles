@@ -32,7 +32,53 @@ pub fn cmd_sync(update: bool, dry_run: bool, no_externals: bool) -> Result<i32> 
     if which("chezmoi").is_none() {
         bail!("chezmoi not found on PATH");
     }
+    if update {
+        let (src_rc, src, _) = run_capture("chezmoi", &["source-path"]);
+        if src_rc == 0 && !src.is_empty() && which("git").is_some() {
+            let (in_git, _, _) = run_capture("git", &["-C", &src, "rev-parse", "--is-inside-work-tree"]);
+            if in_git == 0 {
+                let (st_rc, dirty, _) = run_capture("git", &["-C", &src, "status", "--porcelain"]);
+                if st_rc == 0 && !dirty.is_empty() {
+                    let lines: Vec<&str> = dirty.lines().collect();
+                    if dry_run {
+                        eprintln!(
+                            "dotfiles sync: warning: source repo ({src}) has {} uncommitted change(s):",
+                            lines.len()
+                        );
+                    } else {
+                        eprintln!(
+                            "dotfiles sync: source repo ({src}) has {} uncommitted change(s); refusing to auto-stash during update:",
+                            lines.len()
+                        );
+                    }
+                    for line in lines.iter().take(10) {
+                        eprintln!("  {line}");
+                    }
+                    if lines.len() > 10 {
+                        eprintln!("  ... ({} more)", lines.len() - 10);
+                    }
+                    if !dry_run {
+                        eprintln!(
+                            "Run `git -C {src} status` to inspect, then commit/stash/clean them before retrying `dotfiles sync --update`."
+                        );
+                        return Ok(1);
+                    }
+                }
+                let (stash_rc, stashes, _) = run_capture("git", &["-C", &src, "stash", "list"]);
+                if stash_rc == 0 && !stashes.is_empty() {
+                    let count = stashes.lines().count();
+                    eprintln!(
+                        "dotfiles sync: note: {count} git stash entr{} in {src} (inspect with `git -C {src} stash list`)",
+                        if count == 1 { "y" } else { "ies" }
+                    );
+                }
+            }
+        }
+    }
     let mut args = vec![if update { "update" } else { "apply" }];
+    if update {
+        args.push("--init");
+    }
     if dry_run {
         args.push("--dry-run");
         args.push("--verbose");

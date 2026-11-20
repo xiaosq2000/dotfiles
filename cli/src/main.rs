@@ -325,4 +325,38 @@ mod tests {
         assert!(script.contains("'*::args:_dotfiles_dynamic_jail'"));
         assert!(script.contains("'*::args:_dotfiles_dynamic_upgrade'"));
     }
+
+    #[test]
+    fn git_credential_helper_audit_catches_ephemeral_and_missing_paths() {
+        use crate::doctor::check_git_credential_helper_issue;
+        assert!(
+            check_git_credential_helper_issue(
+                "https://github.com",
+                "!f() { PATH=\"$HOME/.local/share/mise/shims:$HOME/.pixi/bin:$PATH\"; command -v gh >/dev/null 2>&1 || return 0; exec gh auth git-credential \"$@\"; }; f"
+            )
+            .is_none()
+        );
+        assert!(check_git_credential_helper_issue("https://github.com", "").is_none());
+        assert!(
+            check_git_credential_helper_issue(
+                "https://github.com",
+                "!/tmp/user/.local/share/mise/installs/aqua-cli-cli/2.105.0/bin/gh auth git-credential"
+            )
+            .is_some()
+        );
+        assert!(
+            check_git_credential_helper_issue(
+                "https://github.com",
+                "!/tmp/user/.pixi/envs/gh/bin/gh auth git-credential"
+            )
+            .is_some()
+        );
+        assert!(
+            check_git_credential_helper_issue(
+                "https://github.com",
+                "!/nonexistent/path/to/gh auth git-credential"
+            )
+            .is_some()
+        );
+    }
 }

@@ -253,6 +253,18 @@ fn check_secrets(home: &Path, data: Option<&ChezmoiData>) -> (SecretsCheck, Opti
     if !policy_ok {
         issues.push("policy.json missing or invalid".to_string());
     }
+    if age_exists && which("chezmoi").is_some() {
+        let (rc, cfg_json, _) = run_capture("chezmoi", &["dump-config", "--format", "json"]);
+        if rc == 0
+            && let Ok(val) = serde_json::from_str::<serde_json::Value>(&cfg_json)
+            && val.get("useBuiltinAge").and_then(|v| v.as_bool()) == Some(false)
+        {
+            issues.push(
+                "chezmoi.toml has useBuiltinAge=false (run `chezmoi init` to avoid external age shim deadlock)"
+                    .to_string(),
+            );
+        }
+    }
 
     let status = if !loose_keys.is_empty() || bad_age_mode {
         "error"
@@ -358,14 +370,57 @@ fn check_toolchain(home: &Path, bundles: &[String], data: Option<&ChezmoiData>) 
     }
 }
 
+pub fn check_git_credential_helper_issue(url: &str, helper: &str) -> Option<String> {
+    let trimmed = helper.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.contains("/.local/share/mise/installs/") || trimmed.contains("/.pixi/envs/") {
+        return Some(format!(
+            "versioned/ephemeral git credential helper for {url} (run `git config --global --unset-all credential.{url}.helper` to inherit ~/.config/git/config)"
+        ));
+    }
+    if let Some(cmd) = trimmed.strip_prefix('!') {
+        let first = cmd.split_whitespace().next().unwrap_or("");
+        let bin = first.trim_matches(|c| c == '"' || c == '\'');
+        if bin.starts_with('/') && !Path::new(bin).is_file() {
+            return Some(format!(
+                "missing git credential helper binary for {url}: {bin}"
+            ));
+        }
+    }
+    None
+}
+
 fn check_shell_and_git(home: &Path) -> ShellGitCheck {
     let xdg_cfg = xdg_config_home(home);
     let env_sh = xdg_cfg.join("dotfiles/env.sh").is_file();
     let git_cfg = xdg_cfg.join("git/config").is_file();
 
+    let mut issues = Vec::new();
     let (diff_algo, diff_ext) = if which("git").is_some() {
         let (_, a, _) = run_capture("git", &["config", "--get", "diff.algorithm"]);
         let (_, e, _) = run_capture("git", &["config", "--get", "diff.external"]);
+        for url in ["https://github.com", "https://gist.github.com"] {
+            let key = format!("credential.{url}.helper");
+            let (rc, helpers, _) = run_capture("git", &["config", "--get-all", &key]);
+            if rc == 0 {
+                for line in helpers.lines() {
+                    if let Some(msg) = check_git_credential_helper_issue(url, line)
+                        && !issues.contains(&msg)
+                    {
+                        issues.push(msg);
+                    }
+                }
+            }
+        }
+        let (lfs_rc, lfs_req, _) = run_capture("git", &["config", "--get", "filter.lfs.required"]);
+        if lfs_rc == 0 && lfs_req.eq_ignore_ascii_case("true") {
+            issues.push(
+                "git filter.lfs.required=true couples all repos to the git-lfs shim (run `git config --global filter.lfs.required false`)"
+                    .to_string(),
+            );
+        }
         (
             (!a.is_empty()).then_some(a),
             (!e.is_empty()).then_some(e),
@@ -385,7 +440,6 @@ fn check_shell_and_git(home: &Path) -> ShellGitCheck {
         None
     };
 
-    let mut issues = Vec::new();
     if !env_sh {
         issues.push("~/.config/dotfiles/env.sh missing".to_string());
     }
