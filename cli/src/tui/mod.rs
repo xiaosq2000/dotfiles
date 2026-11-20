@@ -182,7 +182,7 @@ fn handle_key(
         }
         KeyCode::Enter if app.tab == Tab::Themes => {
             if let Some(item) = app.themes.get(app.theme_idx) {
-                let helper = home_dir().join(".local/bin/theme");
+                let helper = home_dir().join(".local/libexec/dotfiles/theme");
                 app.pending_action = Some(PendingAction::RunCommand {
                     label: format!("theme {}", item.slug),
                     prog: helper.to_string_lossy().into_owned(),
@@ -193,7 +193,7 @@ fn handle_key(
         }
         KeyCode::Char('p') if app.tab == Tab::Themes => {
             if let Some(item) = app.themes.get(app.theme_idx) {
-                let helper = home_dir().join(".local/bin/theme");
+                let helper = home_dir().join(".local/libexec/dotfiles/theme");
                 app.pending_action = Some(PendingAction::RunCommand {
                     label: format!("theme --dry-run {}", item.slug),
                     prog: helper.to_string_lossy().into_owned(),
@@ -204,7 +204,7 @@ fn handle_key(
         }
         KeyCode::Enter | KeyCode::Char('x') if app.tab == Tab::Agents => {
             let agent = AGENT_NAMES[app.agent_idx];
-            let helper = home_dir().join(".local/bin/agent-jail");
+            let helper = home_dir().join(".local/libexec/dotfiles/agent-jail");
             app.pending_action = Some(PendingAction::RunCommand {
                 label: format!("agent-jail --wrap {agent} --dry-run"),
                 prog: helper.to_string_lossy().into_owned(),
@@ -226,9 +226,9 @@ fn handle_key(
             });
         }
         KeyCode::Char('u') if app.tab == Tab::Toolchain => {
-            let helper = home_dir().join(".local/bin/dotfiles-fetch");
+            let helper = home_dir().join(".local/libexec/dotfiles/dotfiles-fetch");
             app.pending_action = Some(PendingAction::RunCommand {
-                label: "dotfiles-fetch outdated".to_string(),
+                label: "dotfiles fetch outdated".to_string(),
                 prog: helper.to_string_lossy().into_owned(),
                 args: vec!["outdated".to_string()],
                 pause: true,
@@ -244,9 +244,9 @@ fn handle_key(
             });
         }
         KeyCode::Char('f') if app.tab == Tab::Toolchain => {
-            let helper = home_dir().join(".local/bin/dotfiles-fetch");
+            let helper = home_dir().join(".local/libexec/dotfiles/dotfiles-fetch");
             app.pending_action = Some(PendingAction::RunCommand {
-                label: "dotfiles-fetch sync".to_string(),
+                label: "dotfiles fetch sync".to_string(),
                 prog: helper.to_string_lossy().into_owned(),
                 args: vec!["sync".to_string()],
                 pause: true,

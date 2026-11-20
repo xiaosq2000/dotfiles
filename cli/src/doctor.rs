@@ -392,9 +392,6 @@ fn check_shell_and_git(home: &Path) -> ShellGitCheck {
     if !git_cfg {
         issues.push("~/.config/git/config missing".to_string());
     }
-    if diff_ext.as_deref() == Some("difft") {
-        issues.push("legacy global diff.external=difft still set in ~/.gitconfig".to_string());
-    }
 
     ShellGitCheck {
         status: if issues.is_empty() { "ok" } else { "warn" }.to_string(),
@@ -418,7 +415,7 @@ fn check_agents(home: &Path, bundles: &[String]) -> AgentsCheck {
     let has_bundle = bundles.iter().any(|b| b == "dev");
     let key_guard = is_executable(&home.join(".agents/hooks/key-guard.py"));
     let agent_notify = is_executable(&home.join(".agents/hooks/agent-notify.py"));
-    let jail_bin = home.join(".local/bin/agent-jail");
+    let jail_bin = home.join(".local/libexec/dotfiles/agent-jail");
 
     let active_jail = if env::var("DOTFILES_AGENT_JAIL").as_deref() == Ok("1") {
         Some(

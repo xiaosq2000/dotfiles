@@ -4,21 +4,15 @@ use std::env;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
-pub fn exec_helper(name: &str, args: &[String], libexec: bool) -> Result<i32> {
-    let home = home_dir();
-    let candidate = if libexec {
-        home.join(".local/libexec/dotfiles").join(name)
-    } else {
-        home.join(".local/bin").join(name)
-    };
-    let binary = if candidate.is_file() {
-        candidate
-    } else if let Some(found) = which(name) {
-        found
-    } else {
-        eprintln!("dotfiles: helper '{name}' not found; run 'chezmoi apply'");
+pub fn exec_helper(name: &str, args: &[String]) -> Result<i32> {
+    let binary = home_dir().join(".local/libexec/dotfiles").join(name);
+    if !binary.is_file() {
+        eprintln!(
+            "dotfiles: helper '{name}' not found at {}; run 'chezmoi apply'",
+            binary.display()
+        );
         return Ok(1);
-    };
+    }
 
     let err = Command::new(&binary).args(args).exec();
     Err(anyhow::anyhow!("failed to exec {}: {err}", binary.display()))

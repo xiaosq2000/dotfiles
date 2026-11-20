@@ -163,10 +163,9 @@ _dotfiles_dynamic_fetch() {
         'sync:Install or update declared downloads'
         'outdated:Check upstream for newer releases'
         'update:Update unpinned downloads to latest'
-        'migrate:Migrate legacy font directories'
     )
     case "${words[1]:-}" in
-        status|sync|outdated|update|migrate)
+        status|sync|outdated|update)
             items=("${(@f)$(command dotfiles __complete downloads 2>/dev/null)}")
             (( ${#items[@]} > 0 )) && [[ -n "${items[1]}" ]] && _describe -t downloads 'download id' items
             ;;
@@ -253,12 +252,12 @@ fn run() -> anyhow::Result<i32> {
         }
         Some(Commands::Tui) => tui::run(),
         Some(Commands::Doctor { json }) => commands::cmd_doctor(json),
-        Some(Commands::Machine { args }) => commands::exec_helper("machine", &args, false),
-        Some(Commands::Theme { args }) => commands::exec_helper("theme", &args, false),
-        Some(Commands::Fetch { args }) => commands::exec_helper("dotfiles-fetch", &args, false),
-        Some(Commands::Jail { args }) => commands::exec_helper("agent-jail", &args, false),
+        Some(Commands::Machine { args }) => commands::exec_helper("machine", &args),
+        Some(Commands::Theme { args }) => commands::exec_helper("theme", &args),
+        Some(Commands::Fetch { args }) => commands::exec_helper("dotfiles-fetch", &args),
+        Some(Commands::Jail { args }) => commands::exec_helper("agent-jail", &args),
         Some(Commands::Agent { action }) => match action {
-            AgentAction::Skills { args } => commands::exec_helper("agent-skills.sh", &args, true),
+            AgentAction::Skills { args } => commands::exec_helper("agent-skills.sh", &args),
             AgentAction::Status { json } => commands::cmd_agent_status(json),
         },
         Some(Commands::Sync {
@@ -267,7 +266,7 @@ fn run() -> anyhow::Result<i32> {
             no_externals,
         }) => commands::cmd_sync(update, dry_run, no_externals),
         Some(Commands::Upgrade { args }) => {
-            commands::exec_helper("upgrade-toolchain.py", &args, true)
+            commands::exec_helper("upgrade-toolchain.py", &args)
         }
         Some(Commands::Check) => commands::cmd_check(),
         Some(Commands::Bootstrap) => commands::cmd_bootstrap(),
