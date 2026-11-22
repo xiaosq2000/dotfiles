@@ -163,7 +163,12 @@ install_pkg_entry() {
     installed_ok=0
     case "$pkg_mgr" in
         apt)
-            if sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"; then
+            # Keep files just deployed from system/ (such as /etc/logid.cfg)
+            # instead of letting dpkg prompt on package-provided conffiles.
+            if sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+                -o Dpkg::Options::=--force-confdef \
+                -o Dpkg::Options::=--force-confold \
+                "$@" </dev/null; then
                 installed_ok=1
             fi
             ;;
