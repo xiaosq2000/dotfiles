@@ -6,8 +6,9 @@ if both define the same target. chezmoi writes only into ~, so this script
 copies them and installs missing system_packages with sudo. It never asks for a
 password: without cached sudo credentials it lists what differs and exits 0.
 
-Rootless hosts (`sudo = false` in .chezmoidata/machines.toml, such as `sicc`)
-render to nothing so apply stays quiet.
+Rootless hosts (`sudo = false`, such as `sicc`) and shared servers whose OS
+layer is managed outside this repo (`manageSystem = false`, such as `imrl`)
+render to nothing so apply stays strictly within `~`.
 
 The template compares each file with its installed copy and probes each
 declared system package via `stat`, rendering to nothing when everything
@@ -21,7 +22,7 @@ world-readable. Deleting a file from system/ leaves the installed copy.
 This runs before 90-downloads, which has to run last.
 */ -}}
 {{- $machineSpec := index .machines .machine -}}
-{{- if $machineSpec.sudo -}}
+{{- if and $machineSpec.sudo (get $machineSpec "manageSystem" | default false) -}}
 {{-   $bundles := $machineSpec.bundles -}}
 {{-   $selection := includeTemplate "software-selection" . | fromJson -}}
 {{-   $roots := list -}}

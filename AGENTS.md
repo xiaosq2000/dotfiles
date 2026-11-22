@@ -173,9 +173,10 @@ apply before any file is written.
 `system/<machine>/` (which overrides shared paths) hold root-owned files at
 their paths under `/`, and `.chezmoiscripts/run_after_80-system-files.sh.tmpl`
 installs the ones that differ plus missing `[system_packages.*]` from
-`.chezmoidata/tools.toml` with `sudo -n` on hosts with `sudo = true`. An
-agent's apply has no sudo and only lists them, so ask the user to run
-`sudo -v && chezmoi apply`.
+`.chezmoidata/tools.toml` with `sudo -n` only on personal hosts with
+`sudo = true` and `manageSystem = true` (`laptop` and `workstation`; shared
+lab servers like `imrl` manage `/` in `lab-infra`). An agent's apply has no
+sudo and only lists them, so ask the user to run `sudo -v && chezmoi apply`.
 
 - chezmoi's name prefixes do not apply there. Files install verbatim as root,
   0755 if executable in git, else 0644.

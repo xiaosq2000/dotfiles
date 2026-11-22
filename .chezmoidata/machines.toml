@@ -7,7 +7,7 @@
 # encrypted machines skill. Filesystem paths below are the deliberate exception
 # explained in docs/secrets.md: cache locations must work before a key exists.
 #
-# Checked on 2026-11-19.
+# Checked on 2026-11-22.
 
 ################################################################################
 # Fields
@@ -18,6 +18,10 @@
 #                          `dev`, `desktop`, `laptop`)
 #   sudo                   whether root is available, for hints rather than for
 #                          anything this repository runs
+#   manageSystem           whether this repository manages root-owned files under
+#                          `/` and distro `system_packages` (true only on personal
+#                          hosts; shared lab servers such as `imrl` belong in
+#                          lab-infra instead)
 #   virtual                true for non-host fallback/CI profiles (`generic`,
 #                          `container`); grouped separately in the dotfiles TUI
 #   docs                   the machine's page, relative to $HOME; present only
@@ -41,6 +45,7 @@ description = "IMRL desktop, Lenovo ThinkStation P3 Tower, one RTX 4080"
 hostnamePattern = "^shuqixiao-ThinkStation-P3-Tower$"
 bundles = ["core", "secrets", "dev", "desktop"]
 sudo = true
+manageSystem = true
 docs = ".agents/skills/machines/references/workstation.md"
 # Home is on a local NVMe with room to spare, so pixi's defaults are right.
 [machines.workstation.pixi]
@@ -53,6 +58,7 @@ description = "Lenovo Legion Y9000P IAH7H, one RTX 3070 Ti, works off campus"
 hostnamePattern = "^shuqixiao-Legion-Y9000P-IAH7H$"
 bundles = ["core", "secrets", "dev", "desktop", "laptop"]
 sudo = true
+manageSystem = true
 docs = ".agents/skills/machines/references/laptop.md"
 # One 468 GB volume holds home, the checkout and the environments. Worth
 # watching, but still local and still one filesystem.
@@ -62,11 +68,12 @@ detachedEnvironments = ""
 repodataDir = ""
 
 [machines.imrl]
-# GPU count checked on 2026-10-16.
-description = "Shared IMRL lab server, eight RTX 4090s, hosts the lab Gitea"
+# Checked on 2026-11-22: root services and hardware policy live in lab-infra.
+description = "Shared IMRL lab server (personal ~ only; system config lives in lab-infra)"
 hostnamePattern = "^capios-SYS-420GP-TNR$"
 bundles = ["core", "secrets", "dev"]
 sudo = true
+manageSystem = false
 # Shared and headless: reached over SSH, so no terminal emulator or font cache.
 docs = ".agents/skills/machines/references/imrl.md"
 # Measured 2026-09-18: 31 GB of package cache in home, on a root filesystem 89%

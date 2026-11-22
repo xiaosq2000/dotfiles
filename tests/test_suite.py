@@ -60,9 +60,6 @@ class UnitChecks(unittest.TestCase):
     def test_upgrade_toolchain(self):
         _run_script([sys.executable, str(TESTS / "check_upgrade.py")])
 
-    def test_gpu_fans(self):
-        _run_script([sys.executable, str(TESTS / "check_gpu_fans.py")])
-
     def test_ui_library(self):
         _run_script([sys.executable, str(TESTS / "check_ui.py")])
 
