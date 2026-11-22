@@ -84,3 +84,21 @@ rewrite a commit that has been pushed.
   on each line whose check differs.
 - Keep documents that agents read, such as skills and project references,
   short: tables and short sentences, not narrative.
+
+## Research and academic writing
+
+- Scientific integrity and fairness come first. Never rely on weakened or buggy
+  baselines to inflate benchmark margins; actively strengthen and tune baselines
+  under equalized budgets so genuine innovation and failure regimes stand out.
+- Aim first AI manuscript drafts at roughly 70% comprehension for a junior PhD
+  student in the area, using minimal faithful formalization without decorative
+  jargon. During human-in-the-loop refinement, adopt higher-level mathematical
+  abstraction whenever it communicates the core idea more concisely and
+  powerfully, accepting the trade-off in introductory readability.
+- Report negative results, parity regimes, stronger baselines, and failure
+  boundaries honestly. Never post-filter metrics with oracle labels, mix
+  variance definitions, or add result-gating assertions to benchmark scripts.
+- Stamp result artifacts with `git_sha`, `git_dirty`, and hyperparameters, and
+  keep generating scripts in git while their numbers remain cited.
+- Load the `academic-research` skill when designing experiments, auditing
+  baselines, or drafting and shipping manuscripts.
