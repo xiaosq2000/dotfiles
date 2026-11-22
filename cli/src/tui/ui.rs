@@ -223,8 +223,11 @@ fn render_overview(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         (
             "system",
             checks.system.status.as_str(),
-            if checks.system.skipped_rootless {
-                "rootless host (skipped)".to_string()
+            if checks.system.skipped {
+                format!(
+                    "{} (skipped)",
+                    checks.system.skip_reason.as_deref().unwrap_or("unmanaged")
+                )
             } else {
                 format!(
                     "files={} ({} drift) · pkgs={} ({} miss)",
@@ -427,8 +430,12 @@ fn render_overview(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         }
         _ => {
             let sys = &checks.system;
-            if sys.skipped_rootless {
-                lines.push(kv("Mode", "rootless host (sudo=false, skipped)", p));
+            if sys.skipped {
+                lines.push(kv(
+                    "Mode",
+                    &format!("{} (skipped)", sys.skip_reason.as_deref().unwrap_or("unmanaged")),
+                    p,
+                ));
             } else {
                 lines.push(kv("Managed Files", &sys.managed_files.to_string(), p));
                 lines.push(kv("Drifted Files", &sys.drifted_files.len().to_string(), p));
@@ -1028,11 +1035,6 @@ fn render_host(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
                         };
                         (b, c, "LogiOps (logid)", format!("MX Master 3 ({})", l.service_state))
                     }
-                    HostControlKind::Fans => {
-                        let f = h.fans.as_ref().expect("fans present");
-                        let (b, c) = if f.active { (" ON  ", p.ok) } else { (" OFF ", p.warn) };
-                        (b, c, "GPU Fans (imrl)", format!("max-fan policy ({})", f.service_state))
-                    }
                 };
                 ListItem::new(vec![
                     Line::from(vec![
@@ -1238,27 +1240,6 @@ fn render_host(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
                 )));
             }
         }
-        Some(HostControlKind::Fans) => {
-            if let Some(f) = &h.fans {
-                lines.push(section_heading("NVIDIA GPU Max-Fan Policy (imrl)", p));
-                lines.push(kv("Service", &format!("nvidia-gpu-fans-max.service ({})", f.service_state), p));
-                lines.push(kv(
-                    "Boot",
-                    match f.enabled {
-                        Some(true) => "enabled",
-                        Some(false) => "disabled",
-                        None => "unknown",
-                    },
-                    p,
-                ));
-                lines.push(kv("Helper", "/usr/local/libexec/nvidia-gpu-fans-max.py", p));
-                lines.push(Line::raw(""));
-                lines.push(Line::from(Span::styled(
-                    "  Space/t: apply now via sudo · R: restart unit",
-                    Style::default().fg(p.accent),
-                )));
-            }
-        }
         None => {
             lines.push(section_heading("Host Environment (Read-Only)", p));
             lines.push(kv("OS", &h.system.os_pretty, p));
@@ -1266,7 +1247,7 @@ fn render_host(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
             lines.push(kv("Uptime", &h.system.uptime, p));
             lines.push(Line::raw(""));
             lines.push(Line::from(Span::styled(
-                "  This machine profile has no managed desktop/laptop/GPU hardware switches.",
+                "  This machine profile has no managed personal hardware switches.",
                 Style::default().fg(p.fg),
             )));
         }

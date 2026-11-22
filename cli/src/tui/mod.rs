@@ -371,17 +371,6 @@ fn activate_host_control_in_tui(app: &mut App) {
                 pause: false,
             });
         }
-        HostControlKind::Fans => {
-            app.pending_action = Some(PendingAction::RunCommand {
-                label: "dotfiles host fans apply".to_string(),
-                prog: "sudo".to_string(),
-                args: vec![
-                    "/usr/bin/python3".to_string(),
-                    host::FANS_HELPER_PATH.to_string(),
-                ],
-                pause: true,
-            });
-        }
     }
 }
 
@@ -409,18 +398,6 @@ fn reload_host_control_in_tui(app: &mut App) {
                     host::LOGID_UNIT.to_string(),
                 ],
                 pause: false,
-            });
-        }
-        HostControlKind::Fans => {
-            app.pending_action = Some(PendingAction::RunCommand {
-                label: format!("sudo systemctl restart {}", host::FANS_UNIT),
-                prog: "sudo".to_string(),
-                args: vec![
-                    "systemctl".to_string(),
-                    "restart".to_string(),
-                    host::FANS_UNIT.to_string(),
-                ],
-                pause: true,
             });
         }
         HostControlKind::Dgpu | HostControlKind::Battery => {

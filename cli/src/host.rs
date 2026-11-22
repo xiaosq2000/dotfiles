@@ -14,12 +14,10 @@ pub const BATTERY_LIMIT_UNIT: &str = "battery-charge-limit.service";
 pub const REFRESH_USER_UNIT: &str = "refresh-rate-on-power.service";
 pub const LOGID_UNIT: &str = "logid.service";
 pub const LOGID_CONFIG_PATH: &str = "/etc/logid.cfg";
-pub const FANS_UNIT: &str = "nvidia-gpu-fans-max.service";
-pub const FANS_HELPER_PATH: &str = "/usr/local/libexec/nvidia-gpu-fans-max.py";
 
 #[derive(Subcommand, Debug)]
 pub enum HostAction {
-    /// Show status of all host hardware/system controls on this machine (default)
+    /// Show status of personal host hardware/system controls on this machine (default)
     Status {
         /// Emit machine-readable JSON
         #[arg(long)]
@@ -49,11 +47,6 @@ pub enum HostAction {
     Logid {
         #[command(subcommand)]
         action: Option<LogidAction>,
-    },
-    /// Inspect or apply the IMRL NVIDIA GPU max-fan policy
-    Fans {
-        #[command(subcommand)]
-        action: Option<FansAction>,
     },
 }
 
@@ -97,14 +90,6 @@ pub enum LogidAction {
     Restart,
 }
 
-#[derive(Subcommand, Debug)]
-pub enum FansAction {
-    /// Show nvidia-gpu-fans-max.service status (default)
-    Status,
-    /// Run /usr/local/libexec/nvidia-gpu-fans-max.py via sudo
-    Apply,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DgpuStatus {
     pub helper_present: bool,
@@ -140,14 +125,6 @@ pub struct LogidStatus {
     pub config_present: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct FansStatus {
-    pub helper_present: bool,
-    pub active: bool,
-    pub service_state: String,
-    pub enabled: Option<bool>,
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct HostSummary {
     pub os_pretty: String,
@@ -167,8 +144,6 @@ pub struct HostReport {
     pub refresh: Option<RefreshStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub logid: Option<LogidStatus>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fans: Option<FansStatus>,
     pub system: HostSummary,
 }
 
@@ -180,7 +155,6 @@ pub fn cmd_host(action: Option<HostAction>) -> Result<i32> {
         HostAction::Battery { action } => cmd_battery(action.unwrap_or(BatteryAction::Status)),
         HostAction::Refresh { action } => cmd_refresh(action.unwrap_or(RefreshAction::Status)),
         HostAction::Logid { action } => cmd_logid(action.unwrap_or(LogidAction::Status)),
-        HostAction::Fans { action } => cmd_fans(action.unwrap_or(FansAction::Status)),
     }
 }
 
@@ -200,7 +174,6 @@ pub fn collect_report(bundles: &[String]) -> HostReport {
     let battery = collect_battery(laptop_selected);
     let refresh = collect_refresh(laptop_selected);
     let logid = collect_logid(desktop_selected);
-    let fans = collect_fans();
     let system = collect_host_summary();
 
     HostReport {
@@ -210,7 +183,6 @@ pub fn collect_report(bundles: &[String]) -> HostReport {
         battery,
         refresh,
         logid,
-        fans,
         system,
     }
 }
@@ -441,22 +413,6 @@ fn collect_logid(desktop_selected: bool) -> Option<LogidStatus> {
     })
 }
 
-fn collect_fans() -> Option<FansStatus> {
-    let helper_present = Path::new(FANS_HELPER_PATH).is_file();
-    let unit_path = Path::new("/etc/systemd/system").join(FANS_UNIT);
-    if !helper_present && !unit_path.is_file() {
-        return None;
-    }
-    let (active, service_state) = unit_is_active(FANS_UNIT, false);
-    let enabled = unit_is_enabled(FANS_UNIT);
-    Some(FansStatus {
-        helper_present,
-        active,
-        service_state,
-        enabled,
-    })
-}
-
 fn cmd_status(json_out: bool) -> Result<i32> {
     let bundles = current_bundles();
     let report = collect_report(&bundles);
@@ -496,10 +452,6 @@ fn cmd_status(json_out: bool) -> Result<i32> {
         any = true;
         let bin = lg.binary.as_deref().unwrap_or("not installed");
         println!("  logid     {} ({bin})", lg.service_state);
-    }
-    if let Some(fans) = &report.fans {
-        any = true;
-        println!("  fans      {} (helper={})", fans.service_state, if fans.helper_present { "present" } else { "missing" });
     }
     if !any {
         println!("  (no managed host hardware controls active on this profile)");
@@ -656,34 +608,6 @@ fn cmd_logid(action: LogidAction) -> Result<i32> {
             if status.success() {
                 println!("logid ({LOGID_UNIT}): restarted");
             }
-            Ok(status.code().unwrap_or(1))
-        }
-    }
-}
-
-fn cmd_fans(action: FansAction) -> Result<i32> {
-    match action {
-        FansAction::Status => {
-            let (active, state) = unit_is_active(FANS_UNIT, false);
-            println!(
-                "fans ({FANS_UNIT}): {} ({state}) | helper={}",
-                if active { "active" } else { "inactive" },
-                if Path::new(FANS_HELPER_PATH).is_file() {
-                    "present"
-                } else {
-                    "missing"
-                }
-            );
-            Ok(0)
-        }
-        FansAction::Apply => {
-            if !Path::new(FANS_HELPER_PATH).is_file() {
-                eprintln!("dotfiles host fans: {FANS_HELPER_PATH} is not installed on this host.");
-                return Ok(1);
-            }
-            let status = Command::new("sudo")
-                .args(["/usr/bin/python3", FANS_HELPER_PATH])
-                .status()?;
             Ok(status.code().unwrap_or(1))
         }
     }

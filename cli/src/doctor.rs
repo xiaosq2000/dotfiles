@@ -115,6 +115,7 @@ fn check_chezmoi() -> (ChezmoiCheck, Option<ChezmoiData>) {
                 theme: None,
                 bundles: Vec::new(),
                 sudo: false,
+                manage_system: false,
                 source_path: None,
                 drifted_count: 0,
                 drifted: Vec::new(),
@@ -126,6 +127,7 @@ fn check_chezmoi() -> (ChezmoiCheck, Option<ChezmoiData>) {
             let bundles = m_info.map(|m| m.bundles.clone()).unwrap_or_default();
             let description = m_info.map(|m| m.description.clone()).unwrap_or_default();
             let sudo = m_info.map(|m| m.sudo).unwrap_or(false);
+            let manage_system = m_info.map(|m| m.manage_system).unwrap_or(false);
 
             let (src_rc, src_out, _) = run_capture("chezmoi", &["source-path"]);
             let (st_rc, st_out, _) =
@@ -159,6 +161,7 @@ fn check_chezmoi() -> (ChezmoiCheck, Option<ChezmoiData>) {
                 }),
                 bundles,
                 sudo,
+                manage_system,
                 source_path: (src_rc == 0 && !src_out.is_empty()).then_some(src_out),
                 drifted_count,
                 drifted: drifted.into_iter().take(20).collect(),
@@ -682,14 +685,10 @@ fn load_fetch_items(home: &Path, bundles: &[String], data: Option<&ChezmoiData>)
     items
 }
 
-const MIGRATED_SBIN_TO_LIBEXEC: [(&str, &str); 4] = [
+const MIGRATED_SBIN_TO_LIBEXEC: [(&str, &str); 3] = [
     ("/usr/local/sbin/bt-autoenable", "/usr/local/libexec/bt-autoenable"),
     ("/usr/local/sbin/power-tunables", "/usr/local/libexec/power-tunables"),
     ("/usr/local/sbin/dgpu-display", "/usr/local/libexec/dgpu-display"),
-    (
-        "/usr/local/sbin/set-nvidia-gpu-fans-max",
-        "/usr/local/libexec/nvidia-gpu-fans-max.py",
-    ),
 ];
 
 fn walk_system_root(root: &Path, cur: &Path, out: &mut BTreeMap<String, (PathBuf, u32)>) {
@@ -726,10 +725,16 @@ fn walk_system_root(root: &Path, cur: &Path, out: &mut BTreeMap<String, (PathBuf
 }
 
 fn check_system(chezmoi: &ChezmoiCheck, data: Option<&ChezmoiData>) -> SystemCheck {
-    if !chezmoi.sudo {
+    if !chezmoi.sudo || !chezmoi.manage_system {
+        let reason = if !chezmoi.sudo {
+            "rootless host"
+        } else {
+            "personal ~ only (manageSystem=false)"
+        };
         return SystemCheck {
             status: "ok".to_string(),
-            skipped_rootless: true,
+            skipped: true,
+            skip_reason: Some(reason.to_string()),
             managed_files: 0,
             drifted_files: Vec::new(),
             selected_system_packages: Vec::new(),
@@ -828,7 +833,8 @@ fn check_system(chezmoi: &ChezmoiCheck, data: Option<&ChezmoiData>) -> SystemChe
     let status = if issues.is_empty() { "ok" } else { "warn" }.to_string();
     SystemCheck {
         status,
-        skipped_rootless: false,
+        skipped: false,
+        skip_reason: None,
         managed_files: merged.len(),
         drifted_files,
         selected_system_packages,
@@ -1016,8 +1022,11 @@ pub fn print_doctor_pretty(report: &DoctorReport) {
 
     // system
     let sys = &report.checks.system;
-    let sys_summary = if sys.skipped_rootless {
-        "rootless host (skipped)".to_string()
+    let sys_summary = if sys.skipped {
+        format!(
+            "{} (skipped)",
+            sys.skip_reason.as_deref().unwrap_or("unmanaged")
+        )
     } else {
         format!(
             "files: {} ({} drifted) | pkgs: {} ({} missing)",

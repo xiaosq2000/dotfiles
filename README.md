@@ -61,8 +61,8 @@ dotfiles theme [variant]            # switch or preview colour theme across tool
 dotfiles fetch <status|sync|outdated|update>
 dotfiles jail [options] -- <cmd>    # run any command inside agent-jail
 dotfiles agent <skills|status>
-dotfiles host [status|keymap|dgpu|battery|refresh|logid|fans]
-                                    # manage host hardware & system controls
+dotfiles host [status|keymap|dgpu|battery|refresh|logid]
+                                    # manage personal host hardware & system controls
 dotfiles check                      # pre-commit + full tests/ suite via `mise run check`
 dotfiles completion <zsh|bash|fish> # cached automatically on fpath in zsh
 ```
@@ -450,8 +450,10 @@ Required distribution packages (`keyd`, `zathura`, `fcitx5`, `fcitx5-pinyin`,
 [.chezmoidata/tools.toml](.chezmoidata/tools.toml) under `[system_packages.*]`
 and selected by bundles.
 
-`.chezmoiscripts/run_after_80-system-files.sh.tmpl` runs only on hosts with
-`sudo = true` (rootless hosts like `sicc` skip cleanly). It deploys differing
+`.chezmoiscripts/run_after_80-system-files.sh.tmpl` runs only on personal hosts
+with `sudo = true` and `manageSystem = true` (`laptop` and `workstation`);
+rootless hosts (`sicc`) and shared servers (`imrl`, whose root services live in
+`lab-infra`) skip cleanly. It deploys differing
 files, installs missing `system_packages` per entry via the distribution package
 manager (`apt-get`, `dnf`, `pacman`, or `zypper`) without aborting if one
 package is unavailable, and never asks for a password: without cached sudo it
@@ -466,7 +468,7 @@ and enables installed units. Deleting a file from `system/` leaves the installed
 copy in place; `dotfiles doctor` audits `system/` drift, missing
 `system_packages`, and superseded `/usr/local/sbin/*` copies without sudo.
 
-Manage host controls from the unified CLI or Tab 6 (`6 Host`) of `dotfiles`:
+Manage personal host controls from the unified CLI or Tab 6 (`6 Host`) of `dotfiles`:
 
 - `dotfiles host keymap [status|on|off|toggle|reload]` — toggle `keyd` HHKB
   remapping (`CapsLock -> Left Ctrl`, `Right Ctrl -> HHKB Fn`) passwordlessly on
@@ -481,8 +483,6 @@ Manage host controls from the unified CLI or Tab 6 (`6 Host`) of `dotfiles`:
   user service (`refresh-rate-on-power.service`).
 - `dotfiles host logid [status|restart]` — inspect or restart Logitech MX Master
   3 `logid.service` (shared across `desktop` hosts).
-- `dotfiles host fans [status|apply]` — inspect or trigger the IMRL GPU max-fan
-  policy (`/usr/local/libexec/nvidia-gpu-fans-max.py`).
 
 ## Secrets
 

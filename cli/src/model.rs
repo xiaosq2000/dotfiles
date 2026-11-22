@@ -43,6 +43,8 @@ pub struct MachineSpec {
     pub bundles: Vec<String>,
     #[serde(default)]
     pub sudo: bool,
+    #[serde(rename = "manageSystem", default)]
+    pub manage_system: bool,
     #[serde(rename = "virtual", default)]
     pub is_virtual: bool,
     #[serde(default)]
@@ -244,6 +246,7 @@ pub struct ChezmoiCheck {
     pub theme: Option<String>,
     pub bundles: Vec<String>,
     pub sudo: bool,
+    pub manage_system: bool,
     pub source_path: Option<String>,
     pub drifted_count: usize,
     pub drifted: Vec<String>,
@@ -317,7 +320,9 @@ pub struct AgentsCheck {
 #[derive(Debug, Clone, Serialize)]
 pub struct SystemCheck {
     pub status: String,
-    pub skipped_rootless: bool,
+    pub skipped: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skip_reason: Option<String>,
     pub managed_files: usize,
     pub drifted_files: Vec<String>,
     pub selected_system_packages: Vec<String>,

@@ -64,7 +64,7 @@ enum Commands {
         action: AgentAction,
     },
 
-    /// Manage host hardware & system controls (keymap, dgpu, battery, refresh, logid, fans)
+    /// Manage personal host hardware & system controls (keymap, dgpu, battery, refresh, logid)
     Host {
         #[command(subcommand)]
         action: Option<host::HostAction>,

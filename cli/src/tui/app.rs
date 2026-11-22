@@ -101,7 +101,6 @@ pub enum HostControlKind {
     Battery,
     Refresh,
     Logid,
-    Fans,
 }
 
 pub struct App {
@@ -299,9 +298,6 @@ impl App {
         }
         if h.logid.is_some() {
             controls.push(HostControlKind::Logid);
-        }
-        if h.fans.is_some() {
-            controls.push(HostControlKind::Fans);
         }
         self.host_controls = controls;
         if !self.host_controls.is_empty() {

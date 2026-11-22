@@ -42,8 +42,9 @@ assert (
 ), help_res.stdout
 
 host_help = subprocess.run([*CMD, "host", "--help"], text=True, capture_output=True, check=True)
-for sub in ("keymap", "dgpu", "battery", "refresh", "logid", "fans"):
+for sub in ("keymap", "dgpu", "battery", "refresh", "logid"):
     assert sub in host_help.stdout, host_help.stdout
+assert "fans" not in host_help.stdout, host_help.stdout
 
 # 2. Unknown subcommand exits 2.
 bad_res = subprocess.run([*CMD, "no-such-cmd"], text=True, capture_output=True, check=False)
