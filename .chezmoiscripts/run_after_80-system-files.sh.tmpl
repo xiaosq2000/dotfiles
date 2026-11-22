@@ -1,8 +1,9 @@
 {{- /*
-Install this machine's root-owned files: everything under system/<machine>/
-goes to the same path under /. chezmoi writes only into ~, so this script
-copies them with sudo. It never asks for a password: without cached sudo
-credentials it lists what differs and exits 0.
+Install this machine's root-owned files: everything under system/<bundle>/
+(for this machine's bundles) and system/<machine>/ goes to the same path under
+/, with system/<machine>/ winning if both define the same target. chezmoi writes
+only into ~, so this script copies them with sudo. It never asks for a password:
+without cached sudo credentials it lists what differs and exits 0.
 
 The template compares each file with its installed copy, and renders to
 nothing when all of them match; chezmoi does not run an empty script. So
@@ -16,52 +17,79 @@ world-readable. Deleting a file from system/ leaves the installed copy.
 
 This runs before 90-downloads, which has to run last.
 */ -}}
-{{- $root := joinPath .chezmoi.sourceDir "system" .machine -}}
-{{- $files := list -}}
-{{- $units := list -}}
-{{- $systemd := false -}}
-{{- $udev := false -}}
-{{- $modprobe := false -}}
-{{- if stat $root -}}
-{{-   range $src := glob (joinPath $root "**") -}}
-{{-     $info := stat $src -}}
-{{-     if not $info.isDir -}}
-{{-       $dst := trimPrefix $root $src -}}
-{{-       if and (not (contains "/__pycache__/" $dst)) (not (hasSuffix ".pyc" $dst)) (not (hasSuffix ".pyo" $dst)) -}}
-{{-         $perm := 420 -}}
-{{-         if eq (mod (div $info.perm 64) 2) 1 -}}
-{{-           $perm = 493 -}}
-{{-         end -}}
-{{-         $cur := stat $dst -}}
-{{-         if or (not $cur) (ne $cur.perm $perm) (ne (include $dst) (include $src)) -}}
-{{-           $files = append $files (dict "src" $src "dst" $dst "mode" (printf "%o" $perm)) -}}
-{{-           if hasPrefix "/etc/systemd/" $dst -}}
-{{-             $systemd = true -}}
+{{- $bundles := (index .machines .machine).bundles -}}
+{{- $roots := list -}}
+{{- range $b := $bundles -}}
+{{-   if ne $b $.machine -}}
+{{-     $roots = append $roots (joinPath $.chezmoi.sourceDir "system" $b) -}}
+{{-   end -}}
+{{- end -}}
+{{- $roots = append $roots (joinPath .chezmoi.sourceDir "system" .machine) -}}
+{{- $byDst := dict -}}
+{{- range $root := $roots -}}
+{{-   if stat $root -}}
+{{-     range $src := glob (joinPath $root "**") -}}
+{{-       $info := stat $src -}}
+{{-       if not $info.isDir -}}
+{{-         $dst := trimPrefix $root $src -}}
+{{-         if and (not (contains "/__pycache__/" $dst)) (not (hasSuffix ".pyc" $dst)) (not (hasSuffix ".pyo" $dst)) -}}
+{{-           $perm := 420 -}}
+{{-           if eq (mod (div $info.perm 64) 2) 1 -}}
+{{-             $perm = 493 -}}
 {{-           end -}}
-{{-           if regexMatch "^/etc/systemd/system/[^/]+\\.(service|socket|timer|path)$" $dst -}}
-{{-             $units = append $units (base $dst) -}}
-{{-           end -}}
-{{-           if hasPrefix "/etc/udev/rules.d/" $dst -}}
-{{-             $udev = true -}}
-{{-           end -}}
-{{-           if hasPrefix "/etc/modprobe.d/" $dst -}}
-{{-             $modprobe = true -}}
-{{-           end -}}
+{{-           $_ := set $byDst $dst (dict "src" $src "dst" $dst "perm" $perm) -}}
 {{-         end -}}
 {{-       end -}}
 {{-     end -}}
 {{-   end -}}
 {{- end -}}
-{{- if $files -}}
+{{- $files := list -}}
+{{- $units := list -}}
+{{- $systemd := false -}}
+{{- $udev := false -}}
+{{- $modprobe := false -}}
+{{- $keyd := false -}}
+{{- range $dst := (keys $byDst | sortAlpha) -}}
+{{-   $entry := index $byDst $dst -}}
+{{-   $cur := stat $dst -}}
+{{-   if or (not $cur) (ne $cur.perm $entry.perm) (ne (include $dst) (include $entry.src)) -}}
+{{-     $files = append $files (dict "src" $entry.src "dst" $dst "mode" (printf "%o" $entry.perm)) -}}
+{{-     if hasPrefix "/etc/systemd/" $dst -}}
+{{-       $systemd = true -}}
+{{-     end -}}
+{{-     if regexMatch "^/etc/systemd/system/[^/]+\\.(service|socket|timer|path)$" $dst -}}
+{{-       $units = append $units (base $dst) -}}
+{{-     end -}}
+{{-     if hasPrefix "/etc/udev/rules.d/" $dst -}}
+{{-       $udev = true -}}
+{{-     end -}}
+{{-     if hasPrefix "/etc/modprobe.d/" $dst -}}
+{{-       $modprobe = true -}}
+{{-     end -}}
+{{-     if hasPrefix "/etc/keyd/" $dst -}}
+{{-       $keyd = true -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+{{- $hasKeydConfig := hasKey $byDst "/etc/keyd/default.conf" -}}
+{{- $keydInstalled := or (stat "/usr/bin/keyd.rvaiya") (stat "/usr/bin/keyd") (stat "/usr/local/bin/keyd") -}}
+{{- $installKeyd := and $hasKeydConfig (not $keydInstalled) -}}
+{{- if or $files $installKeyd -}}
 #!/bin/sh
-# Install the files under system/{{ .machine }}/ that differ from their installed
-# copies. Rendered from .chezmoiscripts/run_after_80-system-files.sh.tmpl.
+# Install files under system/<bundle>/ and system/{{ .machine }}/ that differ
+# from their installed copies, and auto-install keyd on desktop hosts when
+# missing. Rendered from .chezmoiscripts/run_after_80-system-files.sh.tmpl.
 set -eu
 
 if ! sudo -n true 2>/dev/null; then
-    echo "system-files: these differ from {{ $root }}:" >&2
-{{- range $files }}
+{{- if $files }}
+    echo "system-files: these differ from {{ joinPath .chezmoi.sourceDir "system" }}:" >&2
+{{-   range $files }}
     echo "system-files:   {{ .dst }}" >&2
+{{-   end }}
+{{- end }}
+{{- if $installKeyd }}
+    echo "system-files: missing desktop package: keyd (will install and enable automatically)" >&2
 {{- end }}
     echo "system-files: run 'sudo -v && chezmoi apply' to install them" >&2
     exit 0
@@ -82,5 +110,51 @@ sudo -n udevadm control --reload
 {{- end }}
 {{- if $modprobe }}
 echo "system-files: module options take effect when the module next loads"
+{{- end }}
+{{- if $installKeyd }}
+
+keyd_installed_ok=0
+if command -v apt-get >/dev/null 2>&1; then
+    if sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update && \
+       sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y keyd; then
+        keyd_installed_ok=1
+    fi
+elif command -v dnf >/dev/null 2>&1; then
+    if sudo -n dnf install -y keyd; then
+        keyd_installed_ok=1
+    fi
+elif command -v pacman >/dev/null 2>&1; then
+    if sudo -n pacman -S --noconfirm --needed keyd; then
+        keyd_installed_ok=1
+    fi
+elif command -v zypper >/dev/null 2>&1; then
+    if sudo -n zypper --non-interactive install keyd; then
+        keyd_installed_ok=1
+    fi
+else
+    echo "system-files: warning: cannot auto-install keyd (unsupported package manager)" >&2
+fi
+
+if [ "$keyd_installed_ok" -eq 1 ]; then
+    sudo -n systemctl enable --now keyd.service || true
+    KEYD_BIN="$(command -v keyd.rvaiya 2>/dev/null || command -v keyd 2>/dev/null || true)"
+    if [ -n "$KEYD_BIN" ] && systemctl is-active --quiet keyd.service; then
+        sudo -n "$KEYD_BIN" reload || true
+    fi
+    echo "system-files: installed and enabled keyd"
+else
+    echo "system-files: warning: keyd installation did not complete; retry with 'sudo -v && chezmoi apply'" >&2
+fi
+{{- else if $keyd }}
+
+KEYD_BIN="$(command -v keyd.rvaiya 2>/dev/null || command -v keyd 2>/dev/null || true)"
+if [ -n "$KEYD_BIN" ]; then
+    if systemctl is-active --quiet keyd.service; then
+        sudo -n "$KEYD_BIN" reload
+        echo "system-files: reloaded keyd"
+    else
+        echo "system-files: keyd is installed but inactive; run 'dotfiles keymap on' to activate"
+    fi
+fi
 {{- end }}
 {{ end -}}
