@@ -45,13 +45,13 @@ else assumed.
 
 ## Day to day
 
-Checked on 2026-11-20. The unified `dotfiles` CLI (built in Rust under
+Checked on 2026-11-22. The unified `dotfiles` CLI (built in Rust under
 [cli/](cli/Cargo.toml) and installed via `mise` in the `core` bundle) wraps
 daily operations, dynamic Zsh tab completion (via `fzf-tab`), and an
 interactive Ratatui TUI:
 
 ```sh
-dotfiles                            # interactive Ratatui TUI (5 tabs + live Theme Studio)
+dotfiles                            # interactive Ratatui TUI (6 tabs: Overview, Themes, Agents, Toolchain, Machines, Keymap)
 dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents and sandbox
 dotfiles sync [--update] [--dry-run] # chezmoi apply/update (--init + dirty-tree guard)
 dotfiles upgrade [--dry-run] [--now] [--only mise,pixi,fetch,sheldon,pi]
@@ -61,6 +61,8 @@ dotfiles theme [variant]            # switch or preview colour theme across tool
 dotfiles fetch <status|sync|outdated|update>
 dotfiles jail [options] -- <cmd>    # run any command inside agent-jail
 dotfiles agent <skills|status>
+dotfiles keymap [status|on|off|toggle|reload]
+                                    # toggle or inspect desktop keyd HHKB remap
 dotfiles check                      # pre-commit + full tests/ suite via `mise run check`
 dotfiles completion <zsh|bash|fish> # cached automatically on fpath in zsh
 ```
@@ -439,8 +441,10 @@ testing upstream downloads. CI uses local fixtures only.
 
 ## System files
 
-Files outside `~`, such as scripts in `/usr/local/sbin`, systemd units and udev
-rules, live in `system/<machine>/` at their paths under `/`.
+Files outside `~`, such as scripts in `/usr/local/sbin`, `keyd` and polkit
+rules, systemd units and udev rules, live in `system/<bundle>/` (shared by
+every host selecting that bundle, such as `system/desktop/`) and
+`system/<machine>/` (host-specific overrides) at their paths under `/`.
 `.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs the ones that
 differ, as root, and never asks for a password: without cached sudo it lists
 them and the next apply tries again. To install:
@@ -449,8 +453,19 @@ them and the next apply tries again. To install:
 sudo -v && chezmoi apply
 ```
 
-It reloads systemd and udev and enables installed units, but restarts nothing.
-Deleting a file from `system/` leaves the installed copy in place.
+It reloads systemd, udev, and an active `keyd` daemon and enables installed
+units, but restarts nothing. Deleting a file from `system/` leaves the
+installed copy in place.
+
+On `desktop` hosts (`laptop` and `workstation`), `system/desktop/etc/keyd/default.conf`
+maps `CapsLock` to `Left Ctrl` and `Right Ctrl` to a classic HHKB `Fn` layer on
+built-in and standard external keyboards. Running `sudo -v && chezmoi apply` on
+a new desktop host deploys the config and polkit rule, installs `keyd`
+automatically via the distribution package manager (`apt-get`, `dnf`, `pacman`,
+or `zypper`), and enables `keyd.service`. Toggle or inspect it anytime without
+a password via `dotfiles keymap` (`status`, `on`, `off`, `toggle`, `reload`) or
+Tab 6 (`Keymap`) in the `dotfiles` TUI. Exclude an actual hardware HHKB by
+adding `-<vid>:<pid>` (shown by `dotfiles keymap` and the TUI) under `[ids]`.
 
 ## Secrets
 

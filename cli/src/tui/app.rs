@@ -8,24 +8,27 @@ pub enum Tab {
     Agents,
     Toolchain,
     Machines,
+    Keymap,
 }
 
 impl Tab {
-    pub const ALL: [Tab; 5] = [
+    pub const ALL: [Tab; 6] = [
         Tab::Overview,
         Tab::Themes,
         Tab::Agents,
         Tab::Toolchain,
         Tab::Machines,
+        Tab::Keymap,
     ];
 
     pub fn title(self) -> &'static str {
         match self {
             Tab::Overview => "1 Overview",
             Tab::Themes => "2 Themes",
-            Tab::Agents => "3 Agents & Jail",
+            Tab::Agents => "3 Agents",
             Tab::Toolchain => "4 Toolchain",
             Tab::Machines => "5 Machines",
+            Tab::Keymap => "6 Keymap",
         }
     }
 
@@ -36,6 +39,7 @@ impl Tab {
             Tab::Agents => 2,
             Tab::Toolchain => 3,
             Tab::Machines => 4,
+            Tab::Keymap => 5,
         }
     }
 
@@ -45,6 +49,22 @@ impl Tab {
 
     pub fn prev(self) -> Self {
         Self::ALL[(self.index() + Self::ALL.len() - 1) % Self::ALL.len()]
+    }
+
+    /// Resolve which tab covers a given 0-based terminal column inside the top
+    /// tab bar (1-cell left border + 1-cell padding, 3-cell `" │ "` divider).
+    pub fn at_column(col: u16) -> Option<Self> {
+        let mut x: usize = 2;
+        let col = col as usize;
+        for (i, tab) in Self::ALL.iter().enumerate() {
+            let width = tab.title().len();
+            let end = x + width;
+            if col >= x && col <= end {
+                return Some(*tab);
+            }
+            x = end + if i + 1 < Self::ALL.len() { 3 } else { 0 };
+        }
+        None
     }
 }
 
@@ -82,6 +102,7 @@ pub struct App {
     pub agent_idx: usize,
     pub toolchain_idx: usize,
     pub machine_idx: usize,
+    pub keymap_idx: usize,
     pub themes: Vec<ThemeListItem>,
     pub toolchain_rows: Vec<ToolchainRow>,
     pub machine_names: Vec<String>,
@@ -105,6 +126,7 @@ impl App {
             agent_idx: 0,
             toolchain_idx: 0,
             machine_idx: 0,
+            keymap_idx: 0,
             themes: Vec::new(),
             toolchain_rows: Vec::new(),
             machine_names: Vec::new(),
@@ -248,6 +270,12 @@ impl App {
         } else if !self.machine_names.is_empty() {
             self.machine_idx = self.machine_idx.min(self.machine_names.len() - 1);
         }
+
+        if !self.snapshot.keymap.keyboards.is_empty() {
+            self.keymap_idx = self.keymap_idx.min(self.snapshot.keymap.keyboards.len() - 1);
+        } else {
+            self.keymap_idx = 0;
+        }
     }
 
     pub fn active_palette(&self) -> TuiTheme {
@@ -289,6 +317,9 @@ impl App {
             Tab::Machines if !self.machine_names.is_empty() => {
                 self.machine_idx = (self.machine_idx + 1) % self.machine_names.len();
             }
+            Tab::Keymap if !self.snapshot.keymap.keyboards.is_empty() => {
+                self.keymap_idx = (self.keymap_idx + 1) % self.snapshot.keymap.keyboards.len();
+            }
             _ => {}
         }
     }
@@ -309,6 +340,10 @@ impl App {
             Tab::Machines if !self.machine_names.is_empty() => {
                 self.machine_idx =
                     (self.machine_idx + self.machine_names.len() - 1) % self.machine_names.len();
+            }
+            Tab::Keymap if !self.snapshot.keymap.keyboards.is_empty() => {
+                let n = self.snapshot.keymap.keyboards.len();
+                self.keymap_idx = (self.keymap_idx + n - 1) % n;
             }
             _ => {}
         }

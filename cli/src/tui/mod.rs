@@ -3,6 +3,7 @@ pub mod theme;
 pub mod ui;
 
 use crate::doctor::{build_snapshot, home_dir};
+use crate::keymap;
 use crate::model::FullSnapshot;
 use crate::tui::app::{AGENT_NAMES, App, PendingAction, Tab};
 use anyhow::Result;
@@ -16,7 +17,9 @@ use crossterm::terminal::{
 };
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
+use std::env;
 use std::io::{self, BufRead, Write};
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
 use std::thread;
@@ -91,9 +94,8 @@ pub fn run() -> Result<i32> {
                 Event::Mouse(mouse) => {
                     if mouse.kind == MouseEventKind::Down(MouseButton::Left) && mouse.row <= 2 {
                         // Clicking the top tab bar switches tabs smoothly.
-                        if mouse.column < 70 {
-                            let idx = ((mouse.column as usize) / 13).min(Tab::ALL.len() - 1);
-                            app.tab = Tab::ALL[idx];
+                        if let Some(tab) = Tab::at_column(mouse.column) {
+                            app.tab = tab;
                         }
                     } else if mouse.kind == MouseEventKind::ScrollDown {
                         app.move_down();
@@ -138,6 +140,7 @@ fn handle_key(
         KeyCode::Char('3') => app.tab = Tab::Agents,
         KeyCode::Char('4') => app.tab = Tab::Toolchain,
         KeyCode::Char('5') => app.tab = Tab::Machines,
+        KeyCode::Char('6') => app.tab = Tab::Keymap,
         KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => app.tab = app.tab.next(),
         KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => app.tab = app.tab.prev(),
         KeyCode::Down | KeyCode::Char('j') if app.tab != Tab::Agents || code == KeyCode::Down => {
@@ -252,7 +255,114 @@ fn handle_key(
                 pause: true,
             });
         }
+        KeyCode::Char(' ') | KeyCode::Enter | KeyCode::Char('t') if app.tab == Tab::Keymap => {
+            toggle_keymap_in_tui(app);
+        }
+        KeyCode::Char('R') if app.tab == Tab::Keymap => {
+            reload_keymap_in_tui(app);
+        }
+        KeyCode::Char('e') if app.tab == Tab::Keymap => {
+            let source_root = app
+                .snapshot
+                .report
+                .checks
+                .chezmoi
+                .source_path
+                .as_deref()
+                .map(PathBuf::from)
+                .unwrap_or_else(|| home_dir().join(".local/share/chezmoi"));
+            let cfg_src = source_root.join("system/desktop/etc/keyd/default.conf");
+            let editor = env::var("EDITOR")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+                .unwrap_or_else(|| "vi".to_string());
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: format!("{editor} {}", cfg_src.display()),
+                prog: editor,
+                args: vec![cfg_src.to_string_lossy().into_owned()],
+                pause: false,
+            });
+        }
+        KeyCode::Char('a') if app.tab == Tab::Keymap => {
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: "sudo -v && chezmoi apply".to_string(),
+                prog: "sh".to_string(),
+                args: vec!["-c".to_string(), "sudo -v && chezmoi apply".to_string()],
+                pause: true,
+            });
+        }
         _ => {}
+    }
+}
+
+fn toggle_keymap_in_tui(app: &mut App) {
+    if !app.snapshot.keymap.installed {
+        app.status_msg = Some(
+            "keyd is not installed — press 'a' to run `sudo -v && chezmoi apply`.".to_string(),
+        );
+        return;
+    }
+    let target_on = !app.snapshot.keymap.active;
+    if target_on && !app.snapshot.keymap.config_present {
+        app.status_msg = Some(format!(
+            "{} missing — press 'a' to run `sudo -v && chezmoi apply`.",
+            keymap::KEYD_CONFIG_PATH
+        ));
+        return;
+    }
+
+    let verb = if target_on { "start" } else { "stop" };
+    if matches!(keymap::try_manage_unit_passwordless(verb), Ok(true)) {
+        app.snapshot.keymap = keymap::collect_report();
+        if !app.snapshot.keymap.keyboards.is_empty() {
+            app.keymap_idx = app.keymap_idx.min(app.snapshot.keymap.keyboards.len() - 1);
+        }
+        keymap::notify_state(target_on);
+        app.status_msg = Some(if target_on {
+            "Keymap: ON (HHKB remap active)".to_string()
+        } else {
+            "Keymap: OFF (standard keyboard)".to_string()
+        });
+    } else {
+        app.pending_action = Some(PendingAction::RunCommand {
+            label: format!("sudo systemctl {verb} {}", keymap::KEYD_UNIT),
+            prog: "sudo".to_string(),
+            args: vec![
+                "systemctl".to_string(),
+                verb.to_string(),
+                keymap::KEYD_UNIT.to_string(),
+            ],
+            pause: false,
+        });
+    }
+}
+
+fn reload_keymap_in_tui(app: &mut App) {
+    if !app.snapshot.keymap.installed {
+        app.status_msg = Some(
+            "keyd is not installed — press 'a' to run `sudo -v && chezmoi apply`.".to_string(),
+        );
+        return;
+    }
+    if !app.snapshot.keymap.active {
+        app.status_msg =
+            Some("keyd is currently off — press Space/t to enable it first.".to_string());
+        return;
+    }
+    if matches!(keymap::try_manage_unit_passwordless("restart"), Ok(true)) {
+        app.snapshot.keymap = keymap::collect_report();
+        app.status_msg = Some(format!("Reloaded {}.", keymap::KEYD_CONFIG_PATH));
+    } else {
+        app.pending_action = Some(PendingAction::RunCommand {
+            label: format!("sudo systemctl restart {}", keymap::KEYD_UNIT),
+            prog: "sudo".to_string(),
+            args: vec![
+                "systemctl".to_string(),
+                "restart".to_string(),
+                keymap::KEYD_UNIT.to_string(),
+            ],
+            pause: false,
+        });
     }
 }
 

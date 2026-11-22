@@ -1,5 +1,6 @@
 mod commands;
 mod doctor;
+mod keymap;
 mod model;
 mod tui;
 
@@ -60,6 +61,12 @@ enum Commands {
     Agent {
         #[command(subcommand)]
         action: AgentAction,
+    },
+
+    /// Toggle or inspect the HHKB-style keyd keyboard remap (desktop Linux)
+    Keymap {
+        #[command(subcommand)]
+        action: Option<keymap::KeymapAction>,
     },
 
     /// Apply or update dotfiles via chezmoi (inherits caller network environment)
@@ -259,6 +266,7 @@ fn run() -> anyhow::Result<i32> {
             AgentAction::Skills { args } => commands::exec_helper("agent-skills.sh", &args),
             AgentAction::Status { json } => commands::cmd_agent_status(json),
         },
+        Some(Commands::Keymap { action }) => keymap::cmd_keymap(action),
         Some(Commands::Sync {
             update,
             dry_run,
@@ -358,5 +366,27 @@ mod tests {
             )
             .is_some()
         );
+    }
+
+    #[test]
+    fn tui_keymap_tab_renders_and_hit_tests() {
+        use crate::doctor::build_snapshot;
+        use crate::tui::app::{App, Tab};
+        use crate::tui::ui;
+        use ratatui::Terminal;
+        use ratatui::backend::TestBackend;
+
+        assert_eq!(Tab::at_column(2), Some(Tab::Overview));
+        assert_eq!(Tab::at_column(66), Some(Tab::Keymap));
+        assert_eq!(Tab::Overview.prev(), Tab::Keymap);
+        assert_eq!(Tab::Keymap.next(), Tab::Overview);
+
+        let mut app = App::new(build_snapshot());
+        app.tab = Tab::Keymap;
+        for (w, h) in [(120, 34), (80, 24)] {
+            let backend = TestBackend::new(w, h);
+            let mut terminal = Terminal::new(backend).expect("test terminal");
+            terminal.draw(|f| ui::render(f, &app)).expect("render keymap tab");
+        }
     }
 }
