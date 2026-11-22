@@ -2,11 +2,12 @@
 # Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
 #
 # Choose whether GNOME may drive displays from the NVIDIA dGPU.
+# Backend helper invoked by `dotfiles host dgpu`:
 #
-#   dgpu-display       show the setting and whether GNOME follows it
-#   dgpu-display off   GNOME ignores the dGPU, which sleeps in D3cold and saves
-#                      about 8 W; HDMI and DisplayPort, wired to it, go dark
-#   dgpu-display on    GNOME drives the dGPU's outputs again
+#   dotfiles host dgpu       show the setting and whether GNOME follows it
+#   dotfiles host dgpu off   GNOME ignores the dGPU, which sleeps in D3cold and
+#                            saves about 8 W; HDMI and DisplayPort go dark
+#   dotfiles host dgpu on    GNOME drives the dGPU's outputs again
 #
 # The driver stays loaded, so CUDA and PRIME offload work in both states. off
 # and on re-run themselves with sudo.
@@ -27,7 +28,7 @@ TAG=mutter-device-ignore
 
 usage() {
 	cat <<'EOF'
-usage: dgpu-display [status|off|on]
+usage: dotfiles host dgpu [status|off|on]
   status  show the setting and whether GNOME follows it (the default)
   off     let the dGPU sleep; HDMI and DisplayPort stop working
   on      let GNOME drive HDMI and DisplayPort through the dGPU again
@@ -128,7 +129,7 @@ advice() {
 	case $1 in
 	off)
 		if ! tagged; then
-			echo "udev has not applied the rule yet. Run: dgpu-display off"
+			echo "udev has not applied the rule yet. Run: dotfiles host dgpu off"
 		elif [ "$2" = uses ]; then
 			echo "Log out and back in to apply."
 		fi
@@ -136,9 +137,9 @@ advice() {
 	on)
 		if tagged && [ "$2" = uses ]; then
 			echo "udev keeps the tag, so the next login would ignore the dGPU."
-			echo "After logging out and back in, run: dgpu-display on"
+			echo "After logging out and back in, run: dotfiles host dgpu on"
 		elif tagged; then
-			echo "udev keeps the tag. Run: dgpu-display on"
+			echo "udev keeps the tag. Run: dotfiles host dgpu on"
 		elif [ "$2" = ignores ] || [ "$2" = failed ]; then
 			echo "Log out and back in to apply."
 		fi
@@ -180,10 +181,10 @@ cmd_off() {
 		die "off: the BIOS runs the dGPU alone, so ignoring it would leave GNOME without a GPU"
 	fi
 	cat >"$RULE.tmp" <<'EOF'
-# Written by dgpu-display, which reads this file's existence as its "off"
-# setting. Remove it with "dgpu-display on", which also clears the udev tag;
-# deleting the file by hand leaves the tag, and GNOME ignoring the dGPU, until
-# the next boot.
+# Written by dgpu-display (`dotfiles host dgpu`), which reads this file's
+# existence as its "off" setting. Remove it with `dotfiles host dgpu on`, which
+# also clears the udev tag; deleting the file by hand leaves the tag, and GNOME
+# ignoring the dGPU, until the next boot.
 #
 # boot_vga=0 keeps the rule inert if the BIOS is set to run the dGPU alone,
 # where ignoring it would leave GNOME without a GPU.
@@ -223,7 +224,7 @@ cmd_on() {
 	case $(gnome_state) in
 	uses)
 		echo "on: GNOME still uses the dGPU, but udev keeps the tag, so the next login would ignore it."
-		echo "on: after logging out and back in, run: dgpu-display on"
+		echo "on: after logging out and back in, run: dotfiles host dgpu on"
 		return 0
 		;;
 	unknown)

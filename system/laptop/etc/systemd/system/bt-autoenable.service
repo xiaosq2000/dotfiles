@@ -8,7 +8,7 @@ Requires=bluetooth.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/local/sbin/bt-autoenable
+ExecStart=/usr/local/libexec/bt-autoenable
 
 [Install]
 WantedBy=bluetooth.target

@@ -5,7 +5,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/refresh-rate-on-power
+ExecStart=%h/.local/libexec/dotfiles/refresh-rate-on-power
 Restart=on-failure
 RestartSec=5
 

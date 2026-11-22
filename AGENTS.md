@@ -90,15 +90,15 @@ will.
 
 ## Checking a change
 
-Checked on 2026-11-19.
+Checked on 2026-11-22.
 
 ```sh
 chezmoi diff                          # what apply would change in ~
 chezmoi apply && chezmoi verify
-dotfiles doctor                       # host health, drift, tools, agents and sandbox
+dotfiles doctor                       # host health, drift, secrets, tools, agents, sandbox, and system/
 mise run check                        # pre-commit + full tests/ suite
 mise run cli-check                    # Rust clippy + unit tests for cli/
-mise run build-cli                    # local release build -> ~/.local/opt/dotfiles/bin/dotfiles
+mise run build-cli                    # compile cli/target/release/dotfiles (mise manages the installed CLI)
 ```
 
 To check a change without touching `~`, for example from a git worktree, point
@@ -172,15 +172,24 @@ apply before any file is written.
 `system/<bundle>/` (for shared bundle hosts such as `system/desktop/`) and
 `system/<machine>/` (which overrides shared paths) hold root-owned files at
 their paths under `/`, and `.chezmoiscripts/run_after_80-system-files.sh.tmpl`
-installs the ones that differ with `sudo -n`. An agent's apply has no sudo and
-only lists them, so ask the user to run `sudo -v && chezmoi apply`.
+installs the ones that differ plus missing `[system_packages.*]` from
+`.chezmoidata/tools.toml` with `sudo -n` on hosts with `sudo = true`. An
+agent's apply has no sudo and only lists them, so ask the user to run
+`sudo -v && chezmoi apply`.
 
 - chezmoi's name prefixes do not apply there. Files install verbatim as root,
   0755 if executable in git, else 0644.
-- Keep every file world-readable, because the comparison runs as the user.
-- Deleting a file there leaves the installed copy; remove it by hand.
-- Do not track a file a program rewrites. dgpu-display's udev rule is its
-  on/off setting, so only the script is tracked.
+- Internal helpers live under `/usr/local/libexec/` (root) and
+  `~/.local/libexec/dotfiles/` (user), not `sbin/` or `~/.local/bin/`; user
+  entry points converge on `dotfiles host`.
+- Keep every file world-readable, because the comparison and `dotfiles doctor`
+  run as the user.
+- Deleting a file there leaves the installed copy; remove it by hand
+  (`dotfiles doctor` flags superseded `/usr/local/sbin/*` files once their
+  `/usr/local/libexec/*` replacements are installed).
+- Do not track a file a program rewrites: `/etc/udev/rules.d/61-dgpu-display-off.rules`
+  (dGPU setting) and `/var/lib/dotfiles/battery-full` (persistent 100% battery
+  override) are runtime state, not tracked source files.
 
 ## Commits and writing
 

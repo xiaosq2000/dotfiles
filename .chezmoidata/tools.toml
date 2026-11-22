@@ -1,22 +1,25 @@
-# Named software bundles combining three complementary layers:
+# Named software bundles combining four complementary layers:
 #
-#   packages   conda-forge / source-built pixi global environments (kept slim
-#              for rootless HPC ABI strongholds, C/C++ shared-lib tools, Python
-#              CLI packages, and git-built recipes like um-vpn)
-#   mise       cross-platform CLIs, runtimes, LSPs, and coding agents from
-#              .chezmoidata/mise.toml (floating latest, upgraded locally via dotfiles upgrade)
-#   downloads  non-CLI GUI bundles, fonts, Zotero .xpi plugins, and agy manifest
-#              from .chezmoidata/downloads.toml (installed by dotfiles-fetch)
-#   config     destination paths deployed only when the bundle is selected
+#   packages         conda-forge / source-built pixi global environments (kept slim
+#                    for rootless HPC ABI strongholds, C/C++ shared-lib tools, Python
+#                    CLI packages, and git-built recipes like um-vpn)
+#   mise             cross-platform CLIs, runtimes, LSPs, and coding agents from
+#                    .chezmoidata/mise.toml (floating latest, upgraded locally via
+#                    dotfiles upgrade)
+#   downloads        non-CLI GUI bundles, fonts, Zotero .xpi plugins, and agy manifest
+#                    from .chezmoidata/downloads.toml (installed by dotfiles-fetch)
+#   system_packages  distro packages installed automatically on hosts with sudo = true
+#                    during `sudo -v && chezmoi apply` (skipped on rootless hosts)
+#   config           destination paths deployed only when the bundle is selected
 #
 # Five capability layers cover the entire fleet:
 #   core      universal terminal base (safe on public VPS and unknown hosts)
 #   secrets   identity, encryption, vault, and GitHub auth (never on public VPS)
 #   dev       full development, ML, LSPs, 4 coding agents, and Herdr
-#   desktop   GUI apps (kitty, zathura, fcitx5), 19 font families, and Zotero
+#   desktop   GUI apps (kitty, zathura, fcitx5), keyd/logid, 19 font families, and Zotero
 #   laptop    off-campus VPN and battery refresh-rate service
 #
-# Checked on 2026-11-19.
+# Checked on 2026-11-22.
 
 ################################################################################
 # Bundles
@@ -114,6 +117,7 @@ mise = [
     "lazydocker",
 ]
 downloads = ["agy"]
+system_packages = ["bubblewrap"]
 config = [
     ".claude",
     ".codex",
@@ -125,7 +129,7 @@ config = [
 ]
 
 [bundles.desktop]
-description = "Desktop GUI (kitty, zathura, fcitx5), 19 font families, and Zotero with pinned plugins."
+description = "Desktop GUI (kitty, zathura, fcitx5), keyd/logid, 19 font families, and Zotero with plugins."
 packages = []
 downloads = [
     "kitty",
@@ -139,7 +143,14 @@ downloads = [
     "better-bibtex",
     "extra-meta",
 ]
-# Zathura and Fcitx5 come from the distribution; this bundle supplies their config.
+system_packages = [
+    "keyd",
+    "zathura",
+    "fcitx5",
+    "fcitx5-pinyin",
+    "libnotify",
+    "logiops",
+]
 config = [
     ".config/kitty",
     ".config/zathura",
@@ -158,7 +169,7 @@ packages = ["um-vpn"]
 # The refresh-rate service watches UPower over the system bus and changes mode
 # through mutter over the session bus using system python3 with gi bindings.
 config = [
-    ".local/bin/refresh-rate-on-power",
+    ".local/libexec/dotfiles/refresh-rate-on-power",
     ".config/systemd/user/refresh-rate-on-power.service",
     ".config/systemd/user/graphical-session.target.wants/refresh-rate-on-power.service",
 ]
@@ -212,3 +223,71 @@ exposed = ["hf", "huggingface-cli", "tiny-agents"]
 [packages.zsh]
 # The package also ships a zsh-5.9 binary; expose only `zsh` so upgrades keep matching.
 exposed = ["zsh"]
+
+################################################################################
+# Distribution system packages (sudo hosts only)
+#
+# Checked on 2026-11-22 on Ubuntu 26.04 (resolute). Each entry declares
+# architecture-independent `probe` paths checked via `stat` (if any path exists,
+# the entry is treated as installed, preserving source-built binaries such as
+# /usr/local/bin/logid), per-distro package arrays (`apt`, `dnf`, `pacman`,
+# `zypper`), and an optional systemd unit to enable once installed.
+################################################################################
+
+[system_packages.keyd]
+description = "System-wide HHKB keyboard remapping daemon"
+probe = ["/usr/bin/keyd.rvaiya", "/usr/bin/keyd", "/usr/local/bin/keyd"]
+apt = ["keyd"]
+dnf = ["keyd"]
+pacman = ["keyd"]
+zypper = ["keyd"]
+enable_unit = "keyd.service"
+
+[system_packages.zathura]
+description = "Minimalist PDF viewer with poppler backend"
+probe = ["/usr/bin/zathura", "/usr/local/bin/zathura"]
+apt = ["zathura", "zathura-pdf-poppler"]
+dnf = ["zathura", "zathura-pdf-poppler"]
+pacman = ["zathura", "zathura-pdf-poppler"]
+zypper = ["zathura", "zathura-plugin-pdf-poppler"]
+
+[system_packages.fcitx5]
+description = "Fcitx5 input method framework with GTK/Qt frontends and config UI"
+probe = ["/usr/bin/fcitx5", "/usr/local/bin/fcitx5"]
+apt = ["fcitx5", "fcitx5-frontend-all", "fcitx5-config-qt"]
+dnf = ["fcitx5", "fcitx5-gtk", "fcitx5-qt", "fcitx5-configtool"]
+pacman = ["fcitx5", "fcitx5-gtk", "fcitx5-qt", "fcitx5-configtool"]
+zypper = ["fcitx5", "fcitx5-gtk", "fcitx5-qt", "fcitx5-configtool"]
+
+[system_packages.fcitx5-pinyin]
+description = "Fcitx5 Chinese addons (pinyin and punctuation modules)"
+probe = ["/usr/share/fcitx5/inputmethod/pinyin.conf"]
+apt = ["fcitx5-chinese-addons"]
+dnf = ["fcitx5-chinese-addons"]
+pacman = ["fcitx5-chinese-addons"]
+zypper = ["fcitx5-chinese-addons"]
+
+[system_packages.libnotify]
+description = "Desktop notifications (notify-send) for agent-notify and dotfiles host"
+probe = ["/usr/bin/notify-send", "/usr/local/bin/notify-send"]
+apt = ["libnotify-bin"]
+dnf = ["libnotify"]
+pacman = ["libnotify"]
+zypper = ["libnotify-tools"]
+
+[system_packages.logiops]
+description = "Logitech HID++ daemon (logid) for MX Master 3 thumbwheel"
+probe = ["/usr/local/bin/logid", "/usr/bin/logid"]
+apt = ["logiops"]
+dnf = ["logiops"]
+pacman = ["logiops"]
+zypper = ["logiops"]
+enable_unit = "logid.service"
+
+[system_packages.bubblewrap]
+description = "Primary unprivileged mount-namespace backend for agent-jail"
+probe = ["/usr/bin/bwrap", "/usr/local/bin/bwrap"]
+apt = ["bubblewrap"]
+dnf = ["bubblewrap"]
+pacman = ["bubblewrap"]
+zypper = ["bubblewrap"]

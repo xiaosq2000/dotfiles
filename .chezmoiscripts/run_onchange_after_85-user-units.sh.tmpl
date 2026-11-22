@@ -1,0 +1,21 @@
+{{- if has "laptop" (index .machines .machine).bundles -}}
+#!/bin/sh
+# Reload user systemd units when refresh-rate-on-power unit or helper changes.
+# unit sha256:   {{ include "private_dot_config/systemd/user/refresh-rate-on-power.service" | sha256sum }}
+# helper sha256: {{ include "dot_local/libexec/dotfiles/executable_refresh-rate-on-power" | sha256sum }}
+set -eu
+
+if ! command -v systemctl >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Skip cleanly in headless SSH/container sessions with no user systemd bus.
+if ! systemctl --user show-environment >/dev/null 2>&1; then
+    exit 0
+fi
+
+systemctl --user daemon-reload
+if systemctl --user is-active --quiet refresh-rate-on-power.service; then
+    systemctl --user restart refresh-rate-on-power.service
+fi
+{{- end -}}

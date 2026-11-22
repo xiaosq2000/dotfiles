@@ -10,6 +10,7 @@
 {{- $packages := list -}}
 {{- $mise := list -}}
 {{- $downloads := list -}}
+{{- $systemPackages := list -}}
 {{- $config := list -}}
 {{- range $bundle := (index .machines .machine).bundles -}}
 {{-   if not (hasKey $.bundles $bundle) -}}
@@ -19,6 +20,7 @@
 {{-   $packages = concat $packages (get $spec "packages" | default list) -}}
 {{-   $mise = concat $mise (get $spec "mise" | default list) -}}
 {{-   $downloads = concat $downloads (get $spec "downloads" | default list) -}}
+{{-   $systemPackages = concat $systemPackages (get $spec "system_packages" | default list) -}}
 {{-   $config = concat $config (get $spec "config" | default list) -}}
 {{- end -}}
 {{- range $id := $mise -}}
@@ -31,4 +33,9 @@
 {{-     fail (printf "a bundle selects download %q, which is not in .chezmoidata/downloads.toml" $id) -}}
 {{-   end -}}
 {{- end -}}
-{{- dict "packages" ($packages | uniq | sortAlpha) "mise" ($mise | uniq | sortAlpha) "downloads" ($downloads | uniq | sortAlpha) "config" ($config | uniq | sortAlpha) | toJson -}}
+{{- range $id := $systemPackages -}}
+{{-   if not (hasKey $.system_packages $id) -}}
+{{-     fail (printf "a bundle selects system package %q, which is not in .chezmoidata/tools.toml" $id) -}}
+{{-   end -}}
+{{- end -}}
+{{- dict "packages" ($packages | uniq | sortAlpha) "mise" ($mise | uniq | sortAlpha) "downloads" ($downloads | uniq | sortAlpha) "system_packages" ($systemPackages | uniq | sortAlpha) "config" ($config | uniq | sortAlpha) | toJson -}}

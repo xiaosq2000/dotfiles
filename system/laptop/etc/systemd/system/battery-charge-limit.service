@@ -1,10 +1,13 @@
 # Installed by chezmoi from system/laptop/ in the dotfiles repository. Edit it there.
 #
-# Caps charging near 80% at boot and after every resume. The sleep targets pull
-# the unit in at suspend, and After= holds it until resume. Without
-# RemainAfterExit it goes inactive after each run, so it can run again.
+# Caps charging near 80% at boot and after every resume, unless the user has
+# persistently opted into full (100%) charging via `dotfiles host battery full`
+# (which creates /var/lib/dotfiles/battery-full). The sleep targets pull the
+# unit in at suspend, and After= holds it until resume. Without RemainAfterExit
+# it goes inactive after each run, so it can run again.
 [Unit]
 Description=Cap battery charge at Long_Life (about 80%)
+ConditionPathExists=!/var/lib/dotfiles/battery-full
 After=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
 
 [Service]

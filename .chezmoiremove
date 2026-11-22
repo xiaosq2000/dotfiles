@@ -1,0 +1,2 @@
+# Superseded user-level helper moved from ~/.local/bin/ to ~/.local/libexec/dotfiles/.
+.local/bin/refresh-rate-on-power

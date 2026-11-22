@@ -8,7 +8,7 @@ After=multi-user.target suspend.target hibernate.target hybrid-sleep.target susp
 # systemd from re-running it after suspend or hibernate.
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/power-tunables
+ExecStart=/usr/local/libexec/power-tunables
 
 [Install]
 WantedBy=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target

@@ -1,9 +1,9 @@
 // Installed by chezmoi from system/desktop/ in the dotfiles repository.
 //
 // Allow an active local desktop session in the sudo group to start, stop, or
-// restart keyd.service without a password prompt, so `dotfiles keymap` can
-// switch between HHKB and standard layouts cleanly without adding the user to
-// the input group. Lives in /usr/share/polkit-1/rules.d/ rather than
+// restart keyd.service without a password prompt, so `dotfiles host keymap`
+// can switch between HHKB and standard layouts cleanly without adding the user
+// to the input group. Lives in /usr/share/polkit-1/rules.d/ rather than
 // /etc/polkit-1/rules.d/ because the latter is mode 0750 root:polkitd on
 // Ubuntu and unreadable by unprivileged `chezmoi apply` comparisons.
 //

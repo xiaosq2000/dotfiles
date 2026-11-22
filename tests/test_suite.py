@@ -37,6 +37,23 @@ class UnitChecks(unittest.TestCase):
             for tool_id in bundle.get("mise", []):
                 self.assertIn(tool_id, catalog, f"bundle {bundle_name} selects unknown mise tool {tool_id}")
 
+    def test_system_packages_schema(self):
+        tools = tomllib.loads((ROOT / ".chezmoidata/tools.toml").read_text(encoding="utf-8"))
+        sys_pkgs = tools.get("system_packages", {})
+        bundles = tools["bundles"]
+        self.assertTrue(sys_pkgs)
+        for pkg_id, spec in sys_pkgs.items():
+            probes = spec.get("probe")
+            self.assertIsInstance(probes, list, f"{pkg_id} missing probe list")
+            self.assertTrue(probes, f"{pkg_id} probe list is empty")
+            for p in probes:
+                self.assertTrue(isinstance(p, str) and p.startswith("/"), f"{pkg_id} invalid probe {p!r}")
+            has_distro = any(isinstance(spec.get(k), list) and spec[k] for k in ("apt", "dnf", "pacman", "zypper"))
+            self.assertTrue(has_distro, f"{pkg_id} must declare at least one distro package list")
+        for bundle_name, bundle in bundles.items():
+            for pkg_id in bundle.get("system_packages", []):
+                self.assertIn(pkg_id, sys_pkgs, f"bundle {bundle_name} selects unknown system_package {pkg_id}")
+
     def test_fetch_offline(self):
         _run_script([sys.executable, str(TESTS / "check_fetch.py")])
 
