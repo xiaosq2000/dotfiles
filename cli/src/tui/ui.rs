@@ -37,6 +37,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         Tab::Agents => render_agents(frame, app, p, chunks[1]),
         Tab::Toolchain => render_toolchain(frame, app, p, chunks[1]),
         Tab::Machines => render_machines(frame, app, p, chunks[1]),
+        Tab::Keymap => render_keymap(frame, app, p, chunks[1]),
     }
 
     render_footer(frame, app, p, chunks[2]);
@@ -74,7 +75,7 @@ fn render_header(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
 
     let header_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+        .constraints([Constraint::Percentage(62), Constraint::Percentage(38)])
         .split(area);
 
     let titles: Vec<Line> = Tab::ALL
@@ -125,6 +126,18 @@ fn render_header(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
     } else if let Some(route) = &sg.sbc_route {
         right_spans.push(Span::styled(" · ", Style::default().fg(p.border)));
         right_spans.push(Span::styled(route.as_str(), Style::default().fg(p.vcs)));
+    }
+    if app.snapshot.keymap.installed {
+        right_spans.push(Span::styled(" · ", Style::default().fg(p.border)));
+        let (label, color) = if app.snapshot.keymap.active {
+            ("hhkb:on", p.ok)
+        } else {
+            ("hhkb:off", p.warn)
+        };
+        right_spans.push(Span::styled(
+            label,
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ));
     }
     if app.refreshing {
         let spin = SPINNER[app.tick % SPINNER.len()];
@@ -891,13 +904,200 @@ fn render_machines(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
     frame.render_widget(detail, cols[1]);
 }
 
+fn render_keymap(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(46), Constraint::Percentage(54)])
+        .split(area);
+
+    let left_rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(10), Constraint::Min(6)])
+        .split(cols[0]);
+
+    let km = &app.snapshot.keymap;
+    let (badge, badge_bg, summary) = if !km.installed {
+        (" NOT INSTALLED ", p.warn, "install automatically with 'a' (sudo -v && chezmoi apply)")
+    } else if km.active {
+        ("  ON  ", p.ok, "HHKB remap active on non-excluded keyboards")
+    } else {
+        ("  OFF ", p.warn, "Standard keyboard passthrough (colleague-friendly)")
+    };
+
+    let boot_str = match km.enabled {
+        Some(true) => "enabled (starts at boot)",
+        Some(false) => "disabled",
+        None => "-",
+    };
+
+    let status_lines = vec![
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled(
+                badge,
+                Style::default()
+                    .fg(p.bg)
+                    .bg(badge_bg)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" "),
+            Span::styled(summary, Style::default().fg(p.fg_bright)),
+        ]),
+        Line::raw(""),
+        kv("Service", &format!("keyd.service ({})", km.service_state), p),
+        kv("Boot", boot_str, p),
+        kv(
+            "Config",
+            if km.config_present {
+                "/etc/keyd/default.conf (present)"
+            } else {
+                "/etc/keyd/default.conf (missing)"
+            },
+            p,
+        ),
+        kv(
+            "Polkit Rule",
+            if km.polkit_rule_present {
+                "passwordless toggle ready ✓"
+            } else {
+                "missing (press 'a' to deploy)"
+            },
+            p,
+        ),
+        Line::raw(""),
+        Line::from(Span::styled(
+            "  Space/Enter/t: toggle · R: reload · e: edit · a: apply",
+            Style::default().fg(p.accent),
+        )),
+    ];
+
+    let status_card = Paragraph::new(status_lines)
+        .block(styled_block(
+            Line::from(Span::styled(
+                " HHKB Keymap (keyd) ",
+                Style::default().fg(p.primary).add_modifier(Modifier::BOLD),
+            )),
+            p,
+            false,
+        ))
+        .wrap(Wrap { trim: false });
+    frame.render_widget(status_card, left_rows[0]);
+
+    let kb_items: Vec<ListItem> = if km.keyboards.is_empty() {
+        vec![ListItem::new(Line::from(Span::styled(
+            "  No physical keyboards reported in /proc/bus/input/devices.",
+            Style::default().fg(p.fg),
+        )))]
+    } else {
+        km.keyboards
+            .iter()
+            .map(|kb| {
+                let (st_badge, st_bg) = match kb.state.as_str() {
+                    "remapped" => ("REMAP", p.ok),
+                    "excluded" => ("EXCL ", p.info),
+                    _ => (" STD ", p.border),
+                };
+                let internal_tag = if kb.internal { " (internal)" } else { "" };
+                ListItem::new(vec![
+                    Line::from(vec![
+                        Span::styled(
+                            format!(" {st_badge} "),
+                            Style::default()
+                                .fg(p.bg)
+                                .bg(st_bg)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::raw(" "),
+                        Span::styled(
+                            format!("{} ", kb.id),
+                            Style::default().fg(p.accent).add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            format!("{}{}", kb.name, internal_tag),
+                            Style::default().fg(p.fg_bright),
+                        ),
+                    ]),
+                ])
+            })
+            .collect()
+    };
+
+    let mut kb_state = ListState::default();
+    if !km.keyboards.is_empty() {
+        kb_state.select(Some(app.keymap_idx));
+    }
+    let kb_list = List::new(kb_items)
+        .block(styled_block(
+            Line::from(Span::styled(
+                " Connected Keyboards ",
+                Style::default().fg(p.primary).add_modifier(Modifier::BOLD),
+            )),
+            p,
+            true,
+        ))
+        .highlight_style(Style::default().bg(p.surface))
+        .highlight_symbol("▸ ");
+    frame.render_stateful_widget(kb_list, left_rows[1], &mut kb_state);
+
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(section_heading("Base Layer [main]", p));
+    lines.push(kv("CapsLock", "Left Ctrl (physical Left Ctrl unchanged)", p));
+    lines.push(kv("Right Ctrl", "Hold for HHKB Fn layer", p));
+    lines.push(Line::raw(""));
+    lines.push(section_heading("HHKB Fn Layer [hhkb_fn]", p));
+    lines.push(kv("Diamond Arrows", "[ = Up · ; = Left · ' = Right · / = Down", p));
+    lines.push(kv("Navigation", "k = Home · , = End · l = PgUp · . = PgDn", p));
+    lines.push(kv("Audio", "a = Vol- · s = Vol+ · d = Mute", p));
+    lines.push(kv("Edit / Lock", "Bksp = Del · Tab = CapsLock · \\ = Ins · i = PrtSc", p));
+    lines.push(kv("Function Row", "1..0, -, =  →  F1..F12", p));
+    lines.push(Line::raw(""));
+    lines.push(section_heading("Excluded Device IDs ([ids])", p));
+    lines.push(Line::from(Span::styled(
+        if km.excluded_ids.is_empty() {
+            "  (none)".to_string()
+        } else {
+            format!("  {}", km.excluded_ids.join(" · "))
+        },
+        Style::default().fg(p.vcs),
+    )));
+
+    if let Some(kb) = km.keyboards.get(app.keymap_idx) {
+        lines.push(Line::raw(""));
+        lines.push(section_heading("Selected Keyboard", p));
+        lines.push(kv("VID:PID", &kb.id, p));
+        lines.push(kv("Name", &kb.name, p));
+        lines.push(kv(
+            "Bus",
+            if kb.internal { "internal (built-in)" } else { "external" },
+            p,
+        ));
+        lines.push(kv("Mode", &kb.state, p));
+        if !kb.internal && !kb.excluded {
+            lines.push(Line::from(Span::styled(
+                format!("  To exclude (e.g. hardware HHKB): add `-{}` under [ids] (press 'e')", kb.id),
+                Style::default().fg(p.accent),
+            )));
+        }
+    }
+
+    let inspector = Paragraph::new(lines)
+        .block(styled_block(
+            Line::from(Span::styled(" Layout & Device Inspector ", Style::default().fg(p.info))),
+            p,
+            false,
+        ))
+        .wrap(Wrap { trim: false });
+    frame.render_widget(inspector, cols[1]);
+}
+
 fn render_footer(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
     let hints = match app.tab {
-        Tab::Overview => "j/k select · 1-5/Tab switch · s sync · d diff · c check · r refresh · ? help · q quit",
-        Tab::Themes => "j/k live-preview · Enter apply theme · p dry-run diff · 1-5/Tab switch · q quit",
+        Tab::Overview => "j/k select · 1-6/Tab switch · s sync · d diff · c check · r refresh · ? help · q quit",
+        Tab::Themes => "j/k live-preview · Enter apply theme · p dry-run diff · 1-6/Tab switch · q quit",
         Tab::Agents => "j/k select agent · Enter/x jail dry-run · S skills · r refresh · q quit",
         Tab::Toolchain => "j/k select tool · U upgrade dry-run · u fetch outdated · f fetch sync · r refresh · q quit",
-        Tab::Machines => "j/k select machine · 1-5/Tab switch · r refresh · ? help · q quit",
+        Tab::Machines => "j/k select machine · 1-6/Tab switch · r refresh · ? help · q quit",
+        Tab::Keymap => "j/k keyboard · Space/Enter/t toggle · R reload · e edit config · a sudo apply · r refresh · q quit",
     };
 
     let mut lines = vec![Line::from(vec![
@@ -917,8 +1117,8 @@ fn render_footer(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
 }
 
 fn render_help_modal(frame: &mut Frame, p: TuiTheme, area: Rect) {
-    let width = area.width.min(64);
-    let height = area.height.min(18);
+    let width = area.width.min(68);
+    let height = area.height.min(20);
     let rect = Rect {
         x: area.x + area.width.saturating_sub(width) / 2,
         y: area.y + area.height.saturating_sub(height) / 2,
@@ -927,13 +1127,14 @@ fn render_help_modal(frame: &mut Frame, p: TuiTheme, area: Rect) {
     };
     frame.render_widget(Clear, rect);
     let lines = vec![
-        kv("1 - 5 / Tab / h,l", "Switch tabs", p),
+        kv("1 - 6 / Tab / h,l", "Switch tabs", p),
         kv("j / k / Up / Down", "Move selection (live-previews themes on Tab 2)", p),
         kv("r", "Async refresh doctor & host state", p),
         kv("s / d / c", "Overview: sync dotfiles / chezmoi diff / mise check", p),
         kv("Enter / p", "Themes: apply selected theme / dry-run diff", p),
         kv("Enter / x / S", "Agents: jail dry-run / skills", p),
         kv("U / u / f", "Toolchain: upgrade dry-run / fetch outdated / fetch sync", p),
+        kv("Space / R / e / a", "Keymap: toggle / reload / edit config / sudo apply", p),
         kv("? / Esc / q", "Toggle help / Quit", p),
     ];
     let modal = Paragraph::new(lines)

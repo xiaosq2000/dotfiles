@@ -34,7 +34,12 @@ CMD = [RUST_CLI]
 
 # 1. --help prints usage and exits 0.
 help_res = subprocess.run([*CMD, "--help"], text=True, capture_output=True, check=True)
-assert "doctor" in help_res.stdout and "jail" in help_res.stdout and "upgrade" in help_res.stdout, help_res.stdout
+assert (
+    "doctor" in help_res.stdout
+    and "jail" in help_res.stdout
+    and "upgrade" in help_res.stdout
+    and "keymap" in help_res.stdout
+), help_res.stdout
 
 # 2. Unknown subcommand exits 2.
 bad_res = subprocess.run([*CMD, "no-such-cmd"], text=True, capture_output=True, check=False)
@@ -121,6 +126,17 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-cli-") as tmp:
     )
     ag_report = json.loads(ag_res.stdout)
     assert ag_report["agent_tools_selected"] is False, ag_report
+
+    # `dotfiles keymap status --json` succeeds cleanly even without keyd/systemd.
+    km_res = subprocess.run(
+        [*CMD, "keymap", "status", "--json"],
+        env=test_env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    km_report = json.loads(km_res.stdout)
+    assert "installed" in km_report and "keyboards" in km_report, km_report
 
     comp_res = subprocess.run([*CMD, "completion", "zsh"], env=test_env, text=True, capture_output=True, check=True)
     assert comp_res.stdout.startswith("#compdef dotfiles")

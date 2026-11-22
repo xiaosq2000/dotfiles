@@ -314,4 +314,5 @@ pub struct FullSnapshot {
     pub policy: Option<PolicyFile>,
     pub report: DoctorReport,
     pub fetch_items: Vec<FetchItemStatus>,
+    pub keymap: crate::keymap::KeymapReport,
 }

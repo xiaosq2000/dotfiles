@@ -677,6 +677,7 @@ pub fn build_snapshot() -> FullSnapshot {
     let shell_git = check_shell_and_git(&home);
     let agents = check_agents(&home, &bundles);
     let fetch_items = load_fetch_items(&home, &bundles, data.as_ref());
+    let keymap = crate::keymap::collect_report();
 
     let statuses = [
         chezmoi.status.as_str(),
@@ -710,6 +711,7 @@ pub fn build_snapshot() -> FullSnapshot {
         policy,
         report,
         fetch_items,
+        keymap,
     }
 }
 
