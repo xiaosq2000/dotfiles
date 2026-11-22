@@ -8,7 +8,7 @@ pub enum Tab {
     Agents,
     Toolchain,
     Machines,
-    Keymap,
+    Host,
 }
 
 impl Tab {
@@ -18,7 +18,7 @@ impl Tab {
         Tab::Agents,
         Tab::Toolchain,
         Tab::Machines,
-        Tab::Keymap,
+        Tab::Host,
     ];
 
     pub fn title(self) -> &'static str {
@@ -28,7 +28,7 @@ impl Tab {
             Tab::Agents => "3 Agents",
             Tab::Toolchain => "4 Toolchain",
             Tab::Machines => "5 Machines",
-            Tab::Keymap => "6 Keymap",
+            Tab::Host => "6 Host",
         }
     }
 
@@ -39,7 +39,7 @@ impl Tab {
             Tab::Agents => 2,
             Tab::Toolchain => 3,
             Tab::Machines => 4,
-            Tab::Keymap => 5,
+            Tab::Host => 5,
         }
     }
 
@@ -94,6 +94,16 @@ pub struct ToolchainRow {
     pub ok: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostControlKind {
+    Keymap,
+    Dgpu,
+    Battery,
+    Refresh,
+    Logid,
+    Fans,
+}
+
 pub struct App {
     pub snapshot: FullSnapshot,
     pub tab: Tab,
@@ -102,10 +112,11 @@ pub struct App {
     pub agent_idx: usize,
     pub toolchain_idx: usize,
     pub machine_idx: usize,
-    pub keymap_idx: usize,
+    pub host_idx: usize,
     pub themes: Vec<ThemeListItem>,
     pub toolchain_rows: Vec<ToolchainRow>,
     pub machine_names: Vec<String>,
+    pub host_controls: Vec<HostControlKind>,
     pub refreshing: bool,
     pub tick: usize,
     pub status_msg: Option<String>,
@@ -126,10 +137,11 @@ impl App {
             agent_idx: 0,
             toolchain_idx: 0,
             machine_idx: 0,
-            keymap_idx: 0,
+            host_idx: 0,
             themes: Vec::new(),
             toolchain_rows: Vec::new(),
             machine_names: Vec::new(),
+            host_controls: Vec::new(),
             refreshing: false,
             tick: 0,
             status_msg: None,
@@ -271,10 +283,31 @@ impl App {
             self.machine_idx = self.machine_idx.min(self.machine_names.len() - 1);
         }
 
-        if !self.snapshot.keymap.keyboards.is_empty() {
-            self.keymap_idx = self.keymap_idx.min(self.snapshot.keymap.keyboards.len() - 1);
+        let h = &self.snapshot.host;
+        let mut controls = Vec::new();
+        if h.desktop_selected || h.keymap.installed || h.keymap.config_present {
+            controls.push(HostControlKind::Keymap);
+        }
+        if h.dgpu.is_some() {
+            controls.push(HostControlKind::Dgpu);
+        }
+        if h.battery.is_some() {
+            controls.push(HostControlKind::Battery);
+        }
+        if h.refresh.is_some() {
+            controls.push(HostControlKind::Refresh);
+        }
+        if h.logid.is_some() {
+            controls.push(HostControlKind::Logid);
+        }
+        if h.fans.is_some() {
+            controls.push(HostControlKind::Fans);
+        }
+        self.host_controls = controls;
+        if !self.host_controls.is_empty() {
+            self.host_idx = self.host_idx.min(self.host_controls.len() - 1);
         } else {
-            self.keymap_idx = 0;
+            self.host_idx = 0;
         }
     }
 
@@ -306,7 +339,7 @@ impl App {
 
     pub fn move_down(&mut self) {
         match self.tab {
-            Tab::Overview => self.overview_idx = (self.overview_idx + 1) % 5,
+            Tab::Overview => self.overview_idx = (self.overview_idx + 1) % 6,
             Tab::Themes if !self.themes.is_empty() => {
                 self.theme_idx = (self.theme_idx + 1) % self.themes.len();
             }
@@ -317,8 +350,8 @@ impl App {
             Tab::Machines if !self.machine_names.is_empty() => {
                 self.machine_idx = (self.machine_idx + 1) % self.machine_names.len();
             }
-            Tab::Keymap if !self.snapshot.keymap.keyboards.is_empty() => {
-                self.keymap_idx = (self.keymap_idx + 1) % self.snapshot.keymap.keyboards.len();
+            Tab::Host if !self.host_controls.is_empty() => {
+                self.host_idx = (self.host_idx + 1) % self.host_controls.len();
             }
             _ => {}
         }
@@ -326,7 +359,7 @@ impl App {
 
     pub fn move_up(&mut self) {
         match self.tab {
-            Tab::Overview => self.overview_idx = (self.overview_idx + 4) % 5,
+            Tab::Overview => self.overview_idx = (self.overview_idx + 5) % 6,
             Tab::Themes if !self.themes.is_empty() => {
                 self.theme_idx = (self.theme_idx + self.themes.len() - 1) % self.themes.len();
             }
@@ -341,9 +374,9 @@ impl App {
                 self.machine_idx =
                     (self.machine_idx + self.machine_names.len() - 1) % self.machine_names.len();
             }
-            Tab::Keymap if !self.snapshot.keymap.keyboards.is_empty() => {
-                let n = self.snapshot.keymap.keyboards.len();
-                self.keymap_idx = (self.keymap_idx + n - 1) % n;
+            Tab::Host if !self.host_controls.is_empty() => {
+                let n = self.host_controls.len();
+                self.host_idx = (self.host_idx + n - 1) % n;
             }
             _ => {}
         }

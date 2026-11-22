@@ -1,7 +1,7 @@
 use crate::model::{
     AgentEntry, AgentsCheck, ChezmoiCheck, ChezmoiData, DoctorChecks, DoctorReport,
     FetchItemStatus, FullSnapshot, LooseKey, PolicyFile, SecretsCheck, ShellGitCheck,
-    ToolchainCheck,
+    SystemCheck, ToolchainCheck,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -335,6 +335,13 @@ fn check_toolchain(home: &Path, bundles: &[String], data: Option<&ChezmoiData>) 
         .map(ToString::to_string)
         .collect();
 
+    let shadow_path = home.join(".local/opt/dotfiles/bin/dotfiles");
+    let shadow_dotfiles_bin = if shadow_path.exists() {
+        Some(shadow_path.to_string_lossy().into_owned())
+    } else {
+        None
+    };
+
     let mut issues = Vec::new();
     if !bundles.is_empty() && pixi_bin.is_none() {
         issues.push("pixi missing".to_string());
@@ -347,6 +354,12 @@ fn check_toolchain(home: &Path, bundles: &[String], data: Option<&ChezmoiData>) 
     }
     if !pending.is_empty() {
         issues.push(format!("pending retries: {}", pending.join(", ")));
+    }
+    if shadow_dotfiles_bin.is_some() {
+        issues.push(
+            "local override ~/.local/opt/dotfiles/bin/dotfiles shadows mise shim; remove it (`rm -f ~/.local/opt/dotfiles/bin/dotfiles`)"
+                .to_string(),
+        );
     }
 
     let status =
@@ -366,6 +379,7 @@ fn check_toolchain(home: &Path, bundles: &[String], data: Option<&ChezmoiData>) 
         selected_mise_tools: selected_mise,
         missing_mise_shims: missing_mise,
         pending_markers: pending,
+        shadow_dotfiles_bin,
         issues,
     }
 }
@@ -668,6 +682,162 @@ fn load_fetch_items(home: &Path, bundles: &[String], data: Option<&ChezmoiData>)
     items
 }
 
+const MIGRATED_SBIN_TO_LIBEXEC: [(&str, &str); 4] = [
+    ("/usr/local/sbin/bt-autoenable", "/usr/local/libexec/bt-autoenable"),
+    ("/usr/local/sbin/power-tunables", "/usr/local/libexec/power-tunables"),
+    ("/usr/local/sbin/dgpu-display", "/usr/local/libexec/dgpu-display"),
+    (
+        "/usr/local/sbin/set-nvidia-gpu-fans-max",
+        "/usr/local/libexec/nvidia-gpu-fans-max.py",
+    ),
+];
+
+fn walk_system_root(root: &Path, cur: &Path, out: &mut BTreeMap<String, (PathBuf, u32)>) {
+    let Ok(entries) = fs::read_dir(cur) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if meta.is_dir() {
+            if entry.file_name() == "__pycache__" {
+                continue;
+            }
+            walk_system_root(root, &path, out);
+        } else if meta.is_file() {
+            let Ok(rel) = path.strip_prefix(root) else {
+                continue;
+            };
+            let rel_str = rel.to_string_lossy();
+            if rel_str.ends_with(".pyc") || rel_str.ends_with(".pyo") {
+                continue;
+            }
+            let dst = format!("/{rel_str}");
+            let mode = if (meta.permissions().mode() & 0o100) != 0 {
+                0o755
+            } else {
+                0o644
+            };
+            out.insert(dst, (path, mode));
+        }
+    }
+}
+
+fn check_system(chezmoi: &ChezmoiCheck, data: Option<&ChezmoiData>) -> SystemCheck {
+    if !chezmoi.sudo {
+        return SystemCheck {
+            status: "ok".to_string(),
+            skipped_rootless: true,
+            managed_files: 0,
+            drifted_files: Vec::new(),
+            selected_system_packages: Vec::new(),
+            missing_packages: Vec::new(),
+            stale_sbin_files: Vec::new(),
+            issues: Vec::new(),
+        };
+    }
+
+    let mut merged: BTreeMap<String, (PathBuf, u32)> = BTreeMap::new();
+    if let (Some(src_root), Some(machine)) = (&chezmoi.source_path, &chezmoi.machine) {
+        let sys_dir = Path::new(src_root).join("system");
+        for b in &chezmoi.bundles {
+            if b != machine {
+                let root = sys_dir.join(b);
+                if root.is_dir() {
+                    walk_system_root(&root, &root, &mut merged);
+                }
+            }
+        }
+        let machine_root = sys_dir.join(machine);
+        if machine_root.is_dir() {
+            walk_system_root(&machine_root, &machine_root, &mut merged);
+        }
+    }
+
+    let mut drifted_files = Vec::new();
+    for (dst, (src, expected_mode)) in &merged {
+        let dst_path = Path::new(dst);
+        let matches = match (fs::metadata(dst_path), fs::read(dst_path), fs::read(src)) {
+            (Ok(meta), Ok(dst_bytes), Ok(src_bytes)) => {
+                (meta.permissions().mode() & 0o777) == *expected_mode && dst_bytes == src_bytes
+            }
+            _ => false,
+        };
+        if !matches {
+            drifted_files.push(dst.clone());
+        }
+    }
+
+    let mut selected_set = BTreeSet::new();
+    if let Some(d) = data {
+        for b in &chezmoi.bundles {
+            if let Some(spec) = d.bundles.get(b) {
+                for pkg in &spec.system_packages {
+                    selected_set.insert(pkg.clone());
+                }
+            }
+        }
+    }
+    let selected_system_packages: Vec<String> = selected_set.into_iter().collect();
+
+    let mut missing_packages = Vec::new();
+    if let Some(d) = data {
+        for pkg in &selected_system_packages {
+            if let Some(spec) = d.system_packages.get(pkg) {
+                let present = spec.probe.iter().any(|p| Path::new(p).exists());
+                if !present {
+                    missing_packages.push(pkg.clone());
+                }
+            }
+        }
+    }
+
+    let mut stale_sbin_files = Vec::new();
+    for (old_sbin, new_libexec) in MIGRATED_SBIN_TO_LIBEXEC {
+        if merged.contains_key(new_libexec)
+            && Path::new(new_libexec).is_file()
+            && Path::new(old_sbin).exists()
+        {
+            stale_sbin_files.push(old_sbin.to_string());
+        }
+    }
+
+    let mut issues = Vec::new();
+    if !drifted_files.is_empty() {
+        issues.push(format!(
+            "{} system/ file(s) differ from / (run `sudo -v && chezmoi apply`): {}",
+            drifted_files.len(),
+            drifted_files.join(", ")
+        ));
+    }
+    if !missing_packages.is_empty() {
+        issues.push(format!(
+            "missing system_packages (run `sudo -v && chezmoi apply`): {}",
+            missing_packages.join(", ")
+        ));
+    }
+    if !stale_sbin_files.is_empty() {
+        issues.push(format!(
+            "superseded /usr/local/sbin files remain; remove with `sudo rm -f {}`",
+            stale_sbin_files.join(" ")
+        ));
+    }
+
+    let status = if issues.is_empty() { "ok" } else { "warn" }.to_string();
+    SystemCheck {
+        status,
+        skipped_rootless: false,
+        managed_files: merged.len(),
+        drifted_files,
+        selected_system_packages,
+        missing_packages,
+        stale_sbin_files,
+        issues,
+    }
+}
+
 pub fn build_snapshot() -> FullSnapshot {
     let home = home_dir();
     let (chezmoi, data) = check_chezmoi();
@@ -676,8 +846,9 @@ pub fn build_snapshot() -> FullSnapshot {
     let toolchain = check_toolchain(&home, &bundles, data.as_ref());
     let shell_git = check_shell_and_git(&home);
     let agents = check_agents(&home, &bundles);
+    let system = check_system(&chezmoi, data.as_ref());
     let fetch_items = load_fetch_items(&home, &bundles, data.as_ref());
-    let keymap = crate::keymap::collect_report();
+    let host = crate::host::collect_report(&bundles);
 
     let statuses = [
         chezmoi.status.as_str(),
@@ -685,6 +856,7 @@ pub fn build_snapshot() -> FullSnapshot {
         toolchain.status.as_str(),
         shell_git.status.as_str(),
         agents.status.as_str(),
+        system.status.as_str(),
     ];
     let overall = if statuses.contains(&"error") {
         "error"
@@ -703,6 +875,7 @@ pub fn build_snapshot() -> FullSnapshot {
             toolchain,
             shell_git,
             agents,
+            system,
         },
     };
 
@@ -711,7 +884,7 @@ pub fn build_snapshot() -> FullSnapshot {
         policy,
         report,
         fetch_items,
-        keymap,
+        host,
     }
 }
 
@@ -838,6 +1011,24 @@ pub fn print_doctor_pretty(report: &DoctorReport) {
         jail_str
     );
     for issue in &ag.issues {
+        println!("          {dim}-{reset} {issue}");
+    }
+
+    // system
+    let sys = &report.checks.system;
+    let sys_summary = if sys.skipped_rootless {
+        "rootless host (skipped)".to_string()
+    } else {
+        format!(
+            "files: {} ({} drifted) | pkgs: {} ({} missing)",
+            sys.managed_files,
+            sys.drifted_files.len(),
+            sys.selected_system_packages.len(),
+            sys.missing_packages.len()
+        )
+    };
+    println!("  {} {:<10} {}", badge(&sys.status), "system", sys_summary);
+    for issue in &sys.issues {
         println!("          {dim}-{reset} {issue}");
     }
 }

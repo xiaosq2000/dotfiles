@@ -1,4 +1,4 @@
-use crate::tui::app::{AGENT_NAMES, App, Tab};
+use crate::tui::app::{AGENT_NAMES, App, HostControlKind, Tab};
 use crate::tui::theme::{TuiTheme, parse_hex};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
@@ -37,7 +37,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         Tab::Agents => render_agents(frame, app, p, chunks[1]),
         Tab::Toolchain => render_toolchain(frame, app, p, chunks[1]),
         Tab::Machines => render_machines(frame, app, p, chunks[1]),
-        Tab::Keymap => render_keymap(frame, app, p, chunks[1]),
+        Tab::Host => render_host(frame, app, p, chunks[1]),
     }
 
     render_footer(frame, app, p, chunks[2]);
@@ -127,9 +127,9 @@ fn render_header(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         right_spans.push(Span::styled(" · ", Style::default().fg(p.border)));
         right_spans.push(Span::styled(route.as_str(), Style::default().fg(p.vcs)));
     }
-    if app.snapshot.keymap.installed {
+    if app.snapshot.host.keymap.installed {
         right_spans.push(Span::styled(" · ", Style::default().fg(p.border)));
-        let (label, color) = if app.snapshot.keymap.active {
+        let (label, color) = if app.snapshot.host.keymap.active {
             ("hhkb:on", p.ok)
         } else {
             ("hhkb:off", p.warn)
@@ -137,6 +137,15 @@ fn render_header(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         right_spans.push(Span::styled(
             label,
             Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ));
+    }
+    if let Some(dgpu) = &app.snapshot.host.dgpu
+        && dgpu.setting == "off"
+    {
+        right_spans.push(Span::styled(" · ", Style::default().fg(p.border)));
+        right_spans.push(Span::styled(
+            "dgpu:off",
+            Style::default().fg(p.info).add_modifier(Modifier::BOLD),
         ));
     }
     if app.refreshing {
@@ -210,6 +219,21 @@ fn render_overview(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
                     checks.agents.agent_jail_backends.join(",")
                 }
             ),
+        ),
+        (
+            "system",
+            checks.system.status.as_str(),
+            if checks.system.skipped_rootless {
+                "rootless host (skipped)".to_string()
+            } else {
+                format!(
+                    "files={} ({} drift) · pkgs={} ({} miss)",
+                    checks.system.managed_files,
+                    checks.system.drifted_files.len(),
+                    checks.system.selected_system_packages.len(),
+                    checks.system.missing_packages.len()
+                )
+            },
         ),
     ];
 
@@ -371,7 +395,7 @@ fn render_overview(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
             lines.push(kv("zoxide", sg.zoxide.as_deref().unwrap_or("not installed"), p));
             lines.push(kv("sbc route", sg.sbc_route.as_deref().unwrap_or("-"), p));
         }
-        _ => {
+        4 => {
             let ag = &checks.agents;
             lines.push(kv(
                 "dev bundle",
@@ -398,6 +422,41 @@ fn render_overview(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
                         ),
                         Span::styled(status, Style::default().fg(color)),
                     ]));
+                }
+            }
+        }
+        _ => {
+            let sys = &checks.system;
+            if sys.skipped_rootless {
+                lines.push(kv("Mode", "rootless host (sudo=false, skipped)", p));
+            } else {
+                lines.push(kv("Managed Files", &sys.managed_files.to_string(), p));
+                lines.push(kv("Drifted Files", &sys.drifted_files.len().to_string(), p));
+                lines.push(kv(
+                    "System Pkgs",
+                    &if sys.selected_system_packages.is_empty() {
+                        "(none)".to_string()
+                    } else {
+                        sys.selected_system_packages.join(" · ")
+                    },
+                    p,
+                ));
+                lines.push(kv("Missing Pkgs", &sys.missing_packages.len().to_string(), p));
+                lines.push(kv("Stale sbin", &sys.stale_sbin_files.len().to_string(), p));
+                lines.push(Line::raw(""));
+                lines.push(section_heading("Findings", p));
+                if sys.issues.is_empty() {
+                    lines.push(Line::from(Span::styled(
+                        "✓ All system/ files and system_packages match.",
+                        Style::default().fg(p.ok),
+                    )));
+                } else {
+                    for issue in &sys.issues {
+                        lines.push(Line::from(Span::styled(
+                            format!("! {issue}"),
+                            Style::default().fg(p.warn),
+                        )));
+                    }
                 }
             }
         }
@@ -904,132 +963,109 @@ fn render_machines(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
     frame.render_widget(detail, cols[1]);
 }
 
-fn render_keymap(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
+fn render_host(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
     let cols = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(46), Constraint::Percentage(54)])
+        .constraints([Constraint::Percentage(42), Constraint::Percentage(58)])
         .split(area);
 
-    let left_rows = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(10), Constraint::Min(6)])
-        .split(cols[0]);
+    let h = &app.snapshot.host;
 
-    let km = &app.snapshot.keymap;
-    let (badge, badge_bg, summary) = if !km.installed {
-        (" NOT INSTALLED ", p.warn, "install automatically with 'a' (sudo -v && chezmoi apply)")
-    } else if km.active {
-        ("  ON  ", p.ok, "HHKB remap active on non-excluded keyboards")
-    } else {
-        ("  OFF ", p.warn, "Standard keyboard passthrough (colleague-friendly)")
-    };
-
-    let boot_str = match km.enabled {
-        Some(true) => "enabled (starts at boot)",
-        Some(false) => "disabled",
-        None => "-",
-    };
-
-    let status_lines = vec![
-        Line::from(vec![
-            Span::raw("  "),
-            Span::styled(
-                badge,
-                Style::default()
-                    .fg(p.bg)
-                    .bg(badge_bg)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" "),
-            Span::styled(summary, Style::default().fg(p.fg_bright)),
-        ]),
-        Line::raw(""),
-        kv("Service", &format!("keyd.service ({})", km.service_state), p),
-        kv("Boot", boot_str, p),
-        kv(
-            "Config",
-            if km.config_present {
-                "/etc/keyd/default.conf (present)"
-            } else {
-                "/etc/keyd/default.conf (missing)"
-            },
-            p,
-        ),
-        kv(
-            "Polkit Rule",
-            if km.polkit_rule_present {
-                "passwordless toggle ready ✓"
-            } else {
-                "missing (press 'a' to deploy)"
-            },
-            p,
-        ),
-        Line::raw(""),
-        Line::from(Span::styled(
-            "  Space/Enter/t: toggle · R: reload · e: edit · a: apply",
-            Style::default().fg(p.accent),
-        )),
-    ];
-
-    let status_card = Paragraph::new(status_lines)
-        .block(styled_block(
-            Line::from(Span::styled(
-                " HHKB Keymap (keyd) ",
-                Style::default().fg(p.primary).add_modifier(Modifier::BOLD),
-            )),
-            p,
-            false,
-        ))
-        .wrap(Wrap { trim: false });
-    frame.render_widget(status_card, left_rows[0]);
-
-    let kb_items: Vec<ListItem> = if km.keyboards.is_empty() {
+    let items: Vec<ListItem> = if app.host_controls.is_empty() {
         vec![ListItem::new(Line::from(Span::styled(
-            "  No physical keyboards reported in /proc/bus/input/devices.",
+            "  No managed hardware controls on this profile.",
             Style::default().fg(p.fg),
         )))]
     } else {
-        km.keyboards
+        app.host_controls
             .iter()
-            .map(|kb| {
-                let (st_badge, st_bg) = match kb.state.as_str() {
-                    "remapped" => ("REMAP", p.ok),
-                    "excluded" => ("EXCL ", p.info),
-                    _ => (" STD ", p.border),
+            .map(|kind| {
+                let (badge, badge_bg, title, sub) = match kind {
+                    HostControlKind::Keymap => {
+                        let km = &h.keymap;
+                        if !km.installed {
+                            ("MISS ", p.warn, "Keymap (keyd)", "not installed — press 'a'".to_string())
+                        } else if km.active {
+                            (" ON  ", p.ok, "Keymap (keyd)", format!("HHKB remap · {} keyboard(s)", km.keyboards.len()))
+                        } else {
+                            (" OFF ", p.warn, "Keymap (keyd)", "standard passthrough".to_string())
+                        }
+                    }
+                    HostControlKind::Dgpu => {
+                        let d = h.dgpu.as_ref().expect("dgpu present");
+                        let (b, c) = match d.setting.as_str() {
+                            "on" => (" ON  ", p.ok),
+                            "off" => (" OFF ", p.info),
+                            _ => ("WARN ", p.warn),
+                        };
+                        (b, c, "dGPU Display", format!("GNOME: {}", d.gnome))
+                    }
+                    HostControlKind::Battery => {
+                        let b = h.battery.as_ref().expect("battery present");
+                        let (badge, color) = if !b.available {
+                            (" N/A ", p.border)
+                        } else if b.persistent_mode == "full" {
+                            ("FULL ", p.warn)
+                        } else {
+                            ("LIMIT", p.ok)
+                        };
+                        let live = b.live_mode.as_deref().unwrap_or("unavailable");
+                        (badge, color, "Battery Limit", format!("live={live} · persistent={}", b.persistent_mode))
+                    }
+                    HostControlKind::Refresh => {
+                        let r = h.refresh.as_ref().expect("refresh present");
+                        let (b, c) = if r.active { (" ON  ", p.ok) } else { (" OFF ", p.warn) };
+                        (b, c, "Refresh Rate", format!("60 Hz on battery ({})", r.service_state))
+                    }
+                    HostControlKind::Logid => {
+                        let l = h.logid.as_ref().expect("logid present");
+                        let (b, c) = if l.binary.is_none() {
+                            ("MISS ", p.warn)
+                        } else if l.active {
+                            (" ON  ", p.ok)
+                        } else {
+                            (" OFF ", p.warn)
+                        };
+                        (b, c, "LogiOps (logid)", format!("MX Master 3 ({})", l.service_state))
+                    }
+                    HostControlKind::Fans => {
+                        let f = h.fans.as_ref().expect("fans present");
+                        let (b, c) = if f.active { (" ON  ", p.ok) } else { (" OFF ", p.warn) };
+                        (b, c, "GPU Fans (imrl)", format!("max-fan policy ({})", f.service_state))
+                    }
                 };
-                let internal_tag = if kb.internal { " (internal)" } else { "" };
                 ListItem::new(vec![
                     Line::from(vec![
                         Span::styled(
-                            format!(" {st_badge} "),
+                            format!(" {badge} "),
                             Style::default()
                                 .fg(p.bg)
-                                .bg(st_bg)
+                                .bg(badge_bg)
                                 .add_modifier(Modifier::BOLD),
                         ),
                         Span::raw(" "),
                         Span::styled(
-                            format!("{} ", kb.id),
-                            Style::default().fg(p.accent).add_modifier(Modifier::BOLD),
+                            title,
+                            Style::default().fg(p.fg_bright).add_modifier(Modifier::BOLD),
                         ),
-                        Span::styled(
-                            format!("{}{}", kb.name, internal_tag),
-                            Style::default().fg(p.fg_bright),
-                        ),
+                    ]),
+                    Line::from(vec![
+                        Span::raw("        "),
+                        Span::styled(sub, Style::default().fg(p.fg)),
                     ]),
                 ])
             })
             .collect()
     };
 
-    let mut kb_state = ListState::default();
-    if !km.keyboards.is_empty() {
-        kb_state.select(Some(app.keymap_idx));
+    let mut state = ListState::default();
+    if !app.host_controls.is_empty() {
+        state.select(Some(app.host_idx));
     }
-    let kb_list = List::new(kb_items)
+    let list = List::new(items)
         .block(styled_block(
             Line::from(Span::styled(
-                " Connected Keyboards ",
+                " Host Controls (Space/t: toggle · R: reload) ",
                 Style::default().fg(p.primary).add_modifier(Modifier::BOLD),
             )),
             p,
@@ -1037,52 +1073,208 @@ fn render_keymap(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         ))
         .highlight_style(Style::default().bg(p.surface))
         .highlight_symbol("▸ ");
-    frame.render_stateful_widget(kb_list, left_rows[1], &mut kb_state);
+    frame.render_stateful_widget(list, cols[0], &mut state);
 
     let mut lines: Vec<Line> = Vec::new();
-    lines.push(section_heading("Base Layer [main]", p));
-    lines.push(kv("CapsLock", "Left Ctrl (physical Left Ctrl unchanged)", p));
-    lines.push(kv("Right Ctrl", "Hold for HHKB Fn layer", p));
-    lines.push(Line::raw(""));
-    lines.push(section_heading("HHKB Fn Layer [hhkb_fn]", p));
-    lines.push(kv("Diamond Arrows", "[ = Up · ; = Left · ' = Right · / = Down", p));
-    lines.push(kv("Navigation", "k = Home · , = End · l = PgUp · . = PgDn", p));
-    lines.push(kv("Audio", "a = Vol- · s = Vol+ · d = Mute", p));
-    lines.push(kv("Edit / Lock", "Bksp = Del · Tab = CapsLock · \\ = Ins · i = PrtSc", p));
-    lines.push(kv("Function Row", "1..0, -, =  →  F1..F12", p));
-    lines.push(Line::raw(""));
-    lines.push(section_heading("Excluded Device IDs ([ids])", p));
-    lines.push(Line::from(Span::styled(
-        if km.excluded_ids.is_empty() {
-            "  (none)".to_string()
-        } else {
-            format!("  {}", km.excluded_ids.join(" · "))
-        },
-        Style::default().fg(p.vcs),
-    )));
-
-    if let Some(kb) = km.keyboards.get(app.keymap_idx) {
-        lines.push(Line::raw(""));
-        lines.push(section_heading("Selected Keyboard", p));
-        lines.push(kv("VID:PID", &kb.id, p));
-        lines.push(kv("Name", &kb.name, p));
-        lines.push(kv(
-            "Bus",
-            if kb.internal { "internal (built-in)" } else { "external" },
-            p,
-        ));
-        lines.push(kv("Mode", &kb.state, p));
-        if !kb.internal && !kb.excluded {
+    match app.host_controls.get(app.host_idx) {
+        Some(HostControlKind::Keymap) => {
+            let km = &h.keymap;
+            let boot_str = match km.enabled {
+                Some(true) => "enabled (starts at boot)",
+                Some(false) => "disabled",
+                None => "-",
+            };
+            lines.push(section_heading("Keymap Daemon (keyd)", p));
+            lines.push(kv("Service", &format!("keyd.service ({})", km.service_state), p));
+            lines.push(kv("Boot", boot_str, p));
+            lines.push(kv(
+                "Config",
+                if km.config_present {
+                    "/etc/keyd/default.conf (present)"
+                } else {
+                    "/etc/keyd/default.conf (missing)"
+                },
+                p,
+            ));
+            lines.push(kv(
+                "Polkit Rule",
+                if km.polkit_rule_present {
+                    "passwordless toggle ready ✓"
+                } else {
+                    "missing (press 'a' to apply)"
+                },
+                p,
+            ));
+            lines.push(Line::raw(""));
+            lines.push(section_heading("HHKB Mapping ([main] + [hhkb_fn])", p));
+            lines.push(kv("Base Layer", "CapsLock → Left Ctrl · Right Ctrl → Fn (hold)", p));
+            lines.push(kv("Diamond Arrows", "[ = Up · ; = Left · ' = Right · / = Down", p));
+            lines.push(kv("Navigation", "k = Home · , = End · l = PgUp · . = PgDn", p));
+            lines.push(kv("Audio", "a = Vol- · s = Vol+ · d = Mute", p));
+            lines.push(kv("Edit / Lock", "Bksp = Del · Tab = CapsLock · \\ = Ins · i = PrtSc", p));
+            lines.push(kv("Function Row", "1..0, -, =  →  F1..F12", p));
+            lines.push(Line::raw(""));
+            lines.push(section_heading("Connected Keyboards & Exclusions", p));
+            lines.push(kv(
+                "Excluded [ids]",
+                &if km.excluded_ids.is_empty() {
+                    "(none)".to_string()
+                } else {
+                    km.excluded_ids.join(" · ")
+                },
+                p,
+            ));
+            for kb in &km.keyboards {
+                let tag = if kb.internal { " (internal)" } else { "" };
+                let hint = if !kb.internal && !kb.excluded {
+                    format!("  (exclude: -{})", kb.id)
+                } else {
+                    String::new()
+                };
+                let color = match kb.state.as_str() {
+                    "remapped" => p.ok,
+                    "excluded" => p.info,
+                    _ => p.fg,
+                };
+                lines.push(Line::from(vec![
+                    Span::styled(format!("  [{}] ", kb.state), Style::default().fg(color)),
+                    Span::styled(format!("{} ", kb.id), Style::default().fg(p.accent).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("{}{}", kb.name, tag), Style::default().fg(p.fg_bright)),
+                    Span::styled(hint, Style::default().fg(p.fg)),
+                ]));
+            }
+            lines.push(Line::raw(""));
             lines.push(Line::from(Span::styled(
-                format!("  To exclude (e.g. hardware HHKB): add `-{}` under [ids] (press 'e')", kb.id),
+                "  Space/t: toggle · R: reload · e: edit default.conf · a: sudo apply",
                 Style::default().fg(p.accent),
+            )));
+        }
+        Some(HostControlKind::Dgpu) => {
+            if let Some(dgpu) = &h.dgpu {
+                lines.push(section_heading("NVIDIA dGPU Display Output", p));
+                lines.push(kv("Device", dgpu.pci.as_deref().unwrap_or("-"), p));
+                lines.push(kv("Setting", &dgpu.setting, p));
+                lines.push(kv("GNOME", &dgpu.gnome, p));
+                lines.push(kv("Power", &dgpu.power, p));
+                lines.push(kv("Open By", &dgpu.open_by, p));
+                lines.push(kv("Backend", "/usr/local/libexec/dgpu-display", p));
+                if !dgpu.advice.is_empty() {
+                    lines.push(Line::raw(""));
+                    lines.push(section_heading("Advice", p));
+                    for line in &dgpu.advice {
+                        lines.push(Line::from(Span::styled(
+                            format!("  ! {line}"),
+                            Style::default().fg(p.warn),
+                        )));
+                    }
+                }
+                lines.push(Line::raw(""));
+                lines.push(Line::from(Span::styled(
+                    "  Space/t: toggle on/off (uses sudo; pauses to show logout guidance)",
+                    Style::default().fg(p.accent),
+                )));
+            }
+        }
+        Some(HostControlKind::Battery) => {
+            if let Some(bat) = &h.battery {
+                lines.push(section_heading("Battery Charge Limit (BAT0)", p));
+                lines.push(kv(
+                    "Persistent Mode",
+                    if bat.persistent_mode == "full" {
+                        "full (~100% Standard; marker present)"
+                    } else {
+                        "limit (~80% Long_Life; enforced at boot/resume)"
+                    },
+                    p,
+                ));
+                lines.push(kv("Live Sysfs", bat.live_mode.as_deref().unwrap_or("unavailable"), p));
+                lines.push(kv("Available Modes", &bat.available_modes.join(" · "), p));
+                lines.push(kv(
+                    "Boot/Resume Unit",
+                    match bat.service_enabled {
+                        Some(true) => "battery-charge-limit.service (enabled)",
+                        Some(false) => "battery-charge-limit.service (disabled)",
+                        None => "unknown",
+                    },
+                    p,
+                ));
+                lines.push(kv("State Marker", "/var/lib/dotfiles/battery-full", p));
+                lines.push(Line::raw(""));
+                lines.push(Line::from(Span::styled(
+                    "  Space/t: toggle persistent limit (80%) ↔ full (100%) via sudo",
+                    Style::default().fg(p.accent),
+                )));
+            }
+        }
+        Some(HostControlKind::Refresh) => {
+            if let Some(rf) = &h.refresh {
+                lines.push(section_heading("Display Refresh Rate on Power", p));
+                lines.push(kv("User Unit", &format!("refresh-rate-on-power.service ({})", rf.service_state), p));
+                lines.push(kv("Unit File", if rf.unit_present { "deployed ✓" } else { "missing" }, p));
+                lines.push(kv("Helper", "~/.local/libexec/dotfiles/refresh-rate-on-power", p));
+                lines.push(kv("Behavior", "Drops panel to 60 Hz on battery, full rate on AC", p));
+                lines.push(Line::raw(""));
+                lines.push(Line::from(Span::styled(
+                    "  Space/t: start/stop (passwordless) · R: restart",
+                    Style::default().fg(p.accent),
+                )));
+            }
+        }
+        Some(HostControlKind::Logid) => {
+            if let Some(lg) = &h.logid {
+                lines.push(section_heading("Logitech MX Master 3 (logid)", p));
+                lines.push(kv("Service", &format!("logid.service ({})", lg.service_state), p));
+                lines.push(kv("Binary", lg.binary.as_deref().unwrap_or("not installed"), p));
+                lines.push(kv(
+                    "Config",
+                    if lg.config_present { "/etc/logid.cfg (present)" } else { "/etc/logid.cfg (missing)" },
+                    p,
+                ));
+                lines.push(kv("Source", "system/desktop/etc/logid.cfg (shared desktop)", p));
+                lines.push(Line::raw(""));
+                lines.push(Line::from(Span::styled(
+                    "  Space/t/R: restart via sudo · e: edit logid.cfg · a: sudo apply",
+                    Style::default().fg(p.accent),
+                )));
+            }
+        }
+        Some(HostControlKind::Fans) => {
+            if let Some(f) = &h.fans {
+                lines.push(section_heading("NVIDIA GPU Max-Fan Policy (imrl)", p));
+                lines.push(kv("Service", &format!("nvidia-gpu-fans-max.service ({})", f.service_state), p));
+                lines.push(kv(
+                    "Boot",
+                    match f.enabled {
+                        Some(true) => "enabled",
+                        Some(false) => "disabled",
+                        None => "unknown",
+                    },
+                    p,
+                ));
+                lines.push(kv("Helper", "/usr/local/libexec/nvidia-gpu-fans-max.py", p));
+                lines.push(Line::raw(""));
+                lines.push(Line::from(Span::styled(
+                    "  Space/t: apply now via sudo · R: restart unit",
+                    Style::default().fg(p.accent),
+                )));
+            }
+        }
+        None => {
+            lines.push(section_heading("Host Environment (Read-Only)", p));
+            lines.push(kv("OS", &h.system.os_pretty, p));
+            lines.push(kv("Kernel", &h.system.kernel, p));
+            lines.push(kv("Uptime", &h.system.uptime, p));
+            lines.push(Line::raw(""));
+            lines.push(Line::from(Span::styled(
+                "  This machine profile has no managed desktop/laptop/GPU hardware switches.",
+                Style::default().fg(p.fg),
             )));
         }
     }
 
     let inspector = Paragraph::new(lines)
         .block(styled_block(
-            Line::from(Span::styled(" Layout & Device Inspector ", Style::default().fg(p.info))),
+            Line::from(Span::styled(" Host Inspector ", Style::default().fg(p.info))),
             p,
             false,
         ))
@@ -1097,7 +1289,7 @@ fn render_footer(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
         Tab::Agents => "j/k select agent · Enter/x jail dry-run · S skills · r refresh · q quit",
         Tab::Toolchain => "j/k select tool · U upgrade dry-run · u fetch outdated · f fetch sync · r refresh · q quit",
         Tab::Machines => "j/k select machine · 1-6/Tab switch · r refresh · ? help · q quit",
-        Tab::Keymap => "j/k keyboard · Space/Enter/t toggle · R reload · e edit config · a sudo apply · r refresh · q quit",
+        Tab::Host => "j/k control · Space/Enter/t toggle · R reload · e edit config · a sudo apply · r refresh · q quit",
     };
 
     let mut lines = vec![Line::from(vec![
@@ -1134,7 +1326,7 @@ fn render_help_modal(frame: &mut Frame, p: TuiTheme, area: Rect) {
         kv("Enter / p", "Themes: apply selected theme / dry-run diff", p),
         kv("Enter / x / S", "Agents: jail dry-run / skills", p),
         kv("U / u / f", "Toolchain: upgrade dry-run / fetch outdated / fetch sync", p),
-        kv("Space / R / e / a", "Keymap: toggle / reload / edit config / sudo apply", p),
+        kv("Space / R / e / a", "Host: toggle / reload / edit config / sudo apply", p),
         kv("? / Esc / q", "Toggle help / Quit", p),
     ];
     let modal = Paragraph::new(lines)

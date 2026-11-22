@@ -3,9 +3,10 @@ pub mod theme;
 pub mod ui;
 
 use crate::doctor::{build_snapshot, home_dir};
+use crate::host;
 use crate::keymap;
 use crate::model::FullSnapshot;
-use crate::tui::app::{AGENT_NAMES, App, PendingAction, Tab};
+use crate::tui::app::{AGENT_NAMES, App, HostControlKind, PendingAction, Tab};
 use anyhow::Result;
 use crossterm::event::{
     self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
@@ -140,7 +141,7 @@ fn handle_key(
         KeyCode::Char('3') => app.tab = Tab::Agents,
         KeyCode::Char('4') => app.tab = Tab::Toolchain,
         KeyCode::Char('5') => app.tab = Tab::Machines,
-        KeyCode::Char('6') => app.tab = Tab::Keymap,
+        KeyCode::Char('6') => app.tab = Tab::Host,
         KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => app.tab = app.tab.next(),
         KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => app.tab = app.tab.prev(),
         KeyCode::Down | KeyCode::Char('j') if app.tab != Tab::Agents || code == KeyCode::Down => {
@@ -255,35 +256,16 @@ fn handle_key(
                 pause: true,
             });
         }
-        KeyCode::Char(' ') | KeyCode::Enter | KeyCode::Char('t') if app.tab == Tab::Keymap => {
-            toggle_keymap_in_tui(app);
+        KeyCode::Char(' ') | KeyCode::Enter | KeyCode::Char('t') if app.tab == Tab::Host => {
+            activate_host_control_in_tui(app);
         }
-        KeyCode::Char('R') if app.tab == Tab::Keymap => {
-            reload_keymap_in_tui(app);
+        KeyCode::Char('R') if app.tab == Tab::Host => {
+            reload_host_control_in_tui(app);
         }
-        KeyCode::Char('e') if app.tab == Tab::Keymap => {
-            let source_root = app
-                .snapshot
-                .report
-                .checks
-                .chezmoi
-                .source_path
-                .as_deref()
-                .map(PathBuf::from)
-                .unwrap_or_else(|| home_dir().join(".local/share/chezmoi"));
-            let cfg_src = source_root.join("system/desktop/etc/keyd/default.conf");
-            let editor = env::var("EDITOR")
-                .ok()
-                .filter(|v| !v.trim().is_empty())
-                .unwrap_or_else(|| "vi".to_string());
-            app.pending_action = Some(PendingAction::RunCommand {
-                label: format!("{editor} {}", cfg_src.display()),
-                prog: editor,
-                args: vec![cfg_src.to_string_lossy().into_owned()],
-                pause: false,
-            });
+        KeyCode::Char('e') if app.tab == Tab::Host => {
+            edit_host_config_in_tui(app);
         }
-        KeyCode::Char('a') if app.tab == Tab::Keymap => {
+        KeyCode::Char('a') if app.tab == Tab::Host => {
             app.pending_action = Some(PendingAction::RunCommand {
                 label: "sudo -v && chezmoi apply".to_string(),
                 prog: "sh".to_string(),
@@ -295,15 +277,202 @@ fn handle_key(
     }
 }
 
+fn refresh_host_inline(app: &mut App) {
+    let bundles = app.snapshot.report.checks.chezmoi.bundles.clone();
+    app.snapshot.host = host::collect_report(&bundles);
+}
+
+fn activate_host_control_in_tui(app: &mut App) {
+    let Some(&kind) = app.host_controls.get(app.host_idx) else {
+        app.status_msg = Some("No host hardware controls on this profile.".to_string());
+        return;
+    };
+    match kind {
+        HostControlKind::Keymap => toggle_keymap_in_tui(app),
+        HostControlKind::Dgpu => {
+            let Some(dgpu) = &app.snapshot.host.dgpu else {
+                return;
+            };
+            if !dgpu.helper_present {
+                app.status_msg = Some(
+                    "dgpu-display helper missing — press 'a' to run `sudo -v && chezmoi apply`."
+                        .to_string(),
+                );
+                return;
+            }
+            let target = if dgpu.setting == "off" { "on" } else { "off" };
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: format!("dotfiles host dgpu {target}"),
+                prog: host::DGPU_HELPER_PATH.to_string(),
+                args: vec![target.to_string()],
+                pause: true,
+            });
+        }
+        HostControlKind::Battery => {
+            let Some(bat) = &app.snapshot.host.battery else {
+                return;
+            };
+            if !bat.available {
+                app.status_msg = Some("BAT0/charge_types not available on this host.".to_string());
+                return;
+            }
+            let target_full = bat.persistent_mode != "full";
+            let script = if target_full {
+                format!(
+                    "mkdir -p /var/lib/dotfiles && touch {} && echo Standard > {}",
+                    host::BATTERY_FULL_MARKER,
+                    host::BATTERY_CHARGE_TYPES_PATH
+                )
+            } else {
+                format!(
+                    "rm -f {} && echo Long_Life > {}",
+                    host::BATTERY_FULL_MARKER,
+                    host::BATTERY_CHARGE_TYPES_PATH
+                )
+            };
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: format!(
+                    "dotfiles host battery {}",
+                    if target_full { "full" } else { "limit" }
+                ),
+                prog: "sudo".to_string(),
+                args: vec!["sh".to_string(), "-c".to_string(), script],
+                pause: false,
+            });
+        }
+        HostControlKind::Refresh => {
+            let target_on = app
+                .snapshot
+                .host
+                .refresh
+                .as_ref()
+                .map(|r| !r.active)
+                .unwrap_or(true);
+            if matches!(host::set_refresh_inline(target_on), Ok(true)) {
+                refresh_host_inline(app);
+                app.status_msg = Some(if target_on {
+                    "Refresh service: ON (60 Hz on battery)".to_string()
+                } else {
+                    "Refresh service: OFF".to_string()
+                });
+            } else {
+                app.status_msg = Some("Failed to toggle refresh-rate-on-power.service.".to_string());
+            }
+        }
+        HostControlKind::Logid => {
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: format!("sudo systemctl restart {}", host::LOGID_UNIT),
+                prog: "sudo".to_string(),
+                args: vec![
+                    "systemctl".to_string(),
+                    "restart".to_string(),
+                    host::LOGID_UNIT.to_string(),
+                ],
+                pause: false,
+            });
+        }
+        HostControlKind::Fans => {
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: "dotfiles host fans apply".to_string(),
+                prog: "sudo".to_string(),
+                args: vec![
+                    "/usr/bin/python3".to_string(),
+                    host::FANS_HELPER_PATH.to_string(),
+                ],
+                pause: true,
+            });
+        }
+    }
+}
+
+fn reload_host_control_in_tui(app: &mut App) {
+    let Some(&kind) = app.host_controls.get(app.host_idx) else {
+        return;
+    };
+    match kind {
+        HostControlKind::Keymap => reload_keymap_in_tui(app),
+        HostControlKind::Refresh => {
+            if matches!(host::restart_refresh_inline(), Ok(true)) {
+                refresh_host_inline(app);
+                app.status_msg = Some("Restarted refresh-rate-on-power.service.".to_string());
+            } else {
+                app.status_msg = Some("Failed to restart refresh-rate-on-power.service.".to_string());
+            }
+        }
+        HostControlKind::Logid => {
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: format!("sudo systemctl restart {}", host::LOGID_UNIT),
+                prog: "sudo".to_string(),
+                args: vec![
+                    "systemctl".to_string(),
+                    "restart".to_string(),
+                    host::LOGID_UNIT.to_string(),
+                ],
+                pause: false,
+            });
+        }
+        HostControlKind::Fans => {
+            app.pending_action = Some(PendingAction::RunCommand {
+                label: format!("sudo systemctl restart {}", host::FANS_UNIT),
+                prog: "sudo".to_string(),
+                args: vec![
+                    "systemctl".to_string(),
+                    "restart".to_string(),
+                    host::FANS_UNIT.to_string(),
+                ],
+                pause: true,
+            });
+        }
+        HostControlKind::Dgpu | HostControlKind::Battery => {
+            refresh_host_inline(app);
+            app.status_msg = Some("Refreshed host hardware telemetry.".to_string());
+        }
+    }
+}
+
+fn edit_host_config_in_tui(app: &mut App) {
+    let Some(&kind) = app.host_controls.get(app.host_idx) else {
+        return;
+    };
+    let rel = match kind {
+        HostControlKind::Keymap => "system/desktop/etc/keyd/default.conf",
+        HostControlKind::Logid => "system/desktop/etc/logid.cfg",
+        _ => {
+            app.status_msg = Some("No editable config file for this control.".to_string());
+            return;
+        }
+    };
+    let source_root = app
+        .snapshot
+        .report
+        .checks
+        .chezmoi
+        .source_path
+        .as_deref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir().join(".local/share/chezmoi"));
+    let cfg_src = source_root.join(rel);
+    let editor = env::var("EDITOR")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or_else(|| "vi".to_string());
+    app.pending_action = Some(PendingAction::RunCommand {
+        label: format!("{editor} {}", cfg_src.display()),
+        prog: editor,
+        args: vec![cfg_src.to_string_lossy().into_owned()],
+        pause: false,
+    });
+}
+
 fn toggle_keymap_in_tui(app: &mut App) {
-    if !app.snapshot.keymap.installed {
+    if !app.snapshot.host.keymap.installed {
         app.status_msg = Some(
             "keyd is not installed — press 'a' to run `sudo -v && chezmoi apply`.".to_string(),
         );
         return;
     }
-    let target_on = !app.snapshot.keymap.active;
-    if target_on && !app.snapshot.keymap.config_present {
+    let target_on = !app.snapshot.host.keymap.active;
+    if target_on && !app.snapshot.host.keymap.config_present {
         app.status_msg = Some(format!(
             "{} missing — press 'a' to run `sudo -v && chezmoi apply`.",
             keymap::KEYD_CONFIG_PATH
@@ -313,10 +482,7 @@ fn toggle_keymap_in_tui(app: &mut App) {
 
     let verb = if target_on { "start" } else { "stop" };
     if matches!(keymap::try_manage_unit_passwordless(verb), Ok(true)) {
-        app.snapshot.keymap = keymap::collect_report();
-        if !app.snapshot.keymap.keyboards.is_empty() {
-            app.keymap_idx = app.keymap_idx.min(app.snapshot.keymap.keyboards.len() - 1);
-        }
+        app.snapshot.host.keymap = keymap::collect_report();
         keymap::notify_state(target_on);
         app.status_msg = Some(if target_on {
             "Keymap: ON (HHKB remap active)".to_string()
@@ -338,19 +504,19 @@ fn toggle_keymap_in_tui(app: &mut App) {
 }
 
 fn reload_keymap_in_tui(app: &mut App) {
-    if !app.snapshot.keymap.installed {
+    if !app.snapshot.host.keymap.installed {
         app.status_msg = Some(
             "keyd is not installed — press 'a' to run `sudo -v && chezmoi apply`.".to_string(),
         );
         return;
     }
-    if !app.snapshot.keymap.active {
+    if !app.snapshot.host.keymap.active {
         app.status_msg =
             Some("keyd is currently off — press Space/t to enable it first.".to_string());
         return;
     }
     if matches!(keymap::try_manage_unit_passwordless("restart"), Ok(true)) {
-        app.snapshot.keymap = keymap::collect_report();
+        app.snapshot.host.keymap = keymap::collect_report();
         app.status_msg = Some(format!("Reloaded {}.", keymap::KEYD_CONFIG_PATH));
     } else {
         app.pending_action = Some(PendingAction::RunCommand {

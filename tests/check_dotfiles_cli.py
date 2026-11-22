@@ -38,8 +38,12 @@ assert (
     "doctor" in help_res.stdout
     and "jail" in help_res.stdout
     and "upgrade" in help_res.stdout
-    and "keymap" in help_res.stdout
+    and "host" in help_res.stdout
 ), help_res.stdout
+
+host_help = subprocess.run([*CMD, "host", "--help"], text=True, capture_output=True, check=True)
+for sub in ("keymap", "dgpu", "battery", "refresh", "logid", "fans"):
+    assert sub in host_help.stdout, host_help.stdout
 
 # 2. Unknown subcommand exits 2.
 bad_res = subprocess.run([*CMD, "no-such-cmd"], text=True, capture_output=True, check=False)
@@ -98,6 +102,25 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-cli-") as tmp:
     assert report["checks"]["secrets"]["policy_json_valid"] is True, report
     assert report["checks"]["shell_git"]["env_sh"] is True, report
     assert report["checks"]["shell_git"]["git_xdg_config"] is True, report
+    assert report["checks"]["system"]["status"] == "ok", report
+    assert report["checks"]["toolchain"].get("shadow_dotfiles_bin") is None, report
+
+    # Legacy local ~/.local/opt/dotfiles/bin/dotfiles triggers a doctor shadow warning.
+    shadow_bin = home / ".local/opt/dotfiles/bin/dotfiles"
+    shadow_bin.parent.mkdir(parents=True, exist_ok=True)
+    shadow_bin.write_text("#!/bin/sh\n")
+    shadow_bin.chmod(0o755)
+    shadow_res = subprocess.run(
+        [*CMD, "doctor", "--json"],
+        env=test_env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    shadow_report = json.loads(shadow_res.stdout)
+    assert shadow_report["checks"]["toolchain"]["shadow_dotfiles_bin"] == str(shadow_bin), shadow_report
+    assert shadow_report["checks"]["toolchain"]["status"] == "warn", shadow_report
+    shadow_bin.unlink()
 
     # Loose SSH private key permissions trigger an error exit code.
     bad_key = home / ".ssh/id_test_loose"
@@ -127,9 +150,19 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-cli-") as tmp:
     ag_report = json.loads(ag_res.stdout)
     assert ag_report["agent_tools_selected"] is False, ag_report
 
-    # `dotfiles keymap status --json` succeeds cleanly even without keyd/systemd.
+    # `dotfiles host status --json` and `dotfiles host keymap status --json` succeed cleanly.
+    host_res = subprocess.run(
+        [*CMD, "host", "status", "--json"],
+        env=test_env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    host_report = json.loads(host_res.stdout)
+    assert "keymap" in host_report and "system" in host_report, host_report
+
     km_res = subprocess.run(
-        [*CMD, "keymap", "status", "--json"],
+        [*CMD, "host", "keymap", "status", "--json"],
         env=test_env,
         text=True,
         capture_output=True,

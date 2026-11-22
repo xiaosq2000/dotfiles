@@ -1,5 +1,6 @@
 mod commands;
 mod doctor;
+mod host;
 mod keymap;
 mod model;
 mod tui;
@@ -63,10 +64,10 @@ enum Commands {
         action: AgentAction,
     },
 
-    /// Toggle or inspect the HHKB-style keyd keyboard remap (desktop Linux)
-    Keymap {
+    /// Manage host hardware & system controls (keymap, dgpu, battery, refresh, logid, fans)
+    Host {
         #[command(subcommand)]
-        action: Option<keymap::KeymapAction>,
+        action: Option<host::HostAction>,
     },
 
     /// Apply or update dotfiles via chezmoi (inherits caller network environment)
@@ -266,7 +267,7 @@ fn run() -> anyhow::Result<i32> {
             AgentAction::Skills { args } => commands::exec_helper("agent-skills.sh", &args),
             AgentAction::Status { json } => commands::cmd_agent_status(json),
         },
-        Some(Commands::Keymap { action }) => keymap::cmd_keymap(action),
+        Some(Commands::Host { action }) => host::cmd_host(action),
         Some(Commands::Sync {
             update,
             dry_run,
@@ -369,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn tui_keymap_tab_renders_and_hit_tests() {
+    fn tui_host_and_system_overview_render_and_hit_test() {
         use crate::doctor::build_snapshot;
         use crate::tui::app::{App, Tab};
         use crate::tui::ui;
@@ -377,16 +378,19 @@ mod tests {
         use ratatui::backend::TestBackend;
 
         assert_eq!(Tab::at_column(2), Some(Tab::Overview));
-        assert_eq!(Tab::at_column(66), Some(Tab::Keymap));
-        assert_eq!(Tab::Overview.prev(), Tab::Keymap);
-        assert_eq!(Tab::Keymap.next(), Tab::Overview);
+        assert_eq!(Tab::at_column(66), Some(Tab::Host));
+        assert_eq!(Tab::Overview.prev(), Tab::Host);
+        assert_eq!(Tab::Host.next(), Tab::Overview);
 
         let mut app = App::new(build_snapshot());
-        app.tab = Tab::Keymap;
-        for (w, h) in [(120, 34), (80, 24)] {
-            let backend = TestBackend::new(w, h);
-            let mut terminal = Terminal::new(backend).expect("test terminal");
-            terminal.draw(|f| ui::render(f, &app)).expect("render keymap tab");
+        for (tab, ov_idx) in [(Tab::Overview, 5), (Tab::Host, 0)] {
+            app.tab = tab;
+            app.overview_idx = ov_idx;
+            for (w, h) in [(120, 34), (80, 24)] {
+                let backend = TestBackend::new(w, h);
+                let mut terminal = Terminal::new(backend).expect("test terminal");
+                terminal.draw(|f| ui::render(f, &app)).expect("render tab");
+            }
         }
     }
 }

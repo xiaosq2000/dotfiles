@@ -30,15 +30,8 @@ cargo test --manifest-path cli/Cargo.toml
 """
 
 [tasks.build-cli]
-description = "Build release Rust dotfiles CLI and install into ~/.local/opt/dotfiles/bin/dotfiles"
-run = """
-set -eu
-cargo build --release --manifest-path cli/Cargo.toml
-mkdir -p "$HOME/.local/opt/dotfiles/bin"
-install -m 0755 cli/target/release/dotfiles "$HOME/.local/opt/dotfiles/bin/dotfiles"
-rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/completions/_dotfiles"
-echo "Installed $HOME/.local/opt/dotfiles/bin/dotfiles"
-"""
+description = "Build release Rust dotfiles CLI locally into cli/target/release/dotfiles (mise manages the installed binary)"
+run = "cargo build --release --manifest-path cli/Cargo.toml"
 
 [tasks.check]
 description = "Run all pre-commit hooks and the full offline repository test suite"

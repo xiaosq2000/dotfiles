@@ -51,8 +51,8 @@ daily operations, dynamic Zsh tab completion (via `fzf-tab`), and an
 interactive Ratatui TUI:
 
 ```sh
-dotfiles                            # interactive Ratatui TUI (6 tabs: Overview, Themes, Agents, Toolchain, Machines, Keymap)
-dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents and sandbox
+dotfiles                            # interactive Ratatui TUI (6 tabs: Overview, Themes, Agents, Toolchain, Machines, Host)
+dotfiles doctor [--json]            # host health, drift, secrets, toolchain, agents, sandbox, and system/
 dotfiles sync [--update] [--dry-run] # chezmoi apply/update (--init + dirty-tree guard)
 dotfiles upgrade [--dry-run] [--now] [--only mise,pixi,fetch,sheldon,pi]
                                     # upgrade toolchains locally & run doctor (--now skips mise 24h cooldown)
@@ -61,8 +61,8 @@ dotfiles theme [variant]            # switch or preview colour theme across tool
 dotfiles fetch <status|sync|outdated|update>
 dotfiles jail [options] -- <cmd>    # run any command inside agent-jail
 dotfiles agent <skills|status>
-dotfiles keymap [status|on|off|toggle|reload]
-                                    # toggle or inspect desktop keyd HHKB remap
+dotfiles host [status|keymap|dgpu|battery|refresh|logid|fans]
+                                    # manage host hardware & system controls
 dotfiles check                      # pre-commit + full tests/ suite via `mise run check`
 dotfiles completion <zsh|bash|fish> # cached automatically on fpath in zsh
 ```
@@ -427,7 +427,7 @@ dotfiles doctor                     # host health, drift, tools, agents and sand
 dotfiles doctor --json              # machine-readable report
 mise run check                      # pre-commit + full tests/ suite (unittest/pytest)
 mise run cli-check                  # Rust clippy + unit tests for cli/
-mise run build-cli                  # build release Rust CLI locally into ~/.local/opt/dotfiles/bin
+mise run build-cli                  # compile cli/target/release/dotfiles (mise manages the installed binary)
 python3 -m unittest discover -s tests -v
 ```
 
@@ -439,33 +439,50 @@ checks.
 home. It downloads a few gigabytes. Run it manually without the proxy when
 testing upstream downloads. CI uses local fixtures only.
 
-## System files
+## System files and distribution packages
 
-Files outside `~`, such as scripts in `/usr/local/sbin`, `keyd` and polkit
-rules, systemd units and udev rules, live in `system/<bundle>/` (shared by
-every host selecting that bundle, such as `system/desktop/`) and
+Files outside `~`, such as `/usr/local/libexec` helpers, `keyd`, `logid`,
+polkit rules, systemd units, and udev rules, live in `system/<bundle>/` (shared
+by every host selecting that bundle, such as `system/desktop/`) and
 `system/<machine>/` (host-specific overrides) at their paths under `/`.
-`.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs the ones that
-differ, as root, and never asks for a password: without cached sudo it lists
-them and the next apply tries again. To install:
+Required distribution packages (`keyd`, `zathura`, `fcitx5`, `fcitx5-pinyin`,
+`libnotify`, `logiops`, `bubblewrap`) are declared in
+[.chezmoidata/tools.toml](.chezmoidata/tools.toml) under `[system_packages.*]`
+and selected by bundles.
+
+`.chezmoiscripts/run_after_80-system-files.sh.tmpl` runs only on hosts with
+`sudo = true` (rootless hosts like `sicc` skip cleanly). It deploys differing
+files, installs missing `system_packages` per entry via the distribution package
+manager (`apt-get`, `dnf`, `pacman`, or `zypper`) without aborting if one
+package is unavailable, and never asks for a password: without cached sudo it
+lists what is pending and exits 0. To install:
 
 ```sh
 sudo -v && chezmoi apply
 ```
 
-It reloads systemd, udev, and an active `keyd` daemon and enables installed
-units, but restarts nothing. Deleting a file from `system/` leaves the
-installed copy in place.
+It reloads systemd, udev, an active `keyd` daemon, and an active `logid` daemon,
+and enables installed units. Deleting a file from `system/` leaves the installed
+copy in place; `dotfiles doctor` audits `system/` drift, missing
+`system_packages`, and superseded `/usr/local/sbin/*` copies without sudo.
 
-On `desktop` hosts (`laptop` and `workstation`), `system/desktop/etc/keyd/default.conf`
-maps `CapsLock` to `Left Ctrl` and `Right Ctrl` to a classic HHKB `Fn` layer on
-built-in and standard external keyboards. Running `sudo -v && chezmoi apply` on
-a new desktop host deploys the config and polkit rule, installs `keyd`
-automatically via the distribution package manager (`apt-get`, `dnf`, `pacman`,
-or `zypper`), and enables `keyd.service`. Toggle or inspect it anytime without
-a password via `dotfiles keymap` (`status`, `on`, `off`, `toggle`, `reload`) or
-Tab 6 (`Keymap`) in the `dotfiles` TUI. Exclude an actual hardware HHKB by
-adding `-<vid>:<pid>` (shown by `dotfiles keymap` and the TUI) under `[ids]`.
+Manage host controls from the unified CLI or Tab 6 (`6 Host`) of `dotfiles`:
+
+- `dotfiles host keymap [status|on|off|toggle|reload]` — toggle `keyd` HHKB
+  remapping (`CapsLock -> Left Ctrl`, `Right Ctrl -> HHKB Fn`) passwordlessly on
+  local desktop sessions, or inspect connected keyboard `VID:PID`s to exclude a
+  hardware HHKB (`-<vid>:<pid>` under `[ids]`).
+- `dotfiles host dgpu [status|on|off]` — switch NVIDIA dGPU display ownership
+  on `laptop` (backed by `/usr/local/libexec/dgpu-display`).
+- `dotfiles host battery [status|limit|full]` — switch persistent charging cap
+  between ~80% (`Long_Life`) and 100% (`Standard`, persisted via
+  `/var/lib/dotfiles/battery-full`).
+- `dotfiles host refresh [status|on|off|toggle]` — control the 60 Hz-on-battery
+  user service (`refresh-rate-on-power.service`).
+- `dotfiles host logid [status|restart]` — inspect or restart Logitech MX Master
+  3 `logid.service` (shared across `desktop` hosts).
+- `dotfiles host fans [status|apply]` — inspect or trigger the IMRL GPU max-fan
+  policy (`/usr/local/libexec/nvidia-gpu-fans-max.py`).
 
 ## Secrets
 

@@ -111,7 +111,7 @@ fn keyd_enabled() -> Option<bool> {
 }
 
 fn print_install_hint() {
-    eprintln!("dotfiles keymap: keyd is not installed.");
+    eprintln!("dotfiles host keymap: keyd is not installed.");
     eprintln!("Install and activate automatically on desktop hosts with:");
     eprintln!("  sudo -v && chezmoi apply");
 }
@@ -318,7 +318,7 @@ fn cmd_reload() -> Result<i32> {
     }
 
     if !keyd_active() {
-        println!("keymap (keyd): keyd is currently off (run `dotfiles keymap on`)");
+        println!("keymap (keyd): keyd is currently off (run `dotfiles host keymap on`)");
         return Ok(0);
     }
 

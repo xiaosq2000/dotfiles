@@ -16,6 +16,8 @@ pub struct ChezmoiData {
     #[serde(default)]
     pub downloads: BTreeMap<String, DownloadSpec>,
     #[serde(default)]
+    pub system_packages: BTreeMap<String, SystemPackageSpec>,
+    #[serde(default)]
     pub schemes: BTreeMap<String, SchemeSpec>,
     #[serde(default)]
     pub themes: BTreeMap<String, ThemeSpec>,
@@ -69,6 +71,16 @@ pub struct BundleSpec {
     pub mise: Vec<String>,
     #[serde(default)]
     pub downloads: Vec<String>,
+    #[serde(default)]
+    pub system_packages: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct SystemPackageSpec {
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub probe: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -216,6 +228,7 @@ pub struct DoctorChecks {
     pub toolchain: ToolchainCheck,
     pub shell_git: ShellGitCheck,
     pub agents: AgentsCheck,
+    pub system: SystemCheck,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -260,6 +273,8 @@ pub struct ToolchainCheck {
     pub selected_mise_tools: Vec<String>,
     pub missing_mise_shims: Vec<String>,
     pub pending_markers: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadow_dotfiles_bin: Option<String>,
     pub issues: Vec<String>,
 }
 
@@ -299,6 +314,18 @@ pub struct AgentsCheck {
     pub issues: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct SystemCheck {
+    pub status: String,
+    pub skipped_rootless: bool,
+    pub managed_files: usize,
+    pub drifted_files: Vec<String>,
+    pub selected_system_packages: Vec<String>,
+    pub missing_packages: Vec<String>,
+    pub stale_sbin_files: Vec<String>,
+    pub issues: Vec<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct FetchItemStatus {
     pub id: String,
@@ -314,5 +341,5 @@ pub struct FullSnapshot {
     pub policy: Option<PolicyFile>,
     pub report: DoctorReport,
     pub fetch_items: Vec<FetchItemStatus>,
-    pub keymap: crate::keymap::KeymapReport,
+    pub host: crate::host::HostReport,
 }
