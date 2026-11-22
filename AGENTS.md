@@ -169,10 +169,11 @@ apply before any file is written.
 
 ## Files outside ~
 
-`system/<machine>/` holds root-owned files at their paths under `/`, and
-`.chezmoiscripts/run_after_80-system-files.sh.tmpl` installs the ones that
-differ with `sudo -n`. An agent's apply has no sudo and only lists them, so ask
-the user to run `sudo -v && chezmoi apply`.
+`system/<bundle>/` (for shared bundle hosts such as `system/desktop/`) and
+`system/<machine>/` (which overrides shared paths) hold root-owned files at
+their paths under `/`, and `.chezmoiscripts/run_after_80-system-files.sh.tmpl`
+installs the ones that differ with `sudo -n`. An agent's apply has no sudo and
+only lists them, so ask the user to run `sudo -v && chezmoi apply`.
 
 - chezmoi's name prefixes do not apply there. Files install verbatim as root,
   0755 if executable in git, else 0644.
