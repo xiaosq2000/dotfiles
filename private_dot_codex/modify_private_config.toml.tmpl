@@ -1,4 +1,4 @@
-{{- $spec := dict "agents" .agents "bundles" (index .machines .machine).bundles | toJson -}}
+{{- $spec := dict "agents" .agents "policy" .policy "bundles" (index .machines .machine).bundles | toJson -}}
 #!/bin/sh
 # Thin shim delegating ~/.codex/config.toml reconciliation to agent-reconcile.py.
 # Ubuntu 22.04 (imrl) ships Python 3.10 without tomllib, so fall back to a pixi

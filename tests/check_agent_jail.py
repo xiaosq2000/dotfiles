@@ -147,12 +147,46 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-jail-") as tmp:
     assert codex_plan["workspace"] == str(alt_ws.resolve())
     assert str(extra_dir.resolve()) in codex_plan["rw_dirs"]
     assert str(env_extra_dir.resolve()) in codex_plan["rw_dirs"]
-    assert codex_plan["command"][:3] == ["codex", "-s", "danger-full-access"]
+    assert codex_plan["command"][:4] == ["codex", "-s", "danger-full-access", "--no-daemon"]
 
-    # Explicit user --sandbox flag on codex is preserved untouched.
+    # Explicit user --sandbox flag on codex is preserved while still injecting --no-daemon.
     dry_codex_ro = run_jail("--backend", "bwrap", "--wrap", "codex", "--dry-run", "--", "--sandbox", "read-only")
     assert dry_codex_ro.returncode == 0, dry_codex_ro.stderr
-    assert json.loads(dry_codex_ro.stdout)["command"] == ["codex", "--sandbox", "read-only"]
+    assert json.loads(dry_codex_ro.stdout)["command"] == ["codex", "--no-daemon", "--sandbox", "read-only"]
+
+    # Explicit --no-daemon is not duplicated; explicit --remote suppresses --no-daemon.
+    dry_codex_nodaemon = run_jail("--backend", "bwrap", "--wrap", "codex", "--dry-run", "--", "--no-daemon", "hello")
+    assert dry_codex_nodaemon.returncode == 0, dry_codex_nodaemon.stderr
+    assert json.loads(dry_codex_nodaemon.stdout)["command"] == ["codex", "-s", "danger-full-access", "--no-daemon", "hello"]
+
+    for remote_args in (
+        ["--remote", "ws://127.0.0.1:9000"],
+        ["--remote=unix:///tmp/demo.sock"],
+        ["resume", "--remote", "ws://127.0.0.1:9000"],
+    ):
+        dry_remote = run_jail("--backend", "bwrap", "--wrap", "codex", "--dry-run", "--", *remote_args)
+        assert dry_remote.returncode == 0, dry_remote.stderr
+        cmd_out = json.loads(dry_remote.stdout)["command"]
+        assert cmd_out == ["codex", "-s", "danger-full-access", *remote_args], cmd_out
+
+    # Explicit `agent-jail --mask-gh -- codex <subcmd>` injects flags before subcommands.
+    for subcmd_args in (
+        ["resume", "--last"],
+        ["fork", "--last"],
+        ["exec", "summarize"],
+    ):
+        dry_sub = run_jail("--backend", "bwrap", "--mask-gh", "--dry-run", "--", "codex", *subcmd_args)
+        assert dry_sub.returncode == 0, dry_sub.stderr
+        sub_plan = json.loads(dry_sub.stdout)
+        assert sub_plan["command"] == ["codex", "-s", "danger-full-access", "--no-daemon", *subcmd_args], sub_plan
+        assert str(home / ".config/gh/hosts.yml") in sub_plan["masked_files"]
+        assert str(home / ".codex/auth.json") not in sub_plan["masked_files"]
+
+    # Codex passthrough subcommands and meta flags receive no injected flags.
+    for passthrough_args in (["--version"], ["login"]):
+        dry_pt = run_jail("--backend", "bwrap", "--dry-run", "--", "codex", *passthrough_args)
+        assert dry_pt.returncode == 0, dry_pt.stderr
+        assert json.loads(dry_pt.stdout)["command"] == ["codex", *passthrough_args]
 
     # --wrap agy injects --dangerously-skip-permissions for interactive runs only.
     dry_agy = run_jail("--backend", "bwrap", "--wrap", "agy", "--dry-run")
@@ -173,7 +207,57 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-jail-") as tmp:
 
     r_nested_codex = run_jail("--wrap", "codex", "--", "hi", extra_env={**stub_env, "DOTFILES_AGENT_JAIL": "1"})
     assert r_nested_codex.returncode == 0
-    assert r_nested_codex.stdout.strip() == "JAIL=1 ARGS=-s danger-full-access hi", r_nested_codex
+    assert r_nested_codex.stdout.strip() == "JAIL=1 ARGS=-s danger-full-access --no-daemon hi", r_nested_codex
+
+    # Verify interactive dot_zshrc and dot_bashrc wrap claude/agy/pi but run codex directly.
+    shell_stub_bin = base / "shell-stub-bin"
+    shell_stub_bin.mkdir()
+    for name in ("claude", "codex", "agy", "pi"):
+        s = shell_stub_bin / name
+        s.write_text(f"#!/bin/sh\nprintf 'DIRECT:{name}:%s\\n' \"$*\"\n")
+        s.chmod(0o755)
+    fake_jail = home / ".local/libexec/dotfiles/agent-jail"
+    fake_jail.parent.mkdir(parents=True, exist_ok=True)
+    fake_jail.write_text("#!/bin/sh\nprintf 'JAILED:%s\\n' \"$*\"\n")
+    fake_jail.chmod(0o755)
+
+    zshrc_text = (ROOT / "dot_zshrc").read_text(encoding="utf-8")
+    bashrc_text = (ROOT / "dot_bashrc").read_text(encoding="utf-8")
+    assert "codex()" not in zshrc_text and "codex:" not in zshrc_text
+    assert "codex()" not in bashrc_text and "codex:" not in bashrc_text
+
+    # Extract the agent-jail wrapper blocks and run them in real bash and zsh.
+    zsh_block_start = zshrc_text.index("unjail()")
+    zsh_block_end = zshrc_text.index("\nsetup_texlive()", zsh_block_start)
+    zsh_block = zshrc_text[zsh_block_start:zsh_block_end]
+
+    bash_block_start = bashrc_text.index("unjail()")
+    bash_block_end = bashrc_text.index("\n# Proxy client", bash_block_start)
+    bash_block = bashrc_text[bash_block_start:bash_block_end]
+
+    shell_env = {**env, "PATH": f"{shell_stub_bin}:{env.get('PATH', '')}"}
+    for shell_bin, has_def, block in (
+        ("bash", "_has() { command -v \"$1\" >/dev/null 2>&1; }", bash_block),
+        ("zsh", "has() { command -v \"$1\" >/dev/null 2>&1; }", zsh_block),
+    ):
+        if not shutil.which(shell_bin):
+            continue
+        script = "\n".join([
+            has_def,
+            block,
+            'claude hi',
+            'agy hi',
+            'pi hi',
+            'codex hi',
+        ])
+        sh_res = subprocess.run([shell_bin, "-c", script], env=shell_env, text=True, capture_output=True, check=True)
+        lines = sh_res.stdout.strip().splitlines()
+        assert lines == [
+            "JAILED:--wrap claude -- hi",
+            "JAILED:--wrap agy -- hi",
+            "JAILED:--wrap pi -- hi",
+            "DIRECT:codex:hi",
+        ], (shell_bin, lines, sh_res.stderr)
 
     r_no_jail_agy = run_jail("--wrap", "agy", "--", "hi", extra_env={**stub_env, "DOTFILES_NO_JAIL": "1"})
     assert r_no_jail_agy.returncode == 0

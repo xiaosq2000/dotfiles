@@ -1,6 +1,6 @@
 # Secrets
 
-Checked on 2026-11-20.
+Checked on 2026-11-23.
 
 This repository is public, so every secret in it is age ciphertext in a file
 named `encrypted_*`. chezmoi decrypts those files on apply with its built-in Go
@@ -169,59 +169,74 @@ cannot apply at all.
 
 ## Keeping agents away from private keys
 
-Checked on 2026-11-19.
+Checked on 2026-11-23.
 
 All four primary coding agents run as you, so by default they can read any file
 you can. Guarded files include ssh private keys, `~/.config/chezmoi/` (except
 `chezmoi.toml` and `chezmoistate.boltdb`), `~/.secrets`, vault extraction
 subcommands (`rbw get`/`dump`, `secret-tool lookup`/`search`), and local CLI /
-agent credential files. Policy is declared once in `.chezmoidata/agents.toml`
-and reconciled by `dot_local/libexec/dotfiles/executable_agent-reconcile.py`.
+agent credential files. Agent settings live in `.chezmoidata/agents.toml`,
+shared secret-masking lists live in `.chezmoidata/policy.toml`, and
+`dot_local/libexec/dotfiles/executable_agent-reconcile.py` reconciles both into
+each agent's native config.
 
 | Agent | What refuses the read | Where it comes from |
 | --- | --- | --- |
 | Claude Code | `Read` and `Bash(gh ...)` deny/ask rules, strict/remote-control privacy env, and the `key-guard.py` hook | `private_dot_claude/modify_private_settings.json.tmpl` |
-| Codex | The `key-guard` bubblewrap permissions profile, `[otel]` privacy defaults, `rules/gh.rules` (including `gh api` prompt), and the `key-guard.py` hook | `private_dot_codex/modify_private_config.toml.tmpl` and `private_dot_codex/modify_private_hooks.json.tmpl` |
+| Codex | The `key-guard` bubblewrap permissions profile (populated from `.chezmoidata/policy.toml` across terminal, desktop app, and remote SSH `app-server` proxy), `[otel]` privacy defaults, `rules/gh.rules` (including `gh api` prompt), and the `key-guard.py` hook | `private_dot_codex/modify_private_config.toml.tmpl` and `private_dot_codex/modify_private_hooks.json.tmpl` |
 | Antigravity CLI (`agy`) | `PreToolUse` JSON hook delegating to `key-guard.py` (`{"decision":"deny"}` on secrets, `{"decision":"allow"}` otherwise — enforced even with `--dangerously-skip-permissions`) | `private_dot_gemini/private_config/modify_private_hooks.json.tmpl` |
 | Pi | Local `dotfiles-guard.ts` extension delegating `tool_call` checks to `key-guard.py` (including foreground subagents via `defaultSubagentOnlyExtensions`) | `private_dot_pi/private_agent/extensions/dotfiles-guard.ts` and `modify_private_settings.json.tmpl` |
 
-Default OS-level sandboxing (`agent-jail`) and unified security policy live in
+OS-level sandboxing (`agent-jail`) and unified security policy live in
 `.chezmoidata/policy.toml` (rendered to `~/.config/dotfiles/policy.json`, also
-read by `key-guard.py`, `check-encrypted.sh`, and `check-secrets.py`).
+read by `agent-reconcile.py`, `key-guard.py`, `check-encrypted.sh`, and
+`check-secrets.py`).
 
-### Default OS sandbox (`agent-jail`)
+### OS sandboxing (`agent-jail` and Codex `key-guard`)
 
-Interactive `zsh` and `bash` shells wrap `claude`, `codex`, `agy`, and `pi` in
-`agent-jail --wrap <agent>` by default (help, version, login, completion, and
-package-management subcommands pass through directly).
+Interactive `zsh` and `bash` shells wrap `claude`, `agy`, and `pi` in
+`agent-jail --wrap <agent>` by default (help, version, login, and management
+subcommands pass through directly). `codex` runs directly in interactive shells
+so it uses its native `key-guard` bubblewrap sandbox and host `app-server`
+daemon (matching the Codex desktop app and remote SSH `app-server` proxy); wrap
+it explicitly with `dotfiles jail -- codex` or `dotfiles jail --mask-gh -- codex`
+when reviewing untrusted repositories.
 
 ```sh
-claude / codex / agy / pi              # runs inside agent-jail automatically
-DOTFILES_JAIL_RW=~/datasets codex      # add extra writable directory (or codex --add-dir)
-unjail agy                             # bypass jail (e.g. when running chezmoi apply)
-DOTFILES_NO_JAIL=1 codex               # bypass jail; codex falls back to its own key-guard sandbox
-dotfiles jail --mask-gh -- codex       # also mask ~/.config/gh/hosts.yml in untrusted repos
+claude / agy / pi                      # runs inside agent-jail automatically
+codex                                  # runs directly with native key-guard sandbox + app-server daemon
+DOTFILES_JAIL_RW=~/datasets claude     # add extra writable directory inside agent-jail
+unjail agy                             # bypass agent-jail (e.g. when running chezmoi apply)
+DOTFILES_NO_JAIL=1 pi                  # bypass agent-jail for one invocation
+dotfiles jail --mask-gh -- codex       # explicit outer bwrap jail (+ --no-daemon) for untrusted repos
 dotfiles jail --dry-run --wrap codex   # inspect exact mounts, masked paths, and adapted command
 ```
 
-- **Primary backend (`bwrap`)**: mounts `/` read-only, current workspace RW,
-  `.git/hooks` and `.git/config` read-only, `/etc/ssh/ssh_config.d` hidden,
-  `~/.secrets` as empty `tmpfs`, and SSH private keys / age identity / CLI &
-  other-agent credentials over-mounted with `/dev/null`, while passing through
-  `SSH_AUTH_SOCK`, `HERDR_SOCKET_PATH`, and `XDG_RUNTIME_DIR`. Machine-specific
-  `pixi` cache/environment directories from `.chezmoidata/machines.toml` are
-  automatically included as writable paths.
+- **Primary `agent-jail` backend (`bwrap`)**: mounts `/` read-only, current
+  workspace RW, `.git/hooks` and `.git/config` read-only, `/etc/ssh/ssh_config.d`
+  hidden, `~/.secrets` as empty `tmpfs`, and SSH private keys / age identity /
+  CLI & other-agent credentials over-mounted with `/dev/null`, while passing
+  through `SSH_AUTH_SOCK`, `HERDR_SOCKET_PATH`, and `XDG_RUNTIME_DIR`.
+  Machine-specific `pixi` cache/environment directories from
+  `.chezmoidata/machines.toml` are automatically included as writable paths.
 - **Rootless HPC fallback (`landlock`)**: invokes Linux Landlock LSM (ABI v1+)
   directly via syscalls with no root or user namespaces required; blocks reads
   of masked secrets (`EACCES`) and restricts writes to the workspace, `/tmp`,
   caches, and the invoked agent's own state directory.
-- **Codex & `gh` behavior**: inside `agent-jail`, `codex` automatically runs
-  with `-s danger-full-access` because Linux `bwrap` cannot nest inside an outer
-  `bwrap` namespace (`gh.rules` approvals and `key-guard.py` stay active;
-  unjailed `codex` retains its own `key-guard` sandbox). `~/.config/gh/hosts.yml`
-  remains read-only inside the jail so `gh pr` / `gh run` work out of the box
-  while `key-guard.py`, `gh.rules`, and Claude `deny` rules block reading
-  `hosts.yml` directly or running `gh auth token` / `gh secret` / `gh repo delete`.
+- **Codex & `gh` behavior**: default `codex` uses its native `key-guard`
+  bubblewrap profile (which denies existing `policy.secrets.masked_dirs`,
+  `policy.secrets.masked_files` except `.codex/auth.json`, `~/.ssh/id_*` globs,
+  and existing custom-named `~/.ssh/` private keys) while staying connected to
+  the host `app-server` daemon. When explicitly wrapped via
+  `dotfiles jail -- codex` or `agent-jail --wrap codex`, `agent-jail` injects
+  `-s danger-full-access` (because Linux `bwrap` cannot nest inside an outer
+  `bwrap` namespace) and `--no-daemon` (unless `--no-daemon` or `--remote` is
+  passed), keeping the entire Codex process inside `bwrap` (`gh.rules` approvals
+  and `key-guard.py` stay active). `~/.config/gh/hosts.yml` remains readable by
+  default so `gh pr` / `gh run` work out of the box while `key-guard.py`,
+  `gh.rules`, and Claude `deny` rules block reading `hosts.yml` directly or
+  running `gh auth token` / `gh secret` / `gh repo delete`; pass `--mask-gh` to
+  mask it inside `agent-jail`.
 
 The hook is `~/.agents/hooks/key-guard.py`. It refuses a tool call that names a
 guarded file, and tells the agent to ask you instead. The exceptions are
@@ -256,13 +271,14 @@ apply that brings `~/.codex/hooks.json`, open Codex and trust the hook in
 `/hooks`. Do it again whenever `hooks.json` changes. Until then only the sandbox
 profile guards the keys in Codex.
 
-A key with a custom name under `~/.ssh/` is covered automatically by both
-`agent-jail` (which masks every non-public file in `~/.ssh/`) and
-`key-guard.py`. Codex's own unjailed sandbox covers any name that starts with
-`id_` and does not end in `.pub`, so name a new key `id_*`. Claude Code's
-`Read` rules list the default names only (`id_rsa`, `id_ed25519` and the rest);
-to add a custom name there, edit `[agents.claude].deny` in
-`.chezmoidata/agents.toml`.
+A key with a custom name under `~/.ssh/` is covered automatically by
+`agent-jail`, `key-guard.py`, and Codex's `key-guard` profile (on `chezmoi apply`,
+`agent-reconcile.py` emits exact `deny` rules for existing non-public, non-`*.pub`
+entries in `~/.ssh/` not matched by the `id_*` globs; re-run `chezmoi apply`
+after adding or removing a custom-named key or local credential file, or name
+new ssh keys `id_*` so the globs cover them immediately). Claude Code's `Read`
+rules list the default names only (`id_rsa`, `id_ed25519` and the rest); to add
+a custom name there, edit `[agents.claude].deny` in `.chezmoidata/agents.toml`.
 
 Agents log in with the key through the ssh agent, so ssh works in Codex's
 sandbox although it cannot open the key file. For ssh to run there at all, the
@@ -293,18 +309,21 @@ fall back to Codex's normal approval policy. Checked on 2026-11-19.
 
 ### Defense-in-depth boundaries
 
-`agent-jail` (OS kernel layer) and `key-guard.py` (tool-call hook layer) are
-complementary:
+OS-level sandboxing (`agent-jail` for `claude`/`agy`/`pi` and explicit
+`dotfiles jail` sessions; Codex's native `key-guard` bubblewrap profile for
+`codex` CLI, desktop app, and remote `app-server` proxy) and `key-guard.py`
+(tool-call hook layer) are complementary:
 
-- **`agent-jail` stops**: runtime-constructed paths, scripts, symlinks, child
-  processes, and local MCP servers from reading masked local keys/credentials
-  (`~/.ssh/*` private keys, `~/.config/chezmoi/key.txt`, `~/.secrets`, AWS,
-  Cargo, Hugging Face, other agents' auth) or writing outside the workspace and
-  allowed caches (plus `.git/hooks` and `.git/config` under `bwrap`).
-- **`key-guard.py` stops** what `agent-jail` intentionally leaves reachable:
+- **OS sandbox (`agent-jail` / Codex `key-guard`) stops**: runtime-constructed
+  paths, scripts, symlinks, child processes, and local MCP servers from reading
+  masked local keys/credentials (`~/.ssh/*` private keys,
+  `~/.config/chezmoi/key.txt`, `~/.secrets`, AWS, Cargo, Hugging Face, other
+  agents' auth) or writing outside the workspace and allowed caches (plus
+  `.git/hooks` and `.git/config` under `bwrap`).
+- **`key-guard.py` stops** what the OS sandbox intentionally leaves reachable:
   1. `unjail` / `DOTFILES_NO_JAIL=1` sessions (e.g. running `chezmoi apply`).
-  2. Direct reads of `~/.config/gh/hosts.yml` (kept readable inside `agent-jail`
-     for `gh pr`/`gh run`) and `gh auth token` / `gh secret` / `gh repo delete`.
+  2. Direct reads of `~/.config/gh/hosts.yml` (kept readable by default for
+     `gh pr`/`gh run`) and `gh auth token` / `gh secret` / `gh repo delete`.
   3. Vault extraction commands (`rbw get`/`dump`, `secret-tool lookup`/`search`),
      whose agent/D-Bus sockets live in `$XDG_RUNTIME_DIR`.
   4. Remote SSH commands (`ssh sicc 'cat ~/.ssh/id_ed25519'`) run over the
@@ -355,14 +374,26 @@ the file on disk is only a handle to the device.
 - **`chezmoi add` writes into whichever source tree its config names.** With
   an unexpected `HOME` or `XDG_CONFIG_HOME`, a new encrypted file can land in
   another repository. Run `git status` after every `add --encrypt`.
-- **Codex's deny list takes globs under `~/.ssh`, never an exact path.** For
-  an exact path that does not exist, Codex creates an empty 0444 file there
-  while each sandboxed command runs, and a command that dies leaves the file
-  behind. ssh then warns about it as an unprotected private key. An exact path
-  in `/etc`, such as `/etc/ssh/ssh_config.d`, is safe, because Codex runs as
-  you and cannot create anything there. Checked with codex-cli 0.155.1 on 2026-09-22. To
-  delete such files, which touches empty files only:
+- **Codex exact `deny` paths must exist on disk.** For an exact `deny` path
+  that does not exist under `~`, Codex creates an empty 0444 placeholder file
+  there while each sandboxed command runs, and a command that dies leaves the
+  file behind (under `~/.ssh`, `ssh` then warns about an unprotected private
+  key). For that reason, `agent-reconcile.py` keeps the four `~/.ssh/id_*`
+  globs and emits exact `deny` paths from `.chezmoidata/policy.toml`
+  (`masked_dirs`, `masked_files` excluding `.codex/auth.json`, and custom-named
+  `~/.ssh/` private keys) only for entries that currently exist under `$HOME`.
+  Re-run `chezmoi apply` after adding or removing a secret file so Codex neither
+  misses new files nor creates placeholders for removed ones. Exact paths in
+  `/etc`, such as `/etc/ssh/ssh_config.d`, are safe because Codex runs
+  unprivileged and cannot create anything there. Checked on 2026-11-23. To
+  delete leftover empty placeholders under `~/.ssh`, which touches empty files
+  only:
 
   ```sh
   find ~/.ssh -maxdepth 1 -name 'id_*' -type f -empty -delete
   ```
+- **Never bind `/tmp/codex-daemon-*` into `agent-jail`.** Inside `agent-jail`,
+  `codex` runs with `-s danger-full-access` because `bwrap` cannot nest;
+  connecting that session to an unjailed host `app-server` daemon would execute
+  commands outside both sandboxes. `agent-jail` injects `--no-daemon` instead
+  (unless `--no-daemon` or `--remote` is already passed).

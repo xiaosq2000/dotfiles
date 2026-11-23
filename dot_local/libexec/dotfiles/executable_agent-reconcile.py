@@ -13,17 +13,23 @@ Compatible with Python 3.10+ (Ubuntu 22.04 on imrl). Only `codex-config` needs
 
 import argparse
 import copy
+import fnmatch
 import json
+from pathlib import Path
 import re
 import sys
 
 TOML_HEADER = re.compile(r"^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*(#.*)?$")
 TOML_TOP_DEFAULT = re.compile(r"^\s*default_permissions\s*=\s*(.*?)\s*(#.*)?$")
 CODEX_COMMENT = [
-    "# Managed by chezmoi from .chezmoidata/agents.toml (agent-reconcile.py).",
+    "# Managed by chezmoi from .chezmoidata/agents.toml and .chezmoidata/policy.toml (agent-reconcile.py).",
     "# Edits to managed sections are overwritten on the next apply. See docs/secrets.md.",
 ]
-MANAGED_CODEX_COMMENTS = set(CODEX_COMMENT)
+MANAGED_CODEX_COMMENTS = set(CODEX_COMMENT) | {
+    "# Managed by chezmoi from .chezmoidata/agents.toml (agent-reconcile.py).",
+    "# Set by chezmoi from dot_codex/modify_private_config.toml, so an edit to",
+    "# this profile is undone by the next apply. See docs/secrets.md.",
+}
 
 
 def warn(target, message):
@@ -213,7 +219,73 @@ def _toml_key(key):
     return json.dumps(key)
 
 
-def reconcile_codex_config(raw, spec):
+def _codex_policy_deny_paths(spec, home, deny_globs):
+    """Collect existing sensitive home paths from policy.toml for Codex key-guard.
+
+    Only emits exact paths that currently exist under `home`, because Codex
+    creates empty 0444 placeholder files for non-existent exact deny entries.
+    """
+    policy = spec.get("policy")
+    if not isinstance(policy, dict):
+        return []
+    secrets = policy.get("secrets")
+    if not isinstance(secrets, dict) or not secrets:
+        return []
+    jail = policy.get("jail") or {}
+    codex_jail = ((jail.get("agents") or {}).get("codex") or {}) if isinstance(jail, dict) else {}
+    own_auth = {home / rel for rel in (codex_jail.get("own_auth_files") or []) if isinstance(rel, str)}
+
+    deny_paths = []
+    seen = set()
+
+    def add(tilde_path):
+        if tilde_path not in seen:
+            seen.add(tilde_path)
+            deny_paths.append(tilde_path)
+
+    for rel in secrets.get("masked_dirs") or []:
+        if not isinstance(rel, str) or not rel:
+            continue
+        p = home / rel
+        if p.is_dir():
+            add(f"~/{rel}")
+
+    for rel in secrets.get("masked_files") or []:
+        if not isinstance(rel, str) or not rel:
+            continue
+        p = home / rel
+        if p in own_auth:
+            continue
+        # Use exists() and not is_dir() so both regular files and /dev/null
+        # bind-mounts (inside agent-jail) are recognized consistently.
+        if p.exists() and not p.is_dir():
+            add(f"~/{rel}")
+
+    # Cover custom-named private keys/dirs under ~/.ssh/ that are not in the
+    # public allowlist, not *.pub, and not already matched by deny_globs.
+    ssh_dir = home / ".ssh"
+    public_names = set(secrets.get("ssh_public_names") or [])
+    public_dirs = set(secrets.get("ssh_public_dirs") or [])
+    if ssh_dir.is_dir() and public_names:
+        try:
+            for child in sorted(ssh_dir.iterdir()):
+                if not child.exists():
+                    continue
+                if child.name in public_names or child.name.endswith(".pub"):
+                    continue
+                if child.is_dir() and child.name in public_dirs:
+                    continue
+                tilde_entry = f"~/.ssh/{child.name}"
+                if not child.is_dir() and any(fnmatch.fnmatchcase(tilde_entry, g) for g in deny_globs):
+                    continue
+                add(tilde_entry)
+        except OSError:
+            pass
+
+    return deny_paths
+
+
+def reconcile_codex_config(raw, spec, home=None):
     try:
         import tomllib
     except ImportError:
@@ -225,14 +297,18 @@ def reconcile_codex_config(raw, spec):
     mcp_want = selected_mcp(spec, "codex")
     profile = codex["profile"]
 
+    home_path = Path(home) if home is not None else Path(spec["home"]) if spec.get("home") else Path.home()
+    deny_globs = list(codex["deny_globs"])
+    filesystem_want = {g: "deny" for g in deny_globs}
+    filesystem_want[codex["ssh_drop_ins"]] = "deny"
+    for path in _codex_policy_deny_paths(spec, home_path, deny_globs):
+        filesystem_want[path] = "deny"
+    filesystem_want[":workspace_roots"] = dict(codex["workspace_roots"])
+
     profile_want = {
         "description": codex["description"],
         "extends": codex["extends"],
-        "filesystem": {
-            **{g: "deny" for g in codex["deny_globs"]},
-            codex["ssh_drop_ins"]: "deny",
-            ":workspace_roots": dict(codex["workspace_roots"]),
-        },
+        "filesystem": filesystem_want,
         "network": {"enabled": True},
     }
 
@@ -525,6 +601,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--spec", help="JSON control-plane payload")
     group.add_argument("--spec-file", help="Path to JSON control-plane payload (e.g. /dev/fd/3)")
+    parser.add_argument("--home", help="Override $HOME when checking existing policy paths (for tests)")
     args = parser.parse_args()
 
     raw = sys.stdin.read()
@@ -534,6 +611,8 @@ def main():
                 spec = json.load(fh)
         else:
             spec = json.loads(args.spec)
+        if args.home and isinstance(spec, dict):
+            spec = {**spec, "home": args.home}
         output = HANDLERS[args.target](raw, spec)
     except Exception as error:
         warn(args.target, f"left file unchanged: {error}")

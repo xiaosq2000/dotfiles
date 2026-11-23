@@ -157,7 +157,7 @@ that tool's template. Never hard-code a variant name in a config file.
 
 ## Context and 4-agent control plane
 
-Checked on 2026-11-19. Four primary coding agents share one declarative control
+Checked on 2026-11-23. Four primary coding agents share one declarative control
 plane in [agents.toml](.chezmoidata/agents.toml) and one security policy in
 [policy.toml](.chezmoidata/policy.toml): **Claude Code (`claude`)**, **Codex
 (`codex`)**, **Antigravity CLI (`agy`)**, and **Pi (`pi`)**.
@@ -171,15 +171,19 @@ plane in [agents.toml](.chezmoidata/agents.toml) and one security policy in
   [Shared agent skills](private_dot_agents/skills/README.md).
 - **Non-destructive reconciliation**: `dot_local/libexec/dotfiles/executable_agent-reconcile.py`
   merges shared privacy defaults (`claude_profile` in `chezmoi.toml`, Codex
-  `[otel]`), `gh` rules, MCP servers, `key-guard.py` (`PreToolUse`),
-  `agent-notify.py` (`Stop`), and Pi settings/packages into each agent's native
-  config on `chezmoi apply` while preserving local auth, sessions, and Herdr hooks.
-- **Default OS sandboxing (`agent-jail`)**: Interactive `zsh` and `bash` shells
-  wrap `claude`, `codex`, `agy`, and `pi` in `agent-jail --wrap <agent>`
-  (`bwrap` primary backend, rootless Linux Landlock fallback for `sicc`). Use
-  `unjail <agent>` (or `DOTFILES_NO_JAIL=1`) to bypass when editing `~` (for
-  example running `chezmoi apply`), and `DOTFILES_JAIL_RW=/path1:/path2` to add
-  extra writable directories. See [docs/secrets.md](docs/secrets.md).
+  `[otel]`), Codex `[permissions.key-guard.filesystem]` rules from `policy.toml`,
+  `gh` rules, MCP servers, `key-guard.py` (`PreToolUse`), `agent-notify.py`
+  (`Stop`), and Pi settings/packages into each agent's native config on
+  `chezmoi apply` while preserving local auth, sessions, and Herdr hooks.
+- **Default OS sandboxing**: Interactive `zsh` and `bash` shells wrap `claude`,
+  `agy`, and `pi` in `agent-jail --wrap <agent>` (`bwrap` primary backend,
+  rootless Linux Landlock fallback for `sicc`). `codex` runs directly with its
+  native `key-guard` bubblewrap sandbox and host `app-server` daemon, and can be
+  wrapped explicitly with `dotfiles jail --mask-gh -- codex` (injects
+  `-s danger-full-access --no-daemon`). Use `unjail <agent>` (or
+  `DOTFILES_NO_JAIL=1`) to bypass `agent-jail` when editing `~` (for example
+  running `chezmoi apply`), and `DOTFILES_JAIL_RW=/path1:/path2` to add extra
+  writable directories. See [docs/secrets.md](docs/secrets.md).
 
 [AGENTS.md](AGENTS.md), which `CLAUDE.md` imports, is for an agent changing this
 repository. It covers the source-versus-target model, the naming attributes, and
@@ -500,9 +504,10 @@ plaintext where either lives, and on a machine with the key `git diff` shows
 both decrypted.
 
 All four primary coding agents (`claude`, `codex`, `agy`, `pi`) are protected by
-two complementary layers — default OS-level `agent-jail` (`bwrap` / Landlock)
-plus `key-guard.py` hooks and native rules — and pre-commit/pre-push hooks
-refuse commits containing secrets.
+two complementary layers — OS-level sandboxing (`agent-jail` `bwrap` / Landlock
+for `claude`, `agy`, and `pi`, plus Codex's native `key-guard` bubblewrap
+profile from the same `policy.toml`) and `key-guard.py` hooks / native rules —
+and pre-commit/pre-push hooks refuse commits containing secrets.
 [docs/secrets.md](docs/secrets.md#keeping-agents-away-from-private-keys) lists
 what each layer enforces and its boundaries.
 

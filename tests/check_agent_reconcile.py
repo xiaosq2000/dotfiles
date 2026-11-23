@@ -7,17 +7,22 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 RECONCILE = ROOT / "dot_local/libexec/dotfiles/executable_agent-reconcile.py"
 NOTIFY = ROOT / "private_dot_agents/hooks/executable_agent-notify.py"
 AGENTS = tomllib.loads((ROOT / ".chezmoidata/agents.toml").read_text())["agents"]
+POLICY = tomllib.loads((ROOT / ".chezmoidata/policy.toml").read_text())["policy"]
 
 
-def run_reconcile(target, raw, spec):
+def run_reconcile(target, raw, spec, extra_args=None):
+    cmd = [sys.executable, str(RECONCILE), target, "--spec", json.dumps(spec)]
+    if extra_args:
+        cmd.extend(extra_args)
     result = subprocess.run(
-        [sys.executable, str(RECONCILE), target, "--spec", json.dumps(spec)],
+        cmd,
         input=raw,
         text=True,
         capture_output=True,
@@ -28,6 +33,7 @@ def run_reconcile(target, raw, spec):
 
 base_spec = {
     "agents": AGENTS,
+    "policy": POLICY,
     "bundles": ["core", "agent-tools", "research"],
     "claude_profile": "strict",
 }
@@ -78,7 +84,8 @@ for conflict in ("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "DISABLE_TELEMETRY"
 assert rc_out["env"]["DISABLE_AUTOUPDATER"] == "1"
 assert rc_out["env"]["DISABLE_ERROR_REPORTING"] == "1"
 
-# 2. Codex config: key-guard permissions, [otel] privacy, MCP injection, sandbox_mode refusal
+# 2. Codex config: key-guard permissions from policy.toml (existing paths only),
+# [otel] privacy, MCP injection, idempotency, and sandbox_mode refusal.
 codex_in = (
     'model = "gpt-6.1"\n\n'
     '[otel]\n'
@@ -87,41 +94,105 @@ codex_in = (
     '[projects."/tmp/demo"]\n'
     'trust_level = "trusted"\n'
 )
-mcp_spec = copy.deepcopy(base_spec)
-mcp_spec["agents"]["mcp"] = {
-    "demo": {
-        "targets": ["codex", "agy"],
-        "bundles": ["research"],
+with tempfile.TemporaryDirectory(prefix="dotfiles-reconcile-codex-") as tmp:
+    fake_home = Path(tmp)
+    (fake_home / ".secrets").mkdir(parents=True)
+    (fake_home / ".secrets/api.txt").write_text("SECRET\n")
+    (fake_home / ".config/chezmoi").mkdir(parents=True)
+    (fake_home / ".config/chezmoi/key.txt").write_text("AGE-SECRET-KEY-TEST\n")
+    (fake_home / ".claude").mkdir(parents=True)
+    (fake_home / ".claude/.credentials.json").write_text("{}\n")
+    (fake_home / ".codex").mkdir(parents=True)
+    (fake_home / ".codex/auth.json").write_text("{}\n")
+    (fake_home / ".ssh/config.d").mkdir(parents=True)
+    (fake_home / ".ssh/config").write_text("Host demo\n")
+    (fake_home / ".ssh/known_hosts").write_text("demo ssh-ed25519 AAAA\n")
+    (fake_home / ".ssh/id_ed25519").write_text("DEFAULT_KEY\n")
+    (fake_home / ".ssh/id_ed25519.pub").write_text("ssh-ed25519 AAAA\n")
+    (fake_home / ".ssh/custom_deploy_key").write_text("CUSTOM_KEY\n")
+    (fake_home / ".ssh/custom_deploy_key.pub").write_text("ssh-ed25519 AAAA\n")
+    (fake_home / ".ssh/private_keys").mkdir(parents=True)
+
+    mcp_spec = copy.deepcopy(base_spec)
+    mcp_spec["home"] = str(fake_home)
+    mcp_spec["agents"]["mcp"] = {
+        "demo": {
+            "targets": ["codex", "agy"],
+            "bundles": ["research"],
+            "command": "demo-mcp",
+            "args": ["--readonly"],
+            "env": {"MODE": "safe"},
+        },
+        "skipped": {
+            "targets": ["codex", "agy"],
+            "bundles": ["nonexistent"],
+            "command": "should-not-appear",
+        },
+    }
+    codex_res = run_reconcile("codex-config", codex_in, mcp_spec)
+    codex_parsed = tomllib.loads(codex_res.stdout)
+    assert codex_parsed["model"] == "gpt-6.1"
+    assert codex_parsed["default_permissions"] == "key-guard"
+    assert codex_parsed["otel"]["exporter"] == "none"
+    assert codex_parsed["otel"]["log_user_prompt"] is False
+    assert codex_parsed["otel"]["custom_flag"] is True
+    assert codex_parsed["projects"]["/tmp/demo"]["trust_level"] == "trusted"
+    assert codex_parsed["mcp_servers"]["demo"] == {
         "command": "demo-mcp",
         "args": ["--readonly"],
         "env": {"MODE": "safe"},
-    },
-    "skipped": {
-        "targets": ["codex", "agy"],
-        "bundles": ["nonexistent"],
-        "command": "should-not-appear",
-    },
-}
-codex_res = run_reconcile("codex-config", codex_in, mcp_spec)
-codex_parsed = tomllib.loads(codex_res.stdout)
-assert codex_parsed["model"] == "gpt-6.1"
-assert codex_parsed["default_permissions"] == "key-guard"
-assert codex_parsed["otel"]["exporter"] == "none"
-assert codex_parsed["otel"]["log_user_prompt"] is False
-assert codex_parsed["otel"]["custom_flag"] is True
-assert codex_parsed["projects"]["/tmp/demo"]["trust_level"] == "trusted"
-assert codex_parsed["mcp_servers"]["demo"] == {
-    "command": "demo-mcp",
-    "args": ["--readonly"],
-    "env": {"MODE": "safe"},
-}
-assert "skipped" not in codex_parsed["mcp_servers"]
-assert run_reconcile("codex-config", codex_res.stdout, mcp_spec).stdout == codex_res.stdout
+    }
+    assert "skipped" not in codex_parsed["mcp_servers"]
 
-# Refuses to modify config using sandbox_mode
-sandbox_raw = 'sandbox_mode = "workspace-write"\n'
-sandbox_res = run_reconcile("codex-config", sandbox_raw, base_spec)
-assert sandbox_res.stdout == sandbox_raw and "unchanged" in sandbox_res.stderr
+    fs_rules = codex_parsed["permissions"]["key-guard"]["filesystem"]
+    # Existing policy dirs/files and custom-named ~/.ssh/ keys are denied.
+    for glob_pat in AGENTS["codex"]["deny_globs"]:
+        assert fs_rules[glob_pat] == "deny", fs_rules
+    assert fs_rules["/etc/ssh/ssh_config.d"] == "deny", fs_rules
+    assert fs_rules["~/.secrets"] == "deny", fs_rules
+    assert fs_rules["~/.config/chezmoi/key.txt"] == "deny", fs_rules
+    assert fs_rules["~/.claude/.credentials.json"] == "deny", fs_rules
+    assert fs_rules["~/.ssh/custom_deploy_key"] == "deny", fs_rules
+    assert fs_rules["~/.ssh/private_keys"] == "deny", fs_rules
+    # Codex's own auth, non-existent policy paths, public ~/.ssh entries, and
+    # id_* keys already covered by deny_globs must not emit exact deny paths.
+    for forbidden_entry in (
+        "~/.codex/auth.json",
+        "~/.aws/credentials",
+        "~/.netrc",
+        "~/.git-credentials",
+        "~/.cargo/credentials",
+        "~/.pi/agent/auth.json",
+        "~/.ssh/id_ed25519",
+        "~/.ssh/id_ed25519.pub",
+        "~/.ssh/custom_deploy_key.pub",
+        "~/.ssh/config",
+        "~/.ssh/known_hosts",
+        "~/.ssh/config.d",
+    ):
+        assert forbidden_entry not in fs_rules, f"unexpected deny entry {forbidden_entry}: {fs_rules}"
+
+    # Idempotency fast-path and --home CLI injection match byte-for-byte.
+    assert run_reconcile("codex-config", codex_res.stdout, mcp_spec).stdout == codex_res.stdout
+    cli_home_spec = {k: v for k, v in mcp_spec.items() if k != "home"}
+    cli_home_res = run_reconcile("codex-config", codex_in, cli_home_spec, extra_args=["--home", str(fake_home)])
+    assert cli_home_res.stdout == codex_res.stdout
+
+    # Adding and later removing a secret file updates exact deny paths cleanly.
+    aws_creds = fake_home / ".aws/credentials"
+    aws_creds.parent.mkdir(parents=True)
+    aws_creds.write_text("[default]\n")
+    added = tomllib.loads(run_reconcile("codex-config", codex_res.stdout, mcp_spec).stdout)
+    assert added["permissions"]["key-guard"]["filesystem"]["~/.aws/credentials"] == "deny"
+    assert added["projects"]["/tmp/demo"]["trust_level"] == "trusted"
+    aws_creds.unlink()
+    removed = tomllib.loads(run_reconcile("codex-config", codex_res.stdout, mcp_spec).stdout)
+    assert "~/.aws/credentials" not in removed["permissions"]["key-guard"]["filesystem"]
+
+    # Refuses to modify config using sandbox_mode
+    sandbox_raw = 'sandbox_mode = "workspace-write"\n'
+    sandbox_res = run_reconcile("codex-config", sandbox_raw, {**base_spec, "home": str(fake_home)})
+    assert sandbox_res.stdout == sandbox_raw and "unchanged" in sandbox_res.stderr
 
 # 3. Codex hooks: preserves Herdr SessionStart and RTK PreToolUse while adding guard & Stop notify
 codex_hooks_in = json.dumps({

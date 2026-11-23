@@ -1,9 +1,10 @@
 # Single source of truth for secret protection policy shared by:
 #   - agent-jail (dot_local/libexec/dotfiles/executable_agent-jail) via ~/.config/dotfiles/policy.json
+#   - agent-reconcile.py (Codex native [permissions.key-guard.filesystem] profile)
 #   - key-guard.py (private_dot_agents/hooks/executable_key-guard.py)
 #   - Git secret hooks (.github/scripts/check-encrypted.sh and check-secrets.py)
 #
-# Checked on 2026-11-19.
+# Checked on 2026-11-23.
 
 [policy.repo]
 # Source paths (relative to chezmoi source root) where every tracked file MUST

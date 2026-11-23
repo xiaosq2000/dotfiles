@@ -190,6 +190,15 @@ def _codex_has_explicit_sandbox(args):
     return False
 
 
+def _codex_has_explicit_daemon_flag(args):
+    for tok in args:
+        if tok == "--":
+            break
+        if tok in ("--no-daemon", "--remote") or tok.startswith("--remote="):
+            return True
+    return False
+
+
 def adapt_agent_cmd(cmd, jailed, wrap_mode):
     """Adjust agent argv for jailed/wrapped execution without breaking explicit user flags."""
     if not cmd:
@@ -203,12 +212,18 @@ def adapt_agent_cmd(cmd, jailed, wrap_mode):
             args.insert(0, "--dangerously-skip-permissions")
         return [cmd[0], *args]
     if binary_agent == "codex" and jailed:
-        # Linux bwrap cannot nest inside our outer agent-jail bwrap namespace.
-        # Disable Codex's inner sandbox while keeping gh.rules approval checks;
-        # outer agent-jail enforces OS-level isolation.
+        # Linux bwrap cannot nest inside our outer agent-jail bwrap namespace,
+        # and the empty /tmp mount hides the host app-server daemon socket
+        # (connecting to an unjailed host daemon with danger-full-access would
+        # also bypass both sandboxes). Disable Codex's inner sandbox and host
+        # daemon while keeping gh.rules approval checks; outer agent-jail
+        # enforces OS-level isolation.
+        prefix = []
         if not _codex_has_explicit_sandbox(args):
-            args = ["-s", "danger-full-access", *args]
-        return [cmd[0], *args]
+            prefix.extend(["-s", "danger-full-access"])
+        if not _codex_has_explicit_daemon_flag(args):
+            prefix.append("--no-daemon")
+        return [cmd[0], *prefix, *args]
     return list(cmd)
 
 

@@ -523,13 +523,14 @@ fi
 ################################################################################
 ################################# coding agent #################################
 ################################################################################
-# Default-jail the four primary coding agents (`claude`, `codex`, `agy`, `pi`)
-# using OS-level bwrap / Landlock isolation (policy in ~/.config/dotfiles/policy.json).
+# Default-jail `claude`, `agy`, and `pi` using OS-level bwrap / Landlock isolation
+# (policy in ~/.config/dotfiles/policy.json).
+# - `codex` runs directly so it keeps its native `key-guard` bwrap sandbox and host
+#   `app-server` daemon; wrap it explicitly with `dotfiles jail -- codex` (or
+#   `dotfiles jail --mask-gh -- codex`) when reviewing untrusted repos.
 # - `agy` also defaults to `--dangerously-skip-permissions` (guarded by agent-jail + key-guard).
-# - `codex` auto-switches to `-s danger-full-access` inside agent-jail to avoid nested bwrap
-#   failure while keeping gh.rules approval checks; unjailed `codex` keeps its own sandbox.
 # - Escape hatches: `unjail <agent> ...`, `DOTFILES_NO_JAIL=1 <agent> ...`, or `command <agent> ...`.
-# - Extra writable paths: `DOTFILES_JAIL_RW=/path1:/path2 <agent> ...` (or `codex --add-dir`).
+# - Extra writable paths: `DOTFILES_JAIL_RW=/path1:/path2 <agent> ...`.
 unjail() {
     DOTFILES_NO_JAIL=1 "$@"
 }
@@ -540,10 +541,6 @@ if [[ -x "${HOME}/.local/libexec/dotfiles/agent-jail" ]]; then
         shift
         case "$_agent:${1:-}" in
             *:-h|*:-v|*:-V|*:--help|*:--version|*:help|*:update|*:install|*:mcp|*:plugin|*:plugins|*:doctor)
-                command "$_agent" "$@"
-                return
-                ;;
-            codex:completion|codex:login|codex:logout|codex:sandbox|codex:debug|codex:features|codex:agents|codex:apply|codex:archive|codex:delete|codex:unarchive|codex:queue|codex:migrate-*)
                 command "$_agent" "$@"
                 return
                 ;;
@@ -563,7 +560,6 @@ if [[ -x "${HOME}/.local/libexec/dotfiles/agent-jail" ]]; then
         "${HOME}/.local/libexec/dotfiles/agent-jail" --wrap "$_agent" -- "$@"
     }
     has claude && claude() { _dotfiles_run_jailed claude "$@"; }
-    has codex  && codex()  { _dotfiles_run_jailed codex "$@"; }
     has agy    && agy()    { _dotfiles_run_jailed agy "$@"; }
     has pi     && pi()     { _dotfiles_run_jailed pi "$@"; }
 fi

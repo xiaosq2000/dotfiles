@@ -6,7 +6,7 @@
 # `chezmoi apply`, preserving local state (auth, sessions, trusted projects,
 # Herdr hooks, unrelated packages and extensions).
 #
-# Checked on 2026-11-19.
+# Checked on 2026-11-23.
 
 [agents.privacy]
 # Override per machine by adding `claude_profile = "remote-control"` under
@@ -84,10 +84,12 @@ ask = [
 
 [agents.codex]
 profile = "key-guard"
-description = "Workspace and network access without ssh private keys. Set by chezmoi."
+description = "Workspace and network access without private keys or local credentials. Set by chezmoi."
 extends = ":workspace"
 # Four globs spell "does not end in .pub" without exact paths (Codex creates an
-# empty 0444 placeholder for an exact missing path). Checked on 2026-09-22.
+# empty 0444 placeholder for an exact missing path). agent-reconcile.py also
+# appends existing exact paths from policy.toml (masked_dirs, masked_files
+# excluding Codex's own auth, and custom-named ~/.ssh/ private keys). Checked on 2026-11-23.
 deny_globs = [
     "~/.ssh/id_*[!b]",
     "~/.ssh/id_*[!u]b",
