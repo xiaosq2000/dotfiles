@@ -276,7 +276,7 @@ pacman = ["libnotify"]
 zypper = ["libnotify-tools"]
 
 [system_packages.logiops]
-description = "Logitech HID++ daemon (logid) for MX Master 3 thumbwheel"
+description = "Logitech HID++ daemon (logid) for MX mice (MX Master 3, MX Anywhere 2S)"
 probe = ["/usr/local/bin/logid", "/usr/bin/logid"]
 apt = ["logiops"]
 dnf = ["logiops"]

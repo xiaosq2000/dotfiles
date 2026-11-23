@@ -481,8 +481,8 @@ Manage personal host controls from the unified CLI or Tab 6 (`6 Host`) of `dotfi
   `/var/lib/dotfiles/battery-full`).
 - `dotfiles host refresh [status|on|off|toggle]` — control the 60 Hz-on-battery
   user service (`refresh-rate-on-power.service`).
-- `dotfiles host logid [status|restart]` — inspect or restart Logitech MX Master
-  3 `logid.service` (shared across `desktop` hosts).
+- `dotfiles host logid [status|restart]` — inspect or restart Logitech MX mice
+  `logid.service` (MX Master 3, MX Anywhere 2S; shared across `desktop` hosts).
 
 ## Secrets
 
