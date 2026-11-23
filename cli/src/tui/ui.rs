@@ -693,19 +693,39 @@ fn render_agents(frame: &mut Frame, app: &App, p: TuiTheme, area: Rect) {
             if entry.instructions { "linked ✓" } else { "missing" },
             p,
         ));
-        lines.push(kv("Default Wrapper", "agent-jail --wrap (escape: unjail <agent>)", p));
         if selected_agent == "codex" {
             lines.push(kv(
-                "Sandbox Mode",
-                "-s danger-full-access inside agent-jail (keeps gh.rules)",
+                "Default Wrapper",
+                "none (native key-guard sandbox + app-server daemon)",
                 p,
             ));
-        } else if selected_agent == "agy" {
             lines.push(kv(
-                "Default Flags",
-                "--dangerously-skip-permissions + key-guard PreToolUse",
+                "Sandbox Profile",
+                if entry.sandbox_profile == Some(true) {
+                    "key-guard ✓"
+                } else {
+                    "missing"
+                },
                 p,
             ));
+            lines.push(kv(
+                "Explicit Jail",
+                "dotfiles jail -- codex (-s danger-full-access --no-daemon)",
+                p,
+            ));
+        } else {
+            lines.push(kv(
+                "Default Wrapper",
+                "agent-jail --wrap (escape: unjail <agent>)",
+                p,
+            ));
+            if selected_agent == "agy" {
+                lines.push(kv(
+                    "Default Flags",
+                    "--dangerously-skip-permissions + key-guard PreToolUse",
+                    p,
+                ));
+            }
         }
     }
 

@@ -383,13 +383,19 @@ mod tests {
         assert_eq!(Tab::Host.next(), Tab::Overview);
 
         let mut app = App::new(build_snapshot());
-        for (tab, ov_idx) in [(Tab::Overview, 5), (Tab::Host, 0)] {
+        for (tab, ov_idx) in [(Tab::Overview, 5), (Tab::Agents, 0), (Tab::Host, 0)] {
             app.tab = tab;
             app.overview_idx = ov_idx;
-            for (w, h) in [(120, 34), (80, 24)] {
-                let backend = TestBackend::new(w, h);
-                let mut terminal = Terminal::new(backend).expect("test terminal");
-                terminal.draw(|f| ui::render(f, &app)).expect("render tab");
+            for agent_idx in 0..crate::tui::app::AGENT_NAMES.len() {
+                app.agent_idx = agent_idx;
+                for (w, h) in [(120, 34), (80, 24)] {
+                    let backend = TestBackend::new(w, h);
+                    let mut terminal = Terminal::new(backend).expect("test terminal");
+                    terminal.draw(|f| ui::render(f, &app)).expect("render tab");
+                }
+                if tab != Tab::Agents {
+                    break;
+                }
             }
         }
     }

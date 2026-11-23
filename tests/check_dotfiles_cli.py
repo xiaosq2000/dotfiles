@@ -140,7 +140,7 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-cli-") as tmp:
     assert loose_report["checks"]["secrets"]["loose_ssh_keys"][0]["name"] == "id_test_loose", loose_report
     bad_key.unlink()
 
-    # `dotfiles agent status --json` succeeds cleanly.
+    # `dotfiles agent status --json` and text output succeed cleanly.
     ag_res = subprocess.run(
         [*CMD, "agent", "status", "--json"],
         env=test_env,
@@ -150,6 +150,34 @@ with tempfile.TemporaryDirectory(prefix="dotfiles-cli-") as tmp:
     )
     ag_report = json.loads(ag_res.stdout)
     assert ag_report["agent_tools_selected"] is False, ag_report
+    assert ag_report["agents"]["codex"]["sandbox_profile"] is False, ag_report
+
+    # Codex sandbox_profile is reported in both JSON and text `dotfiles agent status`.
+    codex_cfg = home / ".codex/config.toml"
+    codex_cfg.parent.mkdir(parents=True, exist_ok=True)
+    codex_cfg.write_text('default_permissions = "key-guard"\n')
+    ag_txt = subprocess.run(
+        [*CMD, "agent", "status"],
+        env=test_env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert "codex" in ag_txt.stdout and "sandbox=ok" in ag_txt.stdout, ag_txt.stdout
+
+    # Explicit `dotfiles jail --mask-gh -- codex` injects -s danger-full-access and --no-daemon.
+    (home / ".config/gh").mkdir(parents=True, exist_ok=True)
+    (home / ".config/gh/hosts.yml").write_text("github.com:\n  user: demo\n")
+    jail_res = subprocess.run(
+        [*CMD, "jail", "--backend", "bwrap", "--mask-gh", "--dry-run", "--", "codex", "resume", "--last"],
+        env=test_env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    jail_plan = json.loads(jail_res.stdout)
+    assert jail_plan["command"] == ["codex", "-s", "danger-full-access", "--no-daemon", "resume", "--last"], jail_plan
+    assert str(home / ".config/gh/hosts.yml") in jail_plan["masked_files"], jail_plan
 
     # `dotfiles host status --json` and `dotfiles host keymap status --json` succeed cleanly.
     host_res = subprocess.run(

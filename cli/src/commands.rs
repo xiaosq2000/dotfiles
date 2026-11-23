@@ -153,11 +153,18 @@ pub fn cmd_agent_status(json_out: bool) -> Result<i32> {
             } else {
                 info.key_guard_configured.unwrap_or(false)
             };
-            println!(
+            let mut line = format!(
                 "  {name:<7} binary={bin} instructions={} guard={}",
                 if info.instructions { "ok" } else { "missing" },
                 if guard { "ok" } else { "missing" }
             );
+            if let Some(sandbox) = info.sandbox_profile {
+                line.push_str(&format!(
+                    " sandbox={}",
+                    if sandbox { "ok" } else { "missing" }
+                ));
+            }
+            println!("{line}");
         }
     }
     Ok(0)

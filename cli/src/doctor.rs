@@ -607,6 +607,9 @@ fn check_agents(home: &Path, bundles: &[String]) -> AgentsCheck {
             {
                 issues.push(format!("{name}: key-guard hook not configured"));
             }
+            if info.binary.is_some() && name == "codex" && info.sandbox_profile != Some(true) {
+                issues.push("codex: key-guard sandbox profile not configured".to_string());
+            }
             if info.binary.is_some() && name == "pi" && info.guard_extension != Some(true) {
                 issues.push("pi: dotfiles-guard.ts extension missing".to_string());
             }
