@@ -10,7 +10,7 @@ description: >-
 
 # Academic Research Workflow
 
-Checked on 2026-11-22.
+Checked on 2026-11-23.
 
 Real innovation is never demonstrated by weakening baselines to inflate benchmark
 margins. Scientific integrity and fairness come first: strengthen and verify
@@ -30,7 +30,7 @@ tests:
 | **Input sensitivity** | In deterministic eval mode, perturb task-critical inputs (observations, goals, obstacles, visual frames) and verify nonzero output sensitivity. |
 | **Output scale fidelity** | Confirm action magnitude, speed, and distribution match the baseline's base prior or reference specification without spurious collapse. |
 | **Known-solution & gradient check** | On an analytic test case, verify the training objective achieves expected error and any analytic Jacobian/gradient matches `autograd` or finite differences. |
-| **Symmetric upper bound** | Run oracle or privileged upper bounds with the exact same RL backbone, critic inputs, and eval wrapper as the proposed method. |
+| **Symmetric upper bound** | Run oracle or privileged upper bounds with the exact same RL backbone, observations (including auxiliary anchors/priors), critic inputs, and eval wrapper as the proposed method. |
 
 ### Controlled variables and ablations
 
@@ -42,6 +42,19 @@ tests:
   than silently aliasing.
 - **Symmetric tuning**: Sweep sensitive baseline hyperparameters over a compact
   declared grid instead of tuning only the proposed method.
+- **A priori round grids and uniform protocols**: Pick speed ratios, sweep
+  grids, and task thresholds from clean, human-canonical numbers before running
+  experiments (e.g., `1.0x, 1.5x, 2.0x, 2.5x, 3.0x`; `{0.2, 0.5, 1.0}`),
+  avoiding odd reverse-engineered decimals or per-regime special caps. Keep
+  baseline sets, sweep grids, and seed/episode protocols uniform across
+  benchmarks in the same paper.
+- **Best-tuned baseline presentation**: Tune each baseline thoroughly, then
+  report one operating point per baseline in main tables and figures chosen by
+  one pre-declared rule (e.g., highest success, breaking ties by lowest
+  violation) applied consistently across all metrics—never pairing a
+  conservative setting for success with an aggressive setting for violation.
+  State sweep grids concisely in captions or text and keep full sweeps in the
+  appendix.
 - **No hidden hacks or result gates**: Never add win-rate or speedup
   `RuntimeError` assertions to benchmark scripts. Disclose auxiliary
   pretraining, checkpoint selection (peak-val vs. final), or simulator
@@ -87,6 +100,8 @@ tests:
 | **Essence before means** | State the physical phenomenon, problem structure, or unified principle before the statistical estimator or neural implementation. |
 | **Causal chaining** | State causes before effects. Link each sentence's opening to the previous sentence's ending. |
 | **Term introduction & consistency** | Bridge from familiar anchors into new terms with simple active clauses. Keep one name and one symbol per concept across the whole paper; avoid raw code identifiers and symbol reuse. |
+| **Baseline naming & symmetry** | Name baselines after their recognizable literature lineage with parallel syntax exposing controlled factors (e.g., `Oracle + ATACOM`, `ECoMaNN (Pos) + ATACOM`, `ECoMaNN (Vel) + ATACOM`; uniform `Method (Ablation)` or `Method w/o X` for ablations). Strip internal code identifiers, debug qualifiers (`fixed ...`), JSON keys, `git_sha`, `ep_seed`, and internal run IDs (`Exp 1A`, `Arm`) from published prose, tables, and captions. |
+| **Table & figure restraint** | Keep main tables and figures uncluttered: one method per row (no slash-packed rows), one best-tuned point per swept baseline, minimal in-plot text boxes, and no emotional punctuation (`!`). |
 | **Sentence economy** | Merge overlapping sentences and prefer short active-voice sentences. Remove promotional adjectives and redundant default qualifiers. |
 | **Detail placement** | Keep motivation, core mechanism, falsifiable hypotheses, and compact contributions in `Abstract` and `Introduction`; complete algorithms, exact losses, and load-bearing theorems in `Problem` and `Method`; structured baseline taxonomy, ablations, and honest failure boundaries in `Experiments`. |
 | **Titles & macros** | Prefer short, general, punchy titles over defensive qualified subtitles. Manage method names via a single LaTeX macro for one-line global updates. |
