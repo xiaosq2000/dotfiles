@@ -63,9 +63,13 @@ def _load_secrets_policy():
 _POLICY = _load_secrets_policy()
 SAFE_CHEZMOI_FILES = set(_POLICY.get("safe_chezmoi_files") or ("chezmoi.toml", "chezmoistate.boltdb"))
 CHEZMOI_CONFIG_PATH = re.compile(r"(?<![\w.-])\.config/chezmoi(?:/([^\s\"'`;|&<>()]*))?")
-AGE_IDENTITY = re.compile(
-    r"chezmoi/(?:[^\s\"'`;|&<>()]*/)?(?:key[^/\s\"'`;|&<>()]*|[^/\s\"'`;|&<>()]*[*?\[{][^/\s\"'`;|&<>()]*)"
-)
+CHEZMOI_PATH = re.compile(r"(?<![\w.-])((?:[^\s\"'`;|&<>(),:=]*/)?chezmoi)/([^\s\"'`;|&<>(),:=]+)")
+CHEZMOI_SOURCE_DIR = re.compile(r"(?:^|/)(?:\.local/)?share/chezmoi$")
+GLOB_CHARS = re.compile(r"[*?\[{]")
+# Basenames that look like the age identity (key, key.txt, key.*, key.t?t,
+# key_backup) without flagging unrelated repo paths such as keyd, keymap.rs,
+# keymaps.lua, or keyboard.conf.
+AGE_KEY_BASENAME = re.compile(r"^key(?:$|[._-]|[*?\[{])")
 
 # Local credential stores and agent auth files that agents must never read.
 CREDENTIAL_PATTERNS = (
@@ -207,8 +211,27 @@ def age_identity(text):
         rest = rest.rstrip("/")
         if ".." in rest.split("/") or rest not in SAFE_CHEZMOI_FILES:
             return "it names the chezmoi age identity or protected file (" + m.group(0) + ")"
-    if AGE_IDENTITY.search(text):
-        return "it names the chezmoi age identity (~/.config/chezmoi/key.txt)"
+    for m in CHEZMOI_PATH.finditer(text):
+        prefix, rest = m.group(1), m.group(2)
+        parts = [p for p in rest.split("/") if p and p != "."]
+        if not parts:
+            continue
+        has_traversal = ".." in parts
+        # ~/.local/share/chezmoi is the public dotfiles source tree, never the
+        # config directory holding key.txt; still block `..` traversal out of it
+        # or an explicit key.txt path.
+        if CHEZMOI_SOURCE_DIR.search(prefix) and not has_traversal:
+            if any(p == "key.txt" for p in parts):
+                return "it names the chezmoi age identity (~/.config/chezmoi/key.txt)"
+            continue
+        if has_traversal and any(p.startswith("key") or GLOB_CHARS.search(p) for p in parts):
+            return "it names the chezmoi age identity (~/.config/chezmoi/key.txt)"
+        if len(parts) == 1 and (parts[0].startswith("key") or GLOB_CHARS.search(parts[0])):
+            return "it names the chezmoi age identity (~/.config/chezmoi/key.txt)"
+        if len(parts) > 1 and GLOB_CHARS.search(parts[0]):
+            return "it names the chezmoi age identity (~/.config/chezmoi/key.txt)"
+        if AGE_KEY_BASENAME.match(parts[-1]):
+            return "it names the chezmoi age identity (~/.config/chezmoi/key.txt)"
     return None
 
 

@@ -87,6 +87,13 @@ done <<'EOF'
 2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/key.t?t"}}
 2 {"tool_name":"Bash","tool_input":{"command":"ls ~/.config/chezmoi"}}
 2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/chezmoi.toml/../key.txt"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat chezmoi/key.txt"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat chezmoi/*"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat chezmoi/x/../key.txt"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat \"$XDG_CONFIG_HOME/chezmoi/key.txt\""}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.local/share/chezmoi/../../../.config/chezmoi/key.txt"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.local/share/chezmoi/../../chezmoi/key.txt"}}
+2 {"tool_name":"Bash","tool_input":{"command":"cat ~/.local/share/chezmoi/key.txt"}}
 2 {"tool_name":"Bash","tool_input":{"command":"env --chdir=~/.config/chezmoi cat key.txt"}}
 2 {"tool_name":"Bash","tool_input":{"command":"env --split-string='cat ~/.ssh/id_ed25519'"}}
 2 {"tool_name":"Bash","tool_input":{"command":"env -S 'cat ~/.ssh/id_ed25519'"}}
@@ -125,6 +132,12 @@ done <<'EOF'
 0 {"tool_name":"Bash","tool_input":{"command":"echo $SSH_AUTH_SOCK; ssh-add -l"}}
 0 {"tool_name":"Bash","tool_input":{"command":"cat ~/.config/chezmoi/chezmoi.toml"}}
 0 {"tool_name":"Bash","tool_input":{"command":"ls ~/.local/share/chezmoi"}}
+0 {"tool_name":"Bash","tool_input":{"command":"ls ~/.local/share/chezmoi/docs/*.md"}}
+0 {"tool_name":"Read","tool_input":{"file_path":"/home/u/.local/share/chezmoi/system/desktop/etc/keyd/default.conf"}}
+0 {"tool_name":"Read","tool_input":{"file_path":"/home/u/.local/share/chezmoi/cli/src/keymap.rs"}}
+0 {"tool_name":"Read","tool_input":{"file_path":"/home/u/.local/share/chezmoi/private_dot_config/nvim/lua/core/keymaps.lua"}}
+0 {"tool_name":"Read","tool_input":{"file_path":"/tmp/chezmoi/system/desktop/etc/keyd/default.conf"}}
+0 {"tool_name":"Read","tool_input":{"file_path":"/tmp/chezmoi/cli/src/keymap.rs"}}
 0 {"tool_name":"Bash","tool_input":{"command":"cat docs/secrets.md .chezmoidata/secrets.toml"}}
 0 {"tool_name":"Bash","tool_input":{"command":"rbw unlocked"}}
 0 {"tool_name":"Grep","tool_input":{"pattern":"\\.ssh/id_","path":"."}}
@@ -203,6 +216,8 @@ for name, args in (
 for name, args in (
     ("read_file", {"Path": "/home/alice/.ssh/config"}),
     ("read_file", {"Path": "/home/alice/.ssh/id_ed25519.pub"}),
+    ("read_file", {"Path": "/home/alice/.local/share/chezmoi/system/desktop/etc/keyd/default.conf"}),
+    ("read_file", {"Path": "/home/alice/.local/share/chezmoi/cli/src/keymap.rs"}),
     ("run_command", {"CommandLine": "ssh -i ~/.ssh/id_ed25519 imrl true", "toolSummary": "SSH check with id_ed25519"}),
     ("grep_search", {"Query": "id_ed25519", "SearchPath": "/home/alice/repo/docs"}),
 ):
