@@ -24,28 +24,22 @@ repo-relative paths—never machine-local paths outside the repository.
 
 ## Downloads
 
-Every machine reaches AI services through `sbc`, whose proxy traffic is metered.
-Under `sbc route ai-only` or `gfw-proxy`, non-AI download hosts go direct
-automatically; under `china-direct` or `global`, interactive shells still route
-foreign downloads through the metered proxy. For large downloads (datasets,
-model weights, packages, large clones), unset the proxy variables or confirm
-`sbc route` routes them direct first; the `machines` skill shows how. If a
-direct download fails, ask the user instead of retrying through the metered
-proxy.
+`sbc` proxy traffic is metered. Before large downloads (datasets, weights,
+packages, large clones), unset proxy variables or confirm `sbc route` sends
+them direct (`ai-only` or `gfw-proxy`, not `china-direct` or `global`; see the
+`machines` skill). If a direct download fails, ask the user; never retry
+through the metered proxy.
 
 ## Environments and CLIs
 
-Invoke modern environment managers (`pixi`, `uv`, `pnpm`, and similar tools) as
-bare commands from `PATH` (for example `pixi run ...`, `uv run ...`,
-`pixi install`, `uv sync`), just as humans do. Never hardcode install paths
-(such as `~/.pixi/bin/pixi` or `~/.local/bin/uv`) or invoke binaries directly
-inside managed environment directories (`.pixi/envs/...`, `.venv/bin/...`)
-unless a wrapper explicitly documents an exception.
+Invoke environment managers (`pixi`, `uv`, `pnpm`, etc.) as bare commands from
+`PATH` (`pixi run ...`, `uv run ...`), never via hardcoded install paths
+(`~/.pixi/bin/pixi`) or managed environment binaries (`.pixi/envs/...`,
+`.venv/bin/...`) unless a wrapper documents an exception.
 
-Design clean CLIs and task entry points for repeatable project workflows—such
-as `pixi` tasks, `pyproject.toml` scripts, or `package.json` scripts—so humans
-and agents run the same short commands instead of long ad-hoc invocations or
-internal script paths.
+Expose repeatable project workflows as clean CLI or task entry points (`pixi`
+tasks, `pyproject.toml` or `package.json` scripts) rather than long ad-hoc
+invocations or internal script paths.
 
 ## Changing a system
 
@@ -78,6 +72,8 @@ rewrite a commit that has been pushed.
 - State the current fact. When a fact changes, replace it outright and let git
   keep the history. Leave out wording such as "as confirmed on", "previously"
   or "this replaces".
+- Use standard technical terms and explicit parameter names; never coin
+  internal shorthand or lab slang in chat, docs, or comments.
 - Keep a past event only as a caveat that changes what someone would do, and
   keep the lesson, not the story.
 - Date any fact that can go stale: one "checked on" date per page, plus a date
