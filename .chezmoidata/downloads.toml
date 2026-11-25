@@ -62,7 +62,7 @@ write = { "distribution/policies.json" = '{"policies": {"DisableAppUpdate": true
 
 # Zotero plugins follow latest releases like Zotero itself; GitHub release
 # digests are verified automatically and 96-zotero-profile backs up replaced
-# copies before installing. Checked on 2026-11-20.
+# copies before installing. Checked on 2026-11-25.
 [downloads.better-bibtex]
 github = "retorquere/zotero-better-bibtex"
 asset = "zotero-better-bibtex-*.xpi"
@@ -74,6 +74,12 @@ github = "xiaosq2000/zotero-extra-meta"
 asset = "zotero-extra-meta-*.xpi"
 extract = false
 filename = "extra-meta.xpi"
+
+[downloads.arxiv-workflow]
+github = "AllanChain/zotero-arxiv-workflow"
+asset = "zotero-arxiv-workflow.xpi"
+extract = false
+filename = "arxiv-workflow.xpi"
 
 # Antigravity CLI publishes per-platform release manifests instead of GitHub
 # Releases, and names the binary `antigravity` inside its archive.

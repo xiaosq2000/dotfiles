@@ -161,7 +161,7 @@ def payload(identifier, spec, version, directory):
                    "Zotero_linux-x86_64/icons/icon128.png": b"icon"}, "xz")
     elif identifier == "agy":
         tar(path, {"antigravity": script(f"agy {version}")}, "gz")
-    elif identifier in ("better-bibtex", "extra-meta"):
+    elif spec.get("extract") is False:
         zip_(path, {"manifest.json": json.dumps({"version": version}).encode()})
     elif path.suffix == ".ttf":
         path.write_bytes(f"{identifier} {version}".encode())
@@ -271,11 +271,13 @@ def fixtures(box, catalog):
         assert output == f"{command} 1\n", (command, output)
     assert json.loads((store / "zotero/current/distribution/policies.json").read_text()) == {"policies": {"DisableAppUpdate": True}}
     # XPI is a zip package, but Zotero needs the archive itself.
-    for xpi_id in ("better-bibtex", "extra-meta"):
-        plugin = store / xpi_id / "current" / f"{xpi_id}.xpi"
-        with zipfile.ZipFile(plugin) as package:
-            assert json.loads(package.read("manifest.json"))["version"] == "1"
-        assert sorted(path.name for path in plugin.parent.iterdir()) == [f"{xpi_id}.xpi"]
+    for xpi_id, spec in catalog.items():
+        if spec.get("extract") is False and spec.get("filename", "").endswith(".xpi"):
+            filename = spec["filename"]
+            plugin = store / xpi_id / "current" / filename
+            with zipfile.ZipFile(plugin) as package:
+                assert json.loads(package.read("manifest.json"))["version"] == "1"
+            assert sorted(path.name for path in plugin.parent.iterdir()) == [filename]
     plugin = store / "better-bibtex/current/better-bibtex.xpi"
     for identifier, spec in catalog.items():
         if "fonts" in spec:

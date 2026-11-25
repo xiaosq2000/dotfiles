@@ -20,6 +20,8 @@ bbt_version = "9.0.71"
 bbt_id = "better-bibtex@iris-advies.com"
 extra_version = "0.1.7"
 extra_id = "extra-meta@dotfiles.local"
+arxiv_version = "0.4.2"
+arxiv_id = "arxiv@allanchain.github.com"
 
 
 def make_plugin(path, plugin_id, ver):
@@ -61,6 +63,7 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     assert "linked" in result.stdout
     assert "Better BibTeX package missing" in result.stderr
     assert "Extra Meta package missing" in result.stderr
+    assert "arXiv Workflow package missing" in result.stderr
     assert link.is_symlink() and link.resolve() == shared
     assert not setup().stdout  # Repeated apply is a no-op for user.js.
 
@@ -90,23 +93,29 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
 
     bbt_pkg = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
     extra_pkg = home / ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi"
+    arxiv_pkg = home / ".local/opt/dotfiles/arxiv-workflow/current/arxiv-workflow.xpi"
     bbt_target = profile / "extensions" / f"{bbt_id}.xpi"
     extra_target = profile / "extensions" / f"{extra_id}.xpi"
+    arxiv_target = profile / "extensions" / f"{arxiv_id}.xpi"
     make_plugin(bbt_pkg, bbt_id, bbt_version)
     make_plugin(extra_pkg, extra_id, extra_version)
+    make_plugin(arxiv_pkg, arxiv_id, arxiv_version)
 
     with (profile / ".parentlock").open("w") as lock:
         fcntl.lockf(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         locked = setup()
         assert "close Zotero" in locked.stderr
-        assert not bbt_target.exists() and not extra_target.exists()
+        assert not bbt_target.exists() and not extra_target.exists() and not arxiv_target.exists()
 
     installed = setup()
     assert "installed Better BibTeX" in installed.stdout
     assert "installed Extra Meta" in installed.stdout
+    assert "installed arXiv Workflow" in installed.stdout
     assert bbt_target.read_bytes() == bbt_pkg.read_bytes()
     assert extra_target.read_bytes() == extra_pkg.read_bytes()
+    assert arxiv_target.read_bytes() == arxiv_pkg.read_bytes()
     assert (extra_target.stat().st_mode & 0o777) == 0o644
+    assert (arxiv_target.stat().st_mode & 0o777) == 0o644
     assert not setup().stdout
 
     # A valid older plugin is saved before replacement. A newer one is never downgraded.
@@ -128,7 +137,7 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     assert "installation skipped" in setup().stderr
     assert bbt_target.read_bytes() == b"not a zip file"
 
-    # Zotero needs a one-time enable and per-plugin auto-update setting for BBT only.
+    # Zotero needs a one-time enable and per-plugin auto-update setting for BBT and arXiv Workflow.
     bbt_target.write_bytes(bbt_pkg.read_bytes())
     state = profile / "extensions.json"
     state.write_text(json.dumps({"addons": [{"id": bbt_id, "active": False,
@@ -146,6 +155,15 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     state.write_text(json.dumps({"addons": [
         {"id": bbt_id, "active": True, "applyBackgroundUpdates": 0},
         {"id": extra_id, "active": True, "applyBackgroundUpdates": 1},
+        {"id": arxiv_id, "active": False, "applyBackgroundUpdates": 1},
+    ]}))
+    result = setup()
+    assert "enable arXiv Workflow" in result.stderr
+    assert "automatic updates to Off" in result.stderr
+    state.write_text(json.dumps({"addons": [
+        {"id": bbt_id, "active": True, "applyBackgroundUpdates": 0},
+        {"id": extra_id, "active": True, "applyBackgroundUpdates": 1},
+        {"id": arxiv_id, "active": True, "applyBackgroundUpdates": 0},
     ]}))
     assert not setup().stderr
 
@@ -158,6 +176,7 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
             "kitty": {"sha256": "kitty-v1"},
             "better-bibtex": {"sha256": "bbt-v1"},
             "extra-meta": {"sha256": "extra-v1"},
+            "arxiv-workflow": {"sha256": "arxiv-v1"},
         }
     }
     lock_file.write_text(json.dumps(lock_data))
@@ -165,6 +184,7 @@ with tempfile.TemporaryDirectory(prefix="zotero-profile-") as directory:
     rendered_v1 = script.read_text()
     assert "# better-bibtex lock: bbt-v1" in rendered_v1
     assert "# extra-meta lock: extra-v1" in rendered_v1
+    assert "# arxiv-workflow lock: arxiv-v1" in rendered_v1
 
     lock_data["resources"]["kitty"]["sha256"] = "kitty-v2"
     lock_file.write_text(json.dumps(lock_data))

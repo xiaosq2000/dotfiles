@@ -142,6 +142,7 @@ downloads = [
     "zotero",
     "better-bibtex",
     "extra-meta",
+    "arxiv-workflow",
 ]
 system_packages = [
     "keyd",

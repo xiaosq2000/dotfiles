@@ -20,8 +20,10 @@
 {{- end }}
 # better-bibtex lock: {{ with index $resources "better-bibtex" }}{{ get . "sha256" | default "none" }}{{ else }}none{{ end }}
 # extra-meta lock: {{ with index $resources "extra-meta" }}{{ get . "sha256" | default "none" }}{{ else }}none{{ end }}
+# arxiv-workflow lock: {{ with index $resources "arxiv-workflow" }}{{ get . "sha256" | default "none" }}{{ else }}none{{ end }}
 # better-bibtex downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi") }}present{{ else }}absent{{ end }}
 # extra-meta downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi") }}present{{ else }}absent{{ end }}
+# arxiv-workflow downloaded: {{ if stat (joinPath .chezmoi.homeDir ".local/opt/dotfiles/arxiv-workflow/current/arxiv-workflow.xpi") }}present{{ else }}absent{{ end }}
 # profiles.ini: {{ if stat (joinPath .chezmoi.homeDir ".zotero/zotero/profiles.ini") }}present{{ else }}absent{{ end }}
 # pending: {{ $pending := joinPath .chezmoi.homeDir ".local/state/dotfiles/zotero-pending" }}{{ if stat $pending }}{{ include $pending | trim }}{{ else }}none{{ end }}
 set -eu
@@ -50,6 +52,7 @@ zotero = home / ".zotero/zotero"
 shared = home / ".config/dotfiles/zotero-user.js"
 bbt_plugin = home / ".local/opt/dotfiles/better-bibtex/current/better-bibtex.xpi"
 extra_meta_plugin = home / ".local/opt/dotfiles/extra-meta/current/extra-meta.xpi"
+arxiv_workflow_plugin = home / ".local/opt/dotfiles/arxiv-workflow/current/arxiv-workflow.xpi"
 pending_marker = home / ".local/state/dotfiles/zotero-pending"
 MAX_BACKUPS = 5
 deferred = False
@@ -225,6 +228,13 @@ install_plugin(
     "Extra Meta",
     extra_meta_plugin,
     check_updates=False,
+)
+install_plugin(
+    profile,
+    "arxiv@allanchain.github.com",
+    "arXiv Workflow",
+    arxiv_workflow_plugin,
+    check_updates=True,
 )
 
 if deferred:

@@ -308,7 +308,7 @@ plugins and `agy`, and `config` paths that only a machine selecting it receives.
 | `core` | `zsh`, `mosh`, `sqlite`, `chezmoi`, `mise`, plus 22 CLIs (`dotfiles`, `nvim`, `tmux`, `fzf`, `rg`, `fd`, `eza`, `yazi`, `starship`, `zoxide`, `lazygit`, `difft`, `sheldon`, `pre-commit`, `gitleaks`, ...) — every machine, including VPS and login nodes |
 | `secrets` | encryption, password vault, and GitHub CLI auth boundary (`age`, `sops`, `rbw`, `libsecret`, `gh`) — trusted machines only; never on VPS |
 | `dev` | full development, Python/ML (`uv`, `ruff`, `ty`, `huggingface_hub`), C++/Web/LaTeX, all Neovim LSPs, `ffmpeg`, diagnostics, 4 coding agents (`codex`, `claude`, `agy`, `pi`, `rtk`), and `herdr` |
-| `desktop` | `kitty`, 19 font families, `zathura`/`fcitx5`/Wayland config, and Zotero with Better BibTeX and Extra Meta |
+| `desktop` | `kitty`, 19 font families, `zathura`/`fcitx5`/Wayland config, and Zotero with Better BibTeX, Extra Meta, and arXiv Workflow |
 | `laptop` | `um-vpn` (built by pixi from git) and a user service that drops the panel to 60 Hz on battery |
 
 To add software, add it to a bundle and run `chezmoi apply`.
@@ -371,23 +371,25 @@ with no build for the machine's platform is skipped with a warning.
 supplies only their configuration. A machine that drops a bundle keeps the files
 it already has, the way an application keeps its profile.
 
-### Zotero, Better BibTeX and Extra Meta
+### Zotero, Better BibTeX, Extra Meta, and arXiv Workflow
 
-Checked on 2026-11-20. The `desktop` bundle declares Better BibTeX and
-[Extra Meta](https://github.com/xiaosq2000/zotero-extra-meta) (`extra-meta@dotfiles.local`)
+Checked on 2026-11-25. The `desktop` bundle declares Better BibTeX,
+[Extra Meta](https://github.com/xiaosq2000/zotero-extra-meta) (`extra-meta@dotfiles.local`),
+and [arXiv Workflow](https://github.com/AllanChain/zotero-arxiv-workflow) (`arxiv@allanchain.github.com`)
 in `.chezmoidata/downloads.toml` alongside Zotero itself (all unpinned, updated
 via `dotfiles fetch update` or `dotfiles upgrade --only fetch`). `dotfiles fetch`
-downloads both `.xpi` release assets and verifies their published digests. An
-apply installs both plugins in the default Zotero profile and leaves identical
+downloads the `.xpi` release assets and verifies their published digests. An
+apply installs the plugins in the default Zotero profile and leaves identical
 installations unchanged. If Zotero is running, an install or upgrade waits
 until you close Zotero and run `chezmoi apply` again. It saves replaced plugins
 in `~/.local/state/dotfiles/zotero-plugins/` (pruning to the five newest
 backups). It will not downgrade a newer installation or replace an existing
 plugin symlink.
 
-On a new profile, open Zotero and enable Better BibTeX and Extra Meta in the plugin
-manager. For Better BibTeX, set automatic updates to Off in the plugin's settings on
-each machine so Zotero and `dotfiles fetch` do not compete.
+On a new profile, open Zotero and enable Better BibTeX, Extra Meta, and arXiv
+Workflow in the plugin manager. For Better BibTeX and arXiv Workflow, set
+automatic updates to Off in the plugin's settings on each machine so Zotero and
+`dotfiles fetch` do not compete.
 
 The bundle shares Better BibTeX preferences and `extensions.startupScanScopes`
 (`1`, so Zotero discovers sideloaded plugins in `extensions/` on startup)
