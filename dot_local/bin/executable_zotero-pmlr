@@ -1,0 +1,746 @@
+#!/usr/bin/env python3
+"""Import or replace Zotero entries directly from official PMLR proceedings.
+
+Reads two structured sources from a proceedings.mlr.press paper page without
+manual metadata rewriting:
+  1. The official BibTeX block (<code id="bibtex">) -> `zotero-cli add bibtex`
+  2. The <head> Highwire <meta name="citation_*"> tags -> ISSN, language, PDF
+
+Then normalizes conference date, `tex.venueabbr`, and `Extra` fields, downloads
+and attaches the official PMLR PDF, and (with `--replace <KEY>`) safely inherits
+collections, tags, short title, and OpenReview/arXiv provenance before moving
+an unannotated old item to Zotero's Trash.
+"""
+
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass, field
+import html
+from html.parser import HTMLParser
+import json
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
+
+PMLR_BASE = "https://proceedings.mlr.press"
+USER_AGENT = "zotero-pmlr/1.0 (+https://proceedings.mlr.press)"
+
+VENUE_ABBR_RULES: tuple[tuple[str, str], ...] = (
+    ("conference on robot learning", "CoRL"),
+    ("international conference on machine learning", "ICML"),
+    ("learning for dynamics and control", "L4DC"),
+    ("artificial intelligence and statistics", "AISTATS"),
+    ("conference on learning theory", "COLT"),
+    ("uncertainty in artificial intelligence", "UAI"),
+    ("algorithmic learning theory", "ALT"),
+    ("asian conference on machine learning", "ACML"),
+    ("conference on lifelong learning agents", "CoLLAs"),
+    ("causal learning and reasoning", "CLeaR"),
+    ("medical imaging with deep learning", "MIDL"),
+    ("machine learning for healthcare", "MLHC"),
+    ("approximate bayesian inference", "AABI"),
+    ("parsimony and learning", "CPAL"),
+)
+
+_INLINE_HTML_TAG_RE = re.compile(r"</?(?:em|i|b|strong|sup|sub|span|code)\b[^>]*>", re.IGNORECASE)
+_ARXIV_URL_RE = re.compile(r"arxiv\.org/(?:abs|pdf)/([0-9]{4}\.[0-9]{4,5}(?:v\d+)?)", re.IGNORECASE)
+_PMLR_URL_RE = re.compile(r"^https?://proceedings\.mlr\.press/(v\d+)/([A-Za-z0-9_-]+)(?:\.html)?/?$")
+_PMLR_SHORTHAND_RE = re.compile(r"^(v\d+)/([A-Za-z0-9_-]+)(?:\.html)?$")
+
+
+@dataclass
+class PmlrPaper:
+    url: str
+    volume: str
+    slug: str
+    raw_bibtex: str
+    clean_bibtex: str
+    fields: dict[str, str]
+    meta: dict[str, list[str]]
+    date: str
+    issn: str
+    language: str
+    pdf_url: str
+    venue_abbr: str
+
+
+@dataclass
+class OldItemInfo:
+    key: str
+    title: str
+    url: str
+    short_title: str
+    extra: str
+    collections: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    note_count: int = 0
+    annotation_count: int = 0
+
+    @property
+    def has_user_work(self) -> bool:
+        return self.note_count > 0 or self.annotation_count > 0
+
+
+class _HeadMetaParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.metas: dict[str, list[str]] = {}
+        self._done = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if self._done:
+            return
+        if tag == "body":
+            self._done = True
+            return
+        if tag != "meta":
+            return
+        attr_map = {k.lower(): (v or "") for k, v in attrs}
+        key = (attr_map.get("name") or attr_map.get("property") or "").strip().lower()
+        content = attr_map.get("content", "").strip()
+        if key and content:
+            self.metas.setdefault(key, []).append(content)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "head":
+            self._done = True
+
+
+def fetch_text(url: str, timeout: int = 25) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
+def download_pdf(url: str, dest: Path, timeout: int = 60) -> int:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = resp.read()
+    if len(data) < 1024 or not data.startswith(b"%PDF-"):
+        raise RuntimeError(f"Downloaded content from {url} is not a valid PDF ({len(data)} bytes)")
+    dest.write_bytes(data)
+    return len(data)
+
+
+def normalize_text(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def normalize_pmlr_target(target: str) -> tuple[str, str, str]:
+    target = target.strip()
+    m = _PMLR_URL_RE.match(target)
+    if not m:
+        m = _PMLR_SHORTHAND_RE.match(target)
+    if not m:
+        raise ValueError(
+            f"Unsupported PMLR paper reference: {target!r}. "
+            "Expected https://proceedings.mlr.press/vNNN/slug.html or vNNN/slug."
+        )
+    volume, slug = m.group(1), m.group(2)
+    return f"{PMLR_BASE}/{volume}/{slug}.html", volume, slug
+
+
+def normalize_volume(vol: str) -> str:
+    v = vol.strip().lower()
+    if v.isdigit():
+        return f"v{v}"
+    if re.fullmatch(r"v\d+", v):
+        return v
+    raise ValueError(f"Invalid PMLR volume {vol!r}; expected e.g. v270 or 270.")
+
+
+def search_volume_html(index_html: str, query: str) -> list[tuple[str, str]]:
+    """Return matching (title, abs_url) pairs from a PMLR volume index page."""
+    norm_q = normalize_text(query)
+    if not norm_q:
+        return []
+    exact: list[tuple[str, str]] = []
+    partial: list[tuple[str, str]] = []
+    for block in index_html.split('<div class="paper">')[1:]:
+        m_title = re.search(r'<p class="title">(.*?)</p>', block, re.S)
+        m_abs = re.search(r'href="(https?://proceedings\.mlr\.press/v\d+/[A-Za-z0-9_-]+\.html)"', block)
+        if not m_title or not m_abs:
+            continue
+        title = html.unescape(re.sub(r"<[^>]+>", "", m_title.group(1))).strip()
+        title = re.sub(r"\s+", " ", title)
+        url = m_abs.group(1)
+        norm_t = normalize_text(title)
+        if norm_t == norm_q:
+            exact.append((title, url))
+        elif norm_q in norm_t or norm_t in norm_q:
+            partial.append((title, url))
+    return exact if exact else partial
+
+
+def extract_bibtex_block(page_html: str) -> str:
+    m = re.search(r'<code[^>]*\bid=["\']bibtex["\'][^>]*>(.*?)</code>', page_html, re.S | re.I)
+    if not m:
+        m = re.search(r'<pre[^>]*\bid=["\']bibtex["\'][^>]*>(.*?)</pre>', page_html, re.S | re.I)
+    if not m:
+        raise ValueError("Could not locate official BibTeX block on PMLR page.")
+    block = html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip()
+    if not block.startswith("@"):
+        raise ValueError("Extracted BibTeX block does not start with '@'.")
+    return block
+
+
+def parse_bibtex_fields(bibtex: str) -> dict[str, str]:
+    """Parse top-level BibTeX key = {value} / "value" / bare fields."""
+    brace_pos = bibtex.find("{")
+    if brace_pos == -1:
+        return {}
+    comma_pos = bibtex.find(",", brace_pos)
+    if comma_pos == -1:
+        return {}
+    body = bibtex[comma_pos + 1 :]
+    fields: dict[str, str] = {}
+    i = 0
+    n = len(body)
+    while i < n:
+        while i < n and body[i] in " \t\r\n,":
+            i += 1
+        if i >= n or body[i] == "}":
+            break
+        key_start = i
+        while i < n and body[i] not in " \t\r\n=}":
+            i += 1
+        key = body[key_start:i].strip().lower()
+        while i < n and body[i] in " \t\r\n":
+            i += 1
+        if i >= n or body[i] != "=":
+            break
+        i += 1
+        while i < n and body[i] in " \t\r\n":
+            i += 1
+        if i >= n:
+            break
+        if body[i] == "{":
+            depth = 1
+            i += 1
+            val_start = i
+            while i < n and depth > 0:
+                if body[i] == "{":
+                    depth += 1
+                elif body[i] == "}":
+                    depth -= 1
+                i += 1
+            val = body[val_start : i - 1]
+        elif body[i] == '"':
+            i += 1
+            val_start = i
+            while i < n and not (body[i] == '"' and body[i - 1] != "\\"):
+                i += 1
+            val = body[val_start:i]
+            if i < n:
+                i += 1
+        else:
+            val_start = i
+            while i < n and body[i] not in ",\r\n}":
+                i += 1
+            val = body[val_start:i]
+        if key:
+            fields[key] = re.sub(r"\s+", " ", val.strip())
+    return fields
+
+
+def sanitize_bibtex_abstract(bibtex: str) -> str:
+    """Strip inline HTML emphasis tags inside the BibTeX abstract field only."""
+    m = re.search(r"(\babstract\s*=\s*\{)", bibtex, re.I)
+    if not m:
+        return bibtex
+    start = m.end()
+    depth = 1
+    i = start
+    while i < len(bibtex) and depth > 0:
+        if bibtex[i] == "{":
+            depth += 1
+        elif bibtex[i] == "}":
+            depth -= 1
+        i += 1
+    if depth != 0:
+        return bibtex
+    end = i - 1
+    cleaned = _INLINE_HTML_TAG_RE.sub("", bibtex[start:end])
+    return bibtex[:start] + cleaned + bibtex[end:]
+
+
+def parse_head_meta(page_html: str) -> dict[str, list[str]]:
+    parser = _HeadMetaParser()
+    parser.feed(page_html)
+    return parser.metas
+
+
+def infer_venue_abbr(booktitle: str, conference_title: str = "") -> str:
+    haystack = f"{booktitle} {conference_title}".lower()
+    for needle, abbr in VENUE_ABBR_RULES:
+        if needle in haystack:
+            return abbr
+    return ""
+
+
+def format_pmlr_date(fields: dict[str, str], meta: dict[str, list[str]]) -> str:
+    year = fields.get("year", "").strip()
+    month = fields.get("month", "").strip()
+    if month and year:
+        month_clean = month.replace("--", "–")
+        return f"{month_clean} {year}"
+    pub_dates = meta.get("citation_publication_date") or []
+    if pub_dates:
+        return pub_dates[0].replace("/", "-")
+    return year
+
+
+def parse_pmlr_page(url: str, volume: str, slug: str, page_html: str) -> PmlrPaper:
+    raw_bibtex = extract_bibtex_block(page_html)
+    clean_bibtex = sanitize_bibtex_abstract(raw_bibtex)
+    fields = parse_bibtex_fields(clean_bibtex)
+    meta = parse_head_meta(page_html)
+
+    def first_meta(name: str) -> str:
+        vals = meta.get(name) or []
+        return vals[0] if vals else ""
+
+    date = format_pmlr_date(fields, meta)
+    issn = first_meta("citation_issn")
+    language = first_meta("citation_language")
+    pdf_url = fields.get("pdf", "").strip() or first_meta("citation_pdf_url")
+    venue_abbr = infer_venue_abbr(
+        fields.get("booktitle", ""),
+        first_meta("citation_conference_title"),
+    )
+    return PmlrPaper(
+        url=url,
+        volume=volume,
+        slug=slug,
+        raw_bibtex=raw_bibtex,
+        clean_bibtex=clean_bibtex,
+        fields=fields,
+        meta=meta,
+        date=date,
+        issn=issn,
+        language=language,
+        pdf_url=pdf_url,
+        venue_abbr=venue_abbr,
+    )
+
+
+def build_extra(
+    venue_abbr: str,
+    old_item: OldItemInfo | None = None,
+) -> str:
+    """Build clean Zotero Extra field without Citation Key:/pdf: noise."""
+    lines: list[str] = []
+    seen_keys: set[str] = set()
+
+    def add_line(line: str) -> None:
+        stripped = line.strip()
+        if not stripped:
+            return
+        if ":" in stripped:
+            k = stripped.split(":", 1)[0].strip().lower()
+            if k in {"citation key", "pdf"}:
+                return
+            if k in seen_keys:
+                return
+            seen_keys.add(k)
+        elif stripped.lower() in seen_keys:
+            return
+        else:
+            seen_keys.add(stripped.lower())
+        lines.append(stripped)
+
+    if venue_abbr:
+        add_line(f"tex.venueabbr: {venue_abbr}")
+
+    if old_item is not None:
+        for raw_line in (old_item.extra or "").splitlines():
+            if raw_line.strip().lower().startswith("tex.venueabbr:"):
+                continue
+            add_line(raw_line)
+        if old_item.url:
+            if "openreview.net" in old_item.url.lower() and "openreview" not in seen_keys:
+                add_line(f"OpenReview: {old_item.url}")
+            m_arxiv = _ARXIV_URL_RE.search(old_item.url)
+            if m_arxiv and "arxiv" not in seen_keys:
+                add_line(f"arXiv: {m_arxiv.group(1)}")
+
+    return "\n".join(lines)
+
+
+def run_zotero_cli(args: list[str], stdin_text: str | None = None) -> dict:
+    cmd = ["zotero-cli", "--json", *args]
+    proc = subprocess.run(
+        cmd,
+        input=stdin_text,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    stdout = proc.stdout.strip()
+    if not stdout:
+        raise RuntimeError(
+            f"zotero-cli {' '.join(args)} produced no output (exit {proc.returncode}): {proc.stderr.strip()}"
+        )
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Failed to parse JSON from zotero-cli {' '.join(args)}: {exc}\nstdout={stdout[:400]}"
+        ) from exc
+    if not payload.get("ok"):
+        err = payload.get("error", {})
+        raise RuntimeError(f"zotero-cli {' '.join(args)} failed: {err.get('message', payload)}")
+    return payload["data"]
+
+
+def inspect_old_item(item_key: str) -> OldItemInfo:
+    meta_resp = run_zotero_cli(["get", "metadata", item_key])
+    data = meta_resp.get("data", {})
+    children_resp = run_zotero_cli(["get", "children", item_key])
+    children = children_resp.get("items", [])
+    notes_resp = run_zotero_cli(["notes", "list", "--item-key", item_key, "--limit", "100"])
+    ann_resp = run_zotero_cli(["annotations", "list", "--item-key", item_key, "--limit", "100"])
+
+    child_notes = sum(1 for c in children if c.get("itemType") == "note")
+    note_count = max(int(notes_resp.get("count", 0)), child_notes)
+    annotation_count = len(ann_resp) if isinstance(ann_resp, list) else int(ann_resp.get("count", 0))
+
+    raw_tags = data.get("tags") or []
+    tags = [
+        (t["tag"] if isinstance(t, dict) else str(t)).strip()
+        for t in raw_tags
+        if (t.get("tag") if isinstance(t, dict) else str(t)).strip()
+    ]
+
+    return OldItemInfo(
+        key=item_key,
+        title=data.get("title", ""),
+        url=data.get("url", ""),
+        short_title=data.get("shortTitle", ""),
+        extra=data.get("extra", ""),
+        collections=list(data.get("collections") or []),
+        tags=tags,
+        note_count=note_count,
+        annotation_count=annotation_count,
+    )
+
+
+def parse_created_item_key(text: str) -> str:
+    m = re.search(r"Item key:\s*`([A-Z0-9]{8})`", text)
+    if not m:
+        m = re.search(r"`([A-Z0-9]{8})`", text)
+    if not m:
+        raise RuntimeError(f"Could not extract new item key from zotero-cli output:\n{text}")
+    return m.group(1)
+
+
+def fix_misparsed_creators(creators: list[dict]) -> list[dict] | None:
+    """Repair single-field 'Last, First' creators misclassified as corporate names.
+
+    Upstream zotero-mcp treats any name containing ' ag' (e.g. 'Agrawal, Pulkit'
+    or 'Agarwal, Alekh') as a German 'AG' corporate entity. Splitting single-comma
+    'Last, First' single-field entries restores proper firstName/lastName fields.
+    """
+    fixed: list[dict] = []
+    changed = False
+    for creator in creators:
+        name = creator.get("name")
+        if (
+            isinstance(name, str)
+            and "firstName" not in creator
+            and "lastName" not in creator
+            and name.count(",") == 1
+        ):
+            last, first = [part.strip() for part in name.split(",", 1)]
+            if first and last:
+                fixed.append(
+                    {
+                        "creatorType": creator.get("creatorType", "author"),
+                        "firstName": first,
+                        "lastName": last,
+                    }
+                )
+                changed = True
+                continue
+        fixed.append(creator)
+    return fixed if changed else None
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="zotero-pmlr",
+        description=(
+            "Import or replace Zotero entries directly from official PMLR proceedings "
+            "(CoRL, ICML, L4DC, AISTATS, COLT, UAI, etc.) using zotero-cli."
+        ),
+    )
+    parser.add_argument(
+        "target",
+        nargs="?",
+        help="PMLR paper URL (https://proceedings.mlr.press/v270/huang25g.html) or vNNN/slug.",
+    )
+    parser.add_argument(
+        "--volume",
+        "-V",
+        help="PMLR volume to search (e.g. v270 or 270) when target URL is omitted.",
+    )
+    parser.add_argument(
+        "--query",
+        "-q",
+        help="Title or substring to search inside --volume (defaults to replaced item title).",
+    )
+    parser.add_argument(
+        "--replace",
+        metavar="ITEM_KEY",
+        help="Existing Zotero item key to replace (inherits collections, tags, shortTitle, Extra provenance).",
+    )
+    parser.add_argument(
+        "-c",
+        "--collection",
+        action="append",
+        default=[],
+        help="Additional Zotero collection key, name, or path (repeatable).",
+    )
+    parser.add_argument(
+        "--tags",
+        default="",
+        help="Comma-separated extra tags to add.",
+    )
+    parser.add_argument(
+        "--short-title",
+        default=None,
+        help="Set Zotero shortTitle (overrides inherited shortTitle on --replace).",
+    )
+    parser.add_argument(
+        "--venue-abbr",
+        default=None,
+        help="Override inferred tex.venueabbr (e.g. CoRL, ICML, L4DC).",
+    )
+    parser.add_argument(
+        "--no-pdf",
+        action="store_true",
+        help="Do not download/attach the official PMLR PDF.",
+    )
+    parser.add_argument(
+        "--keep-old",
+        action="store_true",
+        help="With --replace, leave the old item in the library instead of moving it to Trash.",
+    )
+    parser.add_argument(
+        "--force-trash",
+        action="store_true",
+        help="With --replace, move the old item to Trash even if it has notes or annotations.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        help="Fetch and display planned changes without writing to Zotero.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON result.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+
+    old_item: OldItemInfo | None = None
+    if args.replace:
+        old_item = inspect_old_item(args.replace)
+
+    if args.target:
+        paper_url, volume, slug = normalize_pmlr_target(args.target)
+    elif args.volume:
+        volume = normalize_volume(args.volume)
+        query = args.query or (old_item.title if old_item else "")
+        if not query:
+            print("Error: --volume requires --query or --replace <ITEM_KEY>.", file=sys.stderr)
+            return 2
+        index_html = fetch_text(f"{PMLR_BASE}/{volume}/")
+        matches = search_volume_html(index_html, query)
+        if not matches:
+            print(f"Error: no paper matching {query!r} found in PMLR {volume}.", file=sys.stderr)
+            return 1
+        if len(matches) > 1:
+            print(f"Error: multiple papers match {query!r} in PMLR {volume}:", file=sys.stderr)
+            for title, url in matches[:10]:
+                print(f"  - {title} -> {url}", file=sys.stderr)
+            return 1
+        paper_url, volume, slug = normalize_pmlr_target(matches[0][1])
+    else:
+        print("Error: specify a PMLR URL/slug or --volume with --query/--replace.", file=sys.stderr)
+        return 2
+
+    page_html = fetch_text(paper_url)
+    paper = parse_pmlr_page(paper_url, volume, slug, page_html)
+    venue_abbr = args.venue_abbr if args.venue_abbr is not None else paper.venue_abbr
+    short_title = (
+        args.short_title
+        if args.short_title is not None
+        else (old_item.short_title if old_item else "")
+    )
+    extra = build_extra(venue_abbr, old_item)
+
+    collections: list[str] = []
+    for coll in [*(old_item.collections if old_item else []), *args.collection]:
+        if coll and coll not in collections:
+            collections.append(coll)
+
+    cli_tags = [t.strip() for t in args.tags.split(",") if t.strip()]
+    tags: list[str] = []
+    for tag in [*(old_item.tags if old_item else []), *cli_tags]:
+        if tag and tag not in tags:
+            tags.append(tag)
+
+    plan = {
+        "pmlr_url": paper.url,
+        "volume": paper.volume,
+        "slug": paper.slug,
+        "title": paper.fields.get("title", ""),
+        "booktitle": paper.fields.get("booktitle", ""),
+        "date": paper.date,
+        "issn": paper.issn,
+        "language": paper.language,
+        "short_title": short_title,
+        "venue_abbr": venue_abbr,
+        "extra": extra,
+        "collections": collections,
+        "tags": tags,
+        "pdf_url": "" if args.no_pdf else paper.pdf_url,
+        "replace": old_item.key if old_item else None,
+        "old_has_user_work": old_item.has_user_work if old_item else False,
+        "old_note_count": old_item.note_count if old_item else 0,
+        "old_annotation_count": old_item.annotation_count if old_item else 0,
+    }
+
+    if args.dry_run:
+        if args.json:
+            print(json.dumps({"ok": True, "dry_run": True, "plan": plan}, ensure_ascii=False, indent=2))
+        else:
+            print(f"[dry-run] {plan['title']}")
+            print(f"  PMLR:        {plan['pmlr_url']} ({plan['volume']})")
+            print(f"  Venue/Date:  {plan['venue_abbr'] or '?'} | {plan['date']}")
+            print(f"  ISSN/Lang:   {plan['issn'] or '-'} / {plan['language'] or '-'}")
+            print(f"  ShortTitle:  {plan['short_title'] or '-'}")
+            print(f"  Collections: {plan['collections']}")
+            print(f"  Tags:        {plan['tags']}")
+            print(f"  PDF:         {plan['pdf_url'] or '(skipped)'}")
+            print(f"  Extra:\n    " + ("\n    ".join(plan["extra"].splitlines()) if plan["extra"] else "(empty)"))
+            if old_item:
+                action = (
+                    "keep (--keep-old)"
+                    if args.keep_old
+                    else (
+                        "REFUSE trash (notes/annotations present)"
+                        if old_item.has_user_work and not args.force_trash
+                        else "trash old item"
+                    )
+                )
+                print(
+                    f"  Replace:     {old_item.key} (notes={old_item.note_count}, "
+                    f"annotations={old_item.annotation_count}) -> {action}"
+                )
+        return 0
+
+    add_cmd = [
+        "add",
+        "bibtex",
+        "--bibtex",
+        "-",
+        "--attach-mode",
+        "none",
+        "--if-exists",
+        "duplicate",
+    ]
+    for coll in collections:
+        add_cmd.extend(["-c", coll])
+    if tags:
+        add_cmd.extend(["--tags", ",".join(tags)])
+
+    add_data = run_zotero_cli(add_cmd, stdin_text=paper.clean_bibtex)
+    new_key = parse_created_item_key(add_data.get("text", ""))
+
+    created_meta = run_zotero_cli(["get", "metadata", new_key]).get("data", {})
+    fixed_creators = fix_misparsed_creators(created_meta.get("creators") or [])
+
+    edit_cmd = ["edit", new_key, "--extra", extra]
+    if fixed_creators is not None:
+        edit_cmd.extend(["--creators", json.dumps(fixed_creators, ensure_ascii=False)])
+    if paper.date:
+        edit_cmd.extend(["--date", paper.date])
+    if paper.issn:
+        edit_cmd.extend(["--issn", paper.issn])
+    if paper.language:
+        edit_cmd.extend(["--language", paper.language])
+    if short_title:
+        edit_cmd.extend(["--short-title", short_title])
+    run_zotero_cli(edit_cmd)
+
+    pdf_attached = False
+    pdf_filename = f"{paper.slug}.pdf"
+    if not args.no_pdf and paper.pdf_url:
+        with tempfile.TemporaryDirectory(prefix="zotero-pmlr-") as tmp_dir:
+            pdf_path = Path(tmp_dir) / pdf_filename
+            download_pdf(paper.pdf_url, pdf_path)
+            run_zotero_cli(["attach", new_key, "--file", str(pdf_path), "--filename", pdf_filename])
+            pdf_attached = True
+
+    old_action = "none"
+    warning_msg = ""
+    if old_item:
+        if args.keep_old:
+            old_action = "kept"
+        elif old_item.has_user_work and not args.force_trash:
+            old_action = "kept_due_to_user_work"
+            warning_msg = (
+                f"Old item {old_item.key} has {old_item.note_count} note(s) and "
+                f"{old_item.annotation_count} annotation(s); kept in library so no work is lost. "
+                "Merge it with the new item in Zotero Desktop or re-run with --force-trash."
+            )
+        else:
+            run_zotero_cli(["delete", "item", old_item.key])
+            old_action = "trashed"
+
+    result = {
+        "ok": True,
+        "new_key": new_key,
+        "title": paper.fields.get("title", ""),
+        "pmlr_url": paper.url,
+        "date": paper.date,
+        "venue_abbr": venue_abbr,
+        "short_title": short_title,
+        "collections": collections,
+        "pdf_attached": pdf_attached,
+        "pdf_filename": pdf_filename if pdf_attached else None,
+        "replaced_key": old_item.key if old_item else None,
+        "old_action": old_action,
+        "warning": warning_msg or None,
+    }
+
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print(f"Imported PMLR paper: {result['title']}")
+        print(f"  New key:     {new_key}")
+        print(f"  PMLR URL:    {paper.url}")
+        print(f"  Collections: {collections}")
+        print(f"  PDF:         {pdf_filename if pdf_attached else 'not attached'}")
+        if old_item:
+            print(f"  Old item:    {old_item.key} ({old_action})")
+        if warning_msg:
+            print(f"WARNING: {warning_msg}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

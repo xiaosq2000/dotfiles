@@ -131,6 +131,9 @@ config = [
 [bundles.desktop]
 description = "Desktop GUI (kitty, zathura, fcitx5), keyd/logid, 19 font families, and Zotero with plugins."
 packages = []
+mise = [
+    "zotero-mcp-server",
+]
 downloads = [
     "kitty",
     "maple-mono",
@@ -161,6 +164,8 @@ config = [
     ".config/systemd/user/wayland-xhost.service",
     ".config/systemd/user/graphical-session.target.wants/wayland-xhost.service",
     ".local/bin/zathura",
+    ".local/bin/zotero-pmlr",
+    ".agents/skills/zotero-pmlr",
     ".config/dotfiles/zotero-user.js",
 ]
 

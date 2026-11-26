@@ -6,6 +6,7 @@
 # Re-runs when the script, any skill, the age identity, or agent presence changes.
 # agent-skills.sh sha256: {{ include "dot_local/libexec/dotfiles/executable_agent-skills.sh" | sha256sum }}
 # skills sha256: {{ range (glob (joinPath .chezmoi.sourceDir "private_dot_agents/skills/*/SKILL.md")) }}{{ include . | sha256sum }}{{ end }}
+# zotero-cli skill: {{ if stat (joinPath .chezmoi.homeDir ".agents/skills/zotero-cli/SKILL.md") }}present{{ else }}absent{{ end }}
 # age identity: {{ if stat (joinPath .chezmoi.homeDir .secrets.ageIdentity) }}present{{ else }}absent{{ end }}
 # claude at apply time: {{ if or (lookPath "claude") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/claude")) }}present{{ else }}absent{{ end }}
 # codex at apply time: {{ if or (lookPath "codex") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/codex")) }}present{{ else }}absent{{ end }}

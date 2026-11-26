@@ -1,0 +1,81 @@
+{{- if and (has "desktop" (index .machines .machine).bundles) (has "dev" (index .machines .machine).bundles) -}}
+#!/usr/bin/env bash
+# Sync the zotero-cli skill packaged inside zotero-mcp-server into
+# ~/.agents/skills/zotero-cli so 92-agent-skills links it for all agents
+# without creating or modifying ~/AGENTS.md.
+#
+# Re-runs when zotero-cli presence or installed mise version changes.
+# zotero-cli at apply time: {{ if or (lookPath "zotero-cli") (stat (joinPath .chezmoi.homeDir ".local/share/mise/shims/zotero-cli")) }}present{{ else }}absent{{ end }}
+# zotero-mcp mise installs: {{ range (glob (joinPath .chezmoi.homeDir ".local/share/mise/installs/pypi-zotero-mcp-server/*")) }}{{ base . }} {{ end }}
+set -eu
+
+export PATH="$HOME/.local/share/mise/shims:$HOME/.pixi/bin:$HOME/.local/bin:$PATH"
+
+ZOTERO_MCP_BIN=""
+if command -v mise >/dev/null 2>&1 && ZOTERO_MCP_BIN="$(mise which zotero-mcp 2>/dev/null)" && [ -n "$ZOTERO_MCP_BIN" ]; then
+    :
+elif command -v zotero-mcp >/dev/null 2>&1; then
+    ZOTERO_MCP_BIN="$(command -v zotero-mcp)"
+else
+    echo "zotero-mcp skill: zotero-mcp not found; retry with chezmoi apply after mise install" >&2
+    exit 0
+fi
+
+ZOTERO_MCP_REAL="$(realpath "$ZOTERO_MCP_BIN" 2>/dev/null || printf '%s' "$ZOTERO_MCP_BIN")"
+ZOTERO_PY="$(dirname "$ZOTERO_MCP_REAL")/python"
+if [ ! -x "$ZOTERO_PY" ]; then
+    ZOTERO_PY="$(dirname "$ZOTERO_MCP_REAL")/python3"
+fi
+if [ ! -x "$ZOTERO_PY" ]; then
+    SHEBANG="$(head -n 1 "$ZOTERO_MCP_REAL" 2>/dev/null || true)"
+    case "$SHEBANG" in
+        "#!/"*)
+            CANDIDATE="${SHEBANG#\#!}"
+            CANDIDATE="${CANDIDATE%% *}"
+            if [ "$(basename "$CANDIDATE")" != "env" ] && [ -x "$CANDIDATE" ]; then
+                ZOTERO_PY="$CANDIDATE"
+            fi
+            ;;
+    esac
+fi
+
+if [ ! -x "$ZOTERO_PY" ]; then
+    echo "zotero-mcp skill: cannot resolve Python interpreter for $ZOTERO_MCP_BIN" >&2
+    exit 0
+fi
+
+"$ZOTERO_PY" - <<'PY'
+import filecmp
+from pathlib import Path
+import shutil
+import sys
+
+try:
+    import zotero_mcp
+except ImportError as exc:
+    print(f"zotero-mcp skill: cannot import zotero_mcp ({exc})", file=sys.stderr)
+    raise SystemExit(0)
+
+src = Path(zotero_mcp.__file__).resolve().parent / "skills" / "zotero-cli"
+if not (src / "SKILL.md").is_file():
+    print(f"zotero-mcp skill: packaged skill missing under {src}", file=sys.stderr)
+    raise SystemExit(0)
+
+dst = Path.home() / ".agents" / "skills" / "zotero-cli"
+changed = not dst.is_dir()
+if not changed:
+    src_files = {p.relative_to(src) for p in src.rglob("*") if p.is_file()}
+    dst_files = {p.relative_to(dst) for p in dst.rglob("*") if p.is_file()}
+    if src_files != dst_files or any(
+        not filecmp.cmp(src / rel, dst / rel, shallow=False) for rel in src_files
+    ):
+        changed = True
+
+if changed:
+    if dst.exists():
+        shutil.rmtree(dst)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, dst)
+    print(f"zotero-mcp skill: synced {dst}")
+PY
+{{- end -}}

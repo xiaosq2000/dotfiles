@@ -179,6 +179,10 @@ tool = "aqua:fastfetch-cli/fastfetch"
 [mise.lazydocker]
 tool = "aqua:jesseduffield/lazydocker"
 
+[mise.zotero-mcp-server]
+tool = "pypi:zotero-mcp-server"
+bin = "zotero-cli"
+
 ################################################################################
 # Coding agents and workspaces
 ################################################################################
