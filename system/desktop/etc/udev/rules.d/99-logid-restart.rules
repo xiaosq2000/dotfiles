@@ -1,8 +1,14 @@
 # Installed by chezmoi from system/desktop/ in the dotfiles repository. Edit it there.
 #
-# Restart logid when a Logitech HID++ device (MX Master 3 etc.) appears.
-# logid enumerates HID devices only at startup, so a mouse that reconnects
-# after boot -- e.g. over Bluetooth, once the adapter is powered on -- is
-# never picked up until the daemon is restarted.
+# Restart logid when a Logitech HID++ device (MX Master 3, MX Anywhere 2S, etc.)
+# appears. logid enumerates HID devices only at startup, so a mouse that
+# reconnects after boot -- e.g. over Bluetooth, once the adapter is powered on --
+# is never picked up until the daemon is restarted.
+#
+# Use try-restart so early-boot coldplug of a plugged-in USB receiver is a no-op
+# while logid.service is still inactive; logid.service declares
+# Wants=multi-user.target (checked on 2026-11-28), so an unconditional restart
+# during coldplug pulls getty@tty1.service and plymouth-quit.service into a
+# replace transaction and cancels the queued gdm.service start job.
 ACTION=="add", SUBSYSTEM=="hidraw", DRIVERS=="logitech-hidpp-device", \
-    RUN+="/usr/bin/systemctl restart --no-block logid.service"
+    RUN+="/usr/bin/systemctl try-restart --no-block logid.service"
